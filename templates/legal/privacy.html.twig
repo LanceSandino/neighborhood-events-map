@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+{% set nav = 'info' %}
+{% block title %}Privacy · {{ c.community.name }} Halloween{% endblock %}
+{% block body %}
+<article class="page-card legal">
+  <div class="eyebrow">🔒 Privacy</div>
+  <h1>Privacy notice</h1>
+  <p class="legal-lead">This is a free, volunteer-run neighborhood map. It has <b>no advertising, no analytics and no tracking</b>, and it never sells or shares personal information.</p>
+
+  <h2>If you are browsing the map</h2>
+  <ul>
+    <li><b>No account, no cookies.</b> Browsing, filtering and planning stops set no cookies.</li>
+    <li><b>Saved on this device only.</b> Your favorites, filters and start point are kept in this browser’s local storage so they are still there next time. They are never sent to us. <button type="button" class="link-button" id="btnClearLocal">Clear saved data on this device</button> <span id="clearStatus" class="form-caption" role="status"></span></li>
+    <li><b>Your location stays on your phone.</b> “Show my location” works only after your browser asks you and you allow it; the position is used on the map and never sent to us.</li>
+    <li><b>Map pictures.</b> The map background is loaded from OpenStreetMap’s tile servers, which receive your IP address and browser details like any website you visit (see the <a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener">OpenStreetMap Foundation privacy policy</a>). They set no cookies here. Everything else — pages, scripts, fonts — comes from this site.</li>
+  </ul>
+
+  <h2>If you list your home</h2>
+  <ul>
+    <li><b>Email address</b> — used only to send one-time sign-in links and, if you ask for a review, so the organizer can reply. It is never shown publicly or to other residents.</li>
+    <li><b>Address and listing</b> — your street address, hours, offerings, sensory notes and short note are <b>public on the map</b> while you choose to show them. Please don’t include children’s names or private details.</li>
+    <li><b>Sign-in cookie</b> — one strictly necessary session cookie, set only after you confirm a sign-in link. It ends when you sign out, after {{ c.registration.session_idle_minutes ?? 30 }} minutes without activity, or at the latest after 12 hours.</li>
+    <li><b>Records</b> — the time you listed or changed a home, and organizer actions (such as hiding a listing), are kept in an audit log so mistakes can be fixed fairly.</li>
+  </ul>
+
+  <h2>Security records</h2>
+  <p>To stop spam and abuse the server keeps short-lived records: IP addresses in web server logs (rotated automatically, without page addresses’ query strings), and rate-limit entries stored only as keyed one-way hashes, deleted within two days. Sign-in links expire after minutes and are deleted daily.</p>
+
+  <h2>How long data is kept</h2>
+  <p>Listings belong to one Halloween date and stop being public afterwards. Accounts, homes and listings stay until you give a home up, ask for deletion, or the organizer archives the season. Backups are private to the organizer and rotate after about two weeks.</p>
+
+  <h2>Your choices</h2>
+  <p>You can hide your listing or give up your home at any time from “Manage my house”. To see, correct or delete everything about you, {% include 'legal/_contact.html.twig' %}; the organizer can delete your account and all your homes completely.</p>
+
+  <h2>Children</h2>
+  <p>Families can browse without giving any personal information. Listing a home is for adults; we do not knowingly collect information from children under 13.</p>
+
+  <p class="form-caption">This notice describes how this software works; the organizer of {{ c.community.name }} runs this copy of it. Last updated {{ 'now'|date('F Y') }}.</p>
+  <div class="modal-actions"><a class="secondary" href="/terms">Terms of use</a><a class="primary" href="/">Back to map</a></div>
+</article>
+{% endblock %}
+{% block scripts %}<script type="module" src="/assets/js/legal.js?v={{ app_version }}"></script>{% endblock %}

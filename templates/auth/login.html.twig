@@ -13,7 +13,7 @@
   {% endif %}
   <form id="loginForm" novalidate>
     <div class="hp-field" aria-hidden="true"><label for="loginWebsite">Website</label><input id="loginWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
-    <div class="field full"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" maxlength="254" required><span class="error" data-error="email"></span></div>
+    <div class="field full"><label for="loginEmail">Email</label><input id="loginEmail" type="email" inputmode="email" spellcheck="false" autocapitalize="off" autocomplete="email" maxlength="254" required><span class="error" data-error="email"></span></div>
     <div id="powStatus" class="hide" role="status" aria-live="polite"><span class="form-caption">Running a quick anti-spam check on your device…</span><div class="progress"><span id="powBar"></span></div></div>
     <div id="loginError" class="notice danger hide" role="alert"></div>
     <div class="modal-actions"><a class="secondary" href="/">Back to map</a><button class="primary" type="submit">Email me a sign-in link</button></div>

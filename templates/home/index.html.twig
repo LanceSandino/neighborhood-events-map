@@ -47,7 +47,7 @@
     <button type="button" class="mini-filter" data-filter="noIntense" aria-pressed="false">No intense scares</button>
     {% endif %}
     {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false">Non-food treats</button>{% endif %}
-    {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false">Adult refreshments · 21+</button>{% endif %}
+    {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false">21+ refreshments</button>{% endif %}
     <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false">Stroller-friendly</button>
     <button type="button" class="mini-filter" data-filter="saved" aria-pressed="false">♥ Saved only</button>
     <label class="time-filter">Visit at
@@ -57,7 +57,7 @@
         {% for h in 15..22 %}<option value="{{ '%02d'|format(h) }}:00">{{ ('%02d:00'|format(h))|time12 }}</option>{% endfor %}
       </select>
     </label>
-    <button type="button" class="link-button" id="btnReset">Reset filters</button>
+    <button type="button" class="link-button hide" id="btnReset">Reset filters</button>
   </div>
   <div class="workarea">
     <div class="list-pane">
@@ -68,6 +68,7 @@
       </ul>
     </div>
     <div class="map-pane" id="mapPane">
+      <div class="map-stage">
       <div class="map-fallback" id="mapFallback">Loading the map… The list of homes works without it.</div>
       <div class="map" id="map" role="region" aria-label="Map of participating homes"></div>
       <div class="map-logo">🗺️ {{ c.community.name }} <span>· {{ c.map.boundary_status == 'approved' ? 'neighborhood map' : 'map' }}</span></div>
@@ -79,7 +80,8 @@
         <button type="button" data-action="info" aria-label="Map information" title="Map information">ⓘ</button>
       </div>
       <div class="map-selected" id="mapSelected" role="dialog" aria-label="Selected home"></div>
-      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i> Candy</span><span><i class="legend-bullet gentle"></i> Gentle</span><span><i class="legend-bullet spooky"></i> Spooky</span></div>
+      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i>🎃 Treats</span><span><i class="legend-bullet gentle"></i>🍭 Gentle</span><span><i class="legend-bullet spooky"></i>👻 Spooky</span></div>
+      </div>
       <div class="map-footer"><span>⚠️ Listings are self-reported. Pins show only homes that chose to participate.</span><strong id="footerZones">{% if zs %}{{ zs.title }}{% endif %}</strong></div>
     </div>
   </div>

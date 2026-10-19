@@ -49,7 +49,7 @@ export function selectedHtml(h, ctx, saved) {
   const st = statusOf(h, ctx);
   return `<button type="button" class="x" data-close-selected aria-label="Close">×</button>
     <b>${esc(h.address)}</b>
-    <p>${metaLine(h, ctx)} · <span class="card-status ${st.key}">${esc(st.label)}</span></p>
+    <p>${metaLine(h, ctx)}${st.key === 'later' && !st.label.startsWith('Starts') ? '' : ` · <span class="card-status ${st.key}">${esc(st.label)}</span>`}</p>
     ${h.note ? `<p>${esc(h.note)}</p>` : ''}
     <div class="tags">${tagsHtml(h)}</div>
     <button type="button" class="primary" data-save="${h.id}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save this stop'}</button>
@@ -57,5 +57,5 @@ export function selectedHtml(h, ctx, saved) {
 }
 
 export function pinHtml(h, { dim, number }) {
-  return `<div class="pin ${pinClass(h)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${isScary(h) ? '👻' : h.low_noise ? '🍬' : '🎃'}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
+  return `<div class="pin ${pinClass(h)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${isScary(h) ? '👻' : h.low_noise ? '🍭' : '🎃'}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
 }

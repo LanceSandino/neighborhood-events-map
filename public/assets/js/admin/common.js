@@ -9,6 +9,13 @@ export { esc } from '../lib/render.js';
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
+/** "2026-10-19 03:44:07.484899+00" (PostgreSQL) → "Oct 19, 2026, 11:44 PM" in the organizer's locale/time zone. */
+export function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(String(ts).replace(' ', 'T').replace(/([+-]\d\d)$/, '$1:00'));
+  return Number.isNaN(d.getTime()) ? String(ts) : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 export function flash(message, kind = 'success') {
   const el = $('#flash');
   el.className = kind === 'error' ? 'notice danger' : kind === 'info' ? 'notice info' : 'success';

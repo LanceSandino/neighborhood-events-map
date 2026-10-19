@@ -10,9 +10,9 @@
   </div>
   <div id="claimOutcome" role="status" tabindex="-1"></div>
   <div id="homes" aria-live="polite"><p class="empty">Loading your homes…</p></div>
-  <div class="dash-home">
-    <h2>List another home</h2>
-    <p class="introtext">Manage more than one property? Use the map’s “List your home” form while signed in, or contact the organizer.</p>
+  <div class="dash-home" id="listAnother">
+    <h2 data-f="title">You don’t manage any homes yet</h2>
+    <p class="introtext" data-f="text">Use the map’s “List your home” form while signed in. Your home appears here as soon as it is listed.</p>
     <a class="secondary" href="/#list-my-house">+ List a home</a>
   </div>
 </div>
@@ -23,7 +23,7 @@
     <div class="notice hide" data-f="warning"></div>
     <div class="status-row" role="group" aria-label="Status tonight">
       <button type="button" class="secondary" data-status="active">🎃 Handing out</button>
-      <button type="button" class="secondary" data-status="paused">⏸ Paused</button>
+      <button type="button" class="secondary" data-status="paused">⏸️ Paused</button>
       <button type="button" class="secondary" data-status="out_of_candy">🍬 Out of candy</button>
       <button type="button" class="secondary" data-status="done">✅ Done for tonight</button>
     </div>

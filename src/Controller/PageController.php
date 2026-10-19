@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Community\BrandingStore;
+use App\Community\BrandPalette;
 use App\Community\CommunityPresenter;
 use App\Community\CommunityRepository;
 use App\Listing\ListingRepository;
@@ -51,6 +52,17 @@ final class PageController extends AbstractController
         ]);
     }
 
+    /** Privacy notice, terms of use and accessibility statement (no data collected to view them). */
+    #[Route('/privacy', name: 'privacy', defaults: ['page' => 'privacy'], methods: ['GET'])]
+    #[Route('/terms', name: 'terms', defaults: ['page' => 'terms'], methods: ['GET'])]
+    #[Route('/accessibility', name: 'accessibility', defaults: ['page' => 'accessibility'], methods: ['GET'])]
+    public function legal(string $page): Response
+    {
+        $c = $this->community->current();
+
+        return $this->render('legal/'.$page.'.html.twig', ['c' => $this->presenter->publicPayload($c, [])]);
+    }
+
     #[Route('/me', name: 'me', methods: ['GET'])]
     public function me(): Response
     {
@@ -63,7 +75,7 @@ final class PageController extends AbstractController
     public function theme(): Response
     {
         $b = $this->community->current()->settings['branding'];
-        $css = sprintf(":root{--brand:%s;--brand-accent:%s}\n", $b['primary_color'], $b['accent_color']);
+        $css = BrandPalette::css($b['primary_color'], $b['accent_color']);
 
         return new Response($css, 200, ['Content-Type' => 'text/css; charset=utf-8', 'Cache-Control' => 'public, max-age=300']);
     }

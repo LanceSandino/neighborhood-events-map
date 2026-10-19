@@ -110,7 +110,7 @@ function fit() {
 
 function init() {
   shell();
-  map = L.map('editorMap');
+  map = L.map('editorMap', { zoomSnap: 0.25 });
   L.tileLayer(data.tiles.url, { maxZoom: data.tiles.max_zoom, attribution: esc(data.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(map);
   drawn = new L.FeatureGroup().addTo(map);
   featuresFromCollection(data.geojson).forEach(addFeature);

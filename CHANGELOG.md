@@ -6,6 +6,23 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.4.0-beta.3] - 2026-10-19
+
+### Added
+- Light and dark appearance on every page, following the browser/system setting (semantic colour tokens; dark changes colours only, never layout); the map's tiles are softened in dark mode while pins and outlines keep their colours.
+- Organizer address list pages through results (25 per page).
+- Privacy notice, terms of use and accessibility statement, linked from every page, with a "Clear saved data on this device" control. Public pages set no cookies and load no third-party scripts (tested).
+- Automated WCAG 2.1 AA checks (axe-core) on every public page type in light and dark.
+- Brand colours chosen by an organizer are turned into contrast-checked text and button-ink colours automatically, in both themes; support for high-contrast and forced-colour modes.
+
+### Changed
+- Visual polish from a measured audit at 375/430/768/1440 px: compact, aligned check chips and form controls of one height; one-line top bar on phones; stat tiles in an even 2×2 grid on phones and a full-width row on desktop; the map footer no longer covers the map credit; tapping a home on a phone brings its preview into view; even card spacing with the favourite button in the corner; single-column button stacks on phones; organizer tabs on one scrollable row on tablets; readable dates and review-request text in the console; a taller, sticky boundary editor.
+- Stronger contrast for small grey text; hover states on pointer devices; tabular figures; balanced headings; email fields without autocorrect; "Report this listing" has its own wording.
+- The "List another home" card adapts when a resident has no homes yet.
+
+### Fixed
+- Test listings created by the E2E suite are released afterwards, so they never appear in screenshots.
+
 ## [0.4.0-beta.2] - 2026-10-19
 
 First release whose whole history is free of private deployment data, so the repository can be made public as is. Not approved for production use; see *Known limitations* in 0.1.0-design.1.

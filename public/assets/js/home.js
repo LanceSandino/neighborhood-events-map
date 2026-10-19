@@ -7,7 +7,7 @@
  */
 import { api } from './lib/api.js';
 import { createStore } from './lib/store.js';
-import { DEFAULT_FILTERS, matches } from './lib/filters.js';
+import { DEFAULT_FILTERS, matches, activeFilterCount } from './lib/filters.js';
 import { nowInZone, time12 } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc } from './lib/render.js';
 import { planStops } from './lib/route.js';
@@ -38,7 +38,7 @@ const markers = new Map();
 function initMap() {
   if (!window.L) return;
   try {
-    map = L.map('map', { zoomControl: false, scrollWheelZoom: false, tap: true });
+    map = L.map('map', { zoomControl: false, scrollWheelZoom: false, tap: true, zoomSnap: 0.25 });
     L.tileLayer(C.map.tiles.url, { maxZoom: C.map.tiles.max_zoom, attribution: esc(C.map.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(map);
     if (C.map.boundary) {
       L.geoJSON(C.map.boundary, { style: { color: '#f07936', weight: 2, fillColor: '#f07936', fillOpacity: 0.05 }, interactive: false }).addTo(map);
@@ -100,6 +100,7 @@ function render() {
   $('#statCandy').textContent = homes.filter((h) => h.candy).length;
   $('#statGentle').textContent = homes.filter((h) => h.low_noise && !h.flashing_lights && !h.jump_scares && !h.loud_audio && h.scare_level !== 'intense').length;
   for (const btn of document.querySelectorAll('[data-filter]')) btn.setAttribute('aria-pressed', String(!!filters[btn.dataset.filter]));
+  $('#btnReset').classList.toggle('hide', activeFilterCount(filters) === 0);
   renderPins(ids);
   if (activeId && !homes.some((h) => h.id === activeId)) selectHome(null);
 }
@@ -123,6 +124,12 @@ function selectHome(id, { pan = true } = {}) {
     if (map && pan) map.panTo([h.lat, h.lon], { animate: !matchMedia('(prefers-reduced-motion: reduce)').matches });
     const card = document.querySelector(`.home-card[data-id="${h.id}"]`);
     if (card && card.scrollIntoView && innerWidth > 660) card.scrollIntoView({ block: 'nearest' });
+    // Phones show the map above the list: bring the map (and the preview on it) into view.
+    if (innerWidth <= 660 && pan) {
+      const pane = $('#mapPane');
+      const r = pane.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > innerHeight) pane.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
   }
   render();
 }
@@ -145,7 +152,7 @@ function showRoute() {
   $('#routeItems').innerHTML = currentPlan.length ? currentPlan.map((g, gi) => {
     const label = g.zones.length ? g.zones.map((z) => zoneLabels[z] || z).join(', ') : (currentPlan.length > 1 ? `Area ${gi + 1}` : '');
     return `${label ? `<h3 class="route-group-title">${currentPlan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
-      <ol class="route-items">${g.stops.map((h) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div></li>`; }).join('')}</ol>
+      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Suggested stops')}: ${g.stops.length} stops">${g.stops.map((h) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div></li>`; }).join('')}</ol>
       ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
       ${C.routing.provider && g.stops.length > 1 ? `<button type="button" class="secondary" data-provider-path="${gi}">Show walking path for this trip</button>` : ''}`;
   }).join('') + (currentPlan.length > 1 ? '<div class="notice">🚧 These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>' : '')
@@ -219,7 +226,7 @@ function bind() {
     const report = e.target.closest('[data-report]');
     if (report) {
       const h = homes.find((x) => x.id === Number(report.dataset.report));
-      if (h) openDispute(h.id, h.address);
+      if (h) openDispute(h.id, h.address, 'report');
       return;
     }
     if (e.target.closest('[data-close-selected]')) { selectHome(null); return; }

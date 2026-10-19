@@ -2,7 +2,7 @@
 
 A small, self-hosted trick-or-treat map for **one neighborhood per install**. Families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, logo, colours, date, time zone, boundary, optional zones) without touching code.
 
-**Status:** `0.4.0-beta.2` — feature-complete beta; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.4.0-beta.3` — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|
@@ -98,6 +98,10 @@ Production readiness is blocked on real-world inputs, not code:
 - Production hostname, Cloudflare Tunnel route and a deliverability-tested SMTP relay.
 - Verified safe pedestrian crossings before enabling any routing groups/provider.
 - License confirmation (MIT proposed) and confirmation of the county data's reuse terms before the repository is made public.
+
+## Privacy and accessibility
+
+No ads, no analytics, no tracking: public pages set no cookies, and the only cookie is the sign-in session after a resident confirms a link. Favorites and filters stay in the visitor's browser. Every page links a privacy notice (`/privacy`), terms of use (`/terms`) and an accessibility statement (`/accessibility`); set `community.contact_url` (e.g. `mailto:`) so visitors can reach the organizer. The UI targets WCAG 2.1 AA and is checked automatically (axe-core) in light and dark; colour is never the only signal. These pages describe the software's behaviour — they are not legal advice.
 
 ## Important limitation
 

@@ -88,3 +88,51 @@ test('reduced motion and mobile register sheet screenshot', async ({ page }) => 
   expect(scroll).toBe('auto');
   await page.screenshot({ path: `${SHOTS}/demo-register-390.png` });
 });
+
+test('dark appearance follows the system setting on public pages (+ screenshots)', async ({ browser }) => {
+  for (const [w, h] of [[375, 812], [1440, 1000]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: 'dark' });
+    const page = await ctx.newPage();
+    await politeTiles(page);
+    await page.goto(DEMO + '/');
+    await page.waitForTimeout(800);
+    const look = await page.evaluate(() => {
+      const lum = (c) => { const [r, g, b] = c.match(/\d+/g).map(Number); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+      const bg = getComputedStyle(document.body).backgroundColor;
+      return { scheme: getComputedStyle(document.documentElement).colorScheme, body: lum(bg), card: lum(getComputedStyle(document.querySelector('.home-card')).backgroundColor),
+        text: lum(getComputedStyle(document.querySelector('.home-card b')).color), tool: lum(getComputedStyle(document.querySelector('.map-tools button')).backgroundColor),
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    });
+    expect(look.scheme).toBe('dark');
+    expect(look.body).toBeLessThan(40);
+    expect(look.card).toBeLessThan(60);
+    expect(look.tool).toBeLessThan(60);
+    expect(look.text).toBeGreaterThan(200);
+    expect(look.overflow).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: `${SHOTS}/demo-dark-${w}.png`, fullPage: w <= 430 });
+    await ctx.close();
+  }
+});
+
+test('form check chips are compact and aligned (register step 2)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(DEMO + '/#list-my-house');
+  await page.getByRole('button', { name: /Can’t find your address/ }).click();
+  await page.locator('#seHouse').fill('4321');
+  await page.locator('#seStreet').selectOption({ index: 1 });
+  await page.waitForTimeout(400);
+  const box = await page.locator('#pinMap .leaflet-overlay-pane path').first().boundingBox();
+  await page.mouse.click(box.x + box.width * 0.4, box.y + box.height * 0.6);
+  await page.getByRole('button', { name: 'Next: your stop →' }).click();
+  const chips = await page.locator('#registerForm .check-chip').evaluateAll((els) => els.filter((e) => e.offsetParent).map((e) => {
+    const r = e.getBoundingClientRect(); const i = e.querySelector('input').getBoundingClientRect();
+    return { h: Math.round(r.height), iw: Math.round(i.width), ih: Math.round(i.height), centred: Math.abs((i.top + i.height / 2) - (r.top + r.height / 2)) < 2 };
+  }));
+  expect(chips.length).toBeGreaterThan(4);
+  for (const c of chips) {
+    expect(c.h).toBeLessThanOrEqual(44);
+    expect([c.iw, c.ih]).toEqual([16, 16]);
+    expect(c.centred).toBe(true);
+  }
+  expect(new Set(chips.map((c) => c.h)).size).toBe(1);
+});

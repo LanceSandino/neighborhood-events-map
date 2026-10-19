@@ -11,7 +11,8 @@ let zones = [];
 function shell() {
   $('#admin-addresses').innerHTML = `
     <div class="panel"><div class="toolbar"><input type="search" id="q" placeholder="Search address or owner email" aria-label="Search addresses"><button type="button" class="secondary" id="btnSearch">Search</button><span id="total" class="form-caption"></span></div>
-      <div class="table-wrap"><table class="data"><thead><tr><th>Address</th><th>Zone</th><th>Location</th><th>Owner (private)</th><th>Listing</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Address</th><th>Zone</th><th>Location</th><th>Owner (private)</th><th>Listing</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="pager"><button type="button" class="secondary" id="btnPrev">← Previous</button><span id="pageInfo" class="form-caption"></span><button type="button" class="secondary" id="btnNext">Next →</button></div></div>
     <div class="panel"><h2>Add an address</h2><form id="addForm" class="form-grid" novalidate>
       <div class="field full"><label for="aAddr">Address</label><input id="aAddr" placeholder="123 Pumpkin Ln"></div>
       <div class="field"><label for="aLat">Latitude</label><input id="aLat" inputmode="decimal"></div>
@@ -42,11 +43,23 @@ function row(a) {
 }
 
 let rows = [];
+let page = 0;
+const PAGE = 25;
+function renderPage() {
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  page = Math.min(page, pages - 1);
+  $('#rows').innerHTML = rows.slice(page * PAGE, page * PAGE + PAGE).map(row).join('') || '<tr><td colspan="6">No matches.</td></tr>';
+  $('#pageInfo').textContent = rows.length ? `${page * PAGE + 1}–${Math.min(rows.length, page * PAGE + PAGE)} of ${rows.length}` : '';
+  $('#btnPrev').disabled = page === 0;
+  $('#btnNext').disabled = page >= pages - 1;
+  $('.pager').classList.toggle('hide', rows.length <= PAGE);
+}
 async function search() {
   const res = await call(`/api/admin/addresses?q=${encodeURIComponent($('#q').value)}`);
   rows = res.addresses;
-  $('#total').textContent = `${res.total} addresses total · showing ${rows.length}`;
-  $('#rows').innerHTML = rows.map(row).join('') || '<tr><td colspan="6">No matches.</td></tr>';
+  page = 0;
+  $('#total').textContent = `${res.total} addresses${rows.length < res.total ? ` · first ${rows.length} shown — refine the search` : ''}`;
+  renderPage();
 }
 
 async function act(id, action) {
@@ -95,6 +108,8 @@ async function importCsv(dry) {
   shell();
   $('#q').value = new URLSearchParams(location.search).get('q') || '';
   $('#btnSearch').addEventListener('click', search);
+  $('#btnPrev').addEventListener('click', () => { page -= 1; renderPage(); });
+  $('#btnNext').addEventListener('click', () => { page += 1; renderPage(); });
   $('#q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
   $('#rows').addEventListener('click', (e) => { const b = e.target.closest('button[data-act]'); if (b) act(Number(b.closest('tr').dataset.id), b.dataset.act); });
   $('#addForm').addEventListener('submit', async (e) => {

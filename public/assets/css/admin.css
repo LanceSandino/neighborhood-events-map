@@ -2,7 +2,7 @@
  * @module assets/css/admin.css
  * @description Organizer console layout on top of app.css tokens.
  */
-body.admin { background: #f8f7f4; }
+body.admin { background: var(--bg); }
 .admin-top { background: var(--night); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 22px; flex-wrap: wrap; }
 .admin-top .brand { padding: 0; }
 .admin-tabs { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
@@ -13,29 +13,39 @@ body.admin { background: #f8f7f4; }
 .admin-main { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
 .admin-main h1 { font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 14px; }
 .admin-main h2 { font-size: 18px; font-weight: 900; margin: 18px 0 8px; }
-.cards-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 12px 0; }
-.stat { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.cards-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 12px 0; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
 .stat b { display: block; font-size: 22px; font-weight: 900; font-family: Nunito, sans-serif; }
-.stat span { font-size: 11px; color: #858090; }
-.panel { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 12px 0; box-shadow: var(--shadow); }
+.stat span { font-size: 11px; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 12px 0; box-shadow: var(--shadow); }
+.panel > h2:first-child, .panel > h3:first-child { margin-top: 0; }
 .checklist { list-style: none; padding: 0; margin: 0; }
-.checklist li { padding: 8px 0; border-bottom: 1px solid #f1ede9; display: flex; gap: 10px; align-items: baseline; }
+.checklist li { padding: 8px 0; border-bottom: 1px solid var(--border-soft); display: flex; gap: 10px; align-items: baseline; }
+.checklist li > span:first-child { flex: 0 0 14px; text-align: center; }
 .checklist li:last-child { border-bottom: 0; }
-.ok { color: #2f6b4d; font-weight: 900; } .todo { color: #a2453c; font-weight: 900; } .warn { color: #8e5a2a; font-weight: 900; }
+.ok { color: var(--ok-fg); font-weight: 900; } .todo { color: var(--danger-fg); font-weight: 900; } .warn { color: var(--paused-fg); font-weight: 900; }
 table.data { width: 100%; border-collapse: collapse; font-size: 12px; }
-table.data th, table.data td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #f1ede9; vertical-align: top; }
-table.data th { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #8d8691; }
+table.data th, table.data td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+table.data th { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+table.data td.nowrap, table.data td:first-child { white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
+.pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.row-actions button { font-size: 11px; padding: 6px 9px; min-height: 32px; border-radius: 8px; border: 1px solid #e6e1df; background: #fff; font-weight: 800; }
+.row-actions button { font-size: 11px; padding: 6px 9px; min-height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-weight: 800; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
-.toolbar input[type=search], .toolbar select { border: 1px solid #e5dfe1; border-radius: 10px; padding: 9px 12px; min-height: 40px; }
+.toolbar input[type=search], .toolbar select { border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; height: 44px; }
+.toolbar input[type=search] { min-width: 280px; flex: 1 1 280px; max-width: 420px; }
+.toolbar button { height: 44px; min-height: 0; padding-top: 0; padding-bottom: 0; }
 .editor { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; }
-.editor-map { height: 640px; border-radius: 14px; border: 1px solid var(--line); }
+.editor-map { height: calc(100vh - 170px); min-height: 640px; border-radius: 14px; border: 1px solid var(--line); position: sticky; top: 16px; }
+.editor-side .modal-actions > * { flex: 1 1 100%; }
 .editor-side .panel { margin-top: 0; }
 .layer-list { list-style: none; margin: 0; padding: 0; font-size: 12px; }
-.layer-list li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1ede9; }
+.layer-list li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-soft); }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
-.zones-table input, .zones-table select { width: 100%; border: 1px solid #e5dfe1; border-radius: 8px; padding: 6px; min-height: 34px; }
-pre.json { background: #faf8f6; border: 1px solid #eee9e6; border-radius: 10px; padding: 10px; font-size: 11px; max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-@media (max-width: 900px) { .editor { grid-template-columns: 1fr; } .editor-map { height: 460px; } }
+.zones-table input, .zones-table select { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-height: 34px; }
+.zones-table input[type=checkbox] { width: 16px; height: 16px; min-height: 0; padding: 0; accent-color: var(--orange); }
+pre.json { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 11px; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.reason { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; margin: 8px 0; }
+@media (max-width: 1100px) { .admin-tabs { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; } .admin-tabs a { white-space: nowrap; } }
+@media (max-width: 900px) { .editor { grid-template-columns: 1fr; } .editor-map { height: 460px; min-height: 0; position: static; } }

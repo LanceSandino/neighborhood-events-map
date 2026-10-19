@@ -118,7 +118,12 @@ async function load() {
     }
     const list = $('#homes');
     list.innerHTML = '';
-    if (!me.homes.length) list.innerHTML = '<p class="empty">You don’t manage any homes yet. <a href="/#list-my-house">List your home</a>.</p>';
+    if (!me.homes.length) list.innerHTML = '';
+    const another = $('#listAnother');
+    if (another && me.homes.length) {
+      $('[data-f="title"]', another).textContent = 'List another home';
+      $('[data-f="text"]', another).textContent = 'Manage more than one property? Use the map’s “List your home” form while signed in, or contact the organizer.';
+    }
     for (const h of me.homes) list.appendChild(homeCard(h, me.event_date));
   } catch (e) {
     if (!handleAuthError(e)) $('#homes').innerHTML = `<p class="notice danger">${esc(friendlyError(e))}</p>`;

@@ -64,7 +64,7 @@ function render() {
         <option value="registry" ${s.registration.address_mode === 'registry' ? 'selected' : ''}>Reviewed address list only</option>
         <option value="self_entry" ${s.registration.address_mode === 'self_entry' ? 'selected' : ''}>Street list + resident pin</option>
         <option value="both" ${s.registration.address_mode === 'both' ? 'selected' : ''}>Both</option></select></div>
-      <div class="field"><label><input type="checkbox" id="rEnabled" ${s.registration.enabled ? 'checked' : ''}> Allow new listings</label></div>
+      <div class="field"><span class="label">Listings</span><label class="check-chip"><input type="checkbox" id="rEnabled" ${s.registration.enabled ? 'checked' : ''}> Allow new listings</label></div>
       ${area('rStreets', 'Allowed streets (one per line, for self-entry)', s.registration.street_allowlist.join('\n'))}
       ${field('rIdle', 'Sign-in session idle minutes (5–240)', s.registration.session_idle_minutes, 'type="number" min="5" max="240"')}
       ${field('rLink', 'Email link minutes (5–60)', s.registration.email_magic_link_minutes, 'type="number" min="5" max="60"')}
@@ -76,7 +76,7 @@ function render() {
       ${field('mZoom', 'Default zoom', s.map.zoom, 'type="number" min="10" max="19"')}
       ${area('mNotes', 'Crossing / safety notes (one per line)', s.map.crossing_notes.join('\n'))}
       ${area('rGroups', 'Walkable zone groups (one group per line, keys separated by commas)', s.routing.groups.map((g) => g.join(', ')).join('\n'), 'Zones in different groups are always shown as separate trips. Only group zones you have verified are safely walkable together.')}
-      <div class="field full"><label><input type="checkbox" id="rVerified" ${s.routing.crossings_verified ? 'checked' : ''}> I verified safe pedestrian crossings for the groups above</label></div>
+      <div class="field full"><label class="check-chip"><input type="checkbox" id="rVerified" ${s.routing.crossings_verified ? 'checked' : ''}> I verified safe pedestrian crossings for the groups above</label></div>
     </div></div>
     <div class="modal-actions"><button type="submit" class="primary">Save settings</button></div>
   </form>

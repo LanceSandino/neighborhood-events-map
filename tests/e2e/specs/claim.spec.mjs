@@ -78,7 +78,7 @@ test('first verified claimant publishes immediately; second sees already-claimed
   await bobPage.goto(bobMail.url);
   await bobPage.getByRole('button', { name: 'Confirm sign-in and publish' }).click();
   await expect(bobPage.locator('#claimOutcome')).toContainText('already claimed');
-  await expect(bobPage.locator('#homes')).toContainText('You don’t manage any homes yet');
+  await expect(bobPage.locator('#dashboard')).toContainText('You don’t manage any homes yet');
 
   // A third neighbor gets the conflict up front and files a review request (PoW in browser).
   const carolCtx = await browser.newContext();
@@ -89,6 +89,15 @@ test('first verified claimant publishes immediately; second sees already-claimed
   guard.assertClean();
   await bobCtx.close();
   await carolCtx.close();
+
+  // Leave the shared demo as we found it (no test listing in later screenshots): Alice gives the home up.
+  await page.goto(DEMO + '/me');
+  const released = await page.evaluate(async (id) => {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    const r = await fetch(`/api/me/homes/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify({ confirm: 'RELEASE' }) });
+    return r.status;
+  }, mine.id);
+  expect(released).toBe(200);
 });
 
 test('report a listing from the map files a dispute that reaches the organizer inbox', async ({ page, request }) => {

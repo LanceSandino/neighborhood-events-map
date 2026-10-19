@@ -5,6 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f7f4">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#15141d">
   <meta name="csrf-token" content="{{ csrf_token('nhm') }}">
   <title>{{ pages[page] }} · Organizer · {{ c.community.name }}</title>
   <link rel="icon" href="{{ c.branding.logo_url ?? '/assets/img/favicon.svg' }}">
@@ -28,7 +31,7 @@
   <h1>{{ pages[page] }}</h1>
   <div id="flash" role="status" aria-live="polite"></div>
   {% block body %}{% endblock %}
-  <p class="footer-version">v{{ app_version }}</p>
+  <p class="footer-version">v{{ app_version }} · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/accessibility">Accessibility</a></p>
 </main>
 {% block scripts %}{% endblock %}
 </body>

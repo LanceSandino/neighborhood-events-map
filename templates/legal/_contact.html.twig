@@ -1,0 +1,6 @@
+{# How to reach the organizer about privacy, accessibility or a listing. #}
+{%- if c.community.contact_url -%}
+  <a href="{{ c.community.contact_url }}" rel="noopener">contact the organizer</a>
+{%- else -%}
+  contact the organizer of {{ c.community.name }} (the person who shared this map with you)
+{%- endif -%}

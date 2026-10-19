@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+{% set nav = 'info' %}
+{% block title %}Accessibility · {{ c.community.name }} Halloween{% endblock %}
+{% block body %}
+<article class="page-card legal">
+  <div class="eyebrow">♿ Accessibility</div>
+  <h1>Accessibility statement</h1>
+  <p class="legal-lead">We want every family to be able to use this map. It is designed to meet the <b>Web Content Accessibility Guidelines (WCAG) 2.1, level AA</b>, and is tested with automated accessibility checks on every change.</p>
+
+  <h2>What works today</h2>
+  <ul>
+    <li>Everything on the map is also in the list of homes, so the site works with a keyboard, a screen reader, or with the map turned off.</li>
+    <li>Full keyboard use, a “Skip to content” link and a clearly visible focus outline.</li>
+    <li>Colour is never the only signal: pins carry icons (🎃 treats, 🍭 gentle, 👻 spooky) and every tag has words.</li>
+    <li>Text contrast of at least 4.5:1, light and dark appearance that follows your device setting, and zoom up to 200% without losing content.</li>
+    <li>Animations are switched off when your device asks for reduced motion; touch targets are at least 44 pixels.</li>
+    <li>Sensory filters (no jump scares, no flashing lights, no loud audio) help plan a calm route.</li>
+  </ul>
+
+  <h2>Known limitations</h2>
+  <ul>
+    <li>The map background comes from OpenStreetMap and is a picture; use the list for the same information.</li>
+    <li>Sensory labels are reported by residents and may not be complete.</li>
+  </ul>
+
+  <h2>Tell us about a problem</h2>
+  <p>If something is hard to use, or you need information in another format, please {% include 'legal/_contact.html.twig' %}. Say which page and what happened; we will try to fix it or provide the information another way.</p>
+
+  <p class="form-caption">Last reviewed {{ 'now'|date('F Y') }}.</p>
+  <div class="modal-actions"><a class="primary" href="/">Back to map</a></div>
+</article>
+{% endblock %}

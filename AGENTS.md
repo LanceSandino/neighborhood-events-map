@@ -20,7 +20,7 @@ This file is self-contained: anyone (or any agent such as Codex or Claude Code) 
 - Geometry is validated on the server (`App\Geo`); browser checks are hints only. GeoJSON order is `[longitude, latitude]`.
 - Tokens and secrets never appear in logs, Git, CI output or analytics. `.env*` (except `.env.example`, `.env.dist`, `.env.test`) and `deploy/private/` stay untracked.
 - No inline `<script>`/`style=""` (strict CSP). Escape all user content.
-- UI must stay faithful to the original mock (`docs/design/`): check 375, 430, 768 and 1440 px, keyboard use, reduced motion, 44 px touch targets, no horizontal scroll.
+- UI must stay faithful to the original mock (`docs/design/`): check 375, 430, 768 and 1440 px in **light and dark**, keyboard use, reduced motion, 44 px touch targets, no horizontal scroll. Use the semantic colour tokens in `app.css` (`--surface`, `--text`, `--muted`, `--border`, tag/notice tokens…); never hard-code a colour outside the token blocks. Follow Vercel's Web Interface Guidelines for forms, focus, touch and typography.
 
 ## 3. Structure
 

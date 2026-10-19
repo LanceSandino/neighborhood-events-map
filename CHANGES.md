@@ -170,4 +170,15 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "v0.4.0-beta.2"
   author: "Lance Sandino"
   timestamp: "2026-10-19T04:00:00Z"
+
+- id: CU-20261019-05
+  type: feature
+  title: "Light/dark appearance, accessibility and privacy pages, and measured UI polish across phone, tablet and desktop"
+  description: "Colours moved to semantic tokens with a dark palette under prefers-color-scheme (color-scheme and theme-color metas, explicit select colours, softened map tiles). Fixes from a measured visual audit: field/label specificity that stretched check chips and checkboxes, inherited label fonts in the dashboard form, mismatched control/pill heights, mobile stat tiles, map footer over the credit, off-screen mobile preview, card spacing, wrapped button rows, admin header at tablet width, editor height, dates, contrast, hover states, Vercel interface-guideline items (tap highlight, touch-action, overscroll containment, tabular numbers, balanced headings, email input hints). E2E suite releases its test listing."
+  impact: low
+  affected_modules: ["public/assets/css/app.css", "public/assets/css/admin.css", "public/assets/js/home.js", "public/assets/js/me.js", "public/assets/js/register.js", "public/assets/js/lib/render.js", "public/assets/js/admin/", "templates/"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs (dark appearance; check chips; overflow/targets at 4 widths)", "tests/e2e/specs/a11y.spec.mjs (axe WCAG 2.1 AA, light and dark)", "tests/Integration/LegalPagesTest.php", "tests/Unit/Community/BrandPaletteTest.php", "tests/e2e/specs/claim.spec.mjs (cleanup)", "tests/js/lib.test.mjs"]
+  commit_ref: "v0.4.0-beta.3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T05:00:00Z"
 ```

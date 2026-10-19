@@ -10,4 +10,4 @@ Source of truth: the original HTML mock (`prototype/index.html`) and five screen
 
 Deliberate changes from the mock: real Leaflet/OSM map instead of the SVG sketch; zoom/locate tools; status chips (handing out / starts later / paused / out of candy / done); "Report this listing"; brand colours from configuration; no "Demo home" data unless the fictional demo is explicitly enabled.
 
-Screenshots of this build (Playwright, `bin/e2e.sh`): `screenshots/demo-{375,430,768,1440}.png` (fictional Maple Hollow demo), `screenshots/ventura-{375,430,768,1440}.png` (Ventura Reserve real-plat example, boundary pending review, no listings), `screenshots/demo-register-390.png`, `screenshots/ventura-admin-{overview,map}.png`.
+Appearance follows the browser/system light or dark setting (`demo-dark-{375,1440}.png`). Screenshots of this build (Playwright, `bin/e2e.sh`): `screenshots/demo-{375,430,768,1440}.png` (fictional Maple Hollow demo), `screenshots/ventura-{375,430,768,1440}.png` (Ventura Reserve real-plat example, boundary pending review, no listings), `screenshots/demo-register-390.png`, `screenshots/ventura-admin-{overview,map}.png`.

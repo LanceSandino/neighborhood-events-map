@@ -1,0 +1,40 @@
+{% extends 'base.html.twig' %}
+{% set nav = 'info' %}
+{% block title %}Terms of use · {{ c.community.name }} Halloween{% endblock %}
+{% block body %}
+<article class="page-card legal">
+  <div class="eyebrow">📜 Terms</div>
+  <h1>Terms of use</h1>
+  <p class="legal-lead">{{ c.community.name }} Halloween is a free, volunteer-run community map. By using it you agree to these terms.</p>
+
+  <h2>Listings are self-reported</h2>
+  <p>Homes, hours, treats and sensory details are entered by residents and can be wrong or change at any time. Nothing on this map is checked or guaranteed by the organizer.</p>
+
+  <h2>Stay safe</h2>
+  <ul>
+    <li>Children should be supervised by a responsible adult.</li>
+    <li>Check treats and ingredients yourself, especially for allergies — “non-food” and other labels are only what residents tell us.</li>
+    <li>The suggested stop order is <b>not walking directions</b>. Use sidewalks and marked crossings, follow traffic and gate rules, and respect private property and anyone who isn’t participating.</li>
+    <li>{{ c.community.gate_notice ?: 'This site does not grant access to any gated or private area.' }}</li>
+  </ul>
+
+  <h2>If you list a home</h2>
+  <ul>
+    <li>List only a home you live at or are allowed to represent, and keep details accurate and family-friendly.</li>
+    <li>Your address and listing details are public while shown. Don’t include children’s names or anything you wouldn’t post on your front door.</li>
+    <li>The organizer may hide, transfer or remove a listing, for example after a review request.</li>
+  </ul>
+
+  <h2>Fair use</h2>
+  <p>Don’t misuse the site: no automated scraping, spam, attempts to break security, or listings meant to mislead. Requests that look automated may be slowed or refused.</p>
+
+  <h2>No warranty</h2>
+  <p>The site is provided “as is”, free of charge, without warranties of any kind. To the fullest extent permitted by law, the organizer and the software’s authors are not liable for any loss, injury or damage arising from use of the site or reliance on a listing. Nothing here limits rights that cannot be limited by law.</p>
+
+  <h2>Map data and software</h2>
+  <p>Map data © <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap contributors</a> (ODbL). Questions or problems: {% include 'legal/_contact.html.twig' %}.</p>
+
+  <p class="form-caption">Last updated {{ 'now'|date('F Y') }}.</p>
+  <div class="modal-actions"><a class="secondary" href="/privacy">Privacy notice</a><a class="primary" href="/">Back to map</a></div>
+</article>
+{% endblock %}

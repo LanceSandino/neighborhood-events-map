@@ -10,7 +10,7 @@
 ```bash
 git clone https://github.com/<owner>/neighborhood-halloween-map.git /srv/halloween
 cd /srv/halloween
-git checkout v0.4.0-beta.2            # or the release tag you are deploying
+git checkout v0.4.0-beta.3            # or the release tag you are deploying
 cp .env.example .env && chmod 600 .env
 ```
 
@@ -57,6 +57,7 @@ ingress:
 ## 4. Verify
 
 - Visit the hostname on a phone; check the event badge, map tiles and attribution.
+- Set **Community → Contact link** (e.g. `mailto:organizer@…`) so the privacy, terms and accessibility pages give visitors a way to reach you.
 - Sign in as organizer, review and approve the boundary, import addresses, open listings.
 - List a test home with a real email, confirm, edit, release it.
 - Confirm a backup file appears in `./backups` (mode `0600`) and practice a restore (see backup-restore runbook).

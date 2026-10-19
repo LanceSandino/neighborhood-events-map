@@ -76,6 +76,8 @@ function goTo(n) {
   if (n > step && step === 1 && !validateAddress()) return;
   if (n > step && step === 2 && !validateDetails()) return;
   step = n;
+  const intro = $('#registerIntro');
+  if (intro) intro.hidden = n > 1; // the explanation matters once; later steps keep the space for the form
   form.querySelectorAll('[data-step]').forEach((fs) => { fs.hidden = Number(fs.dataset.step) !== n; });
   document.querySelectorAll('[data-step-dot]').forEach((d) => d.classList.toggle('done', Number(d.dataset.stepDot) <= n));
   const first = form.querySelector(`[data-step="${n}"] input, [data-step="${n}"] select, [data-step="${n}"] textarea`);
@@ -206,11 +208,16 @@ async function submit() {
 
 function initPinMap() {
   if (pinMap || !window.L || !$('#pinMap')) return;
-  pinMap = L.map('pinMap', { scrollWheelZoom: false });
+  pinMap = L.map('pinMap', { scrollWheelZoom: false, zoomSnap: 0.25 });
   L.tileLayer(C.map.tiles.url, { maxZoom: C.map.tiles.max_zoom, attribution: esc(C.map.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(pinMap);
   if (C.map.boundary) L.geoJSON(C.map.boundary, { style: { color: '#f07936', weight: 2, fillOpacity: 0.04 }, interactive: false }).addTo(pinMap);
   const b = C.map.bbox;
-  if (b) pinMap.fitBounds([[b.minLat, b.minLon], [b.maxLat, b.maxLon]]); else if (C.map.center) pinMap.setView([C.map.center.lat, C.map.center.lon], C.map.zoom);
+  const fit = () => {
+    pinMap.invalidateSize();
+    if (b) pinMap.fitBounds([[b.minLat, b.minLon], [b.maxLat, b.maxLon]], { padding: [12, 12] }); else if (C.map.center) pinMap.setView([C.map.center.lat, C.map.center.lon], C.map.zoom);
+  };
+  fit();
+  requestAnimationFrame(fit); // the sheet may still be laying out when the map is created
   pinMap.on('click', (e) => {
     if (pinMarker) pinMarker.setLatLng(e.latlng);
     else pinMarker = L.marker(e.latlng, { draggable: true, keyboard: true, title: 'Your house' }).addTo(pinMap);
@@ -222,9 +229,21 @@ function initPinMap() {
 /* ---------------- Dispute / report ---------------- */
 let disputeAddressId = null;
 
-export function openDispute(addressId, address) {
+const DISPUTE_TEXT = {
+  claimed: { title: 'Ask the organizer to review', after: ' is already claimed. Tell the organizer why you think this is a mistake. They review requests by hand; nothing changes automatically and the current owner is never revealed.' },
+  report: { title: 'Report this listing', after: ': tell the organizer what is wrong with this listing (wrong address, unsafe or offensive details). They review reports by hand; nothing changes automatically.' },
+};
+
+/** @param {'claimed'|'report'} mode claimed = "this home is already claimed" review; report = a listing on the map */
+export function openDispute(addressId, address, mode = 'claimed') {
   disputeAddressId = addressId;
-  $('#disputeAddress').textContent = address;
+  const text = DISPUTE_TEXT[mode] || DISPUTE_TEXT.claimed;
+  $('#disputeTitle').textContent = text.title;
+  const intro = $('#disputeIntro');
+  const b = document.createElement('b');
+  b.id = 'disputeAddress';
+  b.textContent = address;
+  intro.replaceChildren(b, document.createTextNode(text.after));
   $('#disputeForm').hidden = false;
   show($('#disputeSuccess'), false);
   openModal('disputeModal');
