@@ -15,7 +15,7 @@ final class ChangelogReaderTest extends TestCase
 {
     public function testParsesReleasesSectionsAndContinuationLines(): void
     {
-        $md = "# Changelog\n\nIntro.\n\n## [Unreleased]\n\n## [1.2.0] - 2026-10-01\n\n### Added\n- **Bold** feature with `code` and [a link](https://example.org).\n- Long item\n  continued here.\n\n### Fixed\n- A bug.\n\n## [1.1.0] - 2026-09-01\n\n### Changed\n- Older change.\n";
+        $md = "# Changelog\n\nIntro.\n\n## [Unreleased]\n\n### Added\n- Not released yet.\n\n## [1.2.0] - 2026-10-01\n\n### Added\n- **Bold** feature with `code` and [a link](https://example.org).\n- Long item\n  continued here.\n\n### Fixed\n- A bug.\n\n## [1.1.0] - 2026-09-01\n\n### Changed\n- Older change.\n";
         $r = ChangelogReader::parse($md);
         self::assertSame(['1.2.0', '1.1.0'], array_column($r, 'version'));
         self::assertSame('2026-10-01', $r[0]['date']);

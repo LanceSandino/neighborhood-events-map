@@ -1,0 +1,22 @@
+# Staging overlay: the PRODUCTION image and settings (OPcache, preload, read-only containers, no debug),
+# plus Mailpit so sign-in emails can be read while testing behind a tunnel before real SMTP is set up.
+# Usage: COMPOSE_FILE=compose.yaml:compose.staging.yaml in .env, then docker compose up -d --build --wait
+# Mailpit UI: http://127.0.0.1:${MAILPIT_UI_PORT:-8025} (never expose it publicly).
+services:
+  app:
+    environment:
+      MAILER_DSN: smtp://mailpit:1025
+
+  maintenance:
+    environment:
+      MAILER_DSN: smtp://mailpit:1025
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_BIND:-127.0.0.1}:${MAILPIT_UI_PORT:-8025}:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks: [backend, egress]

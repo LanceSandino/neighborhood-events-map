@@ -6,6 +6,12 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Added
+- `compose.staging.yaml`: run the production image and settings with Mailpit for sign-in emails, to test behind a tunnel before real SMTP is set up.
+
+### Changed
+- "What's new" never shows unreleased changes.
+
 ## [0.5.0-beta.4] - 2026-10-19
 
 ### Changed

@@ -10,7 +10,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * @module About/ChangelogReader
  * @description Reads the latest releases from CHANGELOG.md (Keep a Changelog format) for the public
  *     "What's new" dialog and page. Markdown is reduced to plain text (links keep their label); Twig
- *     escapes the result. The empty "Unreleased" section is skipped.
+ *     escapes the result. The "Unreleased" section is never shown.
  *
  * @input path to CHANGELOG.md
  * @output list<array{version:string, date:?string, sections:list<array{title:string, items:list<string>}>}>
@@ -48,7 +48,7 @@ final class ChangelogReader
                 continue;
             }
             $sections = self::sections($block);
-            if ('Unreleased' !== $h[1] || [] !== $sections) {
+            if ('Unreleased' !== $h[1]) { // visitors only see released versions
                 $releases[] = ['version' => $h[1], 'date' => $h[2] ?? null, 'sections' => $sections];
             }
         }

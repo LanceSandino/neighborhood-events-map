@@ -41,6 +41,10 @@ docker compose exec app php bin/console app:admin:grant organizer@example.org
 
 Migrations run automatically on start (`MIGRATE_ON_START=1`). The container refuses to start with a placeholder or short `APP_SECRET`.
 
+### Staging behind a tunnel (production image, test email)
+
+Before real SMTP is ready, set `COMPOSE_FILE=compose.yaml:compose.staging.yaml` in `.env`: the stack runs the production image and settings (OPcache, preload, no debug, read-only containers, allowed host = `APP_BASE_URL` only) and sends email to Mailpit (`MAILPIT_UI_PORT`, local only). The site answers only on its real hostname, so test it through the tunnel; sign-in requests from other addresses are refused by design. Remove the overlay line once `MAILER_DSN` points at a real relay.
+
 ### Performance settings (production image)
 
 - **OPcache** is on, never re-checks files, and **preloads** Symfony's hot classes when PHP-FPM starts (`docker/php/php-prod.ini`). Deploys clear it by recreating the containers (see the upgrade runbook).
