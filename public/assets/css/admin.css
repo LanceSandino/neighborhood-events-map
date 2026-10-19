@@ -49,3 +49,6 @@ pre.json { background: var(--surface-3); border: 1px solid var(--border); border
 .reason { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; margin: 8px 0; }
 @media (max-width: 1100px) { .admin-tabs { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; } .admin-tabs a { white-space: nowrap; } }
 @media (max-width: 900px) { .editor { grid-template-columns: 1fr; } .editor-map { height: 460px; min-height: 0; position: static; } }
+.link-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+.link-row input { border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; height: 44px; background: var(--surface); color: var(--text); }
+@media (max-width: 660px) { .link-row { grid-template-columns: 1fr auto; } .link-row input[data-l=url] { grid-column: 1 / -1; grid-row: 2; } }

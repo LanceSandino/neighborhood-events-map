@@ -80,4 +80,30 @@ final class CommunitySchemaTest extends TestCase
         self::assertSame('17:00', $s['event']['starts_at']);
         self::assertSame('registry', $s['registration']['address_mode']);
     }
+
+    public function testAboutAccessAndLinks(): void
+    {
+        $s = new CommunitySchema();
+        $base = Yaml::parseFile(self::root().'/config/community.example.yaml');
+        $base['community']['about'] = "First paragraph.\r\n\r\n\r\nSecond\x07 one.";
+        $base['community']['access'] = 'gated_open';
+        $base['community']['links'] = [['label' => 'Facebook group', 'url' => 'https://www.facebook.com/groups/example'], ['label' => '', 'url' => '']];
+        $n = $s->normalize($base);
+        self::assertSame("First paragraph.\n\nSecond  one.", $n['community']['about'], 'paragraphs kept, control characters removed');
+        self::assertSame('gated_open', $n['community']['access']);
+        self::assertSame([['label' => 'Facebook group', 'url' => 'https://www.facebook.com/groups/example']], $n['community']['links'], 'empty console rows are dropped');
+        self::assertSame('unspecified', $s->normalize(Yaml::parseFile(self::root().'/config/community.example.yaml'))['community']['access']);
+
+        $base['community']['access'] = 'open-house';
+        $base['community']['links'] = [['label' => 'Bad', 'url' => 'javascript:alert(1)'], ['label' => '', 'url' => 'https://example.org']];
+        try {
+            $s->normalize($base);
+            self::fail('expected ConfigException');
+        } catch (ConfigException $e) {
+            $joined = implode("\n", $e->errors);
+            self::assertStringContainsString('community.access must be one of', $joined);
+            self::assertStringContainsString('community.links[0] needs a label and an https:// or mailto: address', $joined);
+            self::assertStringContainsString('community.links[1]', $joined);
+        }
+    }
 }

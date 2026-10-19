@@ -1,0 +1,34 @@
+{% extends 'base.html.twig' %}
+{% set nav = 'about' %}
+{% block title %}About · {{ c.community.name }} Halloween{% endblock %}
+{% block body %}
+{% set access = access_info(c.community.access ?? null) %}
+<article class="page-card legal about">
+  <div class="eyebrow">{{ c.branding.brand_emoji }} About</div>
+  <h1>{{ c.community.name }} Halloween</h1>
+  {% if c.community.subtitle %}<p class="legal-lead">{{ c.community.subtitle }}</p>{% endif %}
+
+  <div class="about-facts">
+    <div class="about-fact"><span aria-hidden="true">🎃</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; each home sets its own.</p></div></div>
+    {% if c.community.locality %}<div class="about-fact"><span aria-hidden="true">📍</span><div><b>{{ c.community.locality }}{% if c.community.region %}, {{ c.community.region }}{% endif %}</b><p>{{ c.map.boundary_status == 'approved' ? 'Homes inside the neighborhood outline can take part.' : 'The neighborhood outline is still being reviewed.' }}</p></div></div>{% endif %}
+    {% if access %}<div class="about-fact"><span aria-hidden="true">{{ access.icon }}</span><div><b>{{ access.title }}</b><p>{{ access.text }}</p></div></div>{% endif %}
+  </div>
+
+  {% if c.community.gate_notice %}<div class="notice" role="note">{{ c.community.gate_notice }}</div>{% endif %}
+
+  {% if c.community.about %}
+    {% for para in c.community.about|split("\n\n") %}<p>{{ para|nl2br }}</p>{% endfor %}
+  {% else %}
+    <p>A neighborhood map of homes handing out treats on Halloween, with sensory notes and a suggested stop order for families.</p>
+  {% endif %}
+
+  {% if c.community.links ?? [] %}
+    <h2>Links</h2>
+    <ul class="about-links">{% for l in c.community.links %}<li><a href="{{ l.url }}" rel="noopener noreferrer">{{ l.label }}</a></li>{% endfor %}</ul>
+  {% endif %}
+
+  <h2>Questions?</h2>
+  <p>To ask about the event, a listing or your data, {% include 'legal/_contact.html.twig' %}.</p>
+  <div class="modal-actions"><a class="secondary" href="/#list-my-house" data-action="register">🏠 List your home</a><a class="primary" href="/">Open the map</a></div>
+</article>
+{% endblock %}

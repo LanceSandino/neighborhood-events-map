@@ -130,11 +130,13 @@
     <div class="eyebrow">🎃 Community guide</div>
     <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
     <p class="introtext">Halloween is {{ event_badge(c.event.date)|lower|capitalize }}. Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} ({{ c.event.timezone }}); each home sets its own hours.</p>
-    {% if c.community.gate_notice %}<div class="notice">🚪 {{ c.community.gate_notice }}</div>{% else %}<div class="notice">🚪 This site does not grant access to gated areas.</div>{% endif %}
+    {% set access = access_info(c.community.access ?? null) %}
+    {% if access %}<div class="notice info">{{ access.icon }} <b>{{ access.title }}.</b> {{ access.text }}</div>{% endif %}
+    {% if c.community.gate_notice %}<div class="notice">🚪 {{ c.community.gate_notice }}</div>{% elseif not access %}<div class="notice">🚪 This site does not grant access to gated areas.</div>{% endif %}
     {% for note in c.map.crossing_notes %}<div class="notice">⚠️ {{ note }}</div>{% endfor %}
     <p class="introtext">Families browse anonymously. Filters, favorites and your start point stay on this device. Residents list their own homes by confirming an email link; addresses appear only after they opt in. Sensory labels such as “low noise” or “no flashing lights” are self-reported—please use your own judgment.</p>
     <p class="introtext">Something wrong with a listing? Select it on the map and choose “Report this listing”{% if c.community.contact_url %}, or <a href="{{ c.community.contact_url }}" rel="noopener">contact the organizer</a>{% endif %}.</p>
-    <div class="modal-actions"><button type="button" class="primary" data-close>Got it!</button></div>
+    <div class="modal-actions"><a class="secondary" href="/about">About {{ c.community.name }}</a><button type="button" class="primary" data-close>Got it!</button></div>
   </div>
 </div>
 

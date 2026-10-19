@@ -53,6 +53,7 @@ final class PageController extends AbstractController
     }
 
     /** Privacy notice, terms of use and accessibility statement (no data collected to view them). */
+    #[Route('/about', name: 'about', defaults: ['page' => 'about'], methods: ['GET'])]
     #[Route('/privacy', name: 'privacy', defaults: ['page' => 'privacy'], methods: ['GET'])]
     #[Route('/terms', name: 'terms', defaults: ['page' => 'terms'], methods: ['GET'])]
     #[Route('/accessibility', name: 'accessibility', defaults: ['page' => 'accessibility'], methods: ['GET'])]

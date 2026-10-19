@@ -12,7 +12,7 @@ jobs:
   draft-release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check VERSION and CHANGELOG match the tag
         run: |
           tag="${GITHUB_REF_NAME#v}"

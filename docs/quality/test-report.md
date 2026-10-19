@@ -4,7 +4,7 @@ Recorded 2026-10-19 for 0.4.0-beta.2 (after the security hardening) on the devel
 
 | Gate | Command | Result |
 |---|---|---|
-| PHPUnit (unit + integration on PostgreSQL 17) | `docker compose exec app sh bin/test.sh` | **OK — 174 tests, 1300 assertions** |
+| PHPUnit (unit + integration on PostgreSQL 17) | `docker compose exec app sh bin/test.sh` | **OK — 177 tests, 1319 assertions** |
 | Coverage (pcov) | `php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text` | Lines **93.13 %** (2222/2386) ✓ ≥ 85 · Methods 77.24 % (PHPUnit counts only *fully* covered methods; below the 85 % target) · Branches **n/a** (pcov has no branch metric) |
 | Static analysis | `vendor/bin/phpstan analyse` (level 6) | **No errors** |
 | Dependency audit | `composer audit --locked` | No advisories |
@@ -12,7 +12,7 @@ Recorded 2026-10-19 for 0.4.0-beta.2 (after the security hardening) on the devel
 | GIS importer unit tests | `python -m unittest discover -s scripts/tests` | **26/26 pass** (no network) |
 | Importer equivalence | generic importers with the first deployment's private config vs. the original scripts' output | All 11 GeoJSON files and the address CSV byte-identical (SHA-256) |
 | Real-plat import | `fetch_arcgis_boundaries.py` / `fetch_arcgis_addresses.py --config examples/ventura-reserve/gis-sources.json` | 3 valid plats, no overlaps, 1 contiguous part; 152 address points (private) imported with `app:addresses:import` (57/42/53 per phase) |
-| Playwright E2E (Ventura Reserve + demo stacks, new nginx limits) | `./bin/e2e.sh` | **30/30 pass** (incl. 16 axe WCAG 2.1 AA checks in light and dark, dark-appearance and check-chip layout tests) |
+| Playwright E2E (Ventura Reserve + demo stacks, new nginx limits) | `./bin/e2e.sh` | **32/32 pass** (incl. 18 axe WCAG 2.1 AA checks in light and dark, dark-appearance and check-chip layout tests) |
 | Session smoke test | `python3 scripts/smoke_session.py` | **12/12 checks** (Secure/HttpOnly/SameSite cookie, restart durability, logout revocation, link reuse) |
 | Migrations | up → down to zero → up (test DB) | down leaves only the migrations table; up restores everything including `moderation_hold` and `idx_pow_client_created` |
 | Production-mode stack | `compose.yaml` only, port 8089 | All services healthy (app, nginx, postgres, backup, maintenance); read-only roots, `cap_drop: ALL`, no-new-privileges, memory/CPU/PID limits; PHP as `www-data`, nginx as uid 101; image without `.env.*` secrets/tests/docs; foreign `Host` → 400; burst → 429; 1.5 MB body → 413; FPM `request_terminate_timeout = 35s`; purge logged hourly; backup `0600` in `0700`, no session rows; test-like `APP_SECRET` / dev DB password → exit 64; forwarded headers honoured from the host gateway, ignored from a container on the same network |

@@ -12,8 +12,11 @@ community:
   postal_code: ""
   country: "US"
   timezone: "America/New_York"      # IANA time zone used for hours and "open now"
-  gate_notice: ""                   # e.g. "This site does not grant access through the main gate."
-  contact_url: null                 # optional https:// or mailto: link for questions
+  gate_notice: ""                   # access notes, e.g. "Enter by the north gate; park on Main St."
+  contact_url: "mailto:organizer@example.org"   # REPLACE: shown on About/Privacy/Terms/Accessibility for questions and data requests
+  access: unspecified               # public | gated_open | gated_guests | private | unspecified
+  about: ""                         # About page text; a blank line starts a new paragraph
+  links: []                         # e.g. [{ label: "Neighborhood Facebook group", url: "https://www.facebook.com/groups/…" }]
 event:
   date: "2026-10-31"
   starts_at: "17:00"

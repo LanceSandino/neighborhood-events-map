@@ -41,7 +41,9 @@ final class CommunityPresenter
 
         return [
             'configured' => $c->configured,
-            'community' => array_intersect_key($s['community'], array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url'])),
+            // Defaults keep settings saved by older versions valid (fields added later are optional).
+            'community' => array_intersect_key($s['community'] + ['about' => '', 'access' => 'unspecified', 'links' => [], 'contact_url' => null, 'gate_notice' => ''],
+                array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links'])),
             'event' => $s['event'] + ['timezone' => $s['community']['timezone']],
             'branding' => [
                 'logo_url' => null !== $s['branding']['logo'] ? '/branding/'.$s['branding']['logo'] : null,

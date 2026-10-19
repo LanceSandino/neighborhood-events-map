@@ -48,4 +48,35 @@ final class LegalPagesTest extends AppTestCase
             }
         }
     }
+
+    public function testAboutPageShowsTheCommunityStoryAccessAndLinks(): void
+    {
+        $this->configureCommunity(['community' => [
+            'contact_url' => 'mailto:organizer@example.test', 'access' => 'gated_guests',
+            'about' => "Our neighborhood loves Halloween.\n\nParade at <b>6 PM</b>.",
+            'links' => [['label' => 'Facebook group', 'url' => 'https://www.facebook.com/groups/example']],
+            'gate_notice' => 'Enter by the north gate.',
+        ]]);
+        $html = (string) $this->client->request('GET', '/about')->html();
+        self::assertSame(200, $this->code());
+        self::assertStringContainsString('Our neighborhood loves Halloween.', $html);
+        self::assertStringContainsString('Parade at &lt;b&gt;6 PM&lt;/b&gt;.', $html, 'organizer text is escaped');
+        self::assertStringContainsString('Gated — residents and guests', $html);
+        self::assertStringContainsString('Enter by the north gate.', $html);
+        self::assertStringContainsString('href="https://www.facebook.com/groups/example" rel="noopener noreferrer">Facebook group</a>', $html);
+        self::assertSame([], $this->client->getResponse()->headers->getCookies());
+        self::assertStringContainsString('href="/about"', (string) $this->client->request('GET', '/')->html(), 'linked from the map');
+        self::assertStringContainsString('Gated — residents and guests', (string) $this->client->getResponse()->getContent(), 'the map\'s info sheet shows access too');
+    }
+
+    public function testPagesStillRenderForSettingsSavedBeforeTheAboutFieldsExisted(): void
+    {
+        $this->configureCommunity();
+        $this->db()->executeStatement("UPDATE community_settings SET settings = settings #- '{community,about}' #- '{community,access}' #- '{community,links}'");
+        $this->repo()->reset();
+        foreach (['/about', '/', '/privacy'] as $path) {
+            $this->client->request('GET', $path);
+            self::assertSame(200, $this->code(), $path);
+        }
+    }
 }

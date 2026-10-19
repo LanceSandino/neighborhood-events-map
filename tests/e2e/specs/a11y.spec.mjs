@@ -12,6 +12,7 @@ const pages = [
   ['privacy', DEMO + '/privacy'],
   ['terms', DEMO + '/terms'],
   ['accessibility', DEMO + '/accessibility'],
+  ['about', DEMO + '/about'],
   ['real-plat map (listings closed)', VENTURA + '/'],
 ];
 

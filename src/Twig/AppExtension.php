@@ -20,7 +20,20 @@ final class AppExtension extends AbstractExtension
         return [
             new TwigFunction('zone_summary', [$this, 'zoneSummary']),
             new TwigFunction('event_badge', [$this, 'eventBadge']),
+            new TwigFunction('access_info', [$this, 'accessInfo']),
         ];
+    }
+
+    /** @return array{icon:string, title:string, text:string}|null how visitors may reach the homes */
+    public function accessInfo(?string $access): ?array
+    {
+        return match ($access) {
+            'public' => ['icon' => '🚶', 'title' => 'Open to the public', 'text' => 'Public streets: families from anywhere are welcome to walk the neighborhood.'],
+            'gated_open' => ['icon' => '🚪', 'title' => 'Gated — open for trick-or-treating', 'text' => 'The gates are opened for visitors during the suggested hours. Follow posted rules and any gate staff.'],
+            'gated_guests' => ['icon' => '🔐', 'title' => 'Gated — residents and guests', 'text' => 'Only residents and their invited guests can enter. This map does not grant gate access.'],
+            'private' => ['icon' => '🏡', 'title' => 'Residents only', 'text' => 'A private event for residents of the neighborhood.'],
+            default => null,
+        };
     }
 
     public function getFilters(): array

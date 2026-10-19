@@ -15,7 +15,12 @@ community:
   country: "US"
   timezone: "America/New_York"
   gate_notice: "Example configuration from public county records. Not run by or for this community; this is not a real event."
-  contact_url: null
+  contact_url: "mailto:organizer@example.org"
+  access: unspecified
+  about: |
+    Example configuration built from Orange County public plat records (three recorded phases). It is not run by or for this community and is not a real event.
+  links:
+    - { label: "Plat source: Orange County open data", url: "https://ocgis4.ocfl.net/arcgis/rest/services/AGOL_Open_Data/MapServer/54" }
 event:
   date: "2026-10-31"
   starts_at: "17:00"

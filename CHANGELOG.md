@@ -11,6 +11,7 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 ### Added
 - Light and dark appearance on every page, following the browser/system setting (semantic colour tokens; dark changes colours only, never layout); the map's tiles are softened in dark mode while pins and outlines keep their colours.
 - Organizer address list pages through results (25 per page).
+- **About page** (`/about`, linked in the navigation and footer) with the organizer's description, event date and hours, how visitors may reach the homes (open to the public, gated but open for trick-or-treating, residents and guests, residents only), access notes, and links such as a neighborhood Facebook group; all editable in Organizer → Community. The map's info sheet shows the access status too.
 - Privacy notice, terms of use and accessibility statement, linked from every page, with a "Clear saved data on this device" control. Public pages set no cookies and load no third-party scripts (tested).
 - Automated WCAG 2.1 AA checks (axe-core) on every public page type in light and dark.
 - Brand colours chosen by an organizer are turned into contrast-checked text and button-ink colours automatically, in both themes; support for high-contrast and forced-colour modes.
@@ -22,6 +23,10 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ### Fixed
 - Test listings created by the E2E suite are released afterwards, so they never appear in screenshots.
+- The pin-placement map in "List your home" fits the neighborhood outline once the sheet has laid out (it could start too small on some screens).
+
+### Dependencies
+- Playwright 1.64.1 (test image and package together), GitHub Actions v7; Dependabot ignores Symfony major versions (the app stays on 7.4 LTS) and nginx mainline releases (the image tracks the stable branch).
 
 ## [0.4.0-beta.2] - 2026-10-19
 

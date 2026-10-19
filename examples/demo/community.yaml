@@ -11,6 +11,14 @@ community:
   country: "US"
   timezone: "America/Chicago"
   gate_notice: "Fictional demo data — these homes do not exist."
+  contact_url: "mailto:organizer@example.org"
+  access: public
+  about: |
+    Maple Hollow is a FICTIONAL neighborhood used to demonstrate the app. Every home, street and note here is invented.
+
+    Families can browse the map, filter for gentle or spooky stops and plan a route; residents list their own homes with a one-time email link.
+  links:
+    - { label: "Project on GitHub", url: "https://github.com/" }
 event:
   date: "2026-10-30"
   starts_at: "16:30"

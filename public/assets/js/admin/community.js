@@ -21,6 +21,19 @@ function zoneRow(z = { key: '', label: '', claimable: true, residential: true, c
     <td><button type="button" class="link-button" data-remove-zone>Remove</button></td></tr>`;
 }
 
+const ACCESS = [
+  ['unspecified', 'Not stated'],
+  ['public', 'Open to the public (public streets)'],
+  ['gated_open', 'Gated — gates open to trick-or-treaters during event hours'],
+  ['gated_guests', 'Gated — residents and their invited guests only'],
+  ['private', 'Private — residents only'],
+];
+
+function linkRow(l = { label: '', url: '' }) {
+  return `<div class="link-row"><input data-l="label" value="${esc(l.label)}" maxlength="40" placeholder="e.g. Facebook group…" aria-label="Link label">
+    <input data-l="url" value="${esc(l.url)}" placeholder="https://… or mailto:…" aria-label="Link address"><button type="button" class="link-button" data-remove-link>Remove</button></div>`;
+}
+
 function render() {
   const s = settings;
   $('#admin-community').innerHTML = `
@@ -32,8 +45,14 @@ function render() {
       ${field('cRegion', 'State / region', s.community.region)}
       ${field('cPostal', 'Postal code', s.community.postal_code)}
       ${field('cTz', 'Time zone (IANA) *', s.community.timezone, 'list="tzList"')}
-      ${area('cGate', 'Gate / access notice', s.community.gate_notice, 'Shown on the map. The site never grants gate access.')}
-      ${field('cContact', 'Contact link (https:// or mailto:)', s.community.contact_url)}
+      <div class="field full"><label for="cAccess">Access on Halloween night</label><select id="cAccess">${ACCESS.map(([k, l]) => `<option value="${k}" ${s.community.access === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      ${area('cGate', 'Access notes (gates, entrances, parking)', s.community.gate_notice, 'Shown on the map and the About page. The site never grants gate access.')}
+      ${field('cContact', 'Organizer contact (mailto: or https://) *', s.community.contact_url, 'placeholder="mailto:organizer@example.org"')}
+    </div></div>
+    <div class="panel"><h2>About page</h2><div class="form-grid">
+      ${area('cAbout', 'About the neighborhood and the event', s.community.about, 'Shown on the public About page. Blank lines start a new paragraph. Plain text only.')}
+      <div class="field full"><span class="label">Links (e.g. Facebook group, HOA website, event flyer)</span><div id="linkRows">${(s.community.links || []).map(linkRow).join('')}</div>
+        <button type="button" class="secondary" id="btnAddLink">+ Add link</button></div>
     </div></div>
     <div class="panel"><h2>Event</h2><div class="form-grid">
       ${field('eDate', 'Date *', s.event.date, 'type="date"')}
@@ -84,6 +103,8 @@ function render() {
 
   $('#addZone').addEventListener('click', () => $('#zoneRows').insertAdjacentHTML('beforeend', zoneRow()));
   $('#zoneRows').addEventListener('click', (e) => { if (e.target.matches('[data-remove-zone]')) e.target.closest('tr').remove(); });
+  $('#btnAddLink').addEventListener('click', () => $('#linkRows').insertAdjacentHTML('beforeend', linkRow()));
+  $('#linkRows').addEventListener('click', (e) => { if (e.target.matches('[data-remove-link]')) e.target.closest('.link-row').remove(); });
   $('#settingsForm').addEventListener('submit', save);
   $('#bLogo').addEventListener('change', uploadLogo);
   $('#bLogoRemove')?.addEventListener('click', async () => {
@@ -99,7 +120,9 @@ async function save(e) {
   e.preventDefault();
   const s = structuredClone(settings);
   Object.assign(s.community, { name: $('#cName').value, subtitle: $('#cSubtitle').value, locality: $('#cLocality').value, region: $('#cRegion').value,
-    postal_code: $('#cPostal').value, timezone: $('#cTz').value, gate_notice: $('#cGate').value, contact_url: $('#cContact').value || null });
+    postal_code: $('#cPostal').value, timezone: $('#cTz').value, gate_notice: $('#cGate').value, contact_url: $('#cContact').value || null,
+    access: $('#cAccess').value, about: $('#cAbout').value,
+    links: $$('#linkRows .link-row').map((r) => ({ label: $('[data-l=label]', r).value.trim(), url: $('[data-l=url]', r).value.trim() })).filter((l) => l.label || l.url) });
   Object.assign(s.event, { date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
   Object.assign(s.branding, { brand_emoji: $('#bEmoji').value, primary_color: $('#bPrimary').value, accent_color: $('#bAccent').value,
     headline: $('#bHeadline').value, headline_accent: $('#bHeadlineAccent').value, intro: $('#bIntro').value });

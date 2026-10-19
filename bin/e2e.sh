@@ -5,7 +5,7 @@
 # The organizer role for the E2E account is granted out-of-band here, exactly as an operator would.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PW_IMAGE="mcr.microsoft.com/playwright:v1.56.1-noble"
+PW_IMAGE="mcr.microsoft.com/playwright:v1.64.1-noble"
 mkdir -p docs/design/screenshots
 # A fresh organizer address per run keeps repeated runs under the per-email link limit (3 per 15 min).
 E2E_ORGANIZER="e2e-organizer-$(date +%s)@example.test"

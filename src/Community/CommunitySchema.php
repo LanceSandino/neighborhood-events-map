@@ -18,6 +18,9 @@ use App\Address\AddressNormalizer;
  */
 final class CommunitySchema
 {
+    /** How visitors may reach the homes on Halloween night (shown on the map and the About page). */
+    public const ACCESS = ['unspecified', 'public', 'gated_open', 'gated_guests', 'private'];
+
     public const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     public const DEFAULT_TILE_ATTRIBUTION = '© OpenStreetMap contributors';
 
@@ -63,6 +66,28 @@ final class CommunitySchema
         $end = self::time($ev['ends_at'] ?? '21:00');
         if (null === $start || null === $end || $end <= $start) {
             $e[] = 'event.starts_at/ends_at must be HH:MM with the end after the start.';
+        }
+
+        $access = (string) ($c['access'] ?? 'unspecified');
+        if (!\in_array($access, self::ACCESS, true)) {
+            $e[] = 'community.access must be one of: '.implode(', ', self::ACCESS).'.';
+        }
+        $links = [];
+        foreach (self::arr($c['links'] ?? []) as $i => $l) {
+            $l = self::arr($l);
+            $label = self::text($l['label'] ?? '', 40);
+            $url = self::url($l['url'] ?? null);
+            if ('' === $label && '' === trim((string) ($l['url'] ?? ''))) {
+                continue; // an empty row from the console
+            }
+            if ('' === $label || null === $url) {
+                $e[] = sprintf('community.links[%d] needs a label and an https:// or mailto: address.', $i);
+                continue;
+            }
+            $links[] = ['label' => $label, 'url' => $url];
+        }
+        if (\count($links) > 8) {
+            $e[] = 'community.links allows at most 8 links.';
         }
 
         $primary = self::color($b['primary_color'] ?? '#F07936', 'branding.primary_color', $e);
@@ -169,6 +194,9 @@ final class CommunitySchema
                 'timezone' => $tz,
                 'gate_notice' => self::text($c['gate_notice'] ?? '', 300),
                 'contact_url' => self::url($c['contact_url'] ?? null),
+                'about' => self::paragraphs($c['about'] ?? '', 1500),
+                'access' => $access,
+                'links' => $links,
             ],
             'event' => ['date' => $date, 'starts_at' => $start, 'ends_at' => $end],
             'branding' => [
@@ -215,6 +243,15 @@ final class CommunitySchema
     private static function arr(mixed $v): array
     {
         return \is_array($v) ? $v : [];
+    }
+
+    /** Free text that keeps paragraph breaks (other control characters become spaces). */
+    private static function paragraphs(mixed $v, int $max): string
+    {
+        $s = str_replace(["\r\n", "\r"], "\n", (string) (\is_scalar($v) ? $v : ''));
+        $s = preg_replace(['~[\x00-\x09\x0B-\x1F\x7F]~u', '~\n{3,}~'], [' ', "\n\n"], $s) ?? '';
+
+        return mb_substr(trim($s), 0, $max);
     }
 
     private static function text(mixed $v, int $max): string

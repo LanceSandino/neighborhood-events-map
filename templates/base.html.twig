@@ -36,7 +36,7 @@
         <a href="/#route" data-action="route"><span class="nav-icon" aria-hidden="true">🧭</span> My walking route</a>
         <a href="/#list-my-house" data-action="register"><span class="nav-icon" aria-hidden="true">🏠</span> List my house</a>
         <a href="/me" class="{{ nav == 'me' ? 'active' }}" {% if nav == 'me' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🔑</span> Manage my house</a>
-        <a href="/#info" data-action="info"><span class="nav-icon" aria-hidden="true">ℹ️</span> Event info</a>
+        <a href="/about" class="{{ nav == 'about' ? 'active' }}" {% if nav == 'about' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">ℹ️</span> About &amp; event info</a>
       </nav>
     </div>
     <div class="side-bottom">
@@ -61,7 +61,7 @@
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · no tracking</span></footer>
+    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · no tracking</span></footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">
