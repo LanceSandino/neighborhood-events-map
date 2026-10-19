@@ -50,14 +50,20 @@ final class ListingRepository
         );
     }
 
-    /** @return list<array<string,mixed>> */
-    public function publicHomes(string $eventDate): array
+    /**
+     * @param list<string> $hiddenZones zones the organizer has hidden: their homes are not public either
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function publicHomes(string $eventDate, array $hiddenZones = []): array
     {
-        return array_map([self::class, 'publicShape'], $this->db->fetchAllAssociative(
+        $homes = array_map([self::class, 'publicShape'], $this->db->fetchAllAssociative(
             'SELECT '.self::PUBLIC_COLUMNS.' FROM listings l JOIN eligible_addresses a ON a.id = l.address_id
              WHERE '.self::PUBLIC_WHERE.' ORDER BY a.street, a.house_number',
             ['date' => $eventDate],
         ));
+
+        return array_values(array_filter($homes, static fn (array $h) => !\in_array($h['zone'], $hiddenZones, true)));
     }
 
     /** @return array<string,mixed>|null */

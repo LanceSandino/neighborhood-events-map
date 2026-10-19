@@ -269,4 +269,15 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "v0.5.0-beta.1"
   author: "Lance Sandino"
   timestamp: "2026-10-19T09:30:00Z"
+
+- id: CU-20261019-14
+  type: security
+  title: "Pre-publication review of changes since the 0.4.0-beta.2 audit; hidden zones also hide their homes; WebKit test project"
+  description: "Reviewed the approval flow, zone status, lookup, shared-link parsing, admin overview, asset routing, appearance and changelog code. One low finding: listings in a zone later set to hidden stayed in the public homes list; publicHomes() now drops hidden zones (CommunityConfig::hiddenZoneKeys). Playwright gains a webkit-iphone project for public.spec (WebKit's own select styling is reported as a style-src violation and is ignored there; location tests are Chromium-only on the plain-HTTP test host)."
+  impact: low
+  affected_modules: ["src/Listing/ListingRepository.php", "src/Community/CommunityConfig.php", "src/Controller/PageController.php", "src/Controller/Api/PublicApiController.php", "tests/e2e/"]
+  related_tests: ["tests/Integration/ZoneStatusAndReviewTest.php::testHomesAlreadyListedInAZoneThatIsLaterHiddenAreNotPublic", "tests/e2e/playwright.config.mjs (webkit-iphone)"]
+  commit_ref: "v0.5.0-beta.2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T08:45:00Z"
 ```

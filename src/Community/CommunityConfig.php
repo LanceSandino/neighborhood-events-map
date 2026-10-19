@@ -81,6 +81,12 @@ final class CommunityConfig
         return null;
     }
 
+    /** @return list<string> keys of zones the organizer has hidden from the public */
+    public function hiddenZoneKeys(): array
+    {
+        return array_values(array_map(static fn (array $z) => $z['key'], array_filter($this->zones(), static fn (array $z) => 'hidden' === $z['status'])));
+    }
+
     public function zonesEnabled(): bool
     {
         return [] !== $this->zones() && $this->settings['features']['optional_zones'];

@@ -93,6 +93,17 @@ final class ZoneStatusAndReviewTest extends AppTestCase
         $this->configureCommunity(['routing' => ['groups' => [['west', 'east']], 'group_labels' => ['Main', 'Extra']]]);
     }
 
+    public function testHomesAlreadyListedInAZoneThatIsLaterHiddenAreNotPublic(): void
+    {
+        $this->configureCommunity();
+        $this->confirm($this->requestLink('west@example.test', ['address' => ['house_number' => '14', 'street' => 'Pumpkin Ln', 'lat' => 40.006, 'lon' => -75.006], 'listing' => self::listing()]));
+        self::assertCount(1, $this->json('GET', '/api/homes')['homes']);
+        $this->configureCommunity($this->zones(['west' => 'hidden']));
+        self::assertSame([], $this->json('GET', '/api/homes')['homes']);
+        self::assertSame(0, $this->json('GET', '/api/community')['stats']['homes']);
+        self::assertStringNotContainsString('14 Pumpkin Ln', (string) $this->client->request('GET', '/')->html());
+    }
+
     public function testInvalidZoneStatusIsRejected(): void
     {
         $this->expectException(\App\Community\ConfigException::class);

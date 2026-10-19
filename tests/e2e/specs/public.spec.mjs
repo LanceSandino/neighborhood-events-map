@@ -195,6 +195,7 @@ test('a shared link opens the same stops and filters', async ({ page, browser })
 });
 
 test('route: reorder stops, keep the order, share it; start from my location', async ({ browser }) => {
+  test.skip(browser.browserType().name() === 'webkit', 'location needs HTTPS; only Chromium can treat the plain-HTTP test host as secure');
   const ctx = await browser.newContext({ permissions: ['geolocation'] });
   const page = await ctx.newPage();
   await politeTiles(page);
@@ -330,6 +331,7 @@ test('compact list: one row per home with icons, remembered after reload; long n
 });
 
 test('a remembered "My current location" start is used straight away on the next visit', async ({ browser }) => {
+  test.skip(browser.browserType().name() === 'webkit', 'location needs HTTPS; only Chromium can treat the plain-HTTP test host as secure');
   const ctx = await browser.newContext({ permissions: ['geolocation'] });
   const page = await ctx.newPage();
   await politeTiles(page);

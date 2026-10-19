@@ -36,7 +36,7 @@ final class PageController extends AbstractController
     public function home(): Response
     {
         $c = $this->community->current();
-        $homes = $this->listings->publicHomes($c->eventDate());
+        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys());
         $payload = $this->presenter->publicPayload($c, $homes);
 
         return $this->render('home/index.html.twig', ['c' => $payload, 'homes' => $homes, 'boot' => ['community' => $payload, 'homes' => $homes]]);

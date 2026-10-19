@@ -31,7 +31,11 @@ export function watchConsole(page) {
   page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text()); });
   page.on('pageerror', (e) => problems.push(String(e)));
   // Expected API outcomes (409 conflict, 410 used link, 422 validation, 429 throttled) are not page errors.
-  const ignore = (p) => /tile\.openstreetmap\.org/.test(p) || /status of (409|410|422|429)/.test(p);
+  // WebKit reports its own <select> drop-down styling as a style-src violation under a strict CSP (the page
+  // has no inline styles; the menus render normally), so that one WebKit message is not a page error.
+  const webkit = page.context().browser()?.browserType().name() === 'webkit';
+  const ignore = (p) => /tile\.openstreetmap\.org/.test(p) || /status of (409|410|422|429)/.test(p)
+    || (webkit && /Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline'/.test(p));
   return { assertClean: () => expect(problems.filter((p) => !ignore(p)), problems.join('\n')).toEqual([]) };
 }
 

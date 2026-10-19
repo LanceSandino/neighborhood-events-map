@@ -6,6 +6,14 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.5.0-beta.2] - 2026-10-19
+
+### Fixed
+- Homes already listed in a zone the organizer later sets to "Hidden" are no longer public (map, list, counts and API).
+
+### Added
+- Automated tests now also run the main visitor flows in WebKit (Safari's engine) on an iPhone-sized screen.
+
 ## [0.5.0-beta.1] - 2026-10-19
 
 ### Added

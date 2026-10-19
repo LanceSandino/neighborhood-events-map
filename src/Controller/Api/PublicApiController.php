@@ -43,7 +43,7 @@ final class PublicApiController
     public function community(): JsonResponse
     {
         $c = $this->community->current();
-        $homes = $this->listings->publicHomes($c->eventDate());
+        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys());
 
         return self::fresh(new JsonResponse($this->presenter->publicPayload($c, $homes)));
     }
@@ -56,7 +56,7 @@ final class PublicApiController
         return self::fresh(new JsonResponse([
             'event_date' => $c->eventDate(),
             'timezone' => $c->settings['community']['timezone'],
-            'homes' => $this->listings->publicHomes($c->eventDate()),
+            'homes' => $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys()),
         ]));
     }
 
