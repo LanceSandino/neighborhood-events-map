@@ -25,7 +25,7 @@ Built with **PHP 8.3 / Symfony 7.4 LTS, PostgreSQL 17, Twig, vanilla JavaScript/
 Requirements: Docker with Compose v2, `openssl`.
 
 ```bash
-git clone https://github.com/<owner>/neighborhood-halloween-map.git && cd neighborhood-halloween-map
+git clone https://github.com/<owner>/neighborhood-events-map.git && cd neighborhood-events-map
 cp .env.example .env
 ```
 

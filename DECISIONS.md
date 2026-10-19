@@ -35,3 +35,4 @@ Settled choices and standing constraints. Do not re-open an active entry; supers
 - [D-20261019-17] Trick-or-treat reminders ship as a built-in default list; an organizer's own list (up to 12 lines) replaces it entirely rather than being merged (status: active)
 - [D-20261019-18] Release cadence: each feedback round that adds features ships as its own minor pre-release (0.N.0-beta.1, then -beta.2… for fixes); fix-only rounds bump the pre-release number; one tag per tested round, never a large catch-all beta (status: active)
 - [D-20261019-19] Visitors see one "big scares" concept (jump scares or an intense setup) in filters and tags; residents still record both details (status: active)
+- [D-20261019-20] The project is named neighborhood-events-map (renamed from neighborhood-halloween-map) because it will cover more neighborhood events (Christmas next); one install still serves one community (status: active)

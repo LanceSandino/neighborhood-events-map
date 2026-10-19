@@ -6,6 +6,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Changed
+- The project is now **neighborhood-events-map** (repository renamed from neighborhood-halloween-map) so it can grow beyond Halloween; the old GitHub address redirects. The default source link (`APP_SOURCE_URL`) points to the new name.
+
 ## [0.5.0-beta.2] - 2026-10-19
 
 ### Fixed

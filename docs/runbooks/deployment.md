@@ -8,7 +8,7 @@
 - Choose a free loopback port (default `8087`); nothing else needs to be exposed.
 
 ```bash
-git clone https://github.com/<owner>/neighborhood-halloween-map.git /srv/halloween
+git clone https://github.com/<owner>/neighborhood-events-map.git /srv/halloween
 cd /srv/halloween
 git checkout v0.4.0-beta.4            # or the release tag you are deploying
 cp .env.example .env && chmod 600 .env
