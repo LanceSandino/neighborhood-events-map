@@ -17,7 +17,7 @@ test('filters affect list and pins together and persist after reload; favorites 
   await page.reload();
   await expect(page.locator('#listCount')).toHaveText(`${await openNow(request)} showing`);
   await expect(page.locator('.leaflet-marker-icon')).toHaveCount(n);
-  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
+  await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
   const shown = Number((await page.locator('#listCount').textContent()).split(' ')[0]);
   expect(shown).toBeLessThan(n);
   expect(shown).toBeGreaterThan(0);
@@ -26,7 +26,7 @@ test('filters affect list and pins together and persist after reload; favorites 
   await page.locator('.home-card .save').first().click();
   await expect(page.locator('#savedCount')).toHaveText('1');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Low sensory', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Sensory-friendly', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#listCount')).toHaveText(`${shown} showing`);
   await expect(page.locator('#savedCount')).toHaveText('1');
   const stored = await page.evaluate(() => Object.keys(localStorage));
@@ -154,7 +154,7 @@ test('homes not handing out stay off the list and routes; filters show their cou
   // A route built from every visible home leaves the closed ones out and says so.
   await page.getByRole('button', { name: '🧭 Build my route →' }).click();
   await expect(page.locator('#routeItems .route-item')).toHaveCount(all.length - closed.length);
-  await expect(page.locator('#routeSub')).toContainText('not handing out right now');
+  await expect(page.locator('.route-status')).toContainText(`${closed.length} not handing out now`);
   await page.locator('#btnCopyRoute').click();
   await expect(page.locator('.toast')).toContainText('Stop list copied.');
   await page.locator('#btnRouteMap').click();
@@ -162,7 +162,7 @@ test('homes not handing out stay off the list and routes; filters show their cou
   await expect(page.locator('.leaflet-marker-icon .pin-number').first()).toBeVisible();
   // Active filters are counted on the Filters button.
   await expect(page.locator('#filterCount')).toBeHidden();
-  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
+  await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
   await page.locator('#btnFilters').click();
   await page.locator('[data-filter="noScares"]').click();
   await expect(page.locator('#filterCount')).toHaveText('2');
@@ -175,7 +175,7 @@ test('a shared link opens the same stops and filters', async ({ page, browser })
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   for (const i of [0, 2]) await page.locator('.home-card .save').nth(i).click();
-  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
+  await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
   await page.getByRole('button', { name: '🧭 Build my route →' }).click();
   const stops = await page.locator('#routeItems .route-item b').allTextContents();
   const link = await page.locator('#routeLink').inputValue();
@@ -190,7 +190,7 @@ test('a shared link opens the same stops and filters', async ({ page, browser })
   await expect(other.locator('#routeSub')).toContainText('shared with you');
   expect(await other.locator('#routeItems .route-item b').allTextContents()).toEqual(stops);
   await other.keyboard.press('Escape');
-  await expect(other.getByRole('button', { name: 'Low sensory', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(other.getByRole('button', { name: 'Sensory-friendly', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await ctx.close();
 });
 
@@ -283,7 +283,7 @@ test('route: skip stops, bring them back, add nearby suggestions, switch between
   await page.getByRole('button', { name: `Skip ${first}` }).click();
   await expect(items).toHaveCount(openHomes.length - 1);
   await expect(page.locator('#routeLink')).not.toHaveValue(new RegExp(`\\b${openHomes.find((h) => h.address === first).id}\\b`));
-  await page.getByRole('button', { name: 'Bring them back' }).click();
+  await page.getByRole('button', { name: 'Bring back' }).click();
   await expect(items).toHaveCount(openHomes.length);
   await page.keyboard.press('Escape');
   // One favourite: suggestions nearby can be added; "All matching" shows everything again.
@@ -359,6 +359,6 @@ test('each filter shows how many homes it would list', async ({ page, request })
   await expect(candy.locator('.fcount')).toHaveText(String(open.filter((h) => h.candy).length));
   const bigScares = open.filter((h) => h.jump_scares || h.scare_level === 'intense').length;
   await expect(page.locator('[data-filter="noScares"] .fcount')).toHaveText(String(open.length - bigScares));
-  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
+  await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
   await expect(page.locator('#listCount')).toHaveText(`${await page.locator('[data-filter="lowSensory"] .fcount').textContent()} showing`);
 });

@@ -65,7 +65,7 @@
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · No tracking</span><a href="/changelog" data-whats-new>{{ community.name }} Halloween v{{ app_version }} · What’s new</a>{% block footer_credit %}{% endblock %}</footer>
+    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · No tracking</span><span class="footer-id">{{ community.name }} Halloween · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">
@@ -96,7 +96,9 @@
   <p class="form-caption">Saved on this device only. Your device’s own accessibility settings are always respected too.</p>
   <div class="modal-actions"><button type="button" class="secondary" data-appearance-reset>Reset</button><button type="button" class="primary" data-appearance-close>Done</button></div>
 </dialog>
+<button type="button" class="to-top" id="toTop" aria-label="Back to top" title="Back to top" hidden><span aria-hidden="true">↑</span></button>
 <script type="module" src="{{ asset_path('js/appearance.js') }}"></script>
+<script type="module" src="{{ asset_path('js/to-top.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

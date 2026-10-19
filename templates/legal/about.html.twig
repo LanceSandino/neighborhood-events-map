@@ -14,24 +14,34 @@
     {% if access %}<div class="about-fact"><span aria-hidden="true">{{ access.icon }}</span><div><b>{{ access.title }}</b><p>{{ access.text }}</p></div></div>{% endif %}
   </div>
 
-  {% if c.community.gate_notice %}<div class="notice" role="note">{{ c.community.gate_notice }}</div>{% endif %}
+  <nav class="about-connect" aria-label="Links and contact">
+    {% for l in c.community.links ?? [] %}<a class="pill-link" href="{{ l.url }}" rel="noopener noreferrer"><span aria-hidden="true">🔗</span>{{ l.label }}</a>{% endfor %}
+    {% if c.community.contact_url %}<a class="pill-link" href="{{ c.community.contact_url }}" rel="noopener"><span aria-hidden="true">✉️</span>Contact the organizer</a>{% endif %}
+    <a class="pill-link accent" href="/"><span aria-hidden="true">🗺️</span>Open the map</a>
+  </nav>
+  {% if not c.community.contact_url %}<p class="form-caption">Questions about the event, a listing or your data? {% include 'legal/_contact.html.twig' %}.</p>{% endif %}
 
-  {% if c.community.about %}
-    {% for para in c.community.about|split("\n\n") %}<p>{{ para|nl2br }}</p>{% endfor %}
-  {% else %}
-    <p>A neighborhood map of homes handing out treats on Halloween, with sensory notes and a suggested stop order for trick-or-treaters of all ages — families, friends or solo.</p>
+  {% if c.community.gate_notice or c.map.crossing_notes %}
+  <div class="about-notes">
+    {% if c.community.gate_notice %}<div class="notice" role="note">🚪 {{ c.community.gate_notice }}</div>{% endif %}
+    {% for note in c.map.crossing_notes %}<div class="notice" role="note">🚸 {{ note }}</div>{% endfor %}
+  </div>
   {% endif %}
 
-  <h2 id="reminders">Trick-or-treat reminders</h2>
-  <ul class="reminders">{% for r in c.community.reminders %}<li>{{ r }}</li>{% endfor %}</ul>
+  <section class="about-section" aria-labelledby="aboutTitle">
+    <h2 id="aboutTitle">About</h2>
+    {% if c.community.about %}
+      {% for para in c.community.about|split("\n\n") %}<p>{{ para|nl2br }}</p>{% endfor %}
+    {% else %}
+      <p>A neighborhood map of homes handing out treats on Halloween, with sensory notes and a suggested stop order for trick-or-treaters of all ages — families, friends or solo.</p>
+    {% endif %}
+  </section>
 
-  {% if c.community.links ?? [] %}
-    <h2>Links</h2>
-    <ul class="about-links">{% for l in c.community.links %}<li><a href="{{ l.url }}" rel="noopener noreferrer">{{ l.label }}</a></li>{% endfor %}</ul>
-  {% endif %}
+  <section class="about-section" aria-labelledby="reminders">
+    <h2 id="reminders">Trick-or-treat reminders</h2>
+    <ul class="reminders two-col">{% for r in c.community.reminders %}<li>{{ r }}</li>{% endfor %}</ul>
+  </section>
 
-  <h2>Questions?</h2>
-  <p>To ask about the event, a listing or your data, {% include 'legal/_contact.html.twig' %}.</p>
   <div class="modal-actions"><a class="secondary" href="/#list-my-house" data-action="register">🏠 List your home</a><a class="primary" href="/">Open the map</a></div>
 </article>
 {% endblock %}

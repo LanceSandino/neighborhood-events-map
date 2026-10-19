@@ -63,7 +63,7 @@ final class LegalPagesTest extends AppTestCase
         self::assertStringContainsString('Parade at &lt;b&gt;6 PM&lt;/b&gt;.', $html, 'organizer text is escaped');
         self::assertStringContainsString('Gated — residents and guests', $html);
         self::assertStringContainsString('Enter by the north gate.', $html);
-        self::assertStringContainsString('href="https://www.facebook.com/groups/example" rel="noopener noreferrer">Facebook group</a>', $html);
+        self::assertStringContainsString('href="https://www.facebook.com/groups/example" rel="noopener noreferrer"><span aria-hidden="true">🔗</span>Facebook group</a>', $html);
         self::assertSame([], $this->client->getResponse()->headers->getCookies());
         self::assertStringContainsString('href="/about"', (string) $this->client->request('GET', '/')->html(), 'linked from the map');
         self::assertStringContainsString('Gated — residents and guests', (string) $this->client->getResponse()->getContent(), 'the map\'s info sheet shows access too');
@@ -79,7 +79,7 @@ final class LegalPagesTest extends AppTestCase
         self::assertStringContainsString('Watch for cars.', $html);
         $home = (string) $this->client->request('GET', '/')->html();
         self::assertStringContainsString('<a class="event-pill" href="/about"', $home, 'the event date opens the About page');
-        self::assertStringContainsString('href="/about#reminders"', $home, 'the map guide links all reminders');
+        self::assertStringContainsString('<a class="secondary" href="/about">Full guide &amp; links</a>', $home, 'the map guide links the full guide and reminders');
 
         $this->configureCommunity(['community' => ['reminders' => ['Costume parade at 6 PM by the pool.', '  ']]]);
         $html = (string) $this->client->request('GET', '/about')->html();

@@ -176,3 +176,17 @@ test('walking areas filter several zones; old jump/intense filters become "no bi
   assert.deepEqual(counts.zones, { all: 2, 'area:0': 1, lake: 1 });
   assert.equal(choiceCounts(homes, DEFAULT_FILTERS, c, { toggles: ['candy'], keep: (h) => h.id !== 1 }).toggles.candy, 1, 'keep() limits what is counted');
 });
+
+test('large neighborhoods: every stop is kept and ordering stays fast (no 20-stop cap)', () => {
+  const stops = Array.from({ length: 180 }, (_, i) => ({ id: i + 1, zone: 'main', lat: 40.03 + ((i * 37) % 97) / 1e4, lon: -75.01 + ((i * 53) % 89) / 1e4 }));
+  const t0 = performance.now();
+  const plan = planStops(stops, { groups: [['main']], zonesEnabled: true, start: { id: null, lat: 40.03, lon: -75.01 } });
+  const ms = performance.now() - t0;
+  assert.equal(plan[0].stops.length, 180);
+  assert.equal(plan[0].truncated, false);
+  assert.equal(new Set(plan[0].stops.map((s) => s.id)).size, 180);
+  assert.ok(ms < 1500, `ordering 180 stops took ${Math.round(ms)} ms`);
+  const length = (p) => p.slice(1).reduce((sum, s, i) => sum + haversine(p[i], s), 0);
+  const nn = planStops(stops, { groups: [['main']], zonesEnabled: true }); // still a sensible, untangled walk
+  assert.ok(length(nn[0].stops) < length(stops) * 0.5, 'much shorter than the unordered list');
+});

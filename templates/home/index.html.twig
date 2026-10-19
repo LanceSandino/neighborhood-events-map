@@ -23,7 +23,7 @@
   <div class="metric"><div class="metric-icon" aria-hidden="true">🕔</div><div><b>{{ c.event.starts_at|time12|replace({' PM': '', ' AM': ''}) }}–{{ c.event.ends_at|time12 }}</b><span>Suggested hours</span></div></div>
   {% endif %}
   <div class="metric"><div class="metric-icon" aria-hidden="true">🏘️</div><div><b id="statHomes">{{ c.stats.homes }}</b><span>Participating homes</span></div></div>
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🧩</div><div><b id="statGentle">{{ c.stats.low_sensory }}</b><span>Low-sensory stops</span></div></div>
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🧩</div><div><b id="statGentle">{{ c.stats.low_sensory }}</b><span>Sensory-friendly stops</span></div></div>
   {% if c.features.adult_refreshments %}
   <div class="metric"><div class="metric-icon" aria-hidden="true">🍺</div><div><b id="statAdult">{{ c.stats.adult }}</b><span>21+ refreshments</span></div></div>
   {% else %}
@@ -35,17 +35,19 @@
   <div class="controls">
     <div class="search"><input id="search" type="search" placeholder="Search streets, treats, or notes…" aria-label="Search homes" autocomplete="off"></div>
     {% if zones|length > 0 %}
+    <div class="phase-wrap"><span class="fi" aria-hidden="true">📍</span>
     <select class="phase-select" id="zone" aria-label="Filter by {{ zs ? zs.title|split(' ')|last : 'zone' }}">
       {% set word = zs ? zs.title|split(' ')|last : 'zones' %}
       {% set areas = zone_areas(zones, c.routing.groups, c.routing.group_labels ?? []) %}
-      <option value="all" data-label="📍 All {{ word }}">📍 All {{ word }}</option>
+      <option value="all" data-label="All {{ word }}">All {{ word }}</option>
       {% if areas %}<optgroup label="Walking areas">{% for a in areas %}<option value="{{ a.value }}" data-label="{{ a.label }}">{{ a.label }}</option>{% endfor %}</optgroup><optgroup label="{{ word|capitalize }}">{% endif %}
       {% for z in zones %}{% if z.residential and z.status == 'active' %}<option value="{{ z.key }}" data-label="{{ z.label }}">{{ z.label }}</option>{% endif %}{% endfor %}
       {% if areas %}</optgroup>{% endif %}
     </select>
+    </div>
     {% endif %}
     {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false"><span class="fi" aria-hidden="true">🍬</span>Candy</button>{% endif %}
-    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false"><span class="fi" aria-hidden="true">🧩</span>Low sensory</button>{% endif %}
+    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false"><span class="fi" aria-hidden="true">🧩</span>Sensory-friendly</button>{% endif %}
     <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters"><span class="fi" aria-hidden="true">⚙️</span>Filters<span class="filter-count hide" id="filterCount"></span></button>
   </div>
   <div class="filter-more" id="moreFilters" role="group" aria-label="More filters">
@@ -69,7 +71,7 @@
   </div>
   <div class="workarea">
     <div class="list-pane">
-      <div class="list-head"><h2>🍭 Treat stops nearby</h2><div class="list-tools"><span id="listCount" aria-live="polite">{{ homes|length }} showing</span><div class="view-toggle" role="group" aria-label="List layout"><button type="button" data-view="cards" aria-pressed="true" aria-label="Cards" title="Cards">▦</button><button type="button" data-view="compact" aria-pressed="false" aria-label="Compact list" title="Compact list">☰</button></div></div></div>
+      <div class="list-head"><h2>🍬 Treat stops nearby</h2><div class="list-tools"><span id="listCount" aria-live="polite">{{ homes|length }} showing</span><div class="view-toggle" role="group" aria-label="List layout"><button type="button" data-view="cards" aria-pressed="true" aria-label="Cards" title="Cards">▦</button><button type="button" data-view="compact" aria-pressed="false" aria-label="Compact list" title="Compact list">☰</button></div></div></div>
       <div class="list-sub" id="listSub">{% if homes|length == 0 %}No homes have listed yet — check back soon!{% else %}Self-reported by residents · tap a card to see it on the map{% endif %}</div>
       <ul class="cards" id="homeCards" aria-label="Participating homes">
         {% for home in homes %}{% include 'home/_card.html.twig' with {home: home, zones: zones} only %}{% else %}<li class="empty">No homes are listed yet. Residents can add theirs with “List your home”.</li>{% endfor %}
@@ -88,7 +90,7 @@
         <button type="button" data-action="info" aria-label="Map information" title="Map information">ⓘ</button>
       </div>
       <div class="map-selected" id="mapSelected" role="dialog" aria-label="Selected home"></div>
-      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i>🎃 Treats</span><span><i class="legend-bullet gentle"></i>🍭 Gentle</span><span><i class="legend-bullet spooky"></i>👻 Spooky</span></div>
+      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i>🍬 Treats</span><span><i class="legend-bullet gentle"></i>🧩 Sensory-friendly</span><span><i class="legend-bullet spooky"></i>👻 Spooky</span></div>
       </div>
       <div class="map-footer"><span>⚠️ Listings are self-reported. Pins show only homes that chose to participate.</span><strong id="footerZones">{% if zs %}{{ zs.title }}{% endif %}</strong></div>
     </div>

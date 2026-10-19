@@ -1,15 +1,16 @@
 {# Server-rendered house card (no-JS fallback); assets/js/lib/render.js renders the same markup. #}
 {%- set scary = home.jump_scares or home.scare_level == 'intense' -%}
+{%- set sensory = home.low_noise and not home.flashing_lights and not home.loud_audio and not scary -%}
 {%- set zone_label = null -%}
 {%- for z in zones -%}{%- if z.key == home.zone -%}{%- set zone_label = z.label -%}{%- endif -%}{%- endfor -%}
 <li class="home-card" data-id="{{ home.id }}">
-  <div class="card-symbol" aria-hidden="true">{{ scary ? '👻' : (home.low_noise ? '🍭' : '🎃') }}</div>
+  <div class="card-symbol" aria-hidden="true">{{ scary ? '👻' : (sensory ? '🧩' : '🍬') }}</div>
   <div class="card-main">
     <div class="card-line"><b>{{ home.address }}</b></div>
     <div class="card-meta">{% if zone_label %}{{ zone_label }} · {% endif %}{{ home.start|time12 }}–{{ home.end|time12 }}{% if home.status != 'active' %} · {{ {'paused': 'Paused', 'out_of_candy': 'Out of candy', 'done': 'Done for tonight'}[home.status] }}{% endif %}</div>
     <div class="tags">
       {% if home.candy %}<span class="tag candy">🍬 Candy</span>{% endif %}
-      {% if home.low_noise %}<span class="tag quiet">🧩 Low noise</span>{% endif %}
+      {% if sensory %}<span class="tag quiet">🧩 Sensory-friendly</span>{% endif %}
       {% if home.nonfood %}<span class="tag teal" title="Teal pumpkin: non-food treats"><span class="teal-pumpkin" aria-hidden="true">🎃</span> Non-food</span>{% endif %}
       {% if home.scare_level == 'intense' or home.jump_scares %}<span class="tag spooky">😱 Big scares</span>{% elseif home.scare_level == 'mild' %}<span class="tag spooky">🎃 Mild scares</span>{% endif %}
       {% if home.flashing_lights %}<span class="tag strobe">🔦 Flashing lights</span>{% endif %}

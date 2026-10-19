@@ -11,12 +11,20 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 ### Added
 - **Walking areas in the zone filter**: the organizer's walkable groups appear as choices such as "Main (1–3)", "Second (4)" or "Phases 6A, 6B"; choosing one shows, outlines and routes all its zones together. Groups can be named (`routing.group_labels`, or "Name: zone-a, zone-b" in Organizer → Community); unnamed one-zone groups stay plain zone choices.
 - **Counts on every filter**: each filter button, chip and zone choice shows how many homes handing out it would list, given the other filters.
-- Route trips are named after their walking area.
+- Route trips are named after their walking area, and a filter-based route shows the filters it used ("Filtered by: Main (1–3) · 🍬 Candy") with a link to change them.
+- A small "back to top" button on long pages.
+- The route sheet opens with a status line ("25 stops in 3 trips · from your location · 7 not handing out now · 2 skipped — Bring back") and says plainly when it shows only your saved homes.
+
+### Fixed
+- Routes no longer stop at 20 homes per trip, and ordering stays quick for hundreds of homes.
+- The zone menu keeps its 📍 icon whatever is selected.
 
 ### Changed
 - "No jump scares" and "No intense scares" are one filter, **No big scares**; cards show one "😱 Big scares" tag for either. Filters saved or shared by earlier versions carry over.
 - **Kid-friendly** replaces "Stroller-friendly" in filters, tags and the listing form.
-- Low sensory uses the 🧩 icon; non-food treats show a teal pumpkin, the Teal Pumpkin Project's sign for allergy-friendly homes.
+- One vocabulary for pins, legend, cards, filters and the listing form: 🍬 Treats, 🧩 Sensory-friendly (was "Gentle"/"Low sensory"; shown exactly when the filter would include the home) and 👻 Spooky; non-food treats show a teal pumpkin, the Teal Pumpkin Project's sign for allergy-friendly homes.
+- About page: links, contact and "Open the map" at the top, then getting-around notes, About and reminders in clear sections. The map's quick guide is shorter: date and hours, access, getting around, three reminders and a link to the full guide.
+- Footer: "Community Halloween · v… · What's new" on one line.
 - The listing form ("Treats & environment") offers exactly the map's filter options with the same icons and words, from one shared template, and only those the community has turned on; flashing lights are 🔦 everywhere.
 - Summary tiles: zones (or suggested hours), participating homes, low-sensory stops and 21+ refreshments (with candy when 21+ is turned off). The low-sensory count now matches the filter (intense setups are not low sensory).
 

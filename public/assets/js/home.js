@@ -250,9 +250,8 @@ function showRoute({ open = true } = {}) {
   $('#routeSub').textContent = (linked
     ? 'A stop list someone shared with you. Save the ones you like with ♡.'
     : useSaved
-    ? `Your saved stops, in ${manualOrder ? 'your own' : 'a suggested'} order. Separate areas are listed as separate trips.`
-    : `Homes matching your filters${saved.length ? '' : ' (save favorites ♡ to choose your own)'}. Skip any you don’t want with ✕. Separate areas are listed as separate trips.`)
-    + (skipped ? ` ${skipped} ${skipped === 1 ? 'home is' : 'homes are'} left out because ${skipped === 1 ? 'it is' : 'they are'} not handing out right now.` : '')
+    ? `Only your ${saved.length} saved ${saved.length === 1 ? 'home' : 'homes'}, in ${manualOrder ? 'your own' : 'a suggested'} order. Choose “All matching” to see every home.`
+    : `Every home handing out that matches your filters${saved.length ? '' : ' (save favorites ♡ to choose your own)'}. Skip any with ✕.`)
     + (pref === 'here' && !here ? ' 📍 Finding your location…' : '');
   let n = 0;
   routeNumbers = new Map();
@@ -264,12 +263,14 @@ function showRoute({ open = true } = {}) {
     ? suggestNearby(chosen, vis.filter((h) => isOpen(h) && !skippedIds.has(h.id)), { groups: C.routing.groups, zonesEnabled: C.zones.length > 0 })
     : [];
   const extras = (ideas.length ? `<div class="route-suggest"><h3 class="route-group-title">Nearby, not on your list</h3><ul>${ideas.map(({ home: h, meters }) => `<li><div class="route-text"><b>${esc(h.address)}</b><p>About ${Math.max(10, Math.round(meters / 10) * 10)} m from a stop · ${time12(h.start)}–${time12(h.end)}</p></div><button type="button" class="secondary add-stop" data-add-stop="${h.id}" aria-label="Add ${esc(h.address)} to my stops">+ Add</button></li>`).join('')}</ul></div>` : '')
-    + (userSkipped ? `<p class="form-caption route-order">${userSkipped} skipped. <button type="button" class="link-button" data-unskip>Bring them back</button></p>` : '');
-  $('#routeItems').innerHTML = source + (currentPlan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
+
+  const stopCount = currentPlan.reduce((n, g) => n + g.stops.length, 0);
+  const status = `<p class="route-status" role="status"><b>${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}</b>${currentPlan.length > 1 ? ` in ${currentPlan.length} trips` : ''}${start ? ` · from ${start.id ? esc(start.address) : 'your location'}` : ''}${skipped ? ` · ${skipped} not handing out now` : ''}${userSkipped ? ` · ${userSkipped} skipped <button type="button" class="link-button" data-unskip>Bring back</button>` : ''}</p>`;
+  $('#routeItems').innerHTML = source + (!linked && !useSaved ? filterSummary() : '') + status + (currentPlan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
     + currentPlan.map((g, gi) => {
     const label = tripLabel(g, gi);
     return `${label ? `<h3 class="route-group-title">${currentPlan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
-      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
+      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${isLowSensory(h) ? ' · 🧩 Sensory-friendly' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · 👻 Big scares' : ''}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
       ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
       ${C.routing.provider && g.stops.length > 1 ? `<button type="button" class="secondary" data-provider-path="${gi}">Show walking path for this trip</button>` : ''}`;
   }).join('') + (currentPlan.length > 1 ? '<div class="notice">🚧 These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>' : '')
@@ -277,6 +278,24 @@ function showRoute({ open = true } = {}) {
   $('#routeLink').value = shareLink();
   render();
   if (open && !$('#routeModal').classList.contains('open')) openModal('routeModal');
+}
+
+/** The filters shaping a filter-based route, as chips, with a way back to change them. */
+function filterSummary() {
+  const chips = [];
+  const zone = $('#zone');
+  if (zone && zone.value !== 'all') chips.push(zone.selectedOptions[0]?.dataset.label || zone.value);
+  for (const b of document.querySelectorAll('[data-filter][aria-pressed="true"]')) {
+    const icon = b.querySelector('.fi')?.outerHTML || '';
+    const words = [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
+    chips.push({ icon, words });
+  }
+  const time = $('#time');
+  if (time && time.value !== 'any') chips.push(`🕐 ${time.selectedOptions[0]?.textContent || time.value}`);
+  if ((filters.q || '').trim()) chips.push(`🔍 “${filters.q.trim()}”`);
+  if (!chips.length) return '<p class="form-caption route-filters">Showing every home handing out. <button type="button" class="link-button" data-edit-filters>Add filters</button></p>';
+  const html = chips.map((c) => `<span class="route-chip">${typeof c === 'string' ? esc(c) : `${c.icon}${esc(c.words)}`}</span>`).join('');
+  return `<div class="route-filters" aria-label="Filters used for these stops"><span class="label">Filtered by</span>${html}<button type="button" class="link-button" data-edit-filters>Change</button></div>`;
 }
 
 /** Moves a stop within its trip and keeps the new order (on this device, or in the shared view). */
@@ -479,6 +498,12 @@ function bind() {
     if (e.target.closest('[data-unskip]')) { store.set({ skipped: [] }); showRoute({ open: false }); return; }
     const add = e.target.closest('[data-add-stop]');
     if (add) { store.toggleSaved(Number(add.dataset.addStop)); showRoute({ open: false }); toast('Added to your stops.'); return; }
+    if (e.target.closest('[data-edit-filters]')) {
+      closeModal($('#routeModal'));
+      $('#explore').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth' });
+      if ($('#moreFilters') && !$('#moreFilters').classList.contains('open')) $('#btnFilters').click();
+      return;
+    }
     const src = e.target.closest('[data-route-all]');
     if (src) { store.set({ routeAll: src.dataset.routeAll === '1' }); showRoute({ open: false }); return; }
     if (e.target.closest('#btnResetOrder')) {

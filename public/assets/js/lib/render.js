@@ -4,17 +4,19 @@
  *     resident-supplied string goes through esc(). Mirrors templates/home/_card.html.twig.
  */
 import { statusOf, time12 } from './time.js';
+import { isBigScare, isLowSensory } from './filters.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export const isScary = (h) => h.jump_scares || h.scare_level === 'intense';
-export const symbolOf = (h) => (isScary(h) ? '👻' : h.low_noise ? '🍭' : '🎃');
-export const pinClass = (h) => (isScary(h) ? 'scary' : h.low_noise ? 'quiet' : '');
+export const isScary = isBigScare;
+/** One vocabulary everywhere (pins, legend, cards, filters): 👻 Spooky, 🧩 Sensory-friendly, 🍬 Treats. */
+export const symbolOf = (h) => (isScary(h) ? '👻' : isLowSensory(h) ? '🧩' : '🍬');
+export const pinClass = (h) => (isScary(h) ? 'scary' : isLowSensory(h) ? 'quiet' : '');
 
 export function tagsHtml(h) {
   const t = [];
   if (h.candy) t.push(['🍬 Candy', 'candy']);
-  if (h.low_noise) t.push(['🧩 Low noise', 'quiet']);
+  if (isLowSensory(h)) t.push(['🧩 Sensory-friendly', 'quiet']);
   if (h.nonfood) t.push(['🎃 Non-food', 'teal', 'teal-pumpkin']); // Teal Pumpkin Project: non-food treats
   // Visitors see one "big scares" idea for jump scares or an intense setup.
   if (isScary(h)) t.push(['😱 Big scares', 'spooky']);
@@ -61,7 +63,7 @@ export function selectedHtml(h, ctx, saved) {
 }
 
 export function pinHtml(h, { dim, number }) {
-  return `<div class="pin ${pinClass(h)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${isScary(h) ? '👻' : h.low_noise ? '🍭' : '🎃'}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
+  return `<div class="pin ${pinClass(h)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${symbolOf(h)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
 }
 
 /** Leaflet style for a zone outline; with a selected zone, it stands out and the others recede. */

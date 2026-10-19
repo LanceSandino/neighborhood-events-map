@@ -46,7 +46,6 @@ export function suggestNearby(route, candidates, { groups = [], zonesEnabled = f
     .slice(0, limit);
 }
 
-const pathLength = (p) => p.slice(1).reduce((sum, s, i) => sum + haversine(p[i], s), 0);
 
 export function orderGroup(stops, start = null) {
   if (stops.length <= 2) return start && stops.length === 2 && haversine(start, stops[1]) < haversine(start, stops[0]) ? [stops[1], stops[0]] : [...stops];
@@ -60,17 +59,22 @@ export function orderGroup(stops, start = null) {
     current = remaining.splice(best, 1)[0];
     path.push(current);
   }
-  // 2-opt on the open path (start point, if any, is fixed in front).
-  const anchor = start ? [start] : [];
-  let improved = true;
-  let route = [...anchor, ...path];
+  // 2-opt on the open path (start point, if any, is fixed in front). Each move is judged by the change of
+  // its two end edges only, so large neighborhoods (hundreds of stops) stay fast on a phone.
+  const route = [...(start ? [start] : []), ...path];
   const first = start ? 1 : 0;
+  const last = route.length - 1;
+  let improved = true;
   for (let pass = 0; improved && pass < 50; pass++) {
     improved = false;
-    for (let i = first; i < route.length - 1; i++) {
-      for (let k = i + 1; k < route.length; k++) {
-        const candidate = [...route.slice(0, i), ...route.slice(i, k + 1).reverse(), ...route.slice(k + 1)];
-        if (pathLength(candidate) + 1e-6 < pathLength(route)) { route = candidate; improved = true; }
+    for (let i = first; i < last; i++) {
+      for (let k = i + 1; k <= last; k++) {
+        const delta = (i > 0 ? haversine(route[i - 1], route[k]) - haversine(route[i - 1], route[i]) : 0)
+          + (k < last ? haversine(route[i], route[k + 1]) - haversine(route[k], route[k + 1]) : 0);
+        if (delta < -1e-6) {
+          for (let a = i, b = k; a < b; a++, b--) [route[a], route[b]] = [route[b], route[a]];
+          improved = true;
+        }
       }
     }
   }
@@ -80,7 +84,7 @@ export function orderGroup(stops, start = null) {
 /**
  * @returns {Array<{key: string, zones: string[], stops: object[], truncated: boolean}>}
  */
-export function planStops(stops, { groups = [], zonesEnabled = false, start = null, maxPerGroup = 20 } = {}) {
+export function planStops(stops, { groups = [], zonesEnabled = false, start = null, maxPerGroup = 200 } = {}) {
   const grouped = groupStops(stops, groups, zonesEnabled);
   // The start is either one of the stops, or a place that is not a stop (e.g. the visitor's location).
   const point = start && !stops.some((s) => s.id === start.id) ? start : null;
