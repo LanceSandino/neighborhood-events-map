@@ -57,7 +57,7 @@ jobs:
         with: { node-version: '22' }
       - name: Browser library unit tests (node:test)
         run: node --test tests/js/*.test.mjs
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: '3.12' }
       - name: GIS importer unit tests
         run: pip install shapely==2.0.6 && python -I -m unittest discover -s scripts/tests -v
