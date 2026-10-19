@@ -1,0 +1,116 @@
+{
+  "approved": false,
+  "checksums_sha256": {
+    "boundary.geojson": "52ce92337e56f6d88c18baeb3c6a1d8f52ca182f02c99e40958d33143272980c",
+    "phase-1.geojson": "70d06a1a88acf180d93b408f364f31fb288ab9b462333cb4e5289b36e4bbd07c",
+    "phase-2.geojson": "31c21d4307187df84ee62ac63993cbc5c2cf51e46b2744585da9ce971498d131",
+    "phase-3.geojson": "88c30e80452f89bbd69306156eacc2c057ee574bac47229ae98ec0afba99a894",
+    "review-map.html": "3f74dd02289cceff1e983e3c6d00aeaee6440ddd14b6be770ff7f707ee3f4356",
+    "source-all.geojson": "6050570648690891a0fbcba8d82dc35f43c5e2302d22462ec9c75f0ac8df6228",
+    "zones.geojson": "42f2c398562fceec9490935e8cca52d00d4cde5bfb207bbbe412249f940d3b7e"
+  },
+  "coordinate_order": "[longitude, latitude]",
+  "crs": "EPSG:4326 (RFC 7946)",
+  "geometry_checks": {
+    "all_valid": true,
+    "pairwise_overlaps": [],
+    "residential_sum_area_m2_approx": 132732.8,
+    "residential_union_area_m2_approx": 132732.8,
+    "sliver_hole_threshold_m2": 5.0,
+    "sliver_holes_removed": 0,
+    "union_hole_areas_m2_approx": [],
+    "union_holes": 0,
+    "union_parts": 1
+  },
+  "geometry_response_sha256": [
+    "2e0474cf3b6785fa7d8b622d123ad020e10b1cfc0edfe45a7492f663015e6168"
+  ],
+  "groups": {
+    "phase-1": 1,
+    "phase-2": 1,
+    "phase-3": 1
+  },
+  "ids_response_sha256": "8e91964cc632bd0dc243808ae54fc9dc21da630bdb638dde514eac08522aa949",
+  "inventory": [
+    {
+      "INSTRUMENT_NO": "1982P030037",
+      "NAME": "VENTURA RESERVE PH 1",
+      "OBJECTID": 10071,
+      "SUBDIVISION_NO": "8867",
+      "SUBDIVISION_PAGE": "37",
+      "SUBDIVISION_PLAT": "30",
+      "area_m2_approx": 60433.9,
+      "bounds_lonlat": [
+        -81.2973583,
+        28.5053497,
+        -81.2933477,
+        28.5087961
+      ],
+      "classification": "phase-1",
+      "valid": true,
+      "validity_problem": null
+    },
+    {
+      "INSTRUMENT_NO": "1993P031086",
+      "NAME": "VENTURA RESERVE PH 2",
+      "OBJECTID": 7051,
+      "SUBDIVISION_NO": "8913",
+      "SUBDIVISION_PAGE": "86",
+      "SUBDIVISION_PLAT": "31",
+      "area_m2_approx": 33045.3,
+      "bounds_lonlat": [
+        -81.2966919,
+        28.5082538,
+        -81.2939,
+        28.5109437
+      ],
+      "classification": "phase-2",
+      "valid": true,
+      "validity_problem": null
+    },
+    {
+      "INSTRUMENT_NO": "1994P032109",
+      "NAME": "VENTURA RESERVE PH 3",
+      "OBJECTID": 10073,
+      "SUBDIVISION_NO": "8926",
+      "SUBDIVISION_PAGE": "109",
+      "SUBDIVISION_PLAT": "32",
+      "area_m2_approx": 39253.7,
+      "bounds_lonlat": [
+        -81.2949056,
+        28.505232,
+        -81.2924161,
+        28.5092698
+      ],
+      "classification": "phase-3",
+      "valid": true,
+      "validity_problem": null
+    }
+  ],
+  "missing_expected": [],
+  "notes": [
+    "Non-residential zones (none) are excluded from zones.geojson and from the boundary union; they are not claimable.",
+    "Unclassified records are never silently omitted from the inventory.",
+    "Recorded plat polygons may not match actual HOA eligible areas or gated access.",
+    "Plat polygons are eligibility geometry, not a pedestrian network; no crossings are implied.",
+    "House address points must be acquired separately; none are derived from these polygons.",
+    "source-all.geojson is the merged geometry responses (sorted by OBJECTID); raw response digests are listed.",
+    "Do not redistribute in a public repository until the data owner's reuse terms are confirmed."
+  ],
+  "queried_at_utc": "2026-10-19T02:49:50+00:00",
+  "requires_owner_review": [
+    "Confirm HOA eligibility of every recorded section, gates and access routes before approval."
+  ],
+  "source": "https://ocgis4.ocfl.net/arcgis/rest/services/AGOL_Open_Data/MapServer/54/query",
+  "source_OBJECTIDs": [
+    7051,
+    10071,
+    10073
+  ],
+  "source_count": 3,
+  "source_layer": "https://ocgis4.ocfl.net/arcgis/rest/services/AGOL_Open_Data/MapServer/54",
+  "unclassified_count": 0,
+  "variant_records_not_in_main_query": [],
+  "variant_where": "UPPER(NAME) LIKE '%VENTURA%RES%'",
+  "where": "NAME LIKE 'VENTURA RESERVE%'"
+}

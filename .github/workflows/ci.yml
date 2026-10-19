@@ -1,0 +1,110 @@
+# Lightweight CI mirroring local commands (see AGENTS.md "Quality gates").
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: halloween, POSTGRES_PASSWORD: halloween, POSTGRES_DB: halloween }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U halloween" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://halloween:halloween@127.0.0.1:5432/halloween?serverVersion=17&charset=utf8
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl, pdo_pgsql, pcntl, posix, zip
+          coverage: pcov
+          tools: composer:v2
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: PHP syntax
+        run: find src tests migrations -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+      - name: Static analysis (PHPStan level 6)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+      - name: Dependency audit
+        run: composer audit --locked
+      - name: Migrations up / down / up on a blank database
+        run: |
+          php bin/console doctrine:database:create --env=test --if-not-exists
+          php bin/console doctrine:migrations:migrate --env=test -n
+          php bin/console doctrine:migrations:migrate first --env=test -n
+          php bin/console doctrine:migrations:migrate --env=test -n
+      - name: PHPUnit (unit + integration against PostgreSQL)
+        run: php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text --only-summary-for-coverage-text
+
+  js-and-python:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Browser library unit tests (node:test)
+        run: node --test tests/js/*.test.mjs
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: GIS importer unit tests
+        run: pip install shapely==2.0.6 && python -I -m unittest discover -s scripts/tests -v
+
+  images:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose files
+        run: |
+          APP_SECRET=x APP_BASE_URL=http://localhost POSTGRES_PASSWORD=x docker compose -f compose.yaml config -q
+          APP_SECRET=x APP_BASE_URL=http://localhost POSTGRES_PASSWORD=x docker compose -f compose.yaml -f compose.dev.yaml config -q
+      - name: Build production app and nginx images
+        run: |
+          docker build --target prod -t nhm-app:ci .
+          docker build --target nginx -t nhm-nginx:ci .
+          docker run --rm --entrypoint id nhm-app:ci -un | grep -qx www-data
+
+  e2e:
+    runs-on: ubuntu-24.04
+    needs: [php, js-and-python]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create throwaway CI env files (no real secrets)
+        run: |
+          gen() { openssl rand -hex 24; }
+          sed -e "s|^APP_SECRET=.*|APP_SECRET=$(gen)|" -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(gen)|" \
+              -e "s|^# COMPOSE_FILE=|COMPOSE_FILE=|" -e "s|^MAILER_DSN=.*|MAILER_DSN=smtp://mailpit:1025|" \
+              -e "s|^POW_DIFFICULTY=.*|POW_DIFFICULTY=14|" -e "s|^RL_LINK_PER_IP=.*|RL_LINK_PER_IP=500/3600|" \
+              -e "s|^RL_DISPUTE_PER_IP=.*|RL_DISPUTE_PER_IP=200/86400|" .env.example > .env
+          printf 'COMMUNITY_BOOTSTRAP_FILE=/app/examples/ventura-reserve/community.yaml\nRL_POW_PER_IP=2000/600\nRL_LOOKUP_PER_IP=5000/600\n' >> .env
+          sed -e "s|^COMPOSE_PROJECT_NAME=.*|COMPOSE_PROJECT_NAME=halloween-demo|" -e "s|^HTTP_PORT=.*|HTTP_PORT=8088|" \
+              -e "s|^APP_BASE_URL=.*|APP_BASE_URL=http://localhost:8088|" \
+              -e "s|^COMMUNITY_BOOTSTRAP_FILE=.*|COMMUNITY_BOOTSTRAP_FILE=/app/examples/demo/community.yaml|" .env > .env.demo
+          printf 'MAILPIT_UI_PORT=8026\nAPP_DEMO=1\nCOMMUNITY_BOOTSTRAP_APPROVE=1\nADMIN_EMAIL=organizer@maple-hollow.invalid\nRL_DISPUTE_PER_ADDRESS=500/86400\n' >> .env.demo
+      - name: Start the Ventura Reserve and demo stacks
+        run: |
+          docker compose run --rm --no-deps --entrypoint composer app install --no-interaction --no-progress
+          docker compose up -d --build --wait
+          docker compose --env-file .env.demo up -d --build --wait
+      - name: Playwright E2E (tiles blocked to respect the OSM tile policy)
+        env: { E2E_BLOCK_TILES: '1' }
+        run: ./bin/e2e.sh
+      - name: Session lifecycle smoke test (restart durability, cookie flags, logout)
+        run: python3 scripts/smoke_session.py
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: e2e-results, path: tests/e2e/test-results, retention-days: 7 }
+      - if: always()
+        run: docker compose logs app --tail=200 || true

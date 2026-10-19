@@ -1,0 +1,149 @@
+{# Dialogs / mobile bottom sheets for the public page. All behaviour in assets/js/home.js + register.js. #}
+{% set reg = c.registration %}
+<div class="modal-wrap" id="registerModal" role="dialog" aria-modal="true" aria-labelledby="registerTitle" hidden>
+  <div class="modal">
+    <button type="button" class="close-modal" data-close aria-label="Close">×</button>
+    <div class="eyebrow">🏡 For {{ c.community.name }} residents</div>
+    <h2 id="registerTitle">List your trick-or-treat stop</h2>
+    <p class="introtext">No password needed. Pick your address, describe your stop, and confirm with a one-time link sent to your email. First verified neighbor for an address publishes it right away.</p>
+    <ol class="steps" aria-hidden="true"><li data-step-dot="1"></li><li data-step-dot="2"></li><li data-step-dot="3"></li></ol>
+
+    {% if not reg.open %}
+      <div class="notice" role="status">⏳ {{ reg.reason }}</div>
+      <div class="modal-actions"><button type="button" class="secondary" data-close>Close</button></div>
+    {% else %}
+    <form id="registerForm" novalidate>
+      <div class="hp-field" aria-hidden="true"><label for="regWebsite">Website</label><input id="regWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+      <fieldset data-step="1">
+        <legend class="visually-hidden">Step 1 of 3: your address</legend>
+        {% if reg.address_mode != 'self_entry' %}
+        <div class="field full">
+          <label for="addrQuery">Home address *</label>
+          <input id="addrQuery" autocomplete="off" placeholder="House number + street, e.g. 123 Pumpkin Ln" maxlength="80" aria-describedby="addrHelp" aria-autocomplete="list" aria-controls="addrSuggestions">
+          <span class="form-caption" id="addrHelp">Start with your house number. Only addresses in {{ c.community.name }} can be listed.</span>
+          <ul class="suggestions" id="addrSuggestions" role="listbox" aria-label="Matching addresses"></ul>
+          <span class="error" data-error="address"></span>
+        </div>
+        {% endif %}
+        {% if reg.address_mode != 'registry' %}
+        <div id="selfEntry" class="form-grid {{ reg.address_mode == 'both' ? 'hide' }}">
+          <div class="field"><label for="seHouse">House number *</label><input id="seHouse" inputmode="numeric" maxlength="7" autocomplete="off"></div>
+          <div class="field"><label for="seStreet">Street *</label><select id="seStreet"><option value="">Choose…</option>{% for s in reg.street_allowlist %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="seUnit">Unit (optional)</label><input id="seUnit" maxlength="8" autocomplete="off"></div>
+          {% if c.zones|length > 0 %}
+          <div class="field"><label for="seZone">{{ zone_summary(c.zones) ? zone_summary(c.zones).title|split(' ')|last|capitalize : 'Zone' }}</label><select id="seZone"><option value="">Detect from pin</option>{% for z in c.zones %}{% if z.claimable %}<option value="{{ z.key }}">{{ z.label }}</option>{% endif %}{% endfor %}</select></div>
+          {% endif %}
+          <div class="field full">
+            <span class="label" id="pinLabel">Tap your house on the map *</span>
+            <div class="pin-map" id="pinMap" role="application" aria-labelledby="pinLabel"></div>
+            <span class="form-caption">Place the pin on your roof. It must be inside the neighborhood boundary. Nothing is geocoded or guessed.</span>
+            <span class="error" data-error="pin"></span>
+          </div>
+        </div>
+        {% if reg.address_mode == 'both' %}<button type="button" class="link-button" id="btnSelfEntry">Can’t find your address? Enter it and place a pin</button>{% endif %}
+        {% endif %}
+        <div id="claimedPanel" class="notice danger hide" role="alert">
+          <b>This home is already claimed.</b> If you think this is a mistake, request a review. The organizer will follow up by email; the current owner is never shown.
+          <div class="modal-actions"><button type="button" class="secondary" id="btnRequestReview">Request a review</button></div>
+        </div>
+        <div id="selectedAddress" class="success hide" role="status"></div>
+        <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="button" class="primary" data-next="2">Next: your stop →</button></div>
+      </fieldset>
+
+      <fieldset data-step="2" hidden>
+        <legend class="visually-hidden">Step 2 of 3: your stop</legend>
+        <div class="form-grid">
+          <div class="field"><label for="regStart">Start time</label><select id="regStart">{% for h in 15..22 %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.starts_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
+          <div class="field"><label for="regEnd">End time</label><select id="regEnd">{% for h in 15..23 %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.ends_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
+          <div class="field"><label for="regScare">Scare level</label><select id="regScare"><option value="gentle">None · gentle</option><option value="mild">Mild spooky decor</option><option value="intense">Intense scares</option></select></div>
+          <div class="field"><label for="regStatus">Status tonight</label><select id="regStatus"><option value="active">Handing out (during my hours)</option><option value="paused">Paused for now</option></select></div>
+          <div class="field full">
+            <span class="label" id="treatsLabel">Treats &amp; environment</span>
+            <div class="checks" role="group" aria-labelledby="treatsLabel">
+              {% if c.features.candy %}<label class="check-chip"><input type="checkbox" name="candy" checked> 🍬 Candy</label>{% endif %}
+              {% if c.features.nonfood_treats %}<label class="check-chip"><input type="checkbox" name="nonfood"> 💙 Non-food treats</label>{% endif %}
+              {% if c.features.adult_refreshments %}<label class="check-chip"><input type="checkbox" name="adult_drinks"> 🥤 Adult refreshments · 21+</label>{% endif %}
+              <label class="check-chip"><input type="checkbox" name="low_noise" checked> 💚 Low noise</label>
+              <label class="check-chip"><input type="checkbox" name="jump_scares"> 😱 Jump scares</label>
+              <label class="check-chip"><input type="checkbox" name="flashing_lights"> ⚡ Flashing lights</label>
+              <label class="check-chip"><input type="checkbox" name="loud_audio"> 🔊 Loud music/sounds</label>
+              <label class="check-chip"><input type="checkbox" name="stroller_friendly"> 🛞 Stroller-friendly</label>
+            </div>
+            <span class="error" data-error="offerings"></span>
+          </div>
+          <div class="field full"><label for="regNote">Short public note (optional)</label><textarea id="regNote" maxlength="400" placeholder="e.g. Allergy-friendly bin on the porch. No children's names, please."></textarea><span class="form-caption"><span id="noteCount">0</span>/400</span><span class="error" data-error="note"></span></div>
+        </div>
+        <div class="notice info">📍 Your street address, hours and these details will be <b>shown publicly</b> on the map. Your email is never shown.</div>
+        <span class="error" data-error="end"></span>
+        <div class="modal-actions"><button type="button" class="secondary" data-next="1">← Back</button><button type="button" class="primary" data-next="3">Next: confirm by email →</button></div>
+      </fieldset>
+
+      <fieldset data-step="3" hidden>
+        <legend class="visually-hidden">Step 3 of 3: confirm by email</legend>
+        <div class="field full"><label for="regEmail">Your email *</label><input id="regEmail" type="email" autocomplete="email" placeholder="neighbor@example.com" maxlength="254"><span class="error" data-error="email"></span>
+          <p class="form-caption">We email you a one-time link (valid for a short time). Not shown to visitors. Use the same email later to edit your listing.</p></div>
+        <div id="powStatus" class="hide" role="status" aria-live="polite"><span class="form-caption">Running a quick anti-spam check on your device…</span><div class="progress"><span id="powBar"></span></div></div>
+        <div id="submitError" class="notice danger hide" role="alert"></div>
+        <div class="modal-actions"><button type="button" class="secondary" data-next="2">← Back</button><button type="submit" class="primary" id="btnSendLink">Email me the confirmation link →</button></div>
+      </fieldset>
+    </form>
+    <div id="registerSuccess" class="success hide" role="status" tabindex="-1"></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal-wrap" id="disputeModal" role="dialog" aria-modal="true" aria-labelledby="disputeTitle" hidden>
+  <div class="modal">
+    <button type="button" class="close-modal" data-close aria-label="Close">×</button>
+    <div class="eyebrow">🔎 Review request</div>
+    <h2 id="disputeTitle">Ask the organizer to review</h2>
+    <p class="introtext"><b id="disputeAddress"></b> is already claimed. Tell the organizer why you think this is a mistake. They review requests by hand; nothing changes automatically and the current owner is never revealed.</p>
+    <form id="disputeForm" novalidate>
+      <div class="hp-field" aria-hidden="true"><label for="dWebsite">Website</label><input id="dWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+      <div class="field full"><label for="dEmail">Your email *</label><input id="dEmail" type="email" autocomplete="email" maxlength="254"><span class="error" data-error="reporter_email"></span></div>
+      <div class="field full"><label for="dReason">What happened? * (200–2000 characters)</label><textarea id="dReason" minlength="200" maxlength="2000"></textarea><span class="form-caption"><span id="dCount">0</span>/2000</span><span class="error" data-error="reason"></span></div>
+      <div id="dPow" class="hide" role="status"><span class="form-caption">Running a quick anti-spam check…</span><div class="progress"><span id="dPowBar"></span></div></div>
+      <div id="dError" class="notice danger hide" role="alert"></div>
+      <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="submit" class="primary">Send review request</button></div>
+    </form>
+    <div id="disputeSuccess" class="success hide" role="status" tabindex="-1"></div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="routeModal" role="dialog" aria-modal="true" aria-labelledby="routeTitle" hidden>
+  <div class="modal wide">
+    <button type="button" class="close-modal" data-close aria-label="Close">×</button>
+    <div class="eyebrow">✨ Your adventure</div>
+    <h2 id="routeTitle">Your trick-or-treat stops</h2>
+    <p class="introtext" id="routeSub">A suggested stop order based on your saved homes and filters.</p>
+    <div class="field full"><label for="routeStart">Start near</label><select id="routeStart"><option value="">The first stop in each area</option></select></div>
+    <div id="routeItems" aria-live="polite"></div>
+    <div class="notice" id="routeNotice">🚸 This is a suggested order of stops, not walking directions. It never connects separate areas across major roads, water or gates. Use sidewalks and marked crossings.</div>
+    {% for note in c.map.crossing_notes %}<div class="notice">⚠️ {{ note }}</div>{% endfor %}
+    <div class="modal-actions"><button type="button" class="secondary" data-close>Back to map</button><button type="button" class="secondary" id="btnShareRoute">Share</button><button type="button" class="primary" id="btnCopyRoute">Copy stop list</button></div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle" hidden>
+  <div class="modal">
+    <button type="button" class="close-modal" data-close aria-label="Close">×</button>
+    <div class="eyebrow">🎃 Community guide</div>
+    <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
+    <p class="introtext">Halloween is {{ event_badge(c.event.date)|lower|capitalize }}. Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} ({{ c.event.timezone }}); each home sets its own hours.</p>
+    {% if c.community.gate_notice %}<div class="notice">🚪 {{ c.community.gate_notice }}</div>{% else %}<div class="notice">🚪 This site does not grant access to gated areas.</div>{% endif %}
+    {% for note in c.map.crossing_notes %}<div class="notice">⚠️ {{ note }}</div>{% endfor %}
+    <p class="introtext">Families browse anonymously. Filters, favorites and your start point stay on this device. Residents list their own homes by confirming an email link; addresses appear only after they opt in. Sensory labels such as “low noise” or “no flashing lights” are self-reported—please use your own judgment.</p>
+    <p class="introtext">Something wrong with a listing? Select it on the map and choose “Report this listing”{% if c.community.contact_url %}, or <a href="{{ c.community.contact_url }}" rel="noopener">contact the organizer</a>{% endif %}.</p>
+    <div class="modal-actions"><button type="button" class="primary" data-close>Got it!</button></div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="houseModal" role="dialog" aria-modal="true" aria-labelledby="houseTitle" hidden>
+  <div class="modal">
+    <button type="button" class="close-modal" data-close aria-label="Close">×</button>
+    <div class="eyebrow">🏠 My house</div>
+    <h2 id="houseTitle">Your listing</h2>
+    <p class="introtext">List a new home, or sign in with a one-time email link to edit hours, mark “out of candy”, or pause your listing.</p>
+    <div class="modal-actions"><a class="secondary" href="/me">🔑 Manage my listing</a><button type="button" class="primary" data-action="register">+ List my house</button></div>
+  </div>
+</div>

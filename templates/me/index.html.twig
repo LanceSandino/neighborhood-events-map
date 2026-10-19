@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+{% set nav = 'me' %}
+{% block title %}My house · {{ c.community.name }} Halloween{% endblock %}
+{% block meta %}<meta name="csrf-token" content="{{ csrf_token('nhm') }}">{% endblock %}
+{% block body %}
+<div class="dash" id="dashboard">
+  <div class="dash-head">
+    <div><div class="eyebrow">🔑 Signed in</div><h1>My house</h1><p class="session-hint" id="sessionHint">Loading…</p></div>
+    <div class="bottom-actions"><a class="secondary hide" href="/admin" id="adminLink">Organizer console</a><button type="button" class="secondary" id="btnLogout">Sign out</button></div>
+  </div>
+  <div id="claimOutcome" role="status" tabindex="-1"></div>
+  <div id="homes" aria-live="polite"><p class="empty">Loading your homes…</p></div>
+  <div class="dash-home">
+    <h2>List another home</h2>
+    <p class="introtext">Manage more than one property? Use the map’s “List your home” form while signed in, or contact the organizer.</p>
+    <a class="secondary" href="/#list-my-house">+ List a home</a>
+  </div>
+</div>
+<template id="homeTemplate">
+  <article class="dash-home">
+    <h2 data-f="address"></h2>
+    <p class="introtext" data-f="meta"></p>
+    <div class="notice hide" data-f="warning"></div>
+    <div class="status-row" role="group" aria-label="Status tonight">
+      <button type="button" class="secondary" data-status="active">🎃 Handing out</button>
+      <button type="button" class="secondary" data-status="paused">⏸ Paused</button>
+      <button type="button" class="secondary" data-status="out_of_candy">🍬 Out of candy</button>
+      <button type="button" class="secondary" data-status="done">✅ Done for tonight</button>
+    </div>
+    <form class="form-grid" data-f="form" novalidate>
+      <div class="field"><label>Start time<select name="start"></select></label></div>
+      <div class="field"><label>End time<select name="end"></select></label></div>
+      <div class="field"><label>Scare level<select name="scare_level"><option value="gentle">None · gentle</option><option value="mild">Mild spooky decor</option><option value="intense">Intense scares</option></select></label></div>
+      <div class="field"><label>Visible on the map<select name="published"><option value="true">Yes, show my home</option><option value="false">No, hide it for now</option></select></label></div>
+      <div class="field full"><span class="label">Treats &amp; environment</span><div class="checks">
+        <label class="check-chip"><input type="checkbox" name="candy"> 🍬 Candy</label>
+        <label class="check-chip"><input type="checkbox" name="nonfood"> 💙 Non-food treats</label>
+        <label class="check-chip"><input type="checkbox" name="adult_drinks"> 🥤 Adult refreshments · 21+</label>
+        <label class="check-chip"><input type="checkbox" name="low_noise"> 💚 Low noise</label>
+        <label class="check-chip"><input type="checkbox" name="jump_scares"> 😱 Jump scares</label>
+        <label class="check-chip"><input type="checkbox" name="flashing_lights"> ⚡ Flashing lights</label>
+        <label class="check-chip"><input type="checkbox" name="loud_audio"> 🔊 Loud music/sounds</label>
+        <label class="check-chip"><input type="checkbox" name="stroller_friendly"> 🛞 Stroller-friendly</label>
+      </div></div>
+      <div class="field full"><label>Short public note<textarea name="note" maxlength="400"></textarea></label></div>
+      <div class="field full"><div class="notice danger hide" data-f="error" role="alert"></div>
+        <div class="modal-actions"><button type="button" class="danger" data-f="release">Give up this home</button><button type="submit" class="primary">Save changes</button></div></div>
+    </form>
+  </article>
+</template>
+{% endblock %}
+{% block scripts %}<script type="module" src="/assets/js/me.js?v={{ app_version }}"></script>{% endblock %}

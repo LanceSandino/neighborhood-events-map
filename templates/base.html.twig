@@ -1,0 +1,72 @@
+{# Shared shell: dark navigation rail (desktop), top bar, mobile bottom navigation. #}
+{%- set community = c.community -%}
+{%- set branding = c.branding -%}
+{%- set year = c.event.date|slice(0, 4) -%}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#222236">
+  <meta name="description" content="{{ community.name }} Halloween: a friendly trick-or-treat map of homes that chose to participate.">
+  {% block meta %}{% endblock %}
+  <title>{% block title %}{{ community.name }} Halloween{% endblock %}</title>
+  <link rel="icon" href="{{ branding.logo_url ?? '/assets/img/favicon.svg' }}">
+  <link rel="preload" href="/fonts/nunito-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  {% block styles %}{% endblock %}
+  <link rel="stylesheet" href="/assets/css/app.css?v={{ app_version }}">
+  <link rel="stylesheet" href="/theme.css?v={{ app_version }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+  <aside class="sidebar" aria-label="Site">
+    <a class="brand" href="/">
+      <div class="brand-icon" aria-hidden="true">{% if branding.logo_url %}<img src="{{ branding.logo_url }}" alt="">{% else %}{{ branding.brand_emoji }}{% endif %}</div>
+      <div><div class="brand-name">{{ community.name }}<br>Halloween</div><div class="brand-sub">Community {{ year }}</div></div>
+    </a>
+    <div>
+      <div class="nav-title" id="nav-title">EXPLORE</div>
+      <nav class="nav" aria-labelledby="nav-title">
+        {% set nav = nav ?? 'map' %}
+        <a href="/#explore" class="{{ nav == 'map' ? 'active' }}" data-action="explore" {% if nav == 'map' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🗺️</span> Trick-or-treat map</a>
+        <a href="/#route" data-action="route"><span class="nav-icon" aria-hidden="true">🧭</span> My walking route</a>
+        <a href="/#list-my-house" data-action="register"><span class="nav-icon" aria-hidden="true">🏠</span> List my house</a>
+        <a href="/me" class="{{ nav == 'me' ? 'active' }}" {% if nav == 'me' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🔑</span> Manage my house</a>
+        <a href="/#info" data-action="info"><span class="nav-icon" aria-hidden="true">ℹ️</span> Event info</a>
+      </nav>
+    </div>
+    <div class="side-bottom">
+      <div class="side-panel">
+        <div class="ghost" aria-hidden="true">👻</div>
+        <b>Handing out treats?</b>
+        <p>Put your home on the map so the neighborhood can find you!</p>
+        <a class="side-action secondary" href="/#list-my-house" data-action="register">+ Add your house</a>
+      </div>
+      <p class="side-fine">Made for {{ community.name }} neighbors ♥<br>v{{ app_version }}{% if c.demo %} · fictional demo data{% endif %}</p>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topline">
+      <span class="crumb">📍 {% if community.locality %}{{ community.locality }}{% if community.region %}, {{ community.region }}{% endif %} <span class="sep">/</span> {% endif %}<strong>{{ community.name }} Community</strong></span>
+      <div class="topright">
+        {% if c.demo %}<span class="demo-pill">FICTIONAL DEMO</span>{% elseif c.map.boundary_status == 'pending_review' %}<span class="demo-pill warn" title="House listings open after the organizer approves the boundary">SETUP IN REVIEW</span>{% endif %}
+        <span class="event-pill">🎃 {{ event_badge(c.event.date) }}</span>
+        <a class="top-add" href="/#list-my-house" data-action="register">+ List your home</a>
+      </div>
+    </header>
+    <main class="content" id="main" tabindex="-1">
+      {% block body %}{% endblock %}
+    </main>
+  </div>
+</div>
+<nav class="mobile-bottom" aria-label="Primary">
+  <a href="/#explore" class="{{ (nav ?? 'map') == 'map' ? 'active' }}" data-action="explore"><span aria-hidden="true">🗺️</span>Map</a>
+  <a href="/#route" data-action="route"><span aria-hidden="true">🧭</span>My route</a>
+  <a href="/#my-house" data-action="house" class="{{ (nav ?? '') == 'me' ? 'active' }}"><span aria-hidden="true">🏠</span>My house</a>
+</nav>
+{% block modals %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

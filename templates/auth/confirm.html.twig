@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+{% set nav = 'me' %}
+{% block title %}Confirm · {{ c.community.name }} Halloween{% endblock %}
+{% block meta %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<div class="page-card">
+  {% if token %}
+    <div class="eyebrow">✅ One more tap</div>
+    {% if claim %}
+      <h1>Confirm and publish your house</h1>
+      <p>Press confirm to sign in and publish <b>{{ claim.address }}</b> on the {{ c.community.name }} Halloween map. Your street address and these listing details will be public; your email stays private.</p>
+      {% set l = claim.listing %}
+      <div class="confirm-listing" aria-label="Listing to be published">
+        <div class="card-meta">{{ l.start|time12 }}–{{ l.end|time12 }}</div>
+        <div class="tags">
+          {% if l.candy %}<span class="tag candy">🍬 Candy</span>{% endif %}
+          {% if l.nonfood %}<span class="tag teal">💙 Non-food</span>{% endif %}
+          {% if l.low_noise %}<span class="tag quiet">💚 Low noise</span>{% endif %}
+          {% if l.scare_level == 'intense' %}<span class="tag spooky">👻 Intense scares</span>{% elseif l.scare_level == 'mild' %}<span class="tag spooky">🎃 Mild scares</span>{% endif %}
+          {% if l.jump_scares %}<span class="tag spooky">😱 Jump scares</span>{% endif %}
+          {% if l.flashing_lights %}<span class="tag strobe">⚡ Flashing</span>{% endif %}
+          {% if l.loud_audio %}<span class="tag strobe">🔊 Loud audio</span>{% endif %}
+          {% if l.adult_drinks %}<span class="tag drinks">🥤 21+</span>{% endif %}
+          {% if l.stroller_friendly %}<span class="tag quiet">🛞 Stroller-friendly</span>{% endif %}
+        </div>
+        {% if l.note %}<p class="card-note">“{{ l.note }}”</p>{% endif %}
+        <p class="form-caption">Not what you entered? Press Cancel — nothing is published until you confirm.</p>
+      </div>
+    {% else %}
+      <h1>Confirm sign-in</h1>
+      <p>Press confirm to sign in and manage your listing.</p>
+    {% endif %}
+    <form method="post" action="/auth/confirm">
+      <input type="hidden" name="t" value="{{ token }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token(csrf_id) }}">
+      <div class="modal-actions"><a class="secondary" href="/">Cancel</a><button class="primary" type="submit">{{ claim ? 'Confirm sign-in and publish' : 'Confirm sign-in' }}</button></div>
+    </form>
+    <p class="form-caption">This link works once. Opening this page did not sign you in.</p>
+  {% else %}
+    <div class="eyebrow">⏳ Link problem</div>
+    <h1>{{ state == 'used' ? 'This link was already used' : (state == 'expired' ? 'This link has expired' : 'This link is not valid') }}</h1>
+    <p>Sign-in links work once and expire after a few minutes. You can request a fresh one.</p>
+    <div class="modal-actions"><a class="secondary" href="/">Back to map</a><a class="primary" href="/login">Email me a new link</a></div>
+  {% endif %}
+</div>
+{% endblock %}

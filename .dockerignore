@@ -1,0 +1,24 @@
+.git
+.env
+.env.*
+!.env.dist
+!.env.example
+vendor
+var
+backups
+deploy
+tests/e2e/node_modules
+tests/e2e/test-results
+tests/e2e/playwright-report
+coverage
+docs/design/screenshots
+examples/**/review-map.html
+**/__pycache__
+# Never needed in images (tests, docs, CI, caches); keeps build context and images small and secret-free.
+.phpunit.cache
+.phpunit.result.cache
+.github
+tests
+docs
+scripts
+.git*

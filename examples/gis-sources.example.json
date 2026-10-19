@@ -1,0 +1,81 @@
+{
+  "_comment": [
+    "Example config for scripts/fetch_arcgis_boundaries.py and scripts/fetch_arcgis_addresses.py.",
+    "Every value here is a placeholder: copy this file to deploy/private/<community>/gis-sources.json (git-ignored) and fill in your own layer URLs, names and fields.",
+    "Run from the repository root; relative paths resolve against the current directory.",
+    "Keys that start with '_' are comments and ignored. Unknown keys are rejected so typos fail loudly."
+  ],
+  "boundaries": {
+    "_comment": [
+      "layer_url: an ArcGIS MapServer/FeatureServer layer of recorded subdivision (plat) polygons, without /query.",
+      "where: selects the recorded plats of your community. variant_where (optional) is inventoried only, so spelling variants are reported instead of silently missed.",
+      "Classification: the name_field value is upper-cased and whitespace-collapsed, then name_normalize substitutions run in order, then rules run in order and the first match names the zone (match: 'search' by default, or 'fullmatch'). No match means 'unclassified'. Point a rule at 'unclassified' to deny names (replats, amendments) that need a human decision.",
+      "zones: every zone_key a rule can produce. residential zones form zones.geojson and the boundary union; claimable defaults to residential and only residential zones may be claimable. 'unclassified' is built in.",
+      "expected_zones: zones that should be found; missing ones are listed in manifest.json.",
+      "extra_properties: extra output property -> source field, copied onto every feature and into the inventory.",
+      "expected_bounds_lonlat: [min_lon, min_lat, max_lon, max_lat]; polygons outside are flagged (catches swapped coordinates) and never claimable.",
+      "sliver_hole_threshold_m2: union holes smaller than this are removed from the derived boundary only.",
+      "Optional text keys: boundary_name, review_title, source_description, notes (replaces the default manifest notes), owner_review_checks."
+    ],
+    "layer_url": "https://gis.example.gov/arcgis/rest/services/Cadastral/MapServer/1",
+    "where": "Name LIKE '%EXAMPLE ESTATES%'",
+    "variant_where": "UPPER(Name) LIKE '%EXAMPLE%ESTATE%'",
+    "name_field": "Name",
+    "objectid_field": "OBJECTID",
+    "plat_book_field": "BookNumber",
+    "plat_page_fields": ["PlatPage1", "PlatPage2"],
+    "extra_properties": {"gis_sub_number": "GISSubNumber"},
+    "zones": {
+      "unit-1": {"label": "Unit 1", "residential": true},
+      "unit-2": {"label": "Unit 2", "residential": true},
+      "clubhouse": {"label": "Clubhouse", "residential": false, "claimable": false},
+      "common-areas": {"label": "Common areas", "residential": false}
+    },
+    "name_normalize": [
+      {"pattern": "\\bUNIT\\s*(\\d+)\\s*([A-Z])?\\b", "replacement": "UNIT \\1\\2"}
+    ],
+    "rules": [
+      {"pattern": "^(?!EXAMPLE ESTATES\\b)", "zone_key": "unclassified", "note": "only names starting with the community name"},
+      {"pattern": "CLUBHOUSE", "zone_key": "clubhouse"},
+      {"pattern": "COMMON AREA", "zone_key": "common-areas"},
+      {"pattern": "\\b(REPLAT|AMENDED|AMENDMENT|PARTIAL)\\b", "zone_key": "unclassified", "note": "replats need a human decision"},
+      {"pattern": "EXAMPLE ESTATES UNIT 1", "match": "fullmatch", "zone_key": "unit-1"},
+      {"pattern": "EXAMPLE ESTATES UNIT 2", "match": "fullmatch", "zone_key": "unit-2"}
+    ],
+    "expected_zones": ["unit-1", "unit-2", "clubhouse"],
+    "sliver_hole_threshold_m2": 5.0,
+    "overlap_review_threshold_m2": 1.0,
+    "batch_size": 25,
+    "expected_bounds_lonlat": [-101.0, 39.0, -99.0, 41.0],
+    "out_dir": "deploy/private/example-estates/boundaries",
+    "source_all_filename": "source-all.geojson",
+    "boundary_name": "Example Estates (recorded residential units)",
+    "review_title": "Example Estates GIS review map (NOT APPROVED)",
+    "source_description": "Official recorded subdivision polygons from the example county GIS."
+  },
+  "addresses": {
+    "_comment": [
+      "layer_url: an ArcGIS layer of official address points. Only points inside boundary.geojson are written; zone_key comes from zones.geojson.",
+      "fields maps roles to the layer's field names. Roles: address_id, house_number, prefix_direction, street_name, street_type, suffix_direction, unit_type, unit_number, full_address, zip. Use full_address or house_number + street_name at minimum.",
+      "out_fields (optional) is the exact field list requested; it must contain every mapped field. Owner fields are refused.",
+      "boundaries_dir defaults to boundaries.out_dir. Keep out_dir under the git-ignored deploy/private/: addresses.csv is private."
+    ],
+    "layer_url": "https://gis.example.gov/arcgis/rest/services/Addressing/MapServer/0",
+    "where": "1=1",
+    "objectid_field": "OBJECTID",
+    "fields": {
+      "address_id": "AddressID",
+      "house_number": "AddressNumber",
+      "prefix_direction": "PrefixDirection",
+      "street_name": "StreetName",
+      "street_type": "StreetType",
+      "unit_type": "UnitType",
+      "unit_number": "UnitNumber",
+      "full_address": "FullAddress",
+      "zip": "ZipCode"
+    },
+    "batch_size": 200,
+    "out_dir": "deploy/private/example-estates",
+    "boundaries_dir": "deploy/private/example-estates/boundaries"
+  }
+}

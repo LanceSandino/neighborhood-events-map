@@ -1,0 +1,62 @@
+{
+  "_comment": [
+    "Real-data example: Ventura Reserve, City of Orlando, Orange County, Florida.",
+    "Source: Orange County FL open-data map service (AGOL_Open_Data). Layer 54 'Subdivision' holds recorded plats maintained by the Orange County Property Appraiser; layer 0 'Address Points' comes from the county's Central Addressing System.",
+    "Run from the repository root: python3 scripts/fetch_arcgis_boundaries.py --config examples/ventura-reserve/gis-sources.json, then python3 scripts/fetch_arcgis_addresses.py --config examples/ventura-reserve/gis-sources.json.",
+    "Plat polygons are written to examples/ventura-reserve/boundaries (committed). Address points are written to deploy/private/ventura-reserve-example (git-ignored, never committed)."
+  ],
+  "boundaries": {
+    "layer_url": "https://ocgis4.ocfl.net/arcgis/rest/services/AGOL_Open_Data/MapServer/54",
+    "where": "NAME LIKE 'VENTURA RESERVE%'",
+    "variant_where": "UPPER(NAME) LIKE '%VENTURA%RES%'",
+    "name_field": "NAME",
+    "objectid_field": "OBJECTID",
+    "plat_book_field": "SUBDIVISION_PLAT",
+    "plat_page_fields": ["SUBDIVISION_PAGE"],
+    "extra_properties": {"subdivision_no": "SUBDIVISION_NO", "instrument_no": "INSTRUMENT_NO"},
+    "zones": {
+      "phase-1": {"label": "Phase 1", "residential": true},
+      "phase-2": {"label": "Phase 2", "residential": true},
+      "phase-3": {"label": "Phase 3", "residential": true}
+    },
+    "name_normalize": [
+      {"pattern": "\\bPH(?:ASE)?\\s*(\\d+)\\b", "replacement": "PHASE \\1"}
+    ],
+    "rules": [
+      {"pattern": "^(?!VENTURA RESERVE\\b)", "zone_key": "unclassified", "note": "only plats named for the community"},
+      {"pattern": "\\b(REPLAT|REP|AMENDED|AMENDMENT|PARTIAL)\\b", "zone_key": "unclassified", "note": "replats need a human decision"},
+      {"pattern": "VENTURA RESERVE PHASE 1", "match": "fullmatch", "zone_key": "phase-1"},
+      {"pattern": "VENTURA RESERVE PHASE 2", "match": "fullmatch", "zone_key": "phase-2"},
+      {"pattern": "VENTURA RESERVE PHASE 3", "match": "fullmatch", "zone_key": "phase-3"}
+    ],
+    "expected_zones": ["phase-1", "phase-2", "phase-3"],
+    "sliver_hole_threshold_m2": 5.0,
+    "overlap_review_threshold_m2": 1.0,
+    "batch_size": 25,
+    "expected_bounds_lonlat": [-81.32, 28.49, -81.27, 28.52],
+    "out_dir": "examples/ventura-reserve/boundaries",
+    "source_all_filename": "source-all.geojson",
+    "boundary_name": "Ventura Reserve (recorded plats, Phases 1-3)",
+    "review_title": "Ventura Reserve GIS review map (NOT APPROVED)",
+    "source_description": "Official recorded subdivision polygons from the Orange County FL open-data Subdivision layer (maintained by the Orange County Property Appraiser)."
+  },
+  "addresses": {
+    "layer_url": "https://ocgis4.ocfl.net/arcgis/rest/services/AGOL_Open_Data/MapServer/0",
+    "where": "ADDRESS_STATUS = 'Active' AND ADDRESS_TYPE = 'Structure'",
+    "objectid_field": "OBJECTID",
+    "fields": {
+      "address_id": "ENTERPRISE_ADDRESS_ID",
+      "house_number": "FULL_ADDRESS_NUMBER",
+      "prefix_direction": "PRE_DIRECTION",
+      "street_name": "BASENAME",
+      "street_type": "POST_TYPE",
+      "suffix_direction": "POST_DIRECTION",
+      "unit_number": "UNIT",
+      "full_address": "COMPLETE_ADDRESS",
+      "zip": "ZIPCODE"
+    },
+    "batch_size": 200,
+    "out_dir": "deploy/private/ventura-reserve-example",
+    "boundaries_dir": "examples/ventura-reserve/boundaries"
+  }
+}

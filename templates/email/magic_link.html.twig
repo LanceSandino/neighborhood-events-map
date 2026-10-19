@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><body style="margin:0;background:#f8f7f4;font-family:Arial,Helvetica,sans-serif;color:#272638">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #eae5e0" cellpadding="0" cellspacing="0">
+<tr><td style="padding:28px">
+<p style="font-size:12px;letter-spacing:2px;color:#c56b38;font-weight:bold;margin:0 0 8px">🎃 {{ community|upper }} HALLOWEEN</p>
+{% if claim_address %}
+<h1 style="font-size:22px;margin:0 0 12px">Confirm your trick-or-treat listing</h1>
+<p style="font-size:14px;line-height:1.5;margin:0 0 16px">You asked to list <strong>{{ claim_address }}</strong>. Open the link below and press <strong>Confirm</strong> to publish it.</p>
+{% else %}
+<h1 style="font-size:22px;margin:0 0 12px">Your sign-in link</h1>
+<p style="font-size:14px;line-height:1.5;margin:0 0 16px">Open the link below and press <strong>Confirm</strong> to manage your listing.</p>
+{% endif %}
+<p style="margin:0 0 18px"><a href="{{ url }}" style="display:inline-block;background:#f07936;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:10px">Open confirmation page</a></p>
+<p style="font-size:12px;color:#7e7c8c;line-height:1.5;margin:0 0 8px">The link works once and expires in {{ minutes }} minutes. Opening it does not sign you in until you press Confirm.</p>
+{% if claim_address %}<p style="font-size:12px;color:#7e7c8c;line-height:1.5;margin:0 0 8px">After you confirm, your street address and listing details are shown publicly on the neighborhood map. Your email address is never shown.</p>{% endif %}
+<p style="font-size:12px;color:#7e7c8c;line-height:1.5;margin:0">Didn’t ask for this? Ignore this email; nothing will happen.</p>
+</td></tr></table></td></tr></table>
+</body></html>

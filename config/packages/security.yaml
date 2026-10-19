@@ -1,0 +1,31 @@
+security:
+    session_fixation_strategy: invalidate
+    providers:
+        app_users:
+            id: App\Security\UserProvider
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt)/
+            security: false
+        main:
+            lazy: true
+            provider: app_users
+            custom_authenticators:
+                - App\Security\MagicLinkAuthenticator
+            entry_point: App\Security\AuthEntryPoint
+            logout:
+                # Internal path only: POST /api/auth/logout (CSRF-checked controller) calls Security::logout().
+                path: /_internal_logout
+                invalidate_session: true
+                enable_csrf: false
+            access_denied_handler: App\Security\AccessDeniedHandler
+
+    role_hierarchy:
+        ROLE_ADMIN: ROLE_USER
+
+    access_control:
+        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
+        - { path: ^/me, roles: ROLE_USER }
+        - { path: ^/api/me, roles: ROLE_USER }

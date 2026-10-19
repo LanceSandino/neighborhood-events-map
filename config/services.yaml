@@ -1,0 +1,103 @@
+# Service wiring. Infrastructure settings come from env (see .env.dist / .env.example);
+# community, event, branding and geography come from the database (community.yaml bootstrap).
+parameters:
+    # Defaults for optional environment variables (real env / .env files override these).
+    env(APP_BASE_URL): 'http://localhost:8087'
+    env(MAIL_FROM): 'Neighborhood Halloween <no-reply@example.org>'
+    env(ADMIN_EMAIL): 'organizer@example.org'
+    env(SESSION_COOKIE_NAME): 'nhm_session'
+    env(POW_DIFFICULTY): '16'
+    env(POW_TTL_SECONDS): '120'
+    env(RL_LINK_PER_EMAIL): '3/900'
+    env(RL_LINK_PER_IP): '10/3600'
+    env(RL_LINK_PER_ADDRESS): '6/3600'
+    env(RL_LINK_GLOBAL): '200/3600'
+    env(RL_DISPUTE_PER_IP): '3/86400'
+    env(RL_DISPUTE_PER_ADDRESS): '5/86400'
+    env(RL_POW_PER_IP): '40/600'
+    env(RL_LOOKUP_PER_IP): '120/600'
+    env(RL_ROUTE_PER_IP): '30/600'
+    env(RL_CLAIM_PER_USER): '10/3600'
+    env(RL_DISPUTE_GLOBAL): '60/86400'
+    env(ROUTING_PROVIDER): 'none'
+    env(ROUTING_BASE_URL): 'https://api.openrouteservice.org'
+    env(APP_DEMO): '0'
+    env(ROUTING_API_KEY): ''
+    env(AUTH_SESSION_IDLE_MINUTES): ''
+    env(MAGIC_LINK_MINUTES): ''
+    env(ORGANIZER_EMAILS): ''
+    env(AUTH_SESSION_MAX_HOURS): '12'
+    env(AUTH_RESPONSE_FLOOR_MS): '700'
+    env(AUTH_RESPONSE_JITTER_MS): '250'
+    env(VERSION_FILE): '%kernel.project_dir%/VERSION'
+    app.version: '%env(trim:file:resolve:VERSION_FILE)%'
+    app.branding_dir: '%kernel.project_dir%/var/branding'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            string $brandingDirectory: '%app.branding_dir%'
+            string $appVersion: '%app.version%'
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+
+    App\Shared\RuntimeConfig:
+        arguments:
+            $baseUrl: '%env(APP_BASE_URL)%'
+            $mailFrom: '%env(MAIL_FROM)%'
+            $adminEmail: '%env(ADMIN_EMAIL)%'
+            $appSecret: '%env(APP_SECRET)%'
+            $sessionIdleMinutesEnv: '%env(AUTH_SESSION_IDLE_MINUTES)%'
+            $magicLinkMinutesEnv: '%env(MAGIC_LINK_MINUTES)%'
+            $powDifficulty: '%env(int:POW_DIFFICULTY)%'
+            $powTtlSeconds: '%env(int:POW_TTL_SECONDS)%'
+            $rateLimits:
+                link_email: '%env(RL_LINK_PER_EMAIL)%'
+                link_ip: '%env(RL_LINK_PER_IP)%'
+                link_address: '%env(RL_LINK_PER_ADDRESS)%'
+                link_global: '%env(RL_LINK_GLOBAL)%'
+                dispute_ip: '%env(RL_DISPUTE_PER_IP)%'
+                dispute_address: '%env(RL_DISPUTE_PER_ADDRESS)%'
+                pow_ip: '%env(RL_POW_PER_IP)%'
+                lookup_ip: '%env(RL_LOOKUP_PER_IP)%'
+                route_ip: '%env(RL_ROUTE_PER_IP)%'
+                claim_user: '%env(RL_CLAIM_PER_USER)%'
+                dispute_global: '%env(RL_DISPUTE_GLOBAL)%'
+            $routingProvider: '%env(ROUTING_PROVIDER)%'
+            $routingApiKey: '%env(ROUTING_API_KEY)%'
+            $routingBaseUrl: '%env(ROUTING_BASE_URL)%'
+            $demoMode: '%env(bool:APP_DEMO)%'
+
+    App\Security\SessionPolicy:
+        arguments:
+            $maxSessionHours: '%env(int:AUTH_SESSION_MAX_HOURS)%'
+
+    App\Security\UserRepository:
+        arguments:
+            $organizerEmails: '%env(ORGANIZER_EMAILS)%'
+
+    App\Security\ResponseFloorSubscriber:
+        arguments:
+            $floorMs: '%env(int:AUTH_RESPONSE_FLOOR_MS)%'
+            $jitterMs: '%env(int:AUTH_RESPONSE_JITTER_MS)%'
+
+    App\Community\BrandingStore:
+        arguments:
+            $directory: '%app.branding_dir%'
+
+    App\Security\Session\PgSessionHandler:
+        arguments:
+            $connection: '@doctrine.dbal.default_connection'
+
+    App\Routing\RoutingProviderInterface: '@App\Routing\OpenRouteServiceProvider'
+
+when@test:
+    services:
+        App\Routing\RoutingProviderInterface:
+            class: App\Tests\Support\FixtureRoutingProvider
+            public: true

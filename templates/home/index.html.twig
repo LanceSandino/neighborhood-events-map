@@ -1,0 +1,104 @@
+{% extends 'base.html.twig' %}
+{# Public family map. Mirrors prototype/index.html: hero, stats chips, search/filter row,
+   list + real Leaflet map, bottom bar, modals. Works as a readable list without JavaScript. #}
+{% set nav = 'map' %}
+{% set zones = c.zones %}
+{% set zs = zone_summary(zones) %}
+{% block styles %}<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">{% endblock %}
+{% block body %}
+<section class="intro">
+  <div>
+    <div class="eyebrow">✦ {{ c.community.subtitle }}</div>
+    <h1>{{ c.branding.headline }} <span>{{ c.branding.headline_accent }}</span></h1>
+    <p>{{ c.branding.intro }}{% if c.community.name %} All across {{ c.community.name }}.{% endif %}</p>
+  </div>
+  <div class="hero-illustration" aria-hidden="true"><span class="hero-star one">✦</span><span class="hero-moon">🌕</span><span class="hero-ghost">👻</span><span class="hero-star two">✧</span></div>
+</section>
+
+<div class="metrics" aria-label="Neighborhood summary">
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🏘️</div><div><b id="statHomes">{{ c.stats.homes }}</b><span>Participating homes</span></div></div>
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🍬</div><div><b id="statCandy">{{ c.stats.candy }}</b><span>With candy</span></div></div>
+  <div class="metric"><div class="metric-icon" aria-hidden="true">💚</div><div><b id="statGentle">{{ c.stats.low_sensory }}</b><span>Low-sensory stops</span></div></div>
+  {% if zs %}
+  <div class="metric"><div class="metric-icon" aria-hidden="true">📍</div><div><b>{{ zs.title }}</b><span>{{ zs.sub }}</span></div></div>
+  {% else %}
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🕔</div><div><b>{{ c.event.starts_at|time12|replace({' PM': '', ' AM': ''}) }}–{{ c.event.ends_at|time12 }}</b><span>Suggested hours</span></div></div>
+  {% endif %}
+</div>
+
+<section id="explore" aria-label="Find treat stops">
+  <div class="controls">
+    <div class="search"><input id="search" type="search" placeholder="Search streets, treats, or notes…" aria-label="Search homes" autocomplete="off"></div>
+    {% if zones|length > 0 %}
+    <select class="phase-select" id="zone" aria-label="Filter by {{ zs ? zs.title|split(' ')|last : 'zone' }}">
+      <option value="all">📍 All {{ zs ? zs.title|split(' ')|last : 'zones' }}</option>
+      {% for z in zones %}{% if z.residential %}<option value="{{ z.key }}">{{ z.label }}</option>{% endif %}{% endfor %}
+    </select>
+    {% endif %}
+    {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false">🍬 Candy</button>{% endif %}
+    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false">💚 Low sensory</button>{% endif %}
+    <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters">⚙ Filters</button>
+  </div>
+  <div class="filter-more" id="moreFilters" role="group" aria-label="More filters">
+    {% if c.features.sensory_filters %}
+    <button type="button" class="mini-filter" data-filter="noJumps" aria-pressed="false">No jump scares</button>
+    <button type="button" class="mini-filter" data-filter="noFlashing" aria-pressed="false">No flashing lights</button>
+    <button type="button" class="mini-filter" data-filter="noLoud" aria-pressed="false">No loud audio</button>
+    <button type="button" class="mini-filter" data-filter="noIntense" aria-pressed="false">No intense scares</button>
+    {% endif %}
+    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false">Non-food treats</button>{% endif %}
+    {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false">Adult refreshments · 21+</button>{% endif %}
+    <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false">Stroller-friendly</button>
+    <button type="button" class="mini-filter" data-filter="saved" aria-pressed="false">♥ Saved only</button>
+    <label class="time-filter">Visit at
+      <select id="time">
+        <option value="any">Any time</option>
+        <option value="now">Open now</option>
+        {% for h in 15..22 %}<option value="{{ '%02d'|format(h) }}:00">{{ ('%02d:00'|format(h))|time12 }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="button" class="link-button" id="btnReset">Reset filters</button>
+  </div>
+  <div class="workarea">
+    <div class="list-pane">
+      <div class="list-head"><h2>🍭 Treat stops nearby</h2><span id="listCount" aria-live="polite">{{ homes|length }} showing</span></div>
+      <div class="list-sub" id="listSub">{% if homes|length == 0 %}No homes have listed yet — check back soon!{% else %}Self-reported by residents · tap a card to see it on the map{% endif %}</div>
+      <ul class="cards" id="homeCards" aria-label="Participating homes">
+        {% for home in homes %}{% include 'home/_card.html.twig' with {home: home, zones: zones} only %}{% else %}<li class="empty">No homes are listed yet. Residents can add theirs with “List your home”.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="map-pane" id="mapPane">
+      <div class="map-fallback" id="mapFallback">Loading the map… The list of homes works without it.</div>
+      <div class="map" id="map" role="region" aria-label="Map of participating homes"></div>
+      <div class="map-logo">🗺️ {{ c.community.name }} <span>· {{ c.map.boundary_status == 'approved' ? 'neighborhood map' : 'map' }}</span></div>
+      <div class="map-tools">
+        <button type="button" id="btnFit" aria-label="Show the whole neighborhood" title="Show the whole neighborhood">⌖</button>
+        <button type="button" id="btnZoomIn" aria-label="Zoom in" title="Zoom in">+</button>
+        <button type="button" id="btnZoomOut" aria-label="Zoom out" title="Zoom out">−</button>
+        <button type="button" id="btnLocate" aria-label="Show my location (stays on this device)" title="Show my location (stays on this device)">◎</button>
+        <button type="button" data-action="info" aria-label="Map information" title="Map information">ⓘ</button>
+      </div>
+      <div class="map-selected" id="mapSelected" role="dialog" aria-label="Selected home"></div>
+      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i> Candy</span><span><i class="legend-bullet gentle"></i> Gentle</span><span><i class="legend-bullet spooky"></i> Spooky</span></div>
+      <div class="map-footer"><span>⚠️ Listings are self-reported. Pins show only homes that chose to participate.</span><strong id="footerZones">{% if zs %}{{ zs.title }}{% endif %}</strong></div>
+    </div>
+  </div>
+</section>
+
+<div class="bottom-bar">
+  <div><b>✨ Your Halloween, your way</b><p><span id="savedCount">0</span> saved stops · Build a gentle family route or a spooky adventure.</p></div>
+  <div class="bottom-actions"><a class="secondary" href="#list-my-house" data-action="register">🏠 List your home</a><button type="button" class="route-btn" data-action="route">🧭 Build my route →</button></div>
+</div>
+<p class="disclaimer">Listings, hours and sensory details are self-reported by residents and may change. Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{% else %}; this site does not grant access to gated areas{% endif %}.</p>
+<p class="footer-version">{{ c.community.name }} Halloween · v{{ app_version }} · Map data © OpenStreetMap contributors</p>
+<script type="application/json" id="boot">{{ boot|boot_json }}</script>
+{% endblock %}
+
+{% block modals %}
+{% include 'home/_modals.html.twig' %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/vendor/leaflet/leaflet.js" defer></script>
+<script type="module" src="/assets/js/home.js?v={{ app_version }}"></script>
+{% endblock %}

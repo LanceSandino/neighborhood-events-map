@@ -1,0 +1,167 @@
+# Neighborhood Halloween Map — production-style stack (single host, self-hosted).
+# Usage: cp .env.example .env && edit secrets && docker compose up -d --build
+# nginx binds ONLY to 127.0.0.1:${HTTP_PORT}; publish it through Cloudflare Tunnel or an HTTPS proxy.
+# PostgreSQL is on an internal network with no published port.
+name: ${COMPOSE_PROJECT_NAME:-halloween}
+
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-prod}
+  APP_DEBUG: ${APP_DEBUG:-0}
+  APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
+  APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL in .env}
+  DEFAULT_URI: ${APP_BASE_URL}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-halloween}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-halloween}?serverVersion=17&charset=utf8
+  MAILER_DSN: ${MAILER_DSN:-null://null}
+  MAIL_FROM: ${MAIL_FROM:-Neighborhood Halloween <no-reply@example.org>}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-organizer@example.org}
+  COMMUNITY_BOOTSTRAP_FILE: ${COMMUNITY_BOOTSTRAP_FILE:-}
+  COMMUNITY_BOOTSTRAP_APPROVE: ${COMMUNITY_BOOTSTRAP_APPROVE:-0}
+  APP_DEMO: ${APP_DEMO:-0}
+  AUTH_SESSION_IDLE_MINUTES: ${AUTH_SESSION_IDLE_MINUTES:-}
+  AUTH_SESSION_MAX_HOURS: ${AUTH_SESSION_MAX_HOURS:-12}
+  MAGIC_LINK_MINUTES: ${MAGIC_LINK_MINUTES:-}
+  ORGANIZER_EMAILS: ${ORGANIZER_EMAILS:-}
+  AUTH_RESPONSE_FLOOR_MS: ${AUTH_RESPONSE_FLOOR_MS:-700}
+  AUTH_RESPONSE_JITTER_MS: ${AUTH_RESPONSE_JITTER_MS:-250}
+  SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-nhm_session}
+  POW_DIFFICULTY: ${POW_DIFFICULTY:-16}
+  RL_LINK_PER_EMAIL: ${RL_LINK_PER_EMAIL:-3/900}
+  RL_LINK_PER_IP: ${RL_LINK_PER_IP:-10/3600}
+  RL_LINK_PER_ADDRESS: ${RL_LINK_PER_ADDRESS:-6/3600}
+  RL_LINK_GLOBAL: ${RL_LINK_GLOBAL:-200/3600}
+  RL_DISPUTE_PER_IP: ${RL_DISPUTE_PER_IP:-3/86400}
+  RL_DISPUTE_PER_ADDRESS: ${RL_DISPUTE_PER_ADDRESS:-5/86400}
+  RL_POW_PER_IP: ${RL_POW_PER_IP:-40/600}
+  RL_LOOKUP_PER_IP: ${RL_LOOKUP_PER_IP:-120/600}
+  RL_ROUTE_PER_IP: ${RL_ROUTE_PER_IP:-30/600}
+  RL_CLAIM_PER_USER: ${RL_CLAIM_PER_USER:-10/3600}
+  RL_DISPUTE_GLOBAL: ${RL_DISPUTE_GLOBAL:-60/86400}
+  ROUTING_PROVIDER: ${ROUTING_PROVIDER:-none}
+  ROUTING_API_KEY: ${ROUTING_API_KEY:-}
+  MIGRATE_ON_START: ${MIGRATE_ON_START:-1}
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+# Least privilege for every container: no privilege escalation; Linux capabilities dropped where the
+# image does not need them; memory/CPU/process limits so a flood cannot starve other services on the host.
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 256
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-halloween}
+      POSTGRES_USER: ${POSTGRES_USER:-halloween}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+    logging: *logging
+    <<: *hardening
+    mem_limit: 1g
+    cpus: 1.0
+    shm_size: 128m
+
+  app:
+    build: { context: ., target: prod }
+    image: neighborhood-halloween-app:${APP_IMAGE_TAG:-local}
+    restart: unless-stopped
+    environment: *app-env
+    volumes:
+      - branding:/app/var/branding
+      - ./deploy/community:/app/deploy/community:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [backend, egress]
+    logging: *logging
+    <<: *hardening
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    mem_limit: 1g
+    cpus: 1.5
+
+  # Hourly cleanup of expired links, proof-of-work challenges, claim intents, throttle events,
+  # stale route-cache rows and idle sessions (app:maintenance:purge). Same image, no published ports.
+  maintenance:
+    build: { context: ., target: prod }
+    image: neighborhood-halloween-app:${APP_IMAGE_TAG:-local}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      PURGE_INTERVAL_SECONDS: ${PURGE_INTERVAL_SECONDS:-3600}
+    entrypoint: ["/bin/sh", "-c", "while true; do php bin/console app:maintenance:purge --no-interaction || echo 'purge failed' >&2; sleep \"$${PURGE_INTERVAL_SECONDS:-3600}\"; done"]
+    depends_on:
+      app: { condition: service_healthy }   # migrations have run
+    networks: [backend]
+    logging: *logging
+    <<: *hardening
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    mem_limit: 256m
+    cpus: 0.25
+    healthcheck: { disable: true }
+
+  nginx:
+    build: { context: ., target: nginx }
+    image: neighborhood-halloween-nginx:${APP_IMAGE_TAG:-local}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8087}:8080"
+    environment:
+      NGINX_TRUSTED_PROXIES: ${NGINX_TRUSTED_PROXIES:-}   # extra proxy addresses/CIDRs (space-separated), if any
+    depends_on:
+      app: { condition: service_healthy }
+    networks: [egress]
+    logging: *logging
+    <<: *hardening
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    mem_limit: 256m
+    cpus: 0.5
+
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-halloween}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-halloween}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    entrypoint: ["/bin/sh", "/scripts/backup-loop.sh"]
+    volumes:
+      - ./docker/postgres/backup-loop.sh:/scripts/backup-loop.sh:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      postgres: { condition: service_healthy }
+      app: { condition: service_healthy }   # first backup only after migrations ran
+    networks: [backend]
+    logging: *logging
+    <<: *hardening
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]   # create/chmod the bind-mounted backup directory
+    mem_limit: 512m
+    cpus: 0.5
+
+networks:
+  backend:
+    internal: true
+  egress: {}
+
+volumes:
+  pgdata: {}
+  branding: {}

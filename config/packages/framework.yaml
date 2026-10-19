@@ -1,0 +1,34 @@
+framework:
+    secret: '%env(APP_SECRET)%'
+    http_method_override: false
+    csrf_protection: true
+    handle_all_throwables: true
+    trusted_proxies: null
+    session:
+        handler_id: App\Security\Session\PgSessionHandler
+        name: '%env(SESSION_COOKIE_NAME)%'
+        cookie_secure: auto   # Secure automatically when served over HTTPS (nginx sets HTTPS=on)
+        cookie_httponly: true
+        cookie_samesite: lax
+        cookie_lifetime: 0
+        use_cookies: true
+        # Server-side idle enforcement lives in App\Security\Session\IdleSessionSubscriber;
+        # gc_maxlifetime only removes stale rows (keep it above the idle window).
+        gc_maxlifetime: 21600
+        gc_probability: 1
+        gc_divisor: 200
+    php_errors:
+        log: true
+
+when@prod:
+    framework:
+        # Only the public hostname (from APP_BASE_URL) and loopback (container healthchecks) are accepted
+        # as Host; anything else gets 400 before routing. Links in emails always use APP_BASE_URL.
+        trusted_hosts: ['^%env(key:host:url:APP_BASE_URL)%$', '^localhost$', '^127\.0\.0\.1$']
+
+when@test:
+    framework:
+        test: true
+        session:
+            handler_id: null
+            storage_factory_id: session.storage.factory.mock_file

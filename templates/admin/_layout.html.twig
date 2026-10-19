@@ -1,0 +1,35 @@
+{# Organizer console shell: reuses the public design tokens; data via /api/admin/* (CSRF header). #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="csrf-token" content="{{ csrf_token('nhm') }}">
+  <title>{{ pages[page] }} · Organizer · {{ c.community.name }}</title>
+  <link rel="icon" href="{{ c.branding.logo_url ?? '/assets/img/favicon.svg' }}">
+  {% block styles %}{% endblock %}
+  <link rel="stylesheet" href="/assets/css/app.css?v={{ app_version }}">
+  <link rel="stylesheet" href="/assets/css/admin.css?v={{ app_version }}">
+  <link rel="stylesheet" href="/theme.css?v={{ app_version }}">
+</head>
+<body class="admin">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="admin-top">
+  <a class="brand" href="/admin"><div class="brand-icon" aria-hidden="true">{{ c.branding.brand_emoji }}</div><div><div class="brand-name">{{ c.community.name }}</div><div class="brand-sub">Organizer console</div></div></a>
+  <nav class="admin-tabs" aria-label="Organizer sections">
+    {% for key, label in pages %}
+      <a href="{{ {'overview': '/admin', 'community': '/admin/community', 'map': '/admin/community/map', 'addresses': '/admin/addresses', 'disputes': '/admin/disputes', 'audit': '/admin/audit'}[key] }}" {% if key == page %}aria-current="page" class="active"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <div class="admin-actions"><a class="secondary" href="/">View site</a><a class="secondary" href="/me">My house</a><button type="button" class="secondary" id="btnLogout">Sign out</button></div>
+</header>
+<main class="admin-main" id="main" tabindex="-1">
+  <h1>{{ pages[page] }}</h1>
+  <div id="flash" role="status" aria-live="polite"></div>
+  {% block body %}{% endblock %}
+  <p class="footer-version">v{{ app_version }}</p>
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

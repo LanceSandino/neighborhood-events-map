@@ -1,0 +1,58 @@
+# Generic neighborhood configuration — safe to commit. Copy to deploy/community/community.yaml,
+# edit, and set COMMUNITY_BOOTSTRAP_FILE=/app/deploy/community/community.yaml in .env.
+# Secrets (SMTP, DB, APP_SECRET) belong in .env, never here. Everything below can also be
+# edited later in the organizer console (/admin).
+schema_version: 1
+community:
+  id: example-neighborhood          # lowercase letters, digits, dashes
+  name: "Your Neighborhood"
+  subtitle: "Your neighborhood. Your Halloween."
+  locality: "Your City"
+  region: "Your State"
+  postal_code: ""
+  country: "US"
+  timezone: "America/New_York"      # IANA time zone used for hours and "open now"
+  gate_notice: ""                   # e.g. "This site does not grant access through the main gate."
+  contact_url: null                 # optional https:// or mailto: link for questions
+event:
+  date: "2026-10-31"
+  starts_at: "17:00"
+  ends_at: "21:00"
+branding:
+  logo: null                        # optional path to SVG/PNG next to this file (≤ 512 KB)
+  brand_emoji: "🎃"
+  primary_color: "#F07936"
+  accent_color: "#524077"
+  headline: "Little ghosts."
+  headline_accent: "Big adventures."
+  intro: "Find the treats, skip the scares, and make a route that feels right for your family—one sweet stop at a time."
+map:
+  # A real, reviewed GeoJSON boundary (Polygon/MultiPolygon/FeatureCollection, [longitude, latitude]).
+  # Never trace coordinates from a screenshot. Leave null and draw it in /admin/community/map instead.
+  boundary_file: null
+  zones_file: null                  # optional FeatureCollection with properties.zone_key per feature
+  zoom: 16
+  tiles:
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"   # follow the provider's usage policy
+    attribution: "© OpenStreetMap contributors"
+    max_zoom: 19
+  crossing_notes: []
+zones: []                           # optional: [{ key: east, label: "East side" }, …]; none is fine
+features:
+  candy: true
+  nonfood_treats: true
+  adult_refreshments: true
+  sensory_filters: true
+  optional_zones: false
+  walking_routes: true
+registration:
+  enabled: true                     # claims also require an approved boundary
+  address_mode: registry            # registry | self_entry | both
+  street_allowlist: []              # required for self_entry/both
+  email_magic_link_minutes: 15      # AUTH env MAGIC_LINK_MINUTES overrides
+  session_idle_minutes: 30          # env AUTH_SESSION_IDLE_MINUTES overrides
+  max_homes_per_user: 2            # homes one verified email can manage (1-50); organizers can transfer more
+routing:
+  groups: []                        # lists of zone keys verified walkable together
+  crossings_verified: false
+  provider_enabled: false

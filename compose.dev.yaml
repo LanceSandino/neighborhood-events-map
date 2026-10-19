@@ -1,0 +1,43 @@
+# Development overlay: bind-mounted source, dev PHP image with pcov, Mailpit for email.
+# Usage: docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+# Mailpit UI: http://127.0.0.1:8025 (never expose it publicly).
+services:
+  app:
+    build: { context: ., target: dev }
+    image: neighborhood-halloween-app:dev
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: 1
+      MAILER_DSN: smtp://mailpit:1025
+    volumes:
+      - .:/app
+      - appvar:/app/var          # per-stack cache/logs (two dev stacks can share one checkout)
+      - branding:/app/var/branding
+    networks: [backend, egress]
+    # The dev image runs the PHP-FPM master as root (bind-mounted source), so it needs the default
+    # capabilities and a writable root filesystem. Production keeps the hardening from compose.yaml.
+    read_only: false
+    cap_drop: !reset []
+
+  nginx:
+    volumes:
+      - ./public:/app/public:ro
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks: [backend, egress]   # internal-only networks cannot publish the (localhost-only) UI port
+
+  backup:
+    profiles: [backup]
+
+  maintenance:
+    profiles: [maintenance]   # dev stacks purge on demand: docker compose exec app php bin/console app:maintenance:purge
+
+volumes:
+  appvar: {}

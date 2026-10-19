@@ -1,0 +1,65 @@
+# REAL-DATA EXAMPLE — Ventura Reserve, City of Orlando, Orange County, Florida.
+# Used to verify the importer → geometry → registration pipeline against official records.
+# Not affiliated with the community, its residents or its HOA, and not a live event.
+# Geometry: the three recorded plats (Phases 1–3) from Orange County's open-data Subdivision
+# layer, downloaded by scripts/fetch_arcgis_boundaries.py with ./gis-sources.json (see
+# boundaries/manifest.json). It imports PENDING REVIEW. No listings, claims or address points
+# are committed; fetch addresses locally with scripts/fetch_arcgis_addresses.py (README.md).
+schema_version: 1
+community:
+  id: ventura-reserve-example
+  name: "Ventura Reserve"
+  subtitle: "Real-data example built from Orange County plat records"
+  locality: "Orlando"
+  region: "FL"
+  country: "US"
+  timezone: "America/New_York"
+  gate_notice: "Example configuration from public county records. Not run by or for this community; this is not a real event."
+  contact_url: null
+event:
+  date: "2026-10-31"
+  starts_at: "17:00"
+  ends_at: "21:00"
+branding:
+  logo: null
+  brand_emoji: "🎃"
+  primary_color: "#F07936"
+  accent_color: "#524077"
+  headline: "Little ghosts."
+  headline_accent: "Big adventures."
+  intro: "Example map built from official plat records: find the treats, skip the scares, and plan stops that feel right for your family."
+map:
+  boundary_file: boundaries/boundary.geojson
+  zones_file: boundaries/zones.geojson
+  zoom: 17
+  tiles:
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    attribution: "© OpenStreetMap contributors"
+    max_zoom: 19
+zones:
+  - { key: phase-1, label: "Phase 1" }
+  - { key: phase-2, label: "Phase 2" }
+  - { key: phase-3, label: "Phase 3" }
+features:
+  candy: true
+  nonfood_treats: true
+  adult_refreshments: true
+  sensory_filters: true
+  optional_zones: true
+  walking_routes: true
+registration:
+  enabled: true
+  # Inventory: Orange County address points inside the boundary, fetched locally into the
+  # git-ignored deploy/private/ventura-reserve-example/addresses.csv, then imported with
+  # bin/console app:addresses:import. Never committed.
+  address_mode: registry
+  street_allowlist: []
+  email_magic_link_minutes: 15
+  session_idle_minutes: 30
+  max_homes_per_user: 2            # homes one verified email can manage (1-50); organizers can transfer more
+routing:
+  # No walkable groups are asserted: nobody has verified crossings on the ground, so each
+  # phase is planned as its own trip.
+  groups: []
+  crossings_verified: false
+  provider_enabled: false

@@ -1,0 +1,10 @@
+{% if claim_address %}Confirm your listing for {{ claim_address }} on the {{ community }} Halloween map.
+{% else %}Sign in to manage your {{ community }} Halloween listing.
+{% endif %}
+
+Open this link and press the confirm button (it works once and expires in {{ minutes }} minutes):
+{{ url }}
+
+{% if claim_address %}After you confirm, your street address and listing details will be shown publicly on the neighborhood map. Your email address is never shown.
+{% endif %}
+If you did not ask for this, ignore this email; nothing will happen.

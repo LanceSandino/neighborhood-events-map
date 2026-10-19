@@ -1,0 +1,14 @@
+A neighbor asked for a review of an already-claimed home on the {{ community }} Halloween map.
+
+Ticket:   D-{{ '%06d'|format(dispute.id) }}
+Address:  {{ address }}
+Reporter: {{ dispute.reporter_email }} (UNVERIFIED — anyone can type any address; reply to this email to contact them)
+Received: {{ dispute.created_at }}
+
+Their explanation:
+{{ dispute.reason }}
+
+Review evidence offline, then resolve, reject or transfer the claim in the organizer console:
+{{ admin_url }}
+
+Nothing has been changed automatically.
