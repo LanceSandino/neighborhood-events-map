@@ -181,4 +181,59 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "v0.4.0-beta.3"
   author: "Lance Sandino"
   timestamp: "2026-10-19T05:00:00Z"
+
+- id: CU-20261019-06
+  type: feature
+  title: "Testing feedback: filter icons and count, phase highlight, closed homes off lists and routes, copy fallback, shareable links, fingerprinted assets"
+  description: "Filter buttons carry icons and the Filters button shows the active-filter count; choosing a zone outlines and zooms to it (zoneStyle in lib/render.js). Homes paused/out of candy/done are kept off the list and routes (toggle to show them; the route says how many were skipped). Copy uses the Clipboard API on HTTPS and an execCommand fallback elsewhere (iPhone over HTTP). Share links encode changed filters (?f=), stop ids (?stops=), an optional start home (&start=) and a manual-order flag (&o=1). Inclusive wording. Script/stylesheet URLs are /assets/v<version>.<fingerprint>/… (Twig asset_path; nginx alias, one-year immutable cache) after a stale cached module broke the page through the tunnel edge; unversioned /assets/js stays no-cache. Phone filter grid and centred search icon."
+  impact: medium
+  affected_modules: ["public/assets/js/home.js", "public/assets/js/lib/render.js", "public/assets/js/lib/filters.js", "public/assets/js/lib/pow.js", "public/assets/js/pow-worker.js", "public/assets/css/app.css", "templates/", "src/Twig/AssetExtension.php", "docker/nginx/default.conf"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs (closed homes, filter count, copy, show on map, shared link)", "tests/e2e/specs/claim.spec.mjs", "tests/js/lib.test.mjs (zoneStyle)", "tests/Unit/Twig/AssetExtensionTest.php::testUrlChangesWhenAnyAssetChanges"]
+  commit_ref: "v0.4.0-beta.5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T06:30:00Z"
+
+- id: CU-20261019-07
+  type: feature
+  title: "Zone status (active / coming soon / hidden) and organizer approval of self-entered addresses"
+  description: "zones[].status: coming_soon zones are drawn with that label but are not listable, not in the zone filter and not counted; hidden zones are left out of the public payload and the address lookup. Claims into a non-active zone are refused with zone_not_open. registration.review_new_addresses holds a self-entered address (moderation_hold) and hides its listing with moderation_reason 'pending_review'; the outcome is pending_review; organizers see a count and list on the overview and approve with Unhide (also sets reviewed_at). A pin outside the boundary but on a named non-residential or non-active zone is refused with that zone's reason; the form adds the organizer contact link to refusals the organizer can fix. Missing-address hint offers the pin flow or the contact link; the pin flow hides the list search. My house -> List my house now replaces the sheet (modal z-index by stack)."
+  impact: medium
+  affected_modules: ["src/Community/CommunitySchema.php", "src/Community/CommunityConfig.php", "src/Community/CommunityPresenter.php", "src/Address/AddressEligibility.php", "src/Address/AddressRegistry.php", "src/Claim/ClaimService.php", "src/Claim/ClaimOutcome.php", "src/Listing/ListingRepository.php", "src/Controller/Api/", "src/Twig/AppExtension.php", "public/assets/js/register.js", "public/assets/js/me.js", "public/assets/js/admin/", "public/assets/js/lib/modal.js", "templates/home/"]
+  related_tests: ["tests/Integration/ZoneStatusAndReviewTest.php", "tests/Integration/EligibilityTest.php", "tests/e2e/specs/public.spec.mjs (My house -> List my house)", "tests/js/lib.test.mjs (coming-soon style)"]
+  commit_ref: "v0.4.0-beta.5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T07:00:00Z"
+
+- id: CU-20261019-08
+  type: feature
+  title: "Route: start from the visitor's location, reorder stops"
+  description: "planStops accepts a start point that is not a stop (nearest trip first, each trip starts at its stop nearest the point); the location is requested once, kept in memory only, never stored or put in links, and offered only in a secure context. applyOrder/moveStop give per-trip manual ordering kept in local storage (or in the shared view) with a reset to the suggested order. E2E browser uses full Chromium so the test origins count as secure."
+  impact: low
+  affected_modules: ["public/assets/js/lib/route.js", "public/assets/js/lib/store.js", "public/assets/js/home.js", "templates/home/_modals.html.twig", "public/assets/css/app.css", "tests/e2e/playwright.config.mjs"]
+  related_tests: ["tests/js/lib.test.mjs (location start; reorder)", "tests/e2e/specs/public.spec.mjs::route: reorder stops, keep the order, share it; start from my location"]
+  commit_ref: "v0.4.0-beta.5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T07:20:00Z"
+
+- id: CU-20261019-09
+  type: feature
+  title: "What's new dialog and /changelog page with a source-code link"
+  description: "ChangelogReader parses CHANGELOG.md (plain text, empty Unreleased skipped); a native <dialog> opened from the footer version link shows the latest releases and links to the source, full changelog and releases (APP_SOURCE_URL, default the project repository, empty hides them); /changelog is the no-JS fallback. The version shows once (footer). New filter icons."
+  impact: low
+  affected_modules: ["src/About/ChangelogReader.php", "src/Twig/ChangelogExtension.php", "src/Controller/PageController.php", "templates/base.html.twig", "templates/partials/", "templates/legal/changelog.html.twig", "public/assets/js/whatsnew.js", "config/"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php", "tests/e2e/specs/public.spec.mjs::What's new", "tests/e2e/specs/a11y.spec.mjs (changelog page)"]
+  commit_ref: "v0.4.0-beta.5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T07:40:00Z"
+
+- id: CU-20261019-10
+  type: feature
+  title: "GIS importer: reassign official parcel/lot polygons between zones"
+  description: "boundaries.reassign rules fetch polygons from an https ArcGIS layer, require them to lie (>= 95 %) inside from_zone, subtract them there and merge them into the nearest to_zone feature (residential only), snapped to a ~1 cm grid so the app's strict ring check passes; every rule needs a note, recorded with OBJECTIDs, response digest and area in the manifest and its owner-review list. Used privately to keep homes platted inside an amenities tract with the phase they belong to."
+  impact: low
+  affected_modules: ["scripts/fetch_arcgis_boundaries.py", "scripts/arcgis_config.py", "examples/gis-sources.example.json"]
+  related_tests: ["scripts/tests/test_fetch_arcgis_boundaries.py::ReassignTests"]
+  commit_ref: "v0.4.0-beta.5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T08:00:00Z"
 ```

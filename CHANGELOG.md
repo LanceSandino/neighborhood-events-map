@@ -6,6 +6,34 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.4.0-beta.5] - 2026-10-19
+
+### Added
+- **Share a link to an exact view**: the route sheet's Share button and link field reproduce the same stops, filters, starting point and stop order for whoever opens it. Copy works on every phone, including iPhone over plain HTTP.
+- **Start from your location**: the route can start from "📍 My current location" (asked once, kept only in the browser, never sent or put in links); the nearest trip and stop come first. Browsers allow location only over HTTPS, so the option appears only there.
+- **Reorder stops**: ↑/↓ buttons move a stop within its trip; your order is kept on the device and in shared links, with "Use the suggested order" to undo.
+- **Show on map** from the route sheet; numbered pins follow the stop order.
+- Filter buttons have icons, and the Filters button shows how many filters are on.
+- Choosing a phase/zone outlines it, shades the rest and zooms to it.
+- **Zone status**: an organizer can mark a zone "Coming soon" (drawn with that label, homes cannot be listed yet, e.g. no houses built) or "Hidden" (not shown at all).
+- **Approving new addresses**: with `registration.review_new_addresses`, a home that residents add themselves (address and pin) waits for an organizer's approval before it appears. Organizers see the waiting homes on the overview and approve them on the Addresses page; the resident sees "waiting for approval" on My house.
+- When an address is not on the list, the form offers to add it with a pin (where allowed) or links to the organizer's contact. Adding a pin hides the list search until you go back to it.
+- A refused pin says why (for example "Amenities is not a residential area" or "Phase 7 is not open for listings yet") and links to the organizer, who can fix outdated map data.
+- "What's new" dialog with these release notes and a link to the source code (version link in the footer and sidebar; also at `/changelog`). `APP_SOURCE_URL` points it at a fork or hides it.
+- GIS importer: `reassign` moves official parcel or lot polygons from one zone to another (for example homes platted inside an amenities tract), with an explanatory note in the review manifest.
+
+### Changed
+- Homes that are paused, out of candy or done for the night no longer appear in the list or on routes (the map still shows them greyed); "Show N homes not handing out right now" lists them on request, and the route says how many were left out.
+- Wording is for everyone (groups, friends or one person), not only families.
+- On phones the filters sit in an even two-column grid so every label fits; the search icon is centred.
+- Clearer icons: 😱 no jump scares, 🔦 no flashing lights, 🔊 no loud audio, 🎭 no intense scares, 👶 stroller-friendly, 🍺 21+, 🧡 saved.
+- The version appears once, in the footer.
+- Script and stylesheet URLs carry the version and a fingerprint of the files, so browsers and any CDN or tunnel cache always load matching code after an update (and can cache it for a year).
+
+### Fixed
+- "List my house" from the My house sheet opened behind it, so the sheet seemed stuck; it now replaces the sheet.
+- A page could break after an update when a cached older script was mixed with new ones ("does not provide an export named …").
+
 ## [0.4.0-beta.4] - 2026-10-19
 
 ### Added

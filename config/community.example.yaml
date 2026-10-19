@@ -28,7 +28,7 @@ branding:
   accent_color: "#524077"
   headline: "Little ghosts."
   headline_accent: "Big adventures."
-  intro: "Find the treats, skip the scares, and make a route that feels right for your family—one sweet stop at a time."
+  intro: "Find the treats, skip the scares, and plan a route that feels right for you and your crew—one sweet stop at a time."
 map:
   # A real, reviewed GeoJSON boundary (Polygon/MultiPolygon/FeatureCollection, [longitude, latitude]).
   # Never trace coordinates from a screenshot. Leave null and draw it in /admin/community/map instead.
@@ -41,6 +41,8 @@ map:
     max_zoom: 19
   crossing_notes: []
 zones: []                           # optional: [{ key: east, label: "East side" }, …]; none is fine
+                                    # per zone: claimable/residential (false for a clubhouse or park) and
+                                    # status: active | coming_soon (drawn, not listable yet) | hidden (not shown)
 features:
   candy: true
   nonfood_treats: true
@@ -55,6 +57,7 @@ registration:
   email_magic_link_minutes: 15      # AUTH env MAGIC_LINK_MINUTES overrides
   session_idle_minutes: 30          # env AUTH_SESSION_IDLE_MINUTES overrides
   max_homes_per_user: 2            # homes one verified email can manage (1-50); organizers can transfer more
+  review_new_addresses: false       # true: self-entered homes wait for an organizer's approval before they show
 routing:
   groups: []                        # lists of zone keys verified walkable together
   crossings_verified: false

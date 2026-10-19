@@ -57,7 +57,8 @@ Nothing neighborhood-specific lives in code. Start from [`config/community.examp
 2. Boundary: put a reviewed GeoJSON (`[longitude, latitude]`, Polygon/MultiPolygon/FeatureCollection) next to it and reference it as `map.boundary_file`, **or** leave it empty and draw it in **Organizer → Boundary & zones**. Never trace coordinates from a screenshot. Disconnected areas are fine.
 3. Set `COMMUNITY_BOOTSTRAP_FILE=/app/deploy/community/community.yaml` in `.env` and start the stack (imported once; later edits happen in the console and can be exported with `bin/console app:community:export <dir>`).
 4. In the console, check the outline against real streets and press **Approve boundary**. House listings stay closed until you do.
-5. Addresses: import a reviewed CSV (`address,latitude,longitude,zone_key`) in **Addresses & claims** or with `bin/console app:addresses:import file.csv --dry-run`, or enable self-entry with a street allow-list (`registration.address_mode: self_entry|both`).
+5. Addresses: import a reviewed CSV (`address,latitude,longitude,zone_key`) in **Addresses & claims** or with `bin/console app:addresses:import file.csv --dry-run`, or enable self-entry with a street allow-list (`registration.address_mode: self_entry|both`). With `registration.review_new_addresses: true`, homes residents add themselves wait for your approval (Overview lists them; approve on Addresses & claims).
+6. Areas without homes yet: give the zone `status: coming_soon` (drawn with that label, not listable) or `hidden`; switch it to `active` when houses are built.
 
 Two communities ship with the code and run unchanged from it: the fictional, zone-less demo ([`examples/demo/`](examples/demo/)) and the zoned real-plat example ([`examples/ventura-reserve/`](examples/ventura-reserve/)). Keep your own neighborhood's files under the git-ignored `deploy/` folder, not in `examples/`.
 
