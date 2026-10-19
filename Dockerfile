@@ -41,7 +41,7 @@ RUN composer dump-autoload --no-dev --classmap-authoritative \
  && chown -R www-data:www-data var
 USER www-data
 
-FROM nginxinc/nginx-unprivileged:1.30-alpine AS nginx
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS nginx
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/nginx/app-fastcgi.conf /etc/nginx/snippets/app-fastcgi.conf
 COPY --chmod=0755 docker/nginx/trusted-proxy.sh /docker-entrypoint.d/30-trusted-proxy.sh

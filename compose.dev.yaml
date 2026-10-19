@@ -27,7 +27,7 @@ services:
     image: axllent/mailpit:v1.27
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_BIND:-127.0.0.1}:${MAILPIT_UI_PORT:-8025}:8025"
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1

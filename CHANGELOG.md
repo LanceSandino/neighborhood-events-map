@@ -6,6 +6,14 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.4.0-beta.4] - 2026-10-19
+
+### Added
+- `HTTP_BIND` (and `MAILPIT_BIND` in development) to reach a local test stack from phones and other computers on the home network; production keeps `127.0.0.1`.
+
+### Dependencies
+- nginx 1.31, symfony/phpunit-bridge 8.1 (development only), @axe-core/playwright 4.14. Dependabot no longer skips nginx mainline releases or Symfony major versions; every update is proposed and checked by CI.
+
 ## [0.4.0-beta.3] - 2026-10-19
 
 ### Added

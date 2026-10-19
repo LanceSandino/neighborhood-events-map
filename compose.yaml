@@ -118,7 +118,7 @@ services:
     image: neighborhood-halloween-nginx:${APP_IMAGE_TAG:-local}
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${HTTP_PORT:-8087}:8080"
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}:8080"   # HTTP_BIND=0.0.0.0 only for testing from other devices on your LAN
     environment:
       NGINX_TRUSTED_PROXIES: ${NGINX_TRUSTED_PROXIES:-}   # extra proxy addresses/CIDRs (space-separated), if any
     depends_on:

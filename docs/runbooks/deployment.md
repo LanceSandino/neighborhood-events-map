@@ -10,7 +10,7 @@
 ```bash
 git clone https://github.com/<owner>/neighborhood-halloween-map.git /srv/halloween
 cd /srv/halloween
-git checkout v0.4.0-beta.3            # or the release tag you are deploying
+git checkout v0.4.0-beta.4            # or the release tag you are deploying
 cp .env.example .env && chmod 600 .env
 ```
 

@@ -41,7 +41,7 @@ Severity is from the audit. Status: **Fixed** (changed and verified), **Accepted
 | 18 | Low | Optional routing provider could hold workers (15 s) | **Fixed/Accepted** — timeout 5 s. *Residual:* no global provider budget (the provider is off by default) | Code |
 | 19 | Low | Logo: raster check read only the header (polyglot files stored) | **Fixed** — decoded type must match the extension; embedded markup refused (logos are also served with `nosniff` and a sandbox CSP) | `ErrorPathsTest::testBrandingStoreValidatesRasterImages` |
 | 20 | Info | Session/link minutes stored out of range (clamped only at use) | **Fixed** — rejected at save | `CommunitySchemaTest::testCollectsAllErrors` |
-| 21 | Info | nginx 1.27 (end of life), mutable image tags | **Fixed/Accepted** — nginx 1.30 stable; Dependabot for Docker, Composer, Actions and npm. *Residual:* images pinned by tag, not digest | `nginx -v` → 1.30.6 |
+| 21 | Info | nginx 1.27 (end of life), mutable image tags | **Fixed/Accepted** — current nginx (1.31); Dependabot for Docker, Composer, Actions and npm. *Residual:* images pinned by tag, not digest | `nginx -v` |
 | 22 | Info | Host header not validated; weak secret checks | **Fixed** — production `trusted_hosts` = `APP_BASE_URL` host + loopback; the container refuses test-like secrets and the development database password | Production stack: foreign Host → `400`; entrypoint exits `64` |
 | 23 | Info | `429 retry_after` shows recent link activity for an address; a relay that rejects unknown mailboxes would turn into `503` | **Accepted** — neither reveals whether an *account* exists; the response floor hides timing | — |
 
