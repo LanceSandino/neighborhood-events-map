@@ -191,11 +191,66 @@ def fetch_sources(src: BoundarySource, fetch) -> dict:
             "extra_variants": extra_variants, "originals": originals}
 
 
-def build(src: BoundarySource, out: Path, fetch=None) -> dict:
+def snap(geom, grid: float = 1e-7):
+    """Snaps to a ~1 cm grid and drops collinear/repeated vertices, so cutting and merging polygons from
+    different layers leaves no sub-millimetre slivers (which strict ring checks treat as self-intersections)."""
+    import shapely
+
+    return orient_any(shapely.set_precision(geom, grid).simplify(0))
+
+
+def reassign(src: BoundarySource, groups: dict, shapes: dict, fetch_layer) -> list[dict]:
+    """Moves polygons fetched from another layer (e.g. platted lots) out of one zone and into another.
+
+    The moved area is clipped to the source zone, subtracted from it and merged into the target zone's
+    nearest feature. Nothing is drawn by hand; every moved piece comes from the configured layer.
+    """
+    from shapely.geometry import mapping
+    from shapely.ops import unary_union
+
+    report = []
+    for rule in src.reassign:
+        fetch = fetch_layer(rule["layer_url"])
+        page, digest = fetch({"where": rule["where"], "outFields": rule["objectid_field"], "returnGeometry": "true", "outSR": 4326, "f": "geojson"})
+        feats = page.get("features") or [] if isinstance(page, dict) else []
+        if not feats:
+            raise RuntimeError(f"Reassignment {rule['from_zone']} -> {rule['to_zone']}: no features for where={rule['where']!r}")
+        pieces = []
+        for f in feats:
+            geom, problem = check_geometry(f.get("geometry"), src.bounds)
+            if problem:
+                raise RuntimeError(f"Reassignment {rule['from_zone']} -> {rule['to_zone']}: invalid geometry ({problem})")
+            pieces.append(geom)
+        piece = unary_union(pieces)
+        donors = [it for it in groups.get(rule["from_zone"], []) if it["properties"]["source_objectid"] in shapes]
+        targets = [it for it in groups.get(rule["to_zone"], []) if it["properties"]["source_objectid"] in shapes]
+        if not donors or not targets:
+            raise RuntimeError(f"Reassignment {rule['from_zone']} -> {rule['to_zone']}: both zones need valid source polygons")
+        moved = piece.intersection(unary_union([shapes[it["properties"]["source_objectid"]] for it in donors]))
+        if moved.is_empty or area_m2(moved) < 0.95 * area_m2(piece):
+            raise RuntimeError(f"Reassignment {rule['from_zone']} -> {rule['to_zone']}: the fetched polygons are not inside {rule['from_zone']}")
+        for it in donors:
+            oid = it["properties"]["source_objectid"]
+            shapes[oid] = snap(shapes[oid].difference(moved))
+            it["geometry"] = mapping(shapes[oid])
+            it["properties"].setdefault("reassigned_out", []).append({"to_zone": rule["to_zone"], "note": rule["note"]})
+        target = min(targets, key=lambda it: shapes[it["properties"]["source_objectid"]].distance(moved))
+        oid = target["properties"]["source_objectid"]
+        merged, _ = drop_sliver_holes(unary_union([shapes[oid], moved]), src.sliver_m2)
+        shapes[oid] = snap(merged)
+        target["geometry"] = mapping(shapes[oid])
+        target["properties"].setdefault("reassigned_in", []).append({"from_zone": rule["from_zone"], "note": rule["note"]})
+        ids = sorted(int((f.get("properties") or {}).get(rule["objectid_field"], f.get("id", -1))) for f in feats)
+        report.append({**rule, "source_objectids": ids, "response_sha256": digest, "area_m2_approx": round(area_m2(moved), 1)})
+    return report
+
+
+def build(src: BoundarySource, out: Path, fetch=None, fetch_layer=None) -> dict:
     from shapely.geometry import Polygon, mapping
     from shapely.ops import unary_union
 
     fetch = fetch or make_fetch(src.layer_url, USER_AGENT)
+    fetch_layer = fetch_layer or (lambda url: make_fetch(url, USER_AGENT))
     got = fetch_sources(src, fetch)
     object_ids, originals = got["object_ids"], got["originals"]
     out.mkdir(parents=True, exist_ok=True)
@@ -228,6 +283,7 @@ def build(src: BoundarySource, out: Path, fetch=None) -> dict:
                           "area_m2_approx": round(area_m2(geom), 1) if has_geom else None,
                           "bounds_lonlat": [round(v, 7) for v in geom.bounds] if has_geom else None})
 
+    reassigned = reassign(src, groups, shapes, fetch_layer)
     for key, features in sorted(groups.items()):
         hashes[f"{key}.geojson"] = write_json(out / f"{key}.geojson", collection(features))
 
@@ -248,7 +304,7 @@ def build(src: BoundarySource, out: Path, fetch=None) -> dict:
 
     res_shapes = [shapes[it["properties"]["source_objectid"]] for it in residential]
     union, slivers_removed = drop_sliver_holes(unary_union(res_shapes), src.sliver_m2)
-    union = orient_any(union)
+    union = snap(union) if reassigned else orient_any(union)
     sum_area = sum(area_m2(s) for s in res_shapes)
     union_area = area_m2(union)
     hashes["boundary.geojson"] = write_json(out / "boundary.geojson", collection([{
@@ -288,7 +344,9 @@ def build(src: BoundarySource, out: Path, fetch=None) -> dict:
         "requires_owner_review": [
             f"OBJECTID {o['a']} and {o['b']} overlap by ~{o['overlap_m2_approx']} m2; a point there is ambiguous between zones"
             for o in overlaps if o["overlap_m2_approx"] >= src.overlap_review_m2
-        ] + list(src.owner_review_checks),
+        ] + [f"{r['area_m2_approx']} m2 moved from {r['from_zone']} to {r['to_zone']} (layer {r['layer_url']}, OBJECTIDs {r['source_objectids']}): {r['note']}"
+             for r in reassigned] + list(src.owner_review_checks),
+        "reassignments": reassigned,
         "notes": list(src.notes),
         "approved": False, "checksums_sha256": hashes,
     }

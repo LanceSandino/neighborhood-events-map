@@ -202,6 +202,64 @@ class BuildTests(unittest.TestCase):
             self.assertTrue(union.exterior.is_ccw)
 
 
+class ReassignTests(unittest.TestCase):
+    """Lots that are homes inside a non-residential plat move to a residential zone (owner decision)."""
+    RULE = {"layer_url": "https://gis.example.gov/arcgis/rest/services/Cadastral/MapServer/15",
+            "where": "OBJECTID IN (501, 502)", "from_zone": "clubhouse", "to_zone": "unit-1",
+            "note": "Lots 9-10 of the clubhouse plat are homes; their numbering continues Unit 1."}
+
+    @staticmethod
+    def lots_layer(lots):
+        calls = []
+
+        def factory(url):
+            def fetch(params):
+                calls.append((url, params))
+                feats = [{"type": "Feature", "id": oid, "geometry": g, "properties": {"OBJECTID": oid}} for oid, g in lots.items()]
+                return {"type": "FeatureCollection", "features": feats}, "lots-sha"
+            return fetch
+        return factory, calls
+
+    def recs(self):
+        return {1: ("EXAMPLE ESTATES UNIT 1", square(-100.00, 40.00)), 3: ("EXAMPLE ESTATES CLUBHOUSE", square(-99.998, 40.00))}
+
+    def lot(self, x0, y0):
+        return {"type": "Polygon", "coordinates": [[[x0, y0], [x0 + 0.0005, y0], [x0 + 0.0005, y0 + 0.002], [x0, y0 + 0.002], [x0, y0]]]}
+
+    def test_lots_move_from_the_amenity_plat_into_the_residential_zone(self):
+        factory, calls = self.lots_layer({501: self.lot(-99.998, 40.00), 502: self.lot(-99.9975, 40.00)})
+        with tempfile.TemporaryDirectory() as tmp:
+            m = gis.build(source(reassign=[self.RULE]), Path(tmp), fetch=FakeArcGIS(self.recs()), fetch_layer=factory)["manifest"]
+            self.assertEqual(calls[0][0], self.RULE["layer_url"])
+            self.assertEqual(calls[0][1]["where"], "OBJECTID IN (501, 502)")
+            self.assertEqual(m["reassignments"][0]["source_objectids"], [501, 502])
+            self.assertTrue(any("moved from clubhouse to unit-1" in r and "numbering continues" in r for r in m["requires_owner_review"]))
+            self.assertEqual(m["geometry_checks"]["pairwise_overlaps"], [], "the moved lots are no longer in the clubhouse")
+            self.assertEqual(m["geometry_checks"]["union_parts"], 1)
+            from shapely.geometry import Point, shape
+            zones = {f["properties"]["zone_key"]: f for f in json.loads((Path(tmp) / "zones.geojson").read_text())["features"]}
+            club = json.loads((Path(tmp) / "clubhouse.geojson").read_text())["features"][0]
+            inside_lot = Point(-99.9974, 40.001)
+            self.assertTrue(shape(zones["unit-1"]["geometry"]).contains(inside_lot))
+            self.assertFalse(shape(club["geometry"]).contains(inside_lot))
+            self.assertTrue(shape(club["geometry"]).contains(Point(-99.9965, 40.001)), "the rest of the clubhouse plat stays non-residential")
+            self.assertEqual(zones["unit-1"]["properties"]["reassigned_in"][0]["from_zone"], "clubhouse")
+            boundary = shape(json.loads((Path(tmp) / "boundary.geojson").read_text())["features"][0]["geometry"])
+            self.assertTrue(boundary.contains(inside_lot))
+
+    def test_polygons_outside_the_source_zone_or_missing_abort(self):
+        for lots in ({501: self.lot(-99.990, 40.00)}, {}):
+            factory, _ = self.lots_layer(lots)
+            with tempfile.TemporaryDirectory() as tmp, self.assertRaises(RuntimeError):
+                gis.build(source(reassign=[self.RULE]), Path(tmp), fetch=FakeArcGIS(self.recs()), fetch_layer=factory)
+
+    def test_invalid_rules_rejected(self):
+        for bad in ({**self.RULE, "to_zone": "common-areas"}, {**self.RULE, "note": " "}, {**self.RULE, "from_zone": "unit-1"},
+                    {**self.RULE, "layer_url": "http://insecure.example/MapServer/1"}, {**self.RULE, "extra": 1}):
+            with self.assertRaises(RuntimeError, msg=str(bad)):
+                source(reassign=[bad])
+
+
 class ConfigTests(unittest.TestCase):
     def assertRejected(self, pattern, **overrides):
         with self.assertRaisesRegex(RuntimeError, pattern):

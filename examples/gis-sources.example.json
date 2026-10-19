@@ -15,7 +15,8 @@
       "extra_properties: extra output property -> source field, copied onto every feature and into the inventory.",
       "expected_bounds_lonlat: [min_lon, min_lat, max_lon, max_lat]; polygons outside are flagged (catches swapped coordinates) and never claimable.",
       "sliver_hole_threshold_m2: union holes smaller than this are removed from the derived boundary only.",
-      "Optional text keys: boundary_name, review_title, source_description, notes (replaces the default manifest notes), owner_review_checks."
+      "Optional text keys: boundary_name, review_title, source_description, notes (replaces the default manifest notes), owner_review_checks.",
+      "reassign (optional): move official parcel or lot polygons from one zone to another, e.g. homes platted inside an amenities tract. Each rule fetches polygons from layer_url with where, clips them to from_zone, removes them there and merges them into to_zone (must be residential); the required note is copied into the review manifest. Example: [{\"layer_url\": \"https://gis.example.gov/arcgis/rest/services/Parcels/MapServer/0\", \"where\": \"OBJECTID IN (101, 102)\", \"from_zone\": \"amenities\", \"to_zone\": \"phase-1\", \"note\": \"Lots 9-10 of the amenities plat are homes and walk with Phase 1.\"}]"
     ],
     "layer_url": "https://gis.example.gov/arcgis/rest/services/Cadastral/MapServer/1",
     "where": "Name LIKE '%EXAMPLE ESTATES%'",

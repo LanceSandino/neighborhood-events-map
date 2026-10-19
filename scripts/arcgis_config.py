@@ -34,7 +34,7 @@ KEYS = {"layer_url", "where", "variant_where", "name_field", "objectid_field", "
         "plat_page_fields", "extra_properties", "zones", "name_normalize", "rules", "expected_zones",
         "sliver_hole_threshold_m2", "overlap_review_threshold_m2", "batch_size", "expected_bounds_lonlat",
         "out_dir", "source_all_filename", "boundary_name", "review_title", "source_description",
-        "notes", "owner_review_checks"}
+        "notes", "owner_review_checks", "reassign"}
 
 
 def load_config(path: Path) -> dict:
@@ -118,6 +118,7 @@ class BoundarySource:
     source_description: str
     notes: tuple
     owner_review_checks: tuple
+    reassign: tuple = ()
 
     @property
     def residential(self) -> list[str]:
@@ -206,6 +207,27 @@ def _normalize(sec: dict) -> tuple:
     return tuple(steps)
 
 
+def _reassign(sec: dict, zones: dict) -> tuple:
+    """Optional parcel/lot reassignments: polygons from another layer (e.g. platted lots that are homes
+    inside an amenities plat) move from one zone to another. Each needs an owner-supplied note."""
+    out = []
+    for i, r in enumerate(typed(sec, "reassign", list, [], "boundaries")):
+        where = f"boundaries.reassign[{i}]"
+        if not isinstance(r, dict) or set(r) - {"layer_url", "where", "from_zone", "to_zone", "objectid_field", "note", "_comment"}:
+            raise RuntimeError(f"Config {where} must be an object with layer_url, where, from_zone, to_zone, note[, objectid_field]")
+        if not isinstance(r.get("where"), str) or not r["where"].strip() or not isinstance(r.get("note"), str) or not r["note"].strip():
+            raise RuntimeError(f"Config {where} needs a non-empty where clause and a note explaining the decision")
+        frm, to = r.get("from_zone"), r.get("to_zone")
+        if frm not in zones or to not in zones or frm == to or frm == UNCLASSIFIED or not zones[to].residential:
+            raise RuntimeError(f"Config {where}: from_zone and to_zone must be different declared zones and to_zone must be residential")
+        if not str(r.get("layer_url", "")).startswith("https://"):
+            raise RuntimeError(f"Config {where}.layer_url must be an https:// ArcGIS layer URL")
+        url = query_url(r.get("layer_url"), f"{where}.layer_url")
+        out.append({"layer_url": url[: -len("/query")], "where": r["where"], "from_zone": frm, "to_zone": to, "note": r["note"],
+                    "objectid_field": field_name(r.get("objectid_field", "OBJECTID"), f"{where}.objectid_field")})
+    return tuple(out)
+
+
 def _bounds(sec: dict) -> tuple | None:
     b = sec.get("expected_bounds_lonlat")
     if b is None:
@@ -267,6 +289,7 @@ def parse_boundary_source(config: dict) -> BoundarySource:
         notes=_strings(sec, "notes", w) or default_notes,
         owner_review_checks=_strings(sec, "owner_review_checks", w)
         or ("Confirm HOA eligibility of every recorded section, gates and access routes before approval.",),
+        reassign=_reassign(sec, zones),
     )
 
 
