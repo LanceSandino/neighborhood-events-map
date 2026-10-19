@@ -1,0 +1,7 @@
+# The public map, About and policy pages may be indexed; private and machine endpoints may not.
+User-agent: *
+Disallow: /api/
+Disallow: /admin
+Disallow: /me
+Disallow: /auth/
+Disallow: /login

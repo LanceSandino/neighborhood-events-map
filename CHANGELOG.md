@@ -6,6 +6,14 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.5.0-beta.4] - 2026-10-19
+
+### Changed
+- Faster pages: nginx compresses text responses (about 70 % smaller), the map's stylesheet no longer blocks the first paint, and the browser connects to the map-tile server early. Lighthouse (mobile, development stack): Performance 79 → 91.
+- Production PHP preloads Symfony's most-used classes into OPcache when PHP-FPM starts; the PHP-FPM worker pool is set from `.env` (`FPM_MAX_CHILDREN`…). The upgrade runbook recreates containers on every deploy, which is what clears OPcache.
+- Small text is at least 12 px on phones (11 px for tags and badges), so it passes Lighthouse's legibility check.
+- `robots.txt` lets search engines index the public map, About and policy pages but not the API, sign-in, resident or organizer pages.
+
 ## [0.5.0-beta.3] - 2026-10-19
 
 ### Changed

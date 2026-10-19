@@ -280,4 +280,15 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "v0.5.0-beta.2"
   author: "Lance Sandino"
   timestamp: "2026-10-19T08:45:00Z"
+
+- id: CU-20261019-15
+  type: refactor
+  title: "Performance pass from Lighthouse and PHP-FPM/OPcache review"
+  description: "gzip in nginx; leaflet.css loaded by home.js (not render-blocking) with preconnect/dns-prefetch to the tile origin; 9-11 px text raised to 11-12 px; public/robots.txt. Production image adds php-prod.ini (OPcache 192 MB, interned strings 16 MB, preload of Symfony's generated preload file, JIT off) — verified in PHP-FPM: 914 classes preloaded. PHP-FPM pool sizes come from FPM_* env (defaults unchanged). Upgrade runbook uses --force-recreate so every deploy starts with an empty OPcache (validate_timestamps=0)."
+  impact: low
+  affected_modules: ["docker/nginx/default.conf", "docker/php/php-prod.ini", "docker/php/fpm-pool.conf", "Dockerfile", "compose.yaml", "public/robots.txt", "public/assets/css/app.css", "public/assets/js/home.js", "templates/home/index.html.twig", "docs/runbooks/"]
+  related_tests: ["tests/e2e/specs/*.mjs (68 incl. WebKit; overflow and 44 px targets at all sizes)", "Lighthouse mobile run (local, documented in CHANGELOG)", "php-fpm -tt and preload_statistics in the production image (manual check)"]
+  commit_ref: "v0.5.0-beta.4"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T19:15:00Z"
 ```

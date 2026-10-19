@@ -4,7 +4,8 @@
 {% set nav = 'map' %}
 {% set zones = c.zones %}
 {% set zs = zone_summary(zones) %}
-{% block styles %}<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">{% endblock %}
+{# Map styles load from home.js without blocking the first paint; open the connection to the tile server early. #}
+{% block styles %}{% set tile_origin = c.map.tiles.url|split('/')|slice(0, 3)|join('/') %}<link rel="preconnect" href="{{ tile_origin }}" crossorigin><link rel="dns-prefetch" href="{{ tile_origin }}">{% endblock %}
 {% block footer_credit %}<span>Map data © OpenStreetMap contributors</span>{% endblock %}
 {% block body %}
 <section class="intro">

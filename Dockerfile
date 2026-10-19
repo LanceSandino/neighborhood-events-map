@@ -13,7 +13,8 @@ COPY docker/php/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
 COPY docker/php/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
 COPY --chmod=0755 docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
 COPY --chmod=0755 docker/php/healthcheck.sh /usr/local/bin/app-healthcheck
-ENV COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_NO_INTERACTION=1
+ENV COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_NO_INTERACTION=1 \
+    FPM_MAX_CHILDREN=12 FPM_START_SERVERS=3 FPM_MIN_SPARE=2 FPM_MAX_SPARE=6
 WORKDIR /app
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD app-healthcheck
 ENTRYPOINT ["app-entrypoint"]
@@ -33,6 +34,7 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-pr
 
 FROM php-base AS prod
 ENV APP_ENV=prod APP_DEBUG=0
+COPY docker/php/php-prod.ini "$PHP_INI_DIR/conf.d/zzz-app-prod.ini"
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
 RUN composer dump-autoload --no-dev --classmap-authoritative \

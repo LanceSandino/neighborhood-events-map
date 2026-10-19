@@ -545,6 +545,15 @@ function routeFromHash() {
   if (map[location.hash]) actions(map[location.hash]);
 }
 
+// Leaflet's stylesheet is only needed for the map, so it loads here instead of blocking the first paint
+// (stylesheets added before the page's load event still delay it, and the map starts on load).
+if (!document.querySelector('link[href="/vendor/leaflet/leaflet.css"]')) {
+  const css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = '/vendor/leaflet/leaflet.css';
+  document.head.append(css);
+}
+
 bind();
 initRegistration({ community: C, onPublishedHint: () => {} });
 render();

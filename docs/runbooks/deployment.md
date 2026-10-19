@@ -41,6 +41,14 @@ docker compose exec app php bin/console app:admin:grant organizer@example.org
 
 Migrations run automatically on start (`MIGRATE_ON_START=1`). The container refuses to start with a placeholder or short `APP_SECRET`.
 
+### Performance settings (production image)
+
+- **OPcache** is on, never re-checks files, and **preloads** Symfony's hot classes when PHP-FPM starts (`docker/php/php-prod.ini`). Deploys clear it by recreating the containers (see the upgrade runbook).
+- **Composer** autoloading is class-map-authoritative and the Symfony cache is warmed at image build.
+- **PHP-FPM** worker pool: each worker uses about 30–40 MB. Set `FPM_MAX_CHILDREN` to roughly the memory you give PHP divided by 40 MB (default 12 ≈ 512 MB), with `FPM_START_SERVERS`, `FPM_MIN_SPARE` and `FPM_MAX_SPARE` in `.env`; then recreate the `app` container. If the logs show `server reached pm.max_children`, raise it (or add memory).
+- **nginx** gzips text responses and caches fingerprinted scripts and styles for a year.
+- Measure performance on the **production** stack (no `COMPOSE_FILE` dev overlay). The development stack re-checks every PHP file, runs a coverage driver and adds `X-Robots-Tag: noindex`, so it scores lower on Lighthouse by design.
+
 ## 3. Cloudflare Tunnel
 
 Reuse the host's existing `cloudflared` (recommended) and add an ingress rule:
