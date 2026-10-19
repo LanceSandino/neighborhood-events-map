@@ -3,8 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { matches, DEFAULT_FILTERS, isLowSensory, activeFilterCount } from '../../public/assets/js/lib/filters.js';
 import { statusOf, time12, nowInZone } from '../../public/assets/js/lib/time.js';
-import { planStops, orderGroup, haversine } from '../../public/assets/js/lib/route.js';
+import { planStops, orderGroup, haversine, applyOrder, moveStop } from '../../public/assets/js/lib/route.js';
 import { createStore } from '../../public/assets/js/lib/store.js';
+import { zoneStyle } from '../../public/assets/js/lib/render.js';
 
 const home = (o) => ({ id: 1, address: '1 Pumpkin Ln', zone: 'oak', lat: 40.03, lon: -74.99, start: '17:00', end: '21:00', candy: true, nonfood: false,
   adult_drinks: false, low_noise: true, jump_scares: false, flashing_lights: false, loud_audio: false, scare_level: 'gentle', stroller_friendly: false, note: '', status: 'active', ...o });
@@ -91,4 +92,44 @@ test('store is namespaced by community and year and survives storage failures', 
   const b = createStore('x', '2026', broken);
   b.toggleSaved(1);
   assert.deepEqual(b.get().saved, [1]);
+});
+
+test('selecting a zone makes it stand out and the others recede', () => {
+  const z = (key, residential = true) => ({ key, residential });
+  assert.equal(zoneStyle(z('a'), null).weight, 1);
+  assert.equal(zoneStyle(z('a'), 'a').weight, 3);
+  assert.equal(zoneStyle(z('a'), 'a').fillOpacity > zoneStyle(z('b'), 'a').fillOpacity, true);
+  assert.equal(zoneStyle(z('b'), 'a').opacity, 0.5);
+  assert.equal(zoneStyle(z('club', false), null).fill, true, 'non-residential areas are shaded');
+});
+
+test('a "coming soon" zone is drawn faintly dotted and never looks selected', () => {
+  const soon = { key: 'p7', residential: true, status: 'coming_soon' };
+  assert.equal(zoneStyle(soon, null).dashArray, '2 6');
+  assert.equal(zoneStyle(soon, 'p7').weight, 1, 'it cannot be highlighted like an active zone');
+  assert.equal(zoneStyle(soon, 'p1').opacity < zoneStyle(soon, null).opacity, true);
+});
+
+test('starting from the visitor\'s location: nearest trip first, nearest stop first, no stop invented', () => {
+  const stops = [
+    { id: 1, zone: 'north', lat: 40.050, lon: -75.000 }, { id: 2, zone: 'north', lat: 40.052, lon: -75.000 },
+    { id: 3, zone: 'south', lat: 40.010, lon: -75.000 }, { id: 4, zone: 'south', lat: 40.012, lon: -75.000 },
+  ];
+  const groups = [['north'], ['south']];
+  const here = { id: null, lat: 40.013, lon: -75.000 };
+  const plan = planStops(stops, { groups, zonesEnabled: true, start: here });
+  assert.deepEqual(plan.map((g) => g.stops.map((s) => s.id)), [[4, 3], [1, 2]], 'south trip first (nearest), each trip starts at its stop nearest the location');
+  assert.equal(plan.flatMap((g) => g.stops).length, 4, 'the location is a start point, never a stop');
+  assert.ok(plan.every((g) => !('near' in g)));
+});
+
+test('a visitor can reorder stops within a trip; new stops keep their suggested place', () => {
+  const plan = [{ key: 'a', zones: [], stops: [{ id: 1 }, { id: 2 }, { id: 3 }] }, { key: 'b', zones: [], stops: [{ id: 7 }, { id: 8 }] }];
+  const order = moveStop(plan, 3, -1);
+  assert.deepEqual(order, [1, 3, 2, 7, 8]);
+  assert.deepEqual(moveStop(plan, 1, -1), [1, 2, 3, 7, 8], 'cannot move above the first stop');
+  assert.deepEqual(moveStop(plan, 3, 1), [1, 2, 3, 7, 8], 'cannot move below the last stop of its trip');
+  const replanned = [{ key: 'a', zones: [], stops: [{ id: 2 }, { id: 9 }, { id: 1 }, { id: 3 }] }, { key: 'b', zones: [], stops: [{ id: 8 }, { id: 7 }] }];
+  assert.deepEqual(applyOrder(replanned, order).map((g) => g.stops.map((s) => s.id)), [[1, 3, 2, 9], [7, 8]]);
+  assert.equal(applyOrder(replanned, null), replanned);
 });

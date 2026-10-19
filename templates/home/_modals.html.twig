@@ -17,7 +17,7 @@
       <fieldset data-step="1">
         <legend class="visually-hidden">Step 1 of 3: your address</legend>
         {% if reg.address_mode != 'self_entry' %}
-        <div class="field full">
+        <div class="field full" id="lookupField">
           <label for="addrQuery">Home address *</label>
           <input id="addrQuery" autocomplete="off" placeholder="House number and street, e.g. 123 Pumpkin Ln…" maxlength="80" aria-describedby="addrHelp" aria-autocomplete="list" aria-controls="addrSuggestions">
           <span class="form-caption" id="addrHelp">Start with your house number. Only addresses in {{ c.community.name }} can be listed.</span>
@@ -36,12 +36,13 @@
           <div class="field full">
             <span class="label" id="pinLabel">Tap your house on the map *</span>
             <div class="pin-map" id="pinMap" role="application" aria-labelledby="pinLabel"></div>
-            <span class="form-caption">Place the pin on your roof. It must be inside the neighborhood boundary. Nothing is geocoded or guessed.</span>
+            <span class="form-caption">Place the pin on your roof. It must be inside the neighborhood boundary. Nothing is geocoded or guessed.{{ reg.review_new_addresses ? ' A new address appears on the map after an organizer approves it.' }}</span>
             <span class="error" data-error="pin"></span>
           </div>
         </div>
-        {% if reg.address_mode == 'both' %}<button type="button" class="link-button" id="btnSelfEntry">Can’t find your address? Enter it and place a pin</button>{% endif %}
+        {% if reg.address_mode == 'both' %}<button type="button" class="link-button" id="btnSelfEntry">Can’t find your address? Add it and place a pin{{ reg.review_new_addresses ? ' (an organizer approves it)' }}</button><button type="button" class="link-button hide" id="btnUseList">← Search the address list instead</button>{% endif %}
         {% endif %}
+        {% if reg.address_mode == 'registry' and c.community.contact_url %}<p class="form-caption">Home missing from the list? <a href="{{ c.community.contact_url }}" rel="noopener">Contact the organizer</a> to add it.</p>{% endif %}
         <div id="claimedPanel" class="notice danger hide" role="alert">
           <b>This home is already claimed.</b> If you think this is a mistake, request a review. The organizer will follow up by email; the current owner is never shown.
           <div class="modal-actions"><button type="button" class="secondary" id="btnRequestReview">Request a review</button></div>
@@ -62,12 +63,12 @@
             <div class="checks" role="group" aria-labelledby="treatsLabel">
               {% if c.features.candy %}<label class="check-chip"><input type="checkbox" name="candy" checked> 🍬 Candy</label>{% endif %}
               {% if c.features.nonfood_treats %}<label class="check-chip"><input type="checkbox" name="nonfood"> 💙 Non-food treats</label>{% endif %}
-              {% if c.features.adult_refreshments %}<label class="check-chip"><input type="checkbox" name="adult_drinks"> 🥤 Adult refreshments · 21+</label>{% endif %}
+              {% if c.features.adult_refreshments %}<label class="check-chip"><input type="checkbox" name="adult_drinks"> 🍺 Adult refreshments · 21+</label>{% endif %}
               <label class="check-chip"><input type="checkbox" name="low_noise" checked> 💚 Low noise</label>
               <label class="check-chip"><input type="checkbox" name="jump_scares"> 😱 Jump scares</label>
               <label class="check-chip"><input type="checkbox" name="flashing_lights"> ⚡ Flashing lights</label>
               <label class="check-chip"><input type="checkbox" name="loud_audio"> 🔊 Loud music/sounds</label>
-              <label class="check-chip"><input type="checkbox" name="stroller_friendly"> 🛞 Stroller-friendly</label>
+              <label class="check-chip"><input type="checkbox" name="stroller_friendly"> 👶 Stroller-friendly</label>
             </div>
             <span class="error" data-error="offerings"></span>
           </div>
@@ -116,11 +117,12 @@
     <div class="eyebrow">✨ Your adventure</div>
     <h2 id="routeTitle">Your trick-or-treat stops</h2>
     <p class="introtext" id="routeSub">A suggested stop order based on your saved homes and filters.</p>
-    <div class="field full"><label for="routeStart">Start near</label><select id="routeStart"><option value="">The first stop in each area</option></select></div>
+    <div class="field full"><label for="routeStart">Start from</label><select id="routeStart"><option value="">The first stop in each area</option></select></div>
     <div id="routeItems" aria-live="polite"></div>
     <div class="notice" id="routeNotice">🚸 This is a suggested order of stops, not walking directions. It never connects separate areas across major roads, water or gates. Use sidewalks and marked crossings.</div>
     {% for note in c.map.crossing_notes %}<div class="notice">⚠️ {{ note }}</div>{% endfor %}
-    <div class="modal-actions"><button type="button" class="secondary" data-close>Back to map</button><button type="button" class="secondary" id="btnShareRoute">Share</button><button type="button" class="primary" id="btnCopyRoute">Copy stop list</button></div>
+    <div class="field full route-link"><label for="routeLink">Link to these stops and filters</label><input id="routeLink" readonly></div>
+    <div class="modal-actions"><button type="button" class="secondary" id="btnRouteMap">🗺️ Show on map</button><button type="button" class="secondary" id="btnShareRoute">Share</button><button type="button" class="primary" id="btnCopyRoute">Copy stop list</button></div>
   </div>
 </div>
 
@@ -134,7 +136,7 @@
     {% if access %}<div class="notice info">{{ access.icon }} <b>{{ access.title }}.</b> {{ access.text }}</div>{% endif %}
     {% if c.community.gate_notice %}<div class="notice">🚪 {{ c.community.gate_notice }}</div>{% elseif not access %}<div class="notice">🚪 This site does not grant access to gated areas.</div>{% endif %}
     {% for note in c.map.crossing_notes %}<div class="notice">⚠️ {{ note }}</div>{% endfor %}
-    <p class="introtext">Families browse anonymously. Filters, favorites and your start point stay on this device. Residents list their own homes by confirming an email link; addresses appear only after they opt in. Sensory labels such as “low noise” or “no flashing lights” are self-reported—please use your own judgment.</p>
+    <p class="introtext">Visitors browse anonymously. Filters, favorites and your start point stay on this device. Residents list their own homes by confirming an email link; addresses appear only after they opt in. Sensory labels such as “low noise” or “no flashing lights” are self-reported—please use your own judgment.</p>
     <p class="introtext">Something wrong with a listing? Select it on the map and choose “Report this listing”{% if c.community.contact_url %}, or <a href="{{ c.community.contact_url }}" rel="noopener">contact the organizer</a>{% endif %}.</p>
     <div class="modal-actions"><a class="secondary" href="/about">About {{ c.community.name }}</a><button type="button" class="primary" data-close>Got it!</button></div>
   </div>

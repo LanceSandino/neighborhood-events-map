@@ -89,6 +89,10 @@ final class AddressEligibility
         $lat = (float) $lat;
         $lon = (float) $lon;
         if (!$community->insideBoundary($lat, $lon)) {
+            // A pin on a named non-residential or not-yet-open area (e.g. the clubhouse) says so.
+            foreach ($community->zonesAt($lat, $lon) as $zoneKey) {
+                $this->assertZoneClaimable($zoneKey, $community);
+            }
             throw new ClaimRejectedException('outside_boundary', 'The pin is outside the approved neighborhood boundary.');
         }
         $requested = isset($in['zone_key']) && '' !== $in['zone_key'] ? (string) $in['zone_key'] : null;
@@ -138,6 +142,9 @@ final class AddressEligibility
         }
         if (!$zone['claimable']) {
             throw new ClaimRejectedException('zone_not_claimable', sprintf('%s is not a residential area, so homes there cannot be listed.', $zone['label']));
+        }
+        if ('active' !== $zone['status']) {
+            throw new ClaimRejectedException('zone_not_open', sprintf('%s is not open for listings yet. Contact the organizer if your home is ready.', $zone['label']));
         }
     }
 }

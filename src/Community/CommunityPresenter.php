@@ -31,11 +31,12 @@ final class CommunityPresenter
     {
         $s = $c->settings;
         $approved = $c->boundaryApproved && null !== $c->boundary;
-        $zones = $c->zonesEnabled() ? array_map(static fn (array $z) => [
-            'key' => $z['key'], 'label' => $z['label'], 'claimable' => $z['claimable'], 'residential' => $z['residential'],
-            'color' => $z['color'], 'description' => $z['description'],
+        // Hidden zones are left out of the public payload entirely; "coming soon" zones are drawn but not listable.
+        $zones = $c->zonesEnabled() ? array_values(array_map(static fn (array $z) => [
+            'key' => $z['key'], 'label' => $z['label'], 'claimable' => $z['claimable'] && 'active' === $z['status'], 'residential' => $z['residential'],
+            'color' => $z['color'], 'description' => $z['description'], 'status' => $z['status'],
             'geometry' => $approved && isset($c->zoneShapes[$z['key']]) ? $c->zoneShapes[$z['key']]->toGeometry() : null,
-        ], $c->zones()) : [];
+        ], array_filter($c->zones(), static fn (array $z) => 'hidden' !== $z['status']))) : [];
         $state = $c->registrationState();
         $lowSensory = \count(array_filter($homes, static fn (array $h) => $h['low_noise'] && !$h['flashing_lights'] && !$h['jump_scares'] && !$h['loud_audio']));
 
@@ -62,6 +63,7 @@ final class CommunityPresenter
             'registration' => $state + [
                 'address_mode' => $s['registration']['address_mode'],
                 'street_allowlist' => 'registry' !== $s['registration']['address_mode'] ? $s['registration']['street_allowlist'] : [],
+                'review_new_addresses' => (bool) ($s['registration']['review_new_addresses'] ?? false),
             ],
             'routing' => ['groups' => $s['routing']['groups'], 'crossings_verified' => $s['routing']['crossings_verified'],
                 'provider' => $s['routing']['provider_enabled'] && $s['routing']['crossings_verified'] && $this->routing->available()],
@@ -69,7 +71,7 @@ final class CommunityPresenter
                 'homes' => \count($homes),
                 'candy' => \count(array_filter($homes, static fn (array $h) => $h['candy'])),
                 'low_sensory' => $lowSensory,
-                'zones' => \count(array_filter($zones, static fn (array $z) => $z['residential'])),
+                'zones' => \count(array_filter($zones, static fn (array $z) => $z['residential'] && 'active' === $z['status'])),
             ],
             'demo' => $this->config->demoMode,
             'version' => $this->appVersion,

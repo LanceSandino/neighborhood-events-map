@@ -49,7 +49,8 @@ function homeCard(home, eventDate) {
   $('[data-f="meta"]', node).textContent = [home.zone_label, l ? `${time12(l.start)}–${time12(l.end)}` : 'No listing', l && !l.published ? 'Hidden from the map' : 'Shown on the map'].filter(Boolean).join(' · ');
   const warn = $('[data-f="warning"]', node);
   const warnings = [];
-  if (l && l.moderation_hidden) warnings.push('The organizer has hidden this listing. Contact them if you think this is a mistake.');
+  if (l && l.pending_review) warnings.push('Waiting for an organizer to approve this new address. It appears on the map once approved.');
+  else if (l && l.moderation_hidden) warnings.push('The organizer has hidden this listing. Contact them if you think this is a mistake.');
   if (!home.inside_boundary) warnings.push('This address is outside the current neighborhood boundary, so it is not shown publicly.');
   if (l && !l.current_season) warnings.push(`This listing is from ${l.event_date}. Save it to take part on ${eventDate}.`);
   warn.textContent = warnings.join(' ');
@@ -108,10 +109,12 @@ async function load() {
     const out = $('#claimOutcome');
     if (me.claim_outcome) {
       const o = me.claim_outcome;
-      out.className = o.status === 'published' ? 'success' : 'notice';
+      out.className = o.status === 'published' || o.status === 'pending_review' ? 'success' : 'notice';
       out.innerHTML = o.status === 'published'
         ? `🎉 <b>${esc(o.address)}</b> is on the map now. Thanks for handing out treats!`
-        : o.status === 'already_claimed'
+        : o.status === 'pending_review'
+          ? `📝 <b>${esc(o.address)}</b> is saved. Because it is a new address, an organizer approves it before it appears on the map.`
+          : o.status === 'already_claimed'
           ? `This home was already claimed by another neighbor, so nothing was changed. <a href="/#list-my-house">Request a review</a> if you think this is a mistake.`
           : esc(o.message || 'Your listing request could not be completed.');
       out.focus();

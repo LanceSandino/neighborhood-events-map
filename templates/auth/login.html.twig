@@ -22,4 +22,4 @@
   <p class="form-caption">Links work once and expire after a few minutes. Signed-in sessions end after inactivity.</p>
 </div>
 {% endblock %}
-{% block scripts %}<script type="module" src="/assets/js/login.js?v={{ app_version }}"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{{ asset_path('js/login.js') }}"></script>{% endblock %}

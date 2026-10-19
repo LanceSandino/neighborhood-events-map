@@ -31,6 +31,9 @@ parameters:
     env(AUTH_RESPONSE_JITTER_MS): '250'
     env(VERSION_FILE): '%kernel.project_dir%/VERSION'
     app.version: '%env(trim:file:resolve:VERSION_FILE)%'
+    # Public source code link in the "What's new" dialog; set APP_SOURCE_URL to your fork, or empty to hide it.
+    env(APP_SOURCE_URL): 'https://github.com/LanceSandino/neighborhood-halloween-map'
+    app.source_url: '%env(APP_SOURCE_URL)%'
     app.branding_dir: '%kernel.project_dir%/var/branding'
 
 services:

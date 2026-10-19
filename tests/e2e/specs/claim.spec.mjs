@@ -66,6 +66,9 @@ test('first verified claimant publishes immediately; second sees already-claimed
   expect(after.home.status).toBe('out_of_candy');
   await page.goto(DEMO + '/');
   await page.locator('#search').fill(`${house} moonbeam`);
+  // Out-of-candy homes leave the list (and routes) until the visitor asks to see them.
+  await expect(page.locator('.home-card')).toHaveCount(0);
+  await page.locator('#btnShowClosed').click();
   await expect(page.locator('.home-card')).toHaveCount(1);
   await expect(page.locator('.home-card')).toContainText('Out of candy');
   await expect(page.locator('.home-card .card-note')).toContainText('<script>alert(1)</script>');

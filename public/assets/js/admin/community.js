@@ -11,13 +11,17 @@ const field = (id, label, value, attrs = '') => `<div class="field"><label for="
 const area = (id, label, value, help = '') => `<div class="field full"><label for="${id}">${label}</label><textarea id="${id}">${esc(value ?? '')}</textarea>${help ? `<span class="form-caption">${help}</span>` : ''}</div>`;
 const check = (id, label, on) => `<label class="check-chip"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}> ${label}</label>`;
 
-function zoneRow(z = { key: '', label: '', claimable: true, residential: true, color: '', description: '' }) {
+const ZONE_STATUS = [['active', 'Active'], ['coming_soon', 'Coming soon'], ['hidden', 'Hidden']];
+
+function zoneRow(z = { key: '', label: '', claimable: true, residential: true, color: '', description: '', status: 'active' }) {
+  const status = z.status || 'active';
   return `<tr>
     <td><input data-z="key" value="${esc(z.key)}" pattern="[a-z0-9][a-z0-9-]*" aria-label="Zone key"></td>
     <td><input data-z="label" value="${esc(z.label)}" aria-label="Zone label"></td>
     <td><input type="checkbox" data-z="claimable" ${z.claimable ? 'checked' : ''} aria-label="Homes can be listed"></td>
     <td><input type="checkbox" data-z="residential" ${z.residential ? 'checked' : ''} aria-label="Residential"></td>
     <td><input data-z="color" value="${esc(z.color || '')}" placeholder="#RRGGBB" aria-label="Colour"></td>
+    <td><select data-z="status" aria-label="Status">${ZONE_STATUS.map(([v, l]) => `<option value="${v}" ${v === status ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
     <td><button type="button" class="link-button" data-remove-zone>Remove</button></td></tr>`;
 }
 
@@ -74,8 +78,8 @@ function render() {
       ${check('fAdult', 'Adult refreshments (21+)', s.features.adult_refreshments)}${check('fSensory', 'Sensory filters', s.features.sensory_filters)}
       ${check('fZones', 'Show zone filter', s.features.optional_zones)}${check('fRoutes', 'Suggested stop order', s.features.walking_routes)}
     </div></div>
-    <div class="panel"><h2>Zones (optional)</h2><p class="form-caption">Phases, sections or any named areas. Leave empty for a community without zones. Draw their polygons on the Boundary &amp; zones page.</p>
-      <div class="table-wrap"><table class="data zones-table"><thead><tr><th>Key</th><th>Label</th><th>Listable</th><th>Residential</th><th>Colour</th><th></th></tr></thead><tbody id="zoneRows">${s.zones.map(zoneRow).join('')}</tbody></table></div>
+    <div class="panel"><h2>Zones (optional)</h2><p class="form-caption">Phases, sections or any named areas. Leave empty for a community without zones. Draw their polygons on the Boundary &amp; zones page. <b>Coming soon</b> draws the zone with that label but homes there cannot be listed yet (e.g. no houses built); <b>Hidden</b> leaves it off the public map entirely.</p>
+      <div class="table-wrap"><table class="data zones-table"><thead><tr><th>Key</th><th>Label</th><th>Listable</th><th>Residential</th><th>Colour</th><th>Status</th><th></th></tr></thead><tbody id="zoneRows">${s.zones.map(zoneRow).join('')}</tbody></table></div>
       <button type="button" class="secondary" id="addZone">+ Add zone</button>
     </div>
     <div class="panel"><h2>House listings</h2><div class="form-grid">
@@ -84,6 +88,7 @@ function render() {
         <option value="self_entry" ${s.registration.address_mode === 'self_entry' ? 'selected' : ''}>Street list + resident pin</option>
         <option value="both" ${s.registration.address_mode === 'both' ? 'selected' : ''}>Both</option></select></div>
       <div class="field"><span class="label">Listings</span><label class="check-chip"><input type="checkbox" id="rEnabled" ${s.registration.enabled ? 'checked' : ''}> Allow new listings</label></div>
+      <div class="field"><span class="label">New addresses</span><label class="check-chip"><input type="checkbox" id="rReview" ${s.registration.review_new_addresses ? 'checked' : ''}> Approve self-entered homes before they show</label></div>
       ${area('rStreets', 'Allowed streets (one per line, for self-entry)', s.registration.street_allowlist.join('\n'))}
       ${field('rIdle', 'Sign-in session idle minutes (5–240)', s.registration.session_idle_minutes, 'type="number" min="5" max="240"')}
       ${field('rLink', 'Email link minutes (5–60)', s.registration.email_magic_link_minutes, 'type="number" min="5" max="60"')}
@@ -131,10 +136,11 @@ async function save(e) {
   s.zones = $$('#zoneRows tr').map((tr) => ({
     key: $('[data-z=key]', tr).value.trim(), label: $('[data-z=label]', tr).value.trim(), claimable: $('[data-z=claimable]', tr).checked,
     residential: $('[data-z=residential]', tr).checked, color: $('[data-z=color]', tr).value.trim() || undefined,
+    status: $('[data-z=status]', tr).value,
   })).filter((z) => z.key);
   Object.assign(s.registration, { address_mode: $('#rMode').value, enabled: $('#rEnabled').checked, street_allowlist: lines('#rStreets'),
     session_idle_minutes: Number($('#rIdle').value), email_magic_link_minutes: Number($('#rLink').value),
-    max_homes_per_user: Number($('#rMaxHomes').value) });
+    max_homes_per_user: Number($('#rMaxHomes').value), review_new_addresses: $('#rReview').checked });
   s.map.tiles = { ...s.map.tiles, url: $('#mTiles').value, attribution: $('#mAttr').value };
   s.map.zoom = Number($('#mZoom').value);
   s.map.crossing_notes = lines('#mNotes');

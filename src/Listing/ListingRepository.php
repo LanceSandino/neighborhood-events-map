@@ -20,6 +20,9 @@ final class ListingRepository
     private const PUBLIC_COLUMNS = 'a.id, a.display_address, a.zone_key, a.latitude, a.longitude,
         l.start_local, l.end_local, l.candy, l.nonfood, l.adult_drinks, l.low_noise, l.jump_scares, l.flashing_lights,
         l.loud_audio, l.scare_level, l.stroller_friendly, l.note, l.status, l.updated_at';
+    /** moderation_reason of a listing whose new (self-entered) address waits for an organizer's approval */
+    public const PENDING_REVIEW = 'pending_review';
+
     private const PUBLIC_WHERE = 'l.published AND NOT l.moderation_hidden AND a.enabled AND a.inside_boundary AND l.event_date = :date';
 
     public function __construct(private readonly Connection $db, private readonly ClockInterface $clock)
@@ -82,7 +85,9 @@ final class ListingRepository
                 ['h' => 'boolean'],
             );
             if (1 === $n) {
-                $db->executeStatement('UPDATE eligible_addresses SET moderation_hold = :h WHERE id = :id', ['h' => $hidden, 'id' => $addressId], ['h' => 'boolean']);
+                // Unhiding is also the approval of a self-entered address that was waiting for review.
+                $db->executeStatement('UPDATE eligible_addresses SET moderation_hold = :h, reviewed_at = CASE WHEN :h THEN reviewed_at ELSE COALESCE(reviewed_at, :now) END WHERE id = :id',
+                    ['h' => $hidden, 'now' => $this->now(), 'id' => $addressId], ['h' => 'boolean']);
             }
 
             return 1 === $n;

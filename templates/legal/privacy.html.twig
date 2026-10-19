@@ -33,10 +33,10 @@
   <p>You can hide your listing or give up your home at any time from “Manage my house”. To see, correct or delete everything about you, {% include 'legal/_contact.html.twig' %}; the organizer can delete your account and all your homes completely.</p>
 
   <h2>Children</h2>
-  <p>Families can browse without giving any personal information. Listing a home is for adults; we do not knowingly collect information from children under 13.</p>
+  <p>Anyone can browse without giving any personal information. Listing a home is for adults; we do not knowingly collect information from children under 13.</p>
 
   <p class="form-caption">This notice describes how this software works; the organizer of {{ c.community.name }} runs this copy of it. Last updated {{ 'now'|date('F Y') }}.</p>
   <div class="modal-actions"><a class="secondary" href="/terms">Terms of use</a><a class="primary" href="/">Back to map</a></div>
 </article>
 {% endblock %}
-{% block scripts %}<script type="module" src="/assets/js/legal.js?v={{ app_version }}"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{{ asset_path('js/legal.js') }}"></script>{% endblock %}

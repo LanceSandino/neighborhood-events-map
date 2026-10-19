@@ -6,7 +6,7 @@
  * @dependencies lib/sha256.js (importScripts)
  */
 /* eslint-env worker */
-importScripts('/assets/js/lib/sha256.js');
+importScripts('lib/sha256.js'); // relative to this worker, so versioned paths stay together
 
 self.onmessage = function (event) {
   var c = event.data;

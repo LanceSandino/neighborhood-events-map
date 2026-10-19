@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\About\ChangelogReader;
 use App\Community\BrandingStore;
 use App\Community\BrandPalette;
 use App\Community\CommunityPresenter;
@@ -62,6 +63,12 @@ final class PageController extends AbstractController
         $c = $this->community->current();
 
         return $this->render('legal/'.$page.'.html.twig', ['c' => $this->presenter->publicPayload($c, [])]);
+    }
+
+    #[Route('/changelog', name: 'changelog', methods: ['GET'])]
+    public function changelog(ChangelogReader $changelog): Response
+    {
+        return $this->render('legal/changelog.html.twig', ['c' => $this->presenter->publicPayload($this->community->current(), []), 'releases' => $changelog->latest(6)]);
     }
 
     #[Route('/me', name: 'me', methods: ['GET'])]

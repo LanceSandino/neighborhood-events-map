@@ -85,7 +85,7 @@ final class MeApiController
         );
 
         return match ($outcome->status) {
-            'published' => new JsonResponse(['status' => 'published', 'address_id' => $outcome->addressId, 'address' => $outcome->address], 201),
+            'published', 'pending_review' => new JsonResponse(['status' => $outcome->status, 'address_id' => $outcome->addressId, 'address' => $outcome->address], 201),
             'already_yours' => new JsonResponse(['status' => 'already_yours', 'address_id' => $outcome->addressId], 200),
             'already_claimed' => ApiError::response(409, 'already_claimed', 'This home is already claimed.', ['address_id' => $outcome->addressId]),
             'limit' => ApiError::response(409, 'home_limit', (string) $outcome->message),
@@ -143,6 +143,7 @@ final class MeApiController
                     'event_date' => $r['event_date'],
                     'current_season' => $r['event_date'] === $c->eventDate(),
                     'moderation_hidden' => (bool) $r['moderation_hidden'],
+                    'pending_review' => (bool) $r['moderation_hidden'] && ListingRepository::PENDING_REVIEW === $r['moderation_reason'],
                 ] : null,
             ];
         }, $this->residentHomes->of($user)->all());

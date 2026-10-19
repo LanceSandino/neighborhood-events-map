@@ -28,7 +28,7 @@ function shell() {
 }
 
 function row(a) {
-  const listing = a.listing ? `${esc(a.listing.status)}${a.listing.published ? '' : ' · unpublished'}${a.listing.hidden ? ' · <b class="todo">hidden</b>' : ''}<br><span class="form-caption">${esc(a.listing.event_date)}</span>` : '—';
+  const listing = a.listing ? `${esc(a.listing.status)}${a.listing.published ? '' : ' · unpublished'}${a.listing.pending_review ? ' · <b class="todo">new address — waiting for approval</b>' : a.listing.hidden ? ' · <b class="todo">hidden</b>' : ''}<br><span class="form-caption">${esc(a.listing.event_date)}</span>` : '—';
   return `<tr data-id="${a.id}">
     <td><b>${esc(a.address)}</b><br><span class="form-caption">#${a.id} · ${esc(a.source)}${a.enabled ? '' : ' · disabled'}${a.inside_boundary ? '' : ' · <span class="todo">outside boundary</span>'}</span></td>
     <td>${esc(a.zone ?? '—')}</td>
@@ -38,7 +38,7 @@ function row(a) {
     <td><div class="row-actions">
       <button type="button" data-act="edit">Edit</button>
       ${a.owner_user_id ? '<button type="button" data-act="transfer">Transfer</button><button type="button" data-act="unclaim">Unclaim</button>' : ''}
-      ${a.listing ? (a.listing.hidden ? '<button type="button" data-act="unhide">Unhide</button>' : '<button type="button" data-act="hide">Hide</button>') : ''}
+      ${a.listing ? (a.listing.pending_review ? '<button type="button" data-act="unhide">Approve</button>' : a.listing.hidden ? '<button type="button" data-act="unhide">Unhide</button>' : '<button type="button" data-act="hide">Hide</button>') : ''}
     </div></td></tr>`;
 }
 

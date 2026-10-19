@@ -2,6 +2,7 @@ twig:
     file_name_pattern: '*.twig'
     globals:
         app_version: '%app.version%'
+        source_url: '%app.source_url%'
 
 when@test:
     twig:

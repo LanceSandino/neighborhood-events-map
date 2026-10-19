@@ -1,0 +1,12 @@
+{# Releases from CHANGELOG.md; the newest is open, older ones are collapsed. Expects `releases`. #}
+{% for r in releases %}
+<details class="release" {{ loop.first ? 'open' }}>
+  <summary><b>v{{ r.version }}</b>{% if r.date %} <span class="release-date">{{ r.date|date('M j, Y') }}</span>{% endif %}{% if r.version == app_version %} <span class="release-current">this version</span>{% endif %}</summary>
+  {% for s in r.sections %}
+  <h3>{{ s.title }}</h3>
+  <ul>{% for item in s.items %}<li>{{ item }}</li>{% endfor %}</ul>
+  {% endfor %}
+</details>
+{% else %}
+<p>No release notes are available.</p>
+{% endfor %}

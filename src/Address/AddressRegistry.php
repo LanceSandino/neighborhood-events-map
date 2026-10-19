@@ -125,7 +125,7 @@ final class AddressRegistry
         $like = '%'.addcslashes(strtoupper(trim($q)), '%_\\').'%';
 
         return $this->db->fetchAllAssociative(
-            'SELECT a.*, c.user_id, u.email_normalized AS owner_email, c.claimed_at, l.status, l.published, l.moderation_hidden, l.event_date
+            'SELECT a.*, c.user_id, u.email_normalized AS owner_email, c.claimed_at, l.status, l.published, l.moderation_hidden, l.moderation_reason, l.event_date
              FROM eligible_addresses a
              LEFT JOIN claims c ON c.address_id = a.id
              LEFT JOIN users u ON u.id = c.user_id

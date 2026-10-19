@@ -9,9 +9,9 @@ import { api } from './lib/api.js';
 import { createStore } from './lib/store.js';
 import { DEFAULT_FILTERS, matches, activeFilterCount } from './lib/filters.js';
 import { nowInZone, time12 } from './lib/time.js';
-import { cardHtml, selectedHtml, pinHtml, esc } from './lib/render.js';
-import { planStops } from './lib/route.js';
-import { initModals, openModal, toast } from './lib/modal.js';
+import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
+import { planStops, applyOrder, moveStop } from './lib/route.js';
+import { initModals, openModal, closeModal, toast } from './lib/modal.js';
 import { initRegistration, openRegistration, openDispute } from './register.js';
 
 const boot = JSON.parse(document.getElementById('boot').textContent);
@@ -20,9 +20,14 @@ let homes = boot.homes;
 const zoneLabels = Object.fromEntries(C.zones.map((z) => [z.key, z.label]));
 const store = createStore(C.community.id, C.event.date.slice(0, 4));
 let filters = { ...DEFAULT_FILTERS, ...store.get().filters };
+// A shared link (?f=<filters>&stops=<ids>&start=<id>) opens exactly that view.
+const shared = readSharedLink();
+if (shared.filters) { filters = { ...DEFAULT_FILTERS, ...shared.filters }; store.set({ filters }); }
 let activeId = null;
 let routeNumbers = new Map();
 let currentPlan = [];
+let manualOrder = false;
+let here = null; // the visitor's location for "start from my location": memory only, never stored or sent
 
 const $ = (sel) => document.querySelector(sel);
 const ctx = () => {
@@ -30,6 +35,10 @@ const ctx = () => {
   return { today: n.date, eventDate: C.event.date, nowMinutes: n.minutes, zoneLabels, saved: store.get().saved };
 };
 const visible = () => homes.filter((h) => matches(h, filters, ctx()));
+/** Handing out treats now or later tonight; paused, out of candy and done homes are not. */
+const isOpen = (h) => h.status === 'active';
+let showClosed = false;
+const zoneLayers = new Map();
 
 /* ---------------- Map ---------------- */
 let map = null;
@@ -45,16 +54,28 @@ function initMap() {
     }
     for (const z of C.zones) {
       if (!z.geometry) continue;
-      const layer = L.geoJSON(z.geometry, { style: { color: z.residential ? '#7d8f86' : '#a59cb2', weight: 1, dashArray: '4 6', fill: !z.residential, fillOpacity: 0.06 }, interactive: false }).addTo(map);
-      layer.bindTooltip(esc(z.label), { permanent: true, direction: 'center', className: 'boundary-label' });
+      const layer = L.geoJSON(z.geometry, { style: zoneStyle(z, null), interactive: false }).addTo(map);
+      layer.bindTooltip(esc(z.label) + (z.status === 'coming_soon' ? ' · coming soon' : ''), { permanent: true, direction: 'center', className: 'boundary-label' });
+      zoneLayers.set(z.key, { zone: z, layer });
     }
     fitAll();
+    if (filters.zone && filters.zone !== 'all') highlightZone(filters.zone);
     map.on('click', () => selectHome(null));
     $('#mapFallback').hidden = true;
   } catch (e) {
     map = null;
     $('#mapFallback').textContent = 'The map could not load. Use the list of homes instead.';
   }
+}
+
+/** Selecting a phase/zone outlines it, shades the rest and zooms to it; "all" restores the overview. */
+function highlightZone(key, { fit = true } = {}) {
+  if (!map || !zoneLayers.size) return;
+  const selected = key && key !== 'all' && zoneLayers.has(key) ? key : null;
+  for (const { zone, layer } of zoneLayers.values()) layer.setStyle(zoneStyle(zone, selected));
+  if (!fit) return;
+  if (selected) map.fitBounds(zoneLayers.get(selected).layer.getBounds(), { padding: [30, 30], animate: !matchMedia('(prefers-reduced-motion: reduce)').matches });
+  else fitAll();
 }
 
 function fitAll() {
@@ -91,10 +112,20 @@ function render() {
   const vis = visible();
   const ids = new Set(vis.map((h) => h.id));
   const saved = store.get().saved;
-  $('#homeCards').innerHTML = vis.length
-    ? vis.map((h) => cardHtml(h, c, { saved: saved.includes(h.id), active: activeId === h.id })).join('')
+  const open = vis.filter(isOpen);
+  const closed = vis.filter((h) => !isOpen(h));
+  const card = (h) => cardHtml(h, c, { saved: saved.includes(h.id), active: activeId === h.id });
+  const toggle = closed.length
+    ? `<li class="closed-toggle"><button type="button" class="link-button" id="btnShowClosed" aria-expanded="${showClosed}">${showClosed ? 'Hide' : 'Show'} ${closed.length} ${closed.length === 1 ? 'home' : 'homes'} not handing out right now</button></li>`
+    : '';
+  $('#homeCards').innerHTML = open.length || closed.length
+    ? open.map(card).join('') + (open.length ? '' : '<li class="empty">No matching homes are handing out right now.</li>') + toggle + (showClosed ? closed.map(card).join('') : '')
     : `<li class="empty">${homes.length ? 'No homes match these filters. Try a different area or time.' : 'No homes are listed yet. Residents can add theirs with “List your home”.'}</li>`;
-  $('#listCount').textContent = `${vis.length} showing`;
+  $('#listCount').textContent = `${open.length} showing`;
+  const count = activeFilterCount({ ...filters, q: '' });
+  $('#filterCount').textContent = String(count);
+  $('#filterCount').classList.toggle('hide', count === 0);
+  $('#btnFilters').setAttribute('aria-label', count ? `Filters, ${count} active` : 'Filters');
   $('#savedCount').textContent = saved.filter((id) => homes.some((h) => h.id === id)).length;
   $('#statHomes').textContent = homes.length;
   $('#statCandy').textContent = homes.filter((h) => h.candy).length;
@@ -134,38 +165,108 @@ function selectHome(id, { pan = true } = {}) {
   render();
 }
 
+/* ---------------- Shareable links ---------------- */
+function readSharedLink() {
+  const q = new URLSearchParams(location.search);
+  const out = {};
+  try {
+    if (q.get('f')) {
+      const json = JSON.parse(atob(q.get('f').replace(/-/g, '+').replace(/_/g, '/')));
+      out.filters = Object.fromEntries(Object.entries(json).filter(([k]) => k in DEFAULT_FILTERS));
+    }
+  } catch { /* ignore a damaged link */ }
+  const ids = (q.get('stops') || '').split('.').map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 60);
+  if (ids.length) { out.stops = ids; out.start = Number(q.get('start')) || null; out.order = q.get('o') === '1'; }
+  return out;
+}
+
+/** Link to this exact view: the active filters and, for a route, its stops and starting point. */
+function shareLink({ withRoute = true } = {}) {
+  const url = new URL('/', location.origin);
+  const changed = Object.fromEntries(Object.entries(filters).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(DEFAULT_FILTERS[k])));
+  if (Object.keys(changed).length) url.searchParams.set('f', btoa(JSON.stringify(changed)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
+  if (withRoute && currentPlan.length) {
+    url.searchParams.set('stops', currentPlan.flatMap((g) => g.stops.map((h) => h.id)).join('.'));
+    const start = Number($('#routeStart').value) || null; // "my location" is never put in a link
+    if (start) url.searchParams.set('start', String(start));
+    if (manualOrder) url.searchParams.set('o', '1');
+  }
+  return url.toString();
+}
+
 /* ---------------- Route (suggested stop order) ---------------- */
-function showRoute() {
+/** Builds the stop list (suggested order, or the visitor's own order) and shows it; opens the sheet unless it is open. */
+function showRoute({ open = true } = {}) {
   const saved = store.get().saved;
   const vis = visible();
-  const chosen = saved.length ? homes.filter((h) => saved.includes(h.id)) : vis;
+  const fromLink = shared.stops ? homes.filter((h) => shared.stops.includes(h.id)) : null;
+  const pool = fromLink && fromLink.length ? fromLink : (saved.length ? homes.filter((h) => saved.includes(h.id)) : vis);
+  // Homes that are paused, out of candy or done for the night never go on a route.
+  const chosen = pool.filter(isOpen);
+  const skipped = pool.length - chosen.length;
   const startSel = $('#routeStart');
-  const startId = Number(store.get().start) || null;
-  startSel.innerHTML = '<option value="">The first stop in each area</option>' + chosen.map((h) => `<option value="${h.id}" ${h.id === startId ? 'selected' : ''}>${esc(h.address)}</option>`).join('');
-  const start = chosen.find((h) => h.id === startId) || null;
-  currentPlan = planStops(chosen, { groups: C.routing.groups, zonesEnabled: C.zones.length > 0, start });
-  $('#routeSub').textContent = saved.length
-    ? 'Your saved stops, in a suggested order. Separate areas are listed as separate trips.'
-    : 'Homes matching your filters (save favorites ♡ to choose your own). Separate areas are listed as separate trips.';
+  const pref = (fromLink && shared.start) || store.get().start || '';
+  const startId = Number(pref) || null;
+  startSel.innerHTML = '<option value="">The first stop in each area</option>'
+    + ('geolocation' in navigator && window.isSecureContext ? `<option value="here" ${pref === 'here' ? 'selected' : ''}>📍 My current location</option>` : '')
+    + chosen.map((h) => `<option value="${h.id}" ${h.id === startId ? 'selected' : ''}>${esc(h.address)}</option>`).join('');
+  const start = pref === 'here' && here ? { id: null, lat: here.lat, lon: here.lon } : chosen.find((h) => h.id === startId) || null;
+  const order = fromLink && fromLink.length ? (shared.order ? shared.stops : null) : store.get().order;
+  manualOrder = Boolean(order && order.length);
+  currentPlan = applyOrder(planStops(chosen, { groups: C.routing.groups, zonesEnabled: C.zones.length > 0, start }), order);
+  $('#routeSub').textContent = (fromLink && fromLink.length
+    ? 'A stop list someone shared with you. Save the ones you like with ♡.'
+    : saved.length
+    ? `Your saved stops, in ${manualOrder ? 'your own' : 'a suggested'} order. Separate areas are listed as separate trips.`
+    : 'Homes matching your filters (save favorites ♡ to choose your own). Separate areas are listed as separate trips.')
+    + (skipped ? ` ${skipped} ${skipped === 1 ? 'home is' : 'homes are'} left out because ${skipped === 1 ? 'it is' : 'they are'} not handing out right now.` : '');
   let n = 0;
   routeNumbers = new Map();
-  $('#routeItems').innerHTML = currentPlan.length ? currentPlan.map((g, gi) => {
+  const move = (h, i, last, dir) => `<button type="button" class="move" data-move="${dir}" data-id="${h.id}" aria-label="Move ${esc(h.address)} ${dir < 0 ? 'earlier' : 'later'}" ${(dir < 0 ? i === 0 : i === last) ? 'disabled' : ''}>${dir < 0 ? '↑' : '↓'}</button>`;
+  $('#routeItems').innerHTML = currentPlan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
+    + currentPlan.map((g, gi) => {
     const label = g.zones.length ? g.zones.map((z) => zoneLabels[z] || z).join(', ') : (currentPlan.length > 1 ? `Area ${gi + 1}` : '');
     return `${label ? `<h3 class="route-group-title">${currentPlan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
-      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Suggested stops')}: ${g.stops.length} stops">${g.stops.map((h) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div></li>`; }).join('')}</ol>
+      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div>${g.stops.length > 1 ? `<span class="route-move">${move(h, i, g.stops.length - 1, -1)}${move(h, i, g.stops.length - 1, 1)}</span>` : ''}</li>`; }).join('')}</ol>
       ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
       ${C.routing.provider && g.stops.length > 1 ? `<button type="button" class="secondary" data-provider-path="${gi}">Show walking path for this trip</button>` : ''}`;
   }).join('') + (currentPlan.length > 1 ? '<div class="notice">🚧 These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>' : '')
     : '<div class="empty">No stops yet. Save some homes ♡ or change your filters.</div>';
+  $('#routeLink').value = shareLink();
   render();
-  openModal('routeModal');
+  if (open && !$('#routeModal').classList.contains('open')) openModal('routeModal');
+}
+
+/** Moves a stop within its trip and keeps the new order (on this device, or in the shared view). */
+function reorder(id, delta) {
+  const order = moveStop(currentPlan, id, delta);
+  if (shared.stops) { shared.stops = order; shared.order = true; } else store.set({ order });
+  showRoute({ open: false });
+  const again = document.querySelector(`#routeItems [data-move="${delta}"][data-id="${id}"]:not([disabled])`)
+    || document.querySelector(`#routeItems [data-move="${-delta}"][data-id="${id}"]`);
+  if (again) again.focus();
+}
+
+/** "Start from my location": asks for the position once; it stays in memory on this device. */
+function startFromHere() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition((pos) => {
+    here = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    showMe();
+    showRoute({ open: false });
+  }, () => {
+    store.set({ start: '' });
+    showRoute({ open: false });
+    toast('Could not get your location. Choose a starting home instead.');
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
 
 function routeText() {
   let n = 0;
-  return `${C.community.name} Halloween — my stops (suggested order, not walking directions)\n` + currentPlan.map((g, gi) =>
+  return `${C.community.name} Halloween — my stops (${manualOrder ? 'my order' : 'suggested order'}, not walking directions)\n` + currentPlan.map((g, gi) =>
     (currentPlan.length > 1 ? `\nTrip ${gi + 1}${g.zones.length ? ' (' + g.zones.map((z) => zoneLabels[z] || z).join(', ') + ')' : ''}\n` : '')
-    + g.stops.map((h) => `${++n}. ${h.address} (${time12(h.start)}–${time12(h.end)})`).join('\n')).join('\n');
+    + g.stops.map((h) => `${++n}. ${h.address} (${time12(h.start)}–${time12(h.end)})`).join('\n')).join('\n')
+    + `\n\nOpen on the map: ${shareLink()}`;
 }
 
 let pathLayer = null;
@@ -184,15 +285,52 @@ async function showProviderPath(gi) {
   }
 }
 
+/**
+ * Copies text on every browser: the Clipboard API where it is allowed (HTTPS), otherwise a hidden
+ * textarea with execCommand('copy'), which also works on iPhone over plain HTTP.
+ */
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* fall through */ }
+  }
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.setAttribute('readonly', '');
+  area.className = 'copy-buffer';
+  document.body.appendChild(area);
+  area.select();
+  area.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  area.remove();
+  return ok;
+}
+
+/** Closes the stop list and shows the numbered stops on the map. */
+function showRouteOnMap() {
+  closeModal(document.getElementById('routeModal'));
+  const stops = currentPlan.flatMap((g) => g.stops);
+  if (map && stops.length) {
+    const fromHere = $('#routeStart').value === 'here' && here;
+    if (fromHere) showMe();
+    map.fitBounds([...stops.map((h) => [h.lat, h.lon]), ...(fromHere ? [[here.lat, here.lon]] : [])], { padding: [40, 40], maxZoom: 18 });
+    if (innerWidth <= 660) $('#mapPane').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+}
+
 /* ---------------- Location (stays on this device) ---------------- */
 let meMarker = null;
+function showMe() {
+  if (!map || !here) return;
+  const ll = [here.lat, here.lon];
+  if (meMarker) meMarker.setLatLng(ll); else meMarker = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 3, fillColor: '#3b82f6', fillOpacity: 1 }).addTo(map).bindTooltip('You are here (not shared)');
+}
 function locate() {
   if (!navigator.geolocation) { toast('Location is not available in this browser.'); return; }
   navigator.geolocation.getCurrentPosition((pos) => {
-    if (!map) return;
-    const ll = [pos.coords.latitude, pos.coords.longitude];
-    if (meMarker) meMarker.setLatLng(ll); else meMarker = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 3, fillColor: '#3b82f6', fillOpacity: 1 }).addTo(map).bindTooltip('You are here (not shared)');
-    map.setView(ll, Math.max(map.getZoom(), 17));
+    here = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    showMe();
+    if (map) map.setView([here.lat, here.lon], Math.max(map.getZoom(), 17));
   }, () => toast('Could not get your location. The map works without it.'), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
 
@@ -212,7 +350,12 @@ function bind() {
   initModals();
   document.addEventListener('click', (e) => {
     const a = e.target.closest('[data-action]');
-    if (a && actions(a.dataset.action)) { e.preventDefault(); return; }
+    if (a) {
+      // An action chosen inside a sheet (e.g. "+ List my house" in My house) replaces that sheet.
+      const host = a.closest('.modal-wrap.open');
+      if (host && a.dataset.action !== 'explore') closeModal(host);
+      if (actions(a.dataset.action)) { e.preventDefault(); return; }
+    }
     const save = e.target.closest('[data-save]');
     if (save) {
       e.stopPropagation();
@@ -230,6 +373,7 @@ function bind() {
       return;
     }
     if (e.target.closest('[data-close-selected]')) { selectHome(null); return; }
+    if (e.target.closest('#btnShowClosed')) { showClosed = !showClosed; render(); return; }
     const card = e.target.closest('.home-card[data-id]');
     if (card) selectHome(Number(card.dataset.id));
   });
@@ -248,7 +392,10 @@ function bind() {
   search.value = filters.q || '';
   search.addEventListener('input', () => setFilters({ q: search.value }));
   const zone = $('#zone');
-  if (zone) { zone.value = filters.zone || 'all'; zone.addEventListener('change', () => setFilters({ zone: zone.value })); }
+  if (zone) {
+    zone.value = filters.zone || 'all';
+    zone.addEventListener('change', () => { setFilters({ zone: zone.value }); highlightZone(zone.value); });
+  }
   const time = $('#time');
   time.value = filters.time || 'any';
   time.addEventListener('change', () => setFilters({ time: time.value }));
@@ -256,20 +403,40 @@ function bind() {
     filters = { ...DEFAULT_FILTERS };
     store.set({ filters });
     search.value = ''; if (zone) zone.value = 'all'; time.value = 'any';
+    highlightZone('all');
     render();
   });
   $('#btnFit').addEventListener('click', () => { selectHome(null); fitAll(); });
   $('#btnZoomIn').addEventListener('click', () => map && map.zoomIn());
   $('#btnZoomOut').addEventListener('click', () => map && map.zoomOut());
   $('#btnLocate').addEventListener('click', locate);
-  $('#routeStart').addEventListener('change', (e) => { store.set({ start: e.target.value }); showRoute(); });
+  $('#routeStart').addEventListener('change', (e) => {
+    // A new start means a new suggested order.
+    shared.start = null; shared.order = false;
+    store.set({ start: e.target.value, order: [] });
+    if (e.target.value === 'here' && !here) startFromHere(); else showRoute({ open: false });
+  });
+  $('#routeItems').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-move]');
+    if (b) { reorder(Number(b.dataset.id), Number(b.dataset.move)); return; }
+    if (e.target.closest('#btnResetOrder')) {
+      if (shared.stops) shared.order = false; else store.set({ order: [] });
+      showRoute({ open: false });
+      $('#routeStart').focus();
+    }
+  });
+  $('#routeLink').addEventListener('focus', (e) => e.target.select());
   $('#btnCopyRoute').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(routeText()); toast('Stop list copied.'); } catch { prompt('Copy your stop list:', routeText()); }
+    toast(await copyText(routeText()) ? 'Stop list copied.' : 'Copy did not work here; select the list and copy it.');
   });
   $('#btnShareRoute').addEventListener('click', async () => {
-    if (navigator.share) { try { await navigator.share({ title: `${C.community.name} Halloween stops`, text: routeText() }); } catch { /* cancelled */ } }
-    else { try { await navigator.clipboard.writeText(routeText()); toast('Sharing is not available; the list was copied instead.'); } catch { prompt('Copy your stop list:', routeText()); } }
+    const url = shareLink();
+    if (navigator.share) {
+      try { await navigator.share({ title: `${C.community.name} Halloween stops`, text: 'My trick-or-treat stops', url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    toast(await copyText(url) ? 'Link copied — anyone with it sees these stops.' : 'Copy the link below to share these stops.');
   });
+  $('#btnRouteMap').addEventListener('click', showRouteOnMap);
   if (filters.noJumps || filters.noFlashing || filters.noLoud || filters.noIntense || filters.nonfood || filters.adult || filters.stroller || filters.saved || filters.time !== 'any') {
     $('#moreFilters').classList.add('open');
     more.setAttribute('aria-expanded', 'true');
@@ -300,3 +467,4 @@ setInterval(refresh, 60000); // public data only; never touches a signed-in sess
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 addEventListener('hashchange', routeFromHash);
 routeFromHash();
+if (shared.stops) showRoute();

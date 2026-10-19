@@ -6,7 +6,7 @@ namespace App\Claim;
 
 /**
  * @module Claim/ClaimOutcome
- * @description Result of an atomic claim attempt: published | already_yours | already_claimed | limit | closed | rejected.
+ * @description Result of an atomic claim attempt: published | pending_review | already_yours | already_claimed | limit | closed | rejected.
  */
 final class ClaimOutcome
 {

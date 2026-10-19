@@ -21,8 +21,8 @@ export function tagsHtml(h) {
   if (h.jump_scares) t.push(['😱 Jump scares', 'spooky']);
   if (h.flashing_lights) t.push(['⚡ Flashing', 'strobe']);
   if (h.loud_audio) t.push(['🔊 Loud audio', 'strobe']);
-  if (h.adult_drinks) t.push(['🥤 21+', 'drinks']);
-  if (h.stroller_friendly) t.push(['🛞 Stroller-friendly', 'quiet']);
+  if (h.adult_drinks) t.push(['🍺 21+', 'drinks']);
+  if (h.stroller_friendly) t.push(['👶 Stroller-friendly', 'quiet']);
   return t.map(([label, cls]) => `<span class="tag ${cls}">${label}</span>`).join('');
 }
 
@@ -58,4 +58,12 @@ export function selectedHtml(h, ctx, saved) {
 
 export function pinHtml(h, { dim, number }) {
   return `<div class="pin ${pinClass(h)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${isScary(h) ? '👻' : h.low_noise ? '🍭' : '🎃'}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
+}
+
+/** Leaflet style for a zone outline; with a selected zone, it stands out and the others recede. */
+export function zoneStyle(z, selected) {
+  if (z.status === 'coming_soon') return { color: '#a59cb2', weight: 1, dashArray: '2 6', fill: true, fillColor: '#a59cb2', fillOpacity: selected ? 0.04 : 0.10, opacity: selected ? 0.5 : 0.9 };
+  if (selected && z.key === selected) return { color: '#f07936', weight: 3, dashArray: null, fill: true, fillColor: '#f07936', fillOpacity: 0.12, opacity: 1 };
+  if (selected) return { color: '#7d8f86', weight: 1, dashArray: '4 6', fill: true, fillColor: '#1c1b29', fillOpacity: 0.10, opacity: 0.5 };
+  return { color: z.residential ? '#7d8f86' : '#a59cb2', weight: 1, dashArray: '4 6', fill: !z.residential, fillOpacity: 0.06, opacity: 1 };
 }

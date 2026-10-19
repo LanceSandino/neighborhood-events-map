@@ -86,7 +86,11 @@ final class PublicApiController
         $results = [];
         foreach (array_unique(array_map('trim', $prefixes)) as $prefix) {
             foreach ($this->addresses->lookup($prefix) as $r) {
-                $results[$r['id']] = $r + ['zone_label' => $c->zone($r['zone_key'])['label'] ?? null];
+                $zone = $c->zone($r['zone_key']);
+                if (null !== $zone && 'hidden' === $zone['status']) {
+                    continue; // a hidden zone is not public, not even through the lookup
+                }
+                $results[$r['id']] = $r + ['zone_label' => null === $zone ? null : $zone['label'].('coming_soon' === $zone['status'] ? ' · coming soon' : '')];
             }
         }
 

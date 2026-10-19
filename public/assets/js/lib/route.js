@@ -2,8 +2,9 @@
  * @module assets/js/lib/route
  * @description Suggested STOP ORDER (not walking directions). Stops are split into the organizer's
  *     verified walkable groups (or one group per zone, or one group when there are no zones); groups
- *     are never connected to each other. Within a group: nearest-neighbour from the chosen start, then
- *     2-opt on straight-line distance. No path geometry, distance or time is produced.
+ *     are never connected to each other. Within a group: nearest-neighbour from the chosen start (a stop,
+ *     or a point such as the visitor's location), then 2-opt on straight-line distance. A visitor can
+ *     reorder stops within a trip. No path geometry, distance or time is produced.
  */
 export function haversine(a, b) {
   const R = 6371008.8, toRad = (d) => (d * Math.PI) / 180;
@@ -64,15 +65,45 @@ export function orderGroup(stops, start = null) {
  */
 export function planStops(stops, { groups = [], zonesEnabled = false, start = null, maxPerGroup = 20 } = {}) {
   const grouped = groupStops(stops, groups, zonesEnabled);
+  // The start is either one of the stops, or a place that is not a stop (e.g. the visitor's location).
+  const point = start && !stops.some((s) => s.id === start.id) ? start : null;
   const result = [];
   for (const [key, list] of grouped) {
-    const startHere = start && list.some((s) => s.id === start.id) ? start : null;
+    const startHere = !point && start && list.some((s) => s.id === start.id) ? start : null;
     const pool = startHere ? list.filter((s) => s.id !== start.id) : list;
-    let ordered = orderGroup(pool, startHere);
+    let ordered = orderGroup(pool, startHere || point);
     if (startHere) ordered = [startHere, ...ordered];
-    result.push({ key, zones: [...new Set(list.map((s) => s.zone).filter(Boolean))], stops: ordered.slice(0, maxPerGroup), truncated: ordered.length > maxPerGroup });
+    result.push({ key, zones: [...new Set(list.map((s) => s.zone).filter(Boolean))], stops: ordered.slice(0, maxPerGroup), truncated: ordered.length > maxPerGroup,
+      near: point && list.length ? Math.min(...list.map((s) => haversine(point, s))) : 0 });
   }
-  // The group containing the chosen start goes first; others keep a stable order.
-  result.sort((a, b) => (start ? Number(b.stops.some((s) => s.id === start.id)) - Number(a.stops.some((s) => s.id === start.id)) : 0) || a.key.localeCompare(b.key, undefined, { numeric: true }));
-  return result;
+  // The trip with the chosen start (or the one nearest the start point) goes first; others keep a stable order.
+  const hasStart = (g) => Number(Boolean(start) && g.stops.some((s) => s.id === start.id));
+  result.sort((a, b) => (point ? a.near - b.near : hasStart(b) - hasStart(a)) || a.key.localeCompare(b.key, undefined, { numeric: true }));
+  return result.map(({ near, ...g }) => g);
+}
+
+/**
+ * Applies a visitor's own stop order (a list of ids) inside each trip: known stops follow that order,
+ * stops added since then keep their suggested place after them. Trips are never merged.
+ */
+export function applyOrder(plan, order) {
+  if (!order || !order.length) return plan;
+  const rank = new Map(order.map((id, i) => [id, i]));
+  return plan.map((g) => {
+    const known = g.stops.filter((s) => rank.has(s.id)).sort((a, b) => rank.get(a.id) - rank.get(b.id));
+    return { ...g, stops: [...known, ...g.stops.filter((s) => !rank.has(s.id))] };
+  });
+}
+
+/** Moves one stop up (-1) or down (+1) within its trip; returns the new id order of all stops. */
+export function moveStop(plan, id, delta) {
+  const next = plan.map((g) => {
+    const i = g.stops.findIndex((s) => s.id === id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= g.stops.length) return g;
+    const stops = [...g.stops];
+    [stops[i], stops[j]] = [stops[j], stops[i]];
+    return { ...g, stops };
+  });
+  return next.flatMap((g) => g.stops.map((s) => s.id));
 }

@@ -32,25 +32,25 @@
     {% if zones|length > 0 %}
     <select class="phase-select" id="zone" aria-label="Filter by {{ zs ? zs.title|split(' ')|last : 'zone' }}">
       <option value="all">📍 All {{ zs ? zs.title|split(' ')|last : 'zones' }}</option>
-      {% for z in zones %}{% if z.residential %}<option value="{{ z.key }}">{{ z.label }}</option>{% endif %}{% endfor %}
+      {% for z in zones %}{% if z.residential and z.status == 'active' %}<option value="{{ z.key }}">{{ z.label }}</option>{% endif %}{% endfor %}
     </select>
     {% endif %}
-    {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false">🍬 Candy</button>{% endif %}
-    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false">💚 Low sensory</button>{% endif %}
-    <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters">⚙ Filters</button>
+    {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false"><span class="fi" aria-hidden="true">🍬</span>Candy</button>{% endif %}
+    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false"><span class="fi" aria-hidden="true">💚</span>Low sensory</button>{% endif %}
+    <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters"><span class="fi" aria-hidden="true">⚙️</span>Filters<span class="filter-count hide" id="filterCount"></span></button>
   </div>
   <div class="filter-more" id="moreFilters" role="group" aria-label="More filters">
     {% if c.features.sensory_filters %}
-    <button type="button" class="mini-filter" data-filter="noJumps" aria-pressed="false">No jump scares</button>
-    <button type="button" class="mini-filter" data-filter="noFlashing" aria-pressed="false">No flashing lights</button>
-    <button type="button" class="mini-filter" data-filter="noLoud" aria-pressed="false">No loud audio</button>
-    <button type="button" class="mini-filter" data-filter="noIntense" aria-pressed="false">No intense scares</button>
+    <button type="button" class="mini-filter" data-filter="noJumps" aria-pressed="false"><span class="fi" aria-hidden="true">😱</span>No jump scares</button>
+    <button type="button" class="mini-filter" data-filter="noFlashing" aria-pressed="false"><span class="fi" aria-hidden="true">🔦</span>No flashing lights</button>
+    <button type="button" class="mini-filter" data-filter="noLoud" aria-pressed="false"><span class="fi" aria-hidden="true">🔊</span>No loud audio</button>
+    <button type="button" class="mini-filter" data-filter="noIntense" aria-pressed="false"><span class="fi" aria-hidden="true">🎭</span>No intense scares</button>
     {% endif %}
-    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false">Non-food treats</button>{% endif %}
-    {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false">21+ refreshments</button>{% endif %}
-    <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false">Stroller-friendly</button>
-    <button type="button" class="mini-filter" data-filter="saved" aria-pressed="false">♥ Saved only</button>
-    <label class="time-filter">Visit at
+    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false"><span class="fi" aria-hidden="true">💙</span>Non-food treats</button>{% endif %}
+    {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false"><span class="fi" aria-hidden="true">🍺</span>21+ refreshments</button>{% endif %}
+    <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false"><span class="fi" aria-hidden="true">👶</span>Stroller-friendly</button>
+    <button type="button" class="mini-filter" data-filter="saved" aria-pressed="false"><span class="fi" aria-hidden="true">🧡</span>Saved only</button>
+    <label class="time-filter"><span class="fi" aria-hidden="true">🕐</span>Visit at
       <select id="time">
         <option value="any">Any time</option>
         <option value="now">Open now</option>
@@ -88,7 +88,7 @@
 </section>
 
 <div class="bottom-bar">
-  <div><b>✨ Your Halloween, your way</b><p><span id="savedCount">0</span> saved stops · Build a gentle family route or a spooky adventure.</p></div>
+  <div><b>✨ Your Halloween, your way</b><p><span id="savedCount">0</span> saved stops · Plan a gentle stroll or a spooky adventure for you and your crew.</p></div>
   <div class="bottom-actions"><a class="secondary" href="#list-my-house" data-action="register">🏠 List your home</a><button type="button" class="route-btn" data-action="route">🧭 Build my route →</button></div>
 </div>
 <p class="disclaimer">Listings, hours and sensory details are self-reported by residents and may change. Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{% else %}; this site does not grant access to gated areas{% endif %}.</p>
@@ -102,5 +102,5 @@
 
 {% block scripts %}
 <script src="/vendor/leaflet/leaflet.js" defer></script>
-<script type="module" src="/assets/js/home.js?v={{ app_version }}"></script>
+<script type="module" src="{{ asset_path('js/home.js') }}"></script>
 {% endblock %}

@@ -15,7 +15,10 @@ async function load() {
       <div class="stat"><b>${o.counts.addresses}</b><span>Addresses in the private registry</span></div>
       <div class="stat"><b>${o.counts.open_disputes}</b><span>Open review requests</span></div>
       <div class="stat"><b>${o.counts.hidden_listings}</b><span>Hidden by organizer</span></div>
+      <div class="stat"><b>${o.counts.pending_review}</b><span>New addresses waiting for approval</span></div>
     </div>
+    ${o.pending_addresses.length ? `<div class="panel"><h2>New addresses to approve</h2><p class="form-caption">Residents added these homes themselves. Check each one, then choose Approve (or Hide) on the Addresses page.</p>
+      <ul class="link-list">${o.pending_addresses.map((p) => `<li><a href="/admin/addresses?q=${encodeURIComponent(p.address)}">${esc(p.address)}</a></li>`).join('')}</ul></div>` : ''}
     <div class="panel"><h2>Setup checklist</h2><ul class="checklist">
       ${item(o.configured, 'Community details', '<a href="/admin/community">Name, branding, event date and time zone</a>')}
       ${item(b.present, 'Neighborhood boundary', '<a href="/admin/community/map">Draw or import a real GeoJSON boundary</a>')}

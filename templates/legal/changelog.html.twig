@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+{% set nav = 'info' %}
+{% block title %}What’s new · {{ c.community.name }} Halloween{% endblock %}
+{% block body %}
+<article class="page-card legal whats-new-page">
+  <div class="eyebrow">✨ Version {{ app_version }}</div>
+  <h1>What’s new</h1>
+  <p class="legal-lead">This map is free, open-source software that any neighborhood can run. Here is what changed in recent versions.</p>
+  {% include 'partials/_releases.html.twig' with {releases: releases} %}
+  {% include 'partials/_source_links.html.twig' %}
+</article>
+{% endblock %}

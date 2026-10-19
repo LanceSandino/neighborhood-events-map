@@ -35,12 +35,12 @@
       <div class="field full"><span class="label">Treats &amp; environment</span><div class="checks">
         <label class="check-chip"><input type="checkbox" name="candy"> 🍬 Candy</label>
         <label class="check-chip"><input type="checkbox" name="nonfood"> 💙 Non-food treats</label>
-        <label class="check-chip"><input type="checkbox" name="adult_drinks"> 🥤 Adult refreshments · 21+</label>
+        <label class="check-chip"><input type="checkbox" name="adult_drinks"> 🍺 Adult refreshments · 21+</label>
         <label class="check-chip"><input type="checkbox" name="low_noise"> 💚 Low noise</label>
         <label class="check-chip"><input type="checkbox" name="jump_scares"> 😱 Jump scares</label>
         <label class="check-chip"><input type="checkbox" name="flashing_lights"> ⚡ Flashing lights</label>
         <label class="check-chip"><input type="checkbox" name="loud_audio"> 🔊 Loud music/sounds</label>
-        <label class="check-chip"><input type="checkbox" name="stroller_friendly"> 🛞 Stroller-friendly</label>
+        <label class="check-chip"><input type="checkbox" name="stroller_friendly"> 👶 Stroller-friendly</label>
       </div></div>
       <div class="field full"><label>Short public note<textarea name="note" maxlength="400"></textarea></label></div>
       <div class="field full"><div class="notice danger hide" data-f="error" role="alert"></div>
@@ -49,4 +49,4 @@
   </article>
 </template>
 {% endblock %}
-{% block scripts %}<script type="module" src="/assets/js/me.js?v={{ app_version }}"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{{ asset_path('js/me.js') }}"></script>{% endblock %}

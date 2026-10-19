@@ -28,7 +28,7 @@ final class AppExtension extends AbstractExtension
     public function accessInfo(?string $access): ?array
     {
         return match ($access) {
-            'public' => ['icon' => '🚶', 'title' => 'Open to the public', 'text' => 'Public streets: families from anywhere are welcome to walk the neighborhood.'],
+            'public' => ['icon' => '🚶', 'title' => 'Open to the public', 'text' => 'Public streets: visitors from anywhere are welcome to walk the neighborhood.'],
             'gated_open' => ['icon' => '🚪', 'title' => 'Gated — open for trick-or-treating', 'text' => 'The gates are opened for visitors during the suggested hours. Follow posted rules and any gate staff.'],
             'gated_guests' => ['icon' => '🔐', 'title' => 'Gated — residents and guests', 'text' => 'Only residents and their invited guests can enter. This map does not grant gate access.'],
             'private' => ['icon' => '🏡', 'title' => 'Residents only', 'text' => 'A private event for residents of the neighborhood.'],
@@ -45,13 +45,13 @@ final class AppExtension extends AbstractExtension
     }
 
     /**
-     * @param list<array{label:string, residential:bool}> $zones
+     * @param list<array{label:string, residential:bool, status?:string}> $zones active residential zones are counted
      *
      * @return array{title:string, sub:string}|null
      */
     public function zoneSummary(array $zones): ?array
     {
-        $labels = array_values(array_map(static fn (array $z) => $z['label'], array_filter($zones, static fn (array $z) => $z['residential'])));
+        $labels = array_values(array_map(static fn (array $z) => $z['label'], array_filter($zones, static fn (array $z) => $z['residential'] && 'active' === ($z['status'] ?? 'active'))));
         if ([] === $labels) {
             return null;
         }

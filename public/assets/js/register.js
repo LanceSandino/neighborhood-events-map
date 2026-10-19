@@ -52,10 +52,17 @@ export function initRegistration({ community }) {
     });
   }
   $('#addrSuggestions')?.addEventListener('click', (e) => {
+    if (e.target.closest('[data-self-entry]')) {
+      const house = ($('#addrQuery').value.match(/^\s*(\d+)/) || [])[1];
+      $('#btnSelfEntry').click();
+      if (house) $('#seHouse').value = house;
+      return;
+    }
     const b = e.target.closest('button[data-id]');
     if (b) choose({ address_id: Number(b.dataset.id), address: b.dataset.address, claimed: b.dataset.claimed === '1' });
   });
-  $('#btnSelfEntry')?.addEventListener('click', () => { show($('#selfEntry'), true); initPinMap(); $('#seHouse').focus(); });
+  $('#btnSelfEntry')?.addEventListener('click', () => selfEntryOn(true));
+  $('#btnUseList')?.addEventListener('click', () => selfEntryOn(false));
   $('#btnRequestReview')?.addEventListener('click', () => { if (selected?.address_id) openDispute(selected.address_id, selected.address); });
   $('#regNote')?.addEventListener('input', (e) => { $('#noteCount').textContent = e.target.value.length; });
   initDispute();
@@ -84,6 +91,17 @@ function goTo(n) {
   if (first) first.focus();
 }
 
+/** What to do when a home is not on the list: add it (optionally for approval) or contact the organizer. */
+function missingHint() {
+  const none = `No matching address in ${esc(C.community.name)}.`;
+  if (mode === 'both') {
+    return `${none} <button type="button" class="link-button inline" data-self-entry>Add your home and place a pin</button>${C.registration.review_new_addresses ? ' — an organizer approves new addresses before they appear.' : ''}`;
+  }
+  return C.community.contact_url
+    ? `${none} <a href="${esc(C.community.contact_url)}" rel="noopener">Contact the organizer</a> to add your home.`
+    : `${none} Contact the organizer to add your home.`;
+}
+
 async function lookup(text) {
   const list = $('#addrSuggestions');
   list.innerHTML = '';
@@ -92,7 +110,7 @@ async function lookup(text) {
     const { results } = await api(`/api/addresses/lookup?q=${encodeURIComponent(text)}`);
     list.innerHTML = results.length
       ? results.map((r) => `<li role="option"><button type="button" data-id="${r.id}" data-address="${esc(r.address)}" data-claimed="${r.claimed ? 1 : 0}"><span>${esc(r.address)}</span><small>${esc(r.zone_label || '')}${r.claimed ? ' · claimed' : ''}</small></button></li>`).join('')
-      : `<li class="form-caption">No matching address in ${esc(C.community.name)}.${mode === 'both' ? ' You can enter it and place a pin instead.' : ' Contact the organizer if your home is missing.'}</li>`;
+      : `<li class="form-caption">${missingHint()}</li>`;
   } catch (e) {
     list.innerHTML = `<li class="form-caption">${esc(friendlyError(e))}</li>`;
   }
@@ -119,6 +137,28 @@ function selfEntryValues() {
     lat: pinMarker ? Number(pinMarker.getLatLng().lat.toFixed(7)) : null,
     lon: pinMarker ? Number(pinMarker.getLatLng().lng.toFixed(7)) : null,
   };
+}
+
+/** "both" mode: either search the address list, or enter the address and place a pin — one at a time. */
+function selfEntryOn(on) {
+  show($('#selfEntry'), on);
+  show($('#lookupField'), !on);
+  show($('#btnSelfEntry'), !on);
+  show($('#btnUseList'), on);
+  clearErrors($('#registerForm'));
+  if (on) { selected = null; initPinMap(); $('#seHouse').focus(); } else $('#addrQuery').focus();
+}
+
+/** Refusals the organizer can fix (missing or outdated map data) get a contact link. */
+const CONTACT_CODES = ['outside_boundary', 'zone_not_claimable', 'zone_not_open', 'ambiguous_zone', 'not_eligible', 'street_not_allowed'];
+function addContact(field, code) {
+  const el = $('#registerForm').querySelector(`[data-error="${field}"]`);
+  if (!el || !C.community.contact_url || !CONTACT_CODES.includes(code)) return;
+  const a = document.createElement('a');
+  a.href = C.community.contact_url;
+  a.rel = 'noopener';
+  a.textContent = 'Contact the organizer if your home belongs here.';
+  el.append(' ', a);
 }
 
 function usingSelfEntry() {
@@ -178,7 +218,7 @@ async function submit() {
     const res = await api('/api/auth/request-link', { method: 'POST', body: { email, pow, website: $('#regWebsite')?.value || '', claim: { address, listing: details() } } });
     form.hidden = true;
     const ok = $('#registerSuccess');
-    ok.innerHTML = `<b>📬 Check your email.</b><br>We sent a confirmation link for <b>${esc(res.address || selected?.address || '')}</b> to <b>${esc(email)}</b>. Open it and press <b>Confirm</b> within ${res.minutes} minutes to publish your stop. If someone else confirms this address first, you’ll be offered a review instead.<div class="modal-actions"><button type="button" class="secondary" data-close>Done</button></div>`;
+    ok.innerHTML = `<b>📬 Check your email.</b><br>We sent a confirmation link for <b>${esc(res.address || selected?.address || '')}</b> to <b>${esc(email)}</b>. Open it and press <b>Confirm</b> within ${res.minutes} minutes to publish your stop.${!selected.address_id && C.registration.review_new_addresses ? ' Because this address is new, an organizer approves it before it appears on the map.' : ''} If someone else confirms this address first, you’ll be offered a review instead.<div class="modal-actions"><button type="button" class="secondary" data-close>Done</button></div>`;
     show(ok, true);
     ok.focus();
   } catch (e) {
@@ -192,9 +232,11 @@ async function submit() {
     if (e instanceof ApiError && e.fields) {
       for (const [k, v] of Object.entries(e.fields)) setError(form, k, v);
     }
-    if (e instanceof ApiError && ['outside_boundary', 'zone_mismatch', 'ambiguous_zone', 'pin_collision', 'street_not_allowed', 'zone_not_claimable', 'unknown_zone', 'not_eligible', 'invalid_address', 'self_entry_disabled'].includes(e.code)) {
+    if (e instanceof ApiError && ['outside_boundary', 'zone_mismatch', 'ambiguous_zone', 'pin_collision', 'street_not_allowed', 'zone_not_claimable', 'zone_not_open', 'unknown_zone', 'not_eligible', 'invalid_address', 'self_entry_disabled'].includes(e.code)) {
       goTo(1);
-      setError(form, usingSelfEntry() ? 'pin' : 'address', e.message);
+      const field = usingSelfEntry() ? 'pin' : 'address';
+      setError(form, field, e.message);
+      addContact(field, e.code);
       return;
     }
     err.textContent = friendlyError(e);

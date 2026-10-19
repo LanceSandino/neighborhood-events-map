@@ -163,9 +163,14 @@ final class ClaimService
                 sprintf('Each neighbor can manage up to %d homes. Ask the organizer if you need to manage more.', $limit));
         }
 
+        // A new (self-entered) address can be held until an organizer approves it (registration.review_new_addresses).
+        $review = null === $target['address_id'] && (bool) ($community->settings['registration']['review_new_addresses'] ?? false);
         $addressId = $target['address_id'] ?? $this->registry->insert(
             $target['candidate'], $target['zone_key'], $target['lat'], $target['lon'], 'self_entry', true, false,
         );
+        if ($review) {
+            $db->executeStatement('UPDATE eligible_addresses SET moderation_hold = TRUE WHERE id = ? AND reviewed_at IS NULL', [$addressId]);
+        }
         $claimed = $db->fetchOne(
             'INSERT INTO claims (address_id, user_id, claimed_at, updated_at) VALUES (:a, :u, :now, :now)
              ON CONFLICT (address_id) DO NOTHING RETURNING address_id',
@@ -181,6 +186,12 @@ final class ClaimService
             return new ClaimOutcome('already_claimed', $addressId, $target['display'], 'This home is already claimed.');
         }
         $this->listings->insert($db, $addressId, $community->eventDate(), $draft);
+        if ($review && false !== $db->fetchOne('SELECT 1 FROM listings WHERE address_id = ? AND moderation_hidden', [$addressId])) {
+            $db->executeStatement('UPDATE listings SET moderation_reason = ? WHERE address_id = ?', [ListingRepository::PENDING_REVIEW, $addressId]);
+            $this->audit->record($userId, 'user#'.$userId, 'claim.pending_review', 'address', (string) $addressId, ['source' => $source]);
+
+            return new ClaimOutcome('pending_review', $addressId, $target['display'], 'Thanks! An organizer will check this new address before it appears on the map.');
+        }
         $this->audit->record($userId, 'user#'.$userId, 'claim.published', 'address', (string) $addressId, ['source' => $source]);
 
         return new ClaimOutcome('published', $addressId, $target['display'], 'Your home is on the map!');

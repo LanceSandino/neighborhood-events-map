@@ -12,7 +12,7 @@ export async function solvePow(purpose, onProgress = () => {}) {
     throw new Error('This browser cannot run the anti-spam check. Please try a current browser.');
   }
   return new Promise((resolve, reject) => {
-    const worker = new Worker('/assets/js/pow-worker.js');
+    const worker = new Worker(new URL('../pow-worker.js', import.meta.url));
     const timer = setTimeout(() => { worker.terminate(); reject(new Error('The anti-spam check took too long. Please try again.')); }, 110000);
     worker.onmessage = (e) => {
       if (e.data.progress !== undefined) { onProgress(e.data.progress); return; }

@@ -20,6 +20,8 @@ final class CommunitySchema
 {
     /** How visitors may reach the homes on Halloween night (shown on the map and the About page). */
     public const ACCESS = ['unspecified', 'public', 'gated_open', 'gated_guests', 'private'];
+    /** active: shown and listable; coming_soon: drawn as "coming soon", not listable; hidden: not shown at all. */
+    public const ZONE_STATUS = ['active', 'coming_soon', 'hidden'];
 
     public const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     public const DEFAULT_TILE_ATTRIBUTION = '© OpenStreetMap contributors';
@@ -134,7 +136,11 @@ final class CommunitySchema
                 'residential' => (bool) ($z['residential'] ?? ($z['claimable'] ?? true)),
                 'color' => isset($z['color']) ? self::color($z['color'], "zones[$i].color", $e) : null,
                 'description' => self::text($z['description'] ?? '', 160),
+                'status' => (string) ($z['status'] ?? 'active'),
             ];
+            if (!\in_array($zones[$key]['status'], self::ZONE_STATUS, true)) {
+                $e[] = sprintf('zones[%d].status must be one of: %s.', $i, implode(', ', self::ZONE_STATUS));
+            }
         }
 
         $mode = (string) ($r['address_mode'] ?? 'registry');
@@ -206,7 +212,7 @@ final class CommunitySchema
                 'accent_color' => $accent,
                 'headline' => self::text($b['headline'] ?? 'Little ghosts.', 40),
                 'headline_accent' => self::text($b['headline_accent'] ?? 'Big adventures.', 40),
-                'intro' => self::text($b['intro'] ?? 'Find the treats, skip the scares, and make a route that feels right for your family—one sweet stop at a time.', 280),
+                'intro' => self::text($b['intro'] ?? 'Find the treats, skip the scares, and plan a route that feels right for you and your crew—one sweet stop at a time.', 280),
             ],
             'map' => [
                 'center' => $center,
@@ -230,6 +236,8 @@ final class CommunitySchema
                 'email_magic_link_minutes' => $linkMinutes,
                 'session_idle_minutes' => $idleMinutes,
                 'max_homes_per_user' => $maxHomes,
+                // Self-entered addresses wait for an organizer's approval before they appear on the map.
+                'review_new_addresses' => (bool) ($r['review_new_addresses'] ?? false),
             ],
             'routing' => [
                 'groups' => $groups,

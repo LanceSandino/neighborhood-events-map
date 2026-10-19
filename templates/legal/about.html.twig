@@ -19,7 +19,7 @@
   {% if c.community.about %}
     {% for para in c.community.about|split("\n\n") %}<p>{{ para|nl2br }}</p>{% endfor %}
   {% else %}
-    <p>A neighborhood map of homes handing out treats on Halloween, with sensory notes and a suggested stop order for families.</p>
+    <p>A neighborhood map of homes handing out treats on Halloween, with sensory notes and a suggested stop order for trick-or-treaters of all ages — families, friends or solo.</p>
   {% endif %}
 
   {% if c.community.links ?? [] %}

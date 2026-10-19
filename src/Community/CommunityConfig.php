@@ -59,13 +59,17 @@ final class CommunityConfig
         return $this->settings['event']['date'];
     }
 
-    /** @return list<array{key:string,label:string,claimable:bool,residential:bool,color:?string,description:string}> */
+    /**
+     * Zones with their status (settings saved before zone status existed count as active).
+     *
+     * @return list<array{key:string,label:string,claimable:bool,residential:bool,color:?string,description:string,status:string}>
+     */
     public function zones(): array
     {
-        return $this->settings['zones'];
+        return array_map(static fn (array $z) => $z + ['status' => 'active'], $this->settings['zones']);
     }
 
-    /** @return array{key:string,label:string,claimable:bool,residential:bool,color:?string,description:string}|null */
+    /** @return array{key:string,label:string,claimable:bool,residential:bool,color:?string,description:string,status:string}|null */
     public function zone(?string $key): ?array
     {
         foreach ($this->zones() as $z) {

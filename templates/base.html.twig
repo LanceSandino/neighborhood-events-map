@@ -17,7 +17,7 @@
   <link rel="preload" href="/fonts/nunito-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   {% block styles %}{% endblock %}
-  <link rel="stylesheet" href="/assets/css/app.css?v={{ app_version }}">
+  <link rel="stylesheet" href="{{ asset_path('css/app.css') }}">
   <link rel="stylesheet" href="/theme.css?v={{ app_version }}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -46,7 +46,7 @@
         <p>Put your home on the map so the neighborhood can find you!</p>
         <a class="side-action secondary" href="/#list-my-house" data-action="register">+ Add your house</a>
       </div>
-      <p class="side-fine">Made for {{ community.name }} neighbors&nbsp;♥<br>v{{ app_version }}{% if c.demo %} · fictional demo data{% endif %}</p>
+      <p class="side-fine">Made for {{ community.name }} neighbors&nbsp;♥{% if c.demo %}<br>Fictional demo data{% endif %}</p>
     </div>
   </aside>
   <div class="main">
@@ -61,7 +61,7 @@
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · no tracking</span></footer>
+    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a><span>No ads · no tracking</span></footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">
@@ -70,6 +70,15 @@
   <a href="/#my-house" data-action="house" class="{{ (nav ?? '') == 'me' ? 'active' }}"><span aria-hidden="true">🏠</span>My house</a>
 </nav>
 {% block modals %}{% endblock %}
+<dialog class="whats-new" id="whatsNew" aria-labelledby="whatsNewTitle">
+  <button type="button" class="close-modal" data-whats-new-close aria-label="Close">×</button>
+  <div class="eyebrow">✨ Version {{ app_version }}</div>
+  <h2 id="whatsNewTitle">What’s new</h2>
+  <p class="introtext">Free, open-source software any neighborhood can run.</p>
+  {% include 'partials/_releases.html.twig' with {releases: latest_changes(3)} %}
+  {% include 'partials/_source_links.html.twig' %}
+</dialog>
+<script type="module" src="{{ asset_path('js/whatsnew.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

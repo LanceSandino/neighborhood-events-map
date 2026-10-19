@@ -14,6 +14,7 @@ export function openModal(id) {
   const wrap = document.getElementById(id);
   if (!wrap) return null;
   stack.push({ wrap, returnTo: document.activeElement });
+  wrap.style.zIndex = String(2000 + stack.length); // a dialog opened from another one is always on top
   wrap.hidden = false;
   wrap.classList.add('open');
   document.body.style.overflow = 'hidden';

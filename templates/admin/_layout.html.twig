@@ -12,8 +12,8 @@
   <title>{{ pages[page] }} · Organizer · {{ c.community.name }}</title>
   <link rel="icon" href="{{ c.branding.logo_url ?? '/assets/img/favicon.svg' }}">
   {% block styles %}{% endblock %}
-  <link rel="stylesheet" href="/assets/css/app.css?v={{ app_version }}">
-  <link rel="stylesheet" href="/assets/css/admin.css?v={{ app_version }}">
+  <link rel="stylesheet" href="{{ asset_path('css/app.css') }}">
+  <link rel="stylesheet" href="{{ asset_path('css/admin.css') }}">
   <link rel="stylesheet" href="/theme.css?v={{ app_version }}">
 </head>
 <body class="admin">

@@ -14,6 +14,7 @@ use App\Community\BrandingStore;
 use App\Community\CommunityRepository;
 use App\Dispute\DisputeService;
 use App\Geo\ZoneResolver;
+use App\Listing\ListingRepository;
 use App\Security\User;
 use App\Shared\ApiError;
 use App\Shared\JsonBody;
@@ -65,10 +66,14 @@ final class AdminApiController
                 'addresses_outside_boundary' => $count('SELECT COUNT(*) FROM eligible_addresses WHERE NOT inside_boundary'),
                 'claims' => $count('SELECT COUNT(*) FROM claims'),
                 'public_listings' => \count(array_filter($this->db->fetchFirstColumn('SELECT 1 FROM listings l JOIN eligible_addresses a ON a.id = l.address_id WHERE l.published AND NOT l.moderation_hidden AND a.inside_boundary AND l.event_date = ?', [$c->eventDate()]))),
-                'hidden_listings' => $count('SELECT COUNT(*) FROM listings WHERE moderation_hidden'),
+                'hidden_listings' => $count("SELECT COUNT(*) FROM listings WHERE moderation_hidden AND moderation_reason IS DISTINCT FROM '".ListingRepository::PENDING_REVIEW."'"),
+                'pending_review' => $count("SELECT COUNT(*) FROM listings WHERE moderation_hidden AND moderation_reason = '".ListingRepository::PENDING_REVIEW."'"),
                 'open_disputes' => $count("SELECT COUNT(*) FROM disputes WHERE status = 'open'"),
             ],
             'versions' => $this->community->geometryVersions(),
+            'pending_addresses' => $this->db->fetchAllAssociative(
+                'SELECT a.id, a.display_address AS address FROM listings l JOIN eligible_addresses a ON a.id = l.address_id
+                 WHERE l.moderation_hidden AND l.moderation_reason = ? ORDER BY a.created_at LIMIT 20', [ListingRepository::PENDING_REVIEW]),
         ]);
     }
 
@@ -190,7 +195,8 @@ final class AdminApiController
             'id' => (int) $r['id'], 'address' => $r['display_address'], 'zone' => $r['zone_key'], 'lat' => (float) $r['latitude'], 'lon' => (float) $r['longitude'],
             'enabled' => (bool) $r['enabled'], 'inside_boundary' => (bool) $r['inside_boundary'], 'source' => $r['source'],
             'owner_user_id' => null !== $r['user_id'] ? (int) $r['user_id'] : null, 'owner_email' => $r['owner_email'], 'claimed_at' => $r['claimed_at'],
-            'listing' => null === $r['status'] ? null : ['status' => $r['status'], 'published' => (bool) $r['published'], 'hidden' => (bool) $r['moderation_hidden'], 'event_date' => $r['event_date']],
+            'listing' => null === $r['status'] ? null : ['status' => $r['status'], 'published' => (bool) $r['published'], 'hidden' => (bool) $r['moderation_hidden'],
+                'pending_review' => (bool) $r['moderation_hidden'] && ListingRepository::PENDING_REVIEW === $r['moderation_reason'], 'event_date' => $r['event_date']],
         ], $rows)]);
     }
 

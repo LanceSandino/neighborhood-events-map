@@ -1,4 +1,4 @@
 {% extends 'admin/_layout.html.twig' %}
 {% block styles %}<link rel="stylesheet" href="/vendor/leaflet/leaflet.css"><link rel="stylesheet" href="/vendor/leaflet-draw/leaflet.draw.css">{% endblock %}
 {% block body %}<div id="admin-map" class="admin-panel"><p class="empty">Loading the editor…</p></div>{% endblock %}
-{% block scripts %}<script src="/vendor/leaflet/leaflet.js"></script><script src="/vendor/leaflet-draw/leaflet.draw.js"></script><script type="module" src="/assets/js/admin/map.js?v={{ app_version }}"></script>{% endblock %}
+{% block scripts %}<script src="/vendor/leaflet/leaflet.js"></script><script src="/vendor/leaflet-draw/leaflet.draw.js"></script><script type="module" src="{{ asset_path('js/admin/map.js') }}"></script>{% endblock %}

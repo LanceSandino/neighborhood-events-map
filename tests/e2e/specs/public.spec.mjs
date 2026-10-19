@@ -6,6 +6,7 @@ import { politeTiles } from './helpers.mjs';
 test.beforeEach(async ({ page }) => { await politeTiles(page); });
 
 const total = async (request) => (await (await request.get(DEMO + '/api/homes')).json()).homes.length;
+const openNow = async (request) => (await (await request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active').length;
 
 test('filters affect list and pins together and persist after reload; favorites persist', async ({ page, request }) => {
   const guard = watchConsole(page);
@@ -14,18 +15,18 @@ test('filters affect list and pins together and persist after reload; favorites 
   await page.goto(DEMO + '/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await expect(page.locator('#listCount')).toHaveText(`${n} showing`);
+  await expect(page.locator('#listCount')).toHaveText(`${await openNow(request)} showing`);
   await expect(page.locator('.leaflet-marker-icon')).toHaveCount(n);
-  await page.getByRole('button', { name: '💚 Low sensory' }).click();
+  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
   const shown = Number((await page.locator('#listCount').textContent()).split(' ')[0]);
   expect(shown).toBeLessThan(n);
   expect(shown).toBeGreaterThan(0);
   await expect(page.locator('.home-card')).toHaveCount(shown);
-  await expect(page.locator('.leaflet-marker-icon .pin:not(.dim)')).toHaveCount(shown);
+  expect(await page.locator('.leaflet-marker-icon .pin:not(.dim)').count()).toBeGreaterThanOrEqual(shown);
   await page.locator('.home-card .save').first().click();
   await expect(page.locator('#savedCount')).toHaveText('1');
   await page.reload();
-  await expect(page.getByRole('button', { name: '💚 Low sensory' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Low sensory', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#listCount')).toHaveText(`${shown} showing`);
   await expect(page.locator('#savedCount')).toHaveText('1');
   const stored = await page.evaluate(() => Object.keys(localStorage));
@@ -60,7 +61,8 @@ test('map failure still leaves a readable list', async ({ page, request }) => {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expect(page.locator('#mapFallback')).toBeVisible();
-  await expect(page.locator('.home-card')).toHaveCount(n);
+  await expect(page.locator('.home-card')).toHaveCount(await openNow(request));
+  expect(n).toBeGreaterThan(await openNow(request));
 });
 
 for (const [w, h] of [[375, 812], [430, 932], [768, 1024], [1440, 1000]]) {
@@ -135,4 +137,109 @@ test('form check chips are compact and aligned (register step 2)', async ({ page
     expect(c.centred).toBe(true);
   }
   expect(new Set(chips.map((c) => c.h)).size).toBe(1);
+});
+
+test('homes not handing out stay off the list and routes; filters show their count; copy and show-on-map work', async ({ page, request }) => {
+  const all = (await (await request.get(DEMO + '/api/homes')).json()).homes;
+  const closed = all.filter((h) => h.status !== 'active');
+  expect(closed.length).toBeGreaterThan(0);
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const listed = await page.locator('.home-card .card-line b').allTextContents();
+  for (const h of closed) expect(listed).not.toContain(h.address);
+  await page.locator('#btnShowClosed').click();
+  await expect(page.locator('.home-card')).toHaveCount(all.length);
+  await page.locator('#btnShowClosed').click();
+  // A route built from every visible home leaves the closed ones out and says so.
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  await expect(page.locator('#routeItems .route-item')).toHaveCount(all.length - closed.length);
+  await expect(page.locator('#routeSub')).toContainText('not handing out right now');
+  await page.locator('#btnCopyRoute').click();
+  await expect(page.locator('.toast')).toContainText('Stop list copied.');
+  await page.locator('#btnRouteMap').click();
+  await expect(page.locator('#routeModal')).toBeHidden();
+  await expect(page.locator('.leaflet-marker-icon .pin-number').first()).toBeVisible();
+  // Active filters are counted on the Filters button.
+  await expect(page.locator('#filterCount')).toBeHidden();
+  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
+  await page.locator('#btnFilters').click();
+  await page.locator('[data-filter="noJumps"]').click();
+  await expect(page.locator('#filterCount')).toHaveText('2');
+  await page.locator('#btnReset').click();
+  await expect(page.locator('#filterCount')).toBeHidden();
+});
+
+test('a shared link opens the same stops and filters', async ({ page, browser }) => {
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  for (const i of [0, 2]) await page.locator('.home-card .save').nth(i).click();
+  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  const stops = await page.locator('#routeItems .route-item b').allTextContents();
+  const link = await page.locator('#routeLink').inputValue();
+  expect(link).toContain('stops=');
+  expect(link).toContain('f=');
+  // Someone else (fresh browser, nothing saved) opens the link.
+  const ctx = await browser.newContext();
+  const other = await ctx.newPage();
+  await politeTiles(other);
+  await other.goto(link.replace(/^https?:\/\/[^/]+/, DEMO));
+  await expect(other.locator('#routeModal')).toBeVisible();
+  await expect(other.locator('#routeSub')).toContainText('shared with you');
+  expect(await other.locator('#routeItems .route-item b').allTextContents()).toEqual(stops);
+  await other.keyboard.press('Escape');
+  await expect(other.getByRole('button', { name: 'Low sensory', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await ctx.close();
+});
+
+test('route: reorder stops, keep the order, share it; start from my location', async ({ browser }) => {
+  const ctx = await browser.newContext({ permissions: ['geolocation'] });
+  const page = await ctx.newPage();
+  await politeTiles(page);
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const openHomes = (await (await page.request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
+  for (const h of openHomes.slice(0, 3)) await page.locator(`.home-card .save[data-save="${h.id}"]`).click();
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  const names = () => page.locator('#routeItems .route-item b').allTextContents();
+  const before = await names();
+  expect(before).toHaveLength(3);
+  await page.getByRole('button', { name: `Move ${before[0]} later` }).click();
+  expect(await names()).toEqual([before[1], before[0], before[2]]);
+  await expect(page.getByRole('button', { name: `Move ${before[0]} later` })).toBeFocused();
+  await expect(page.locator('#routeLink')).toHaveValue(/[?&]o=1/);
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  expect(await names(), 'own order survives a reload').toEqual([before[1], before[0], before[2]]);
+  await page.getByRole('button', { name: 'Use the suggested order' }).click();
+  expect(await names()).toEqual(before);
+  // Start from the visitor's location (next to the third stop): that stop comes first; nothing is put in the link.
+  const target = openHomes.find((h) => h.address === before[2]);
+  await ctx.setGeolocation({ latitude: target.lat, longitude: target.lon });
+  await page.locator('#routeStart').selectOption('here');
+  await expect(page.locator('#routeItems .route-item b').first()).toHaveText(before[2]);
+  await expect(page.locator('#routeLink')).not.toHaveValue(/start=|lat|lon/);
+  await ctx.close();
+});
+
+test('"What\'s new" opens release notes with a source link; My house → List my house replaces the sheet', async ({ page }) => {
+  await page.goto(DEMO + '/');
+  await page.locator('.site-footer [data-whats-new]').click();
+  const dialog = page.getByRole('dialog', { name: 'What’s new' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('summary').first()).toContainText('this version');
+  await expect(dialog.getByRole('link', { name: 'Source code on GitHub' })).toHaveAttribute('href', /^https:\/\//);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('.mobile-bottom [data-action="house"]').click();
+  await page.locator('#houseModal [data-action="register"]').click();
+  await expect(page.locator('#houseModal')).toBeHidden();
+  await expect(page.locator('#registerModal')).toBeVisible();
+  await page.locator('#registerModal .close-modal').click();
+  await expect(page.locator('#registerModal')).toBeHidden();
 });
