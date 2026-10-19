@@ -21,7 +21,43 @@ final class AppExtension extends AbstractExtension
             new TwigFunction('zone_summary', [$this, 'zoneSummary']),
             new TwigFunction('event_badge', [$this, 'eventBadge']),
             new TwigFunction('access_info', [$this, 'accessInfo']),
+            new TwigFunction('zone_areas', [$this, 'zoneAreas']),
         ];
+    }
+
+    /**
+     * Walking areas for the zone filter: each organizer group of active residential zones, named
+     * "Main (1–3)" when the group has a label, otherwise "Phases 1–3". Unnamed one-zone groups are left
+     * out (the zone itself is already a choice).
+     *
+     * @param list<array{key:string,label:string,residential:bool,status?:string}> $zones
+     * @param list<list<string>>                                                  $groups
+     * @param list<string>                                                        $labels
+     *
+     * @return list<array{value:string, label:string}>
+     */
+    public function zoneAreas(array $zones, array $groups, array $labels = []): array
+    {
+        $active = [];
+        foreach ($zones as $z) {
+            if ($z['residential'] && 'active' === ($z['status'] ?? 'active')) {
+                $active[$z['key']] = $z;
+            }
+        }
+        $areas = [];
+        foreach ($groups as $i => $keys) {
+            $members = array_values(array_filter(array_map(static fn (string $k) => $active[$k] ?? null, $keys)));
+            $label = trim((string) ($labels[$i] ?? ''));
+            if ([] === $members || (\count($members) < 2 && '' === $label)) {
+                continue;
+            }
+            $summary = $this->zoneSummary($members);
+            $range = $summary['sub'] ?? '';
+            $word = ucfirst((string) preg_replace('~^\d+\s+~', '', $summary['title'] ?? ''));
+            $areas[] = ['value' => 'area:'.$i, 'label' => '' !== $label ? sprintf('%s (%s)', $label, $range) : trim($word.' '.$range)];
+        }
+
+        return $areas;
     }
 
     /** @return array{icon:string, title:string, text:string}|null how visitors may reach the homes */

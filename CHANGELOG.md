@@ -6,6 +6,20 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.5.0-beta.1] - 2026-10-19
+
+### Added
+- **Walking areas in the zone filter**: the organizer's walkable groups appear as choices such as "Main (1–3)", "Second (4)" or "Phases 6A, 6B"; choosing one shows, outlines and routes all its zones together. Groups can be named (`routing.group_labels`, or "Name: zone-a, zone-b" in Organizer → Community); unnamed one-zone groups stay plain zone choices.
+- **Counts on every filter**: each filter button, chip and zone choice shows how many homes handing out it would list, given the other filters.
+- Route trips are named after their walking area.
+
+### Changed
+- "No jump scares" and "No intense scares" are one filter, **No big scares**; cards show one "😱 Big scares" tag for either. Filters saved or shared by earlier versions carry over.
+- **Kid-friendly** replaces "Stroller-friendly" in filters, tags and the listing form.
+- Low sensory uses the 🧩 icon; non-food treats show a teal pumpkin, the Teal Pumpkin Project's sign for allergy-friendly homes.
+- The listing form ("Treats & environment") offers exactly the map's filter options with the same icons and words, from one shared template, and only those the community has turned on; flashing lights are 🔦 everywhere.
+- Summary tiles: zones (or suggested hours), participating homes, low-sensory stops and 21+ refreshments (with candy when 21+ is turned off). The low-sensory count now matches the filter (intense setups are not low sensory).
+
 ## [0.4.0-beta.5] - 2026-10-19
 
 ### Added
@@ -31,7 +45,7 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 - Homes that are paused, out of candy or done for the night no longer appear in the list or on routes (the map still shows them greyed); "Show N homes not handing out right now" lists them on request, and the route says how many were left out.
 - Wording is for everyone (groups, friends or one person), not only families.
 - On phones the filters sit in an even two-column grid so every label fits; the search icon is centred.
-- Clearer icons: 😱 no jump scares, 🔦 no flashing lights, 🔊 no loud audio, 🎭 no intense scares, 🪀 non-food treats (a heart now only means saved), 👶 stroller-friendly, 🍺 21+, 🧡 saved.
+- Clearer icons: 😱 no jump scares, 🔦 no flashing lights, 🔊 no loud audio, 🎭 no intense scares, a teal pumpkin for non-food treats, as in the Teal Pumpkin Project (a heart now only means saved), 👶 stroller-friendly, 🍺 21+, 🧡 saved.
 - The version appears once, in the footer next to the community name ("No ads · No tracking"; the OpenStreetMap credit at the end of the map page's footer); the event date in the header opens the About page.
 - Phones in landscape get the phone layout (bottom bar, no side rail) with the list and map side by side, clear of the notch; tablets put the search on its own row and keep button labels on one line.
 - Script and stylesheet URLs carry the version and a fingerprint of the files, so browsers and any CDN or tunnel cache always load matching code after an update (and can cache it for a year).

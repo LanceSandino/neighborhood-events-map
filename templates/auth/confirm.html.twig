@@ -14,14 +14,13 @@
         <div class="card-meta">{{ l.start|time12 }}–{{ l.end|time12 }}</div>
         <div class="tags">
           {% if l.candy %}<span class="tag candy">🍬 Candy</span>{% endif %}
-          {% if l.nonfood %}<span class="tag teal">🪀 Non-food</span>{% endif %}
-          {% if l.low_noise %}<span class="tag quiet">💚 Low noise</span>{% endif %}
-          {% if l.scare_level == 'intense' %}<span class="tag spooky">👻 Intense scares</span>{% elseif l.scare_level == 'mild' %}<span class="tag spooky">🎃 Mild scares</span>{% endif %}
-          {% if l.jump_scares %}<span class="tag spooky">😱 Jump scares</span>{% endif %}
-          {% if l.flashing_lights %}<span class="tag strobe">⚡ Flashing</span>{% endif %}
+          {% if l.nonfood %}<span class="tag teal" title="Teal pumpkin: non-food treats"><span class="teal-pumpkin" aria-hidden="true">🎃</span> Non-food</span>{% endif %}
+          {% if l.low_noise %}<span class="tag quiet">🧩 Low noise</span>{% endif %}
+          {% if l.scare_level == 'intense' or l.jump_scares %}<span class="tag spooky">😱 Big scares</span>{% elseif l.scare_level == 'mild' %}<span class="tag spooky">🎃 Mild scares</span>{% endif %}
+          {% if l.flashing_lights %}<span class="tag strobe">🔦 Flashing lights</span>{% endif %}
           {% if l.loud_audio %}<span class="tag strobe">🔊 Loud audio</span>{% endif %}
           {% if l.adult_drinks %}<span class="tag drinks">🍺 21+</span>{% endif %}
-          {% if l.stroller_friendly %}<span class="tag quiet">👶 Stroller-friendly</span>{% endif %}
+          {% if l.stroller_friendly %}<span class="tag quiet">👶 Kid-friendly</span>{% endif %}
         </div>
         {% if l.note %}<p class="card-note">“{{ l.note }}”</p>{% endif %}
         <p class="form-caption">Not what you entered? Press Cancel — nothing is published until you confirm.</p>

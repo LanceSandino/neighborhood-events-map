@@ -32,4 +32,18 @@ final class AppExtensionTest extends TestCase
         self::assertStringNotContainsString('</script>', $json, 'cannot break out of <script type="application/json">');
         self::assertSame(['a' => '</script>'], json_decode($json, true));
     }
+
+    public function testWalkingAreasForTheZoneFilter(): void
+    {
+        $x = new AppExtension();
+        $zone = static fn (string $k, string $status = 'active', bool $residential = true) => ['key' => 'p'.strtolower($k), 'label' => 'Phase '.$k, 'residential' => $residential, 'status' => $status];
+        $zones = [$zone('1'), $zone('2'), $zone('3'), $zone('4'), $zone('6A'), $zone('6B'), $zone('7', 'coming_soon'), $zone('Club', 'active', false)];
+        $groups = [['p1', 'p2', 'p3'], ['p4'], ['p6a', 'p6b', 'p7'], ['pclub']];
+        self::assertSame([
+            ['value' => 'area:0', 'label' => 'Phases 1–3'],
+            ['value' => 'area:2', 'label' => 'Phases 6A, 6B'],
+        ], $x->zoneAreas($zones, $groups), 'unnamed one-zone groups, coming-soon and non-residential zones are left out');
+        self::assertSame(['Main (1–3)', 'Second (4)', 'Third (6A, 6B)'], array_column($x->zoneAreas($zones, $groups, ['Main', 'Second', 'Third']), 'label'));
+        self::assertSame([], $x->zoneAreas($zones, []));
+    }
 }

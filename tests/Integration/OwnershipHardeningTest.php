@@ -121,7 +121,7 @@ final class OwnershipHardeningTest extends AppTestCase
         self::assertSame(200, $this->code());
         self::assertStringContainsString('7 Lantern Way', $html);
         self::assertStringContainsString('Glow sticks at the gate', $html, 'the owner sees the exact note before publishing it');
-        self::assertStringContainsString('Jump scares', $html);
+        self::assertStringContainsString('Big scares', $html, 'jump scares / intense setups are shown as big scares');
         self::assertStringContainsString('5:30', $html);
     }
 

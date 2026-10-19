@@ -84,7 +84,7 @@ final class ErrorPathsTest extends AppTestCase
     {
         $this->configureCommunity(['features' => ['adult_refreshments' => false, 'nonfood_treats' => false, 'candy' => false, 'sensory_filters' => false]]);
         $html = (string) $this->client->request('GET', '/')->html();
-        foreach (['Adult refreshments · 21+', 'btnCandy', 'btnQuiet', 'No jump scares'] as $hidden) {
+        foreach (['name="adult_drinks"', 'btnCandy', 'btnQuiet', 'data-filter="noScares"', 'data-filter="adult"', 'id="statAdult"'] as $hidden) {
             self::assertStringNotContainsString($hidden, $html);
         }
         $id = $this->addAddress('3', 'Lantern Way', 40.005, -74.995, 'east');

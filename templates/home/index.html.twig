@@ -17,13 +17,17 @@
 </section>
 
 <div class="metrics" aria-label="Neighborhood summary">
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🏘️</div><div><b id="statHomes">{{ c.stats.homes }}</b><span>Participating homes</span></div></div>
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🍬</div><div><b id="statCandy">{{ c.stats.candy }}</b><span>With candy</span></div></div>
-  <div class="metric"><div class="metric-icon" aria-hidden="true">💚</div><div><b id="statGentle">{{ c.stats.low_sensory }}</b><span>Low-sensory stops</span></div></div>
   {% if zs %}
   <div class="metric"><div class="metric-icon" aria-hidden="true">📍</div><div><b>{{ zs.title }}</b><span>{{ zs.sub }}</span></div></div>
   {% else %}
   <div class="metric"><div class="metric-icon" aria-hidden="true">🕔</div><div><b>{{ c.event.starts_at|time12|replace({' PM': '', ' AM': ''}) }}–{{ c.event.ends_at|time12 }}</b><span>Suggested hours</span></div></div>
+  {% endif %}
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🏘️</div><div><b id="statHomes">{{ c.stats.homes }}</b><span>Participating homes</span></div></div>
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🧩</div><div><b id="statGentle">{{ c.stats.low_sensory }}</b><span>Low-sensory stops</span></div></div>
+  {% if c.features.adult_refreshments %}
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🍺</div><div><b id="statAdult">{{ c.stats.adult }}</b><span>21+ refreshments</span></div></div>
+  {% else %}
+  <div class="metric"><div class="metric-icon" aria-hidden="true">🍬</div><div><b id="statCandy">{{ c.stats.candy }}</b><span>With candy</span></div></div>
   {% endif %}
 </div>
 
@@ -32,24 +36,27 @@
     <div class="search"><input id="search" type="search" placeholder="Search streets, treats, or notes…" aria-label="Search homes" autocomplete="off"></div>
     {% if zones|length > 0 %}
     <select class="phase-select" id="zone" aria-label="Filter by {{ zs ? zs.title|split(' ')|last : 'zone' }}">
-      <option value="all">📍 All {{ zs ? zs.title|split(' ')|last : 'zones' }}</option>
-      {% for z in zones %}{% if z.residential and z.status == 'active' %}<option value="{{ z.key }}">{{ z.label }}</option>{% endif %}{% endfor %}
+      {% set word = zs ? zs.title|split(' ')|last : 'zones' %}
+      {% set areas = zone_areas(zones, c.routing.groups, c.routing.group_labels ?? []) %}
+      <option value="all" data-label="📍 All {{ word }}">📍 All {{ word }}</option>
+      {% if areas %}<optgroup label="Walking areas">{% for a in areas %}<option value="{{ a.value }}" data-label="{{ a.label }}">{{ a.label }}</option>{% endfor %}</optgroup><optgroup label="{{ word|capitalize }}">{% endif %}
+      {% for z in zones %}{% if z.residential and z.status == 'active' %}<option value="{{ z.key }}" data-label="{{ z.label }}">{{ z.label }}</option>{% endif %}{% endfor %}
+      {% if areas %}</optgroup>{% endif %}
     </select>
     {% endif %}
     {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false"><span class="fi" aria-hidden="true">🍬</span>Candy</button>{% endif %}
-    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false"><span class="fi" aria-hidden="true">💚</span>Low sensory</button>{% endif %}
+    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false"><span class="fi" aria-hidden="true">🧩</span>Low sensory</button>{% endif %}
     <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters"><span class="fi" aria-hidden="true">⚙️</span>Filters<span class="filter-count hide" id="filterCount"></span></button>
   </div>
   <div class="filter-more" id="moreFilters" role="group" aria-label="More filters">
     {% if c.features.sensory_filters %}
-    <button type="button" class="mini-filter" data-filter="noJumps" aria-pressed="false"><span class="fi" aria-hidden="true">😱</span>No jump scares</button>
+    <button type="button" class="mini-filter" data-filter="noScares" aria-pressed="false" title="No jump scares or intense setups"><span class="fi" aria-hidden="true">😱</span>No big scares</button>
     <button type="button" class="mini-filter" data-filter="noFlashing" aria-pressed="false"><span class="fi" aria-hidden="true">🔦</span>No flashing lights</button>
     <button type="button" class="mini-filter" data-filter="noLoud" aria-pressed="false"><span class="fi" aria-hidden="true">🔊</span>No loud audio</button>
-    <button type="button" class="mini-filter" data-filter="noIntense" aria-pressed="false"><span class="fi" aria-hidden="true">🎭</span>No intense scares</button>
     {% endif %}
-    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false"><span class="fi" aria-hidden="true">🪀</span>Non-food treats</button>{% endif %}
+    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false"><span class="fi teal-pumpkin" aria-hidden="true">🎃</span>Non-food treats</button>{% endif %}
     {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false"><span class="fi" aria-hidden="true">🍺</span>21+ refreshments</button>{% endif %}
-    <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false"><span class="fi" aria-hidden="true">👶</span>Stroller-friendly</button>
+    <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false"><span class="fi" aria-hidden="true">👶</span>Kid-friendly</button>
     <button type="button" class="mini-filter" data-filter="saved" aria-pressed="false"><span class="fi" aria-hidden="true">🧡</span>Saved only</button>
     <label class="time-filter"><span class="fi" aria-hidden="true">🕐</span>Visit at
       <select id="time">

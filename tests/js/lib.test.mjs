@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { matches, DEFAULT_FILTERS, isLowSensory, activeFilterCount } from '../../public/assets/js/lib/filters.js';
+import { matches, DEFAULT_FILTERS, isLowSensory, activeFilterCount, normalizeFilters, choiceCounts } from '../../public/assets/js/lib/filters.js';
 import { statusOf, time12, nowInZone } from '../../public/assets/js/lib/time.js';
 import { planStops, orderGroup, haversine, applyOrder, moveStop, suggestNearby } from '../../public/assets/js/lib/route.js';
 import { createStore } from '../../public/assets/js/lib/store.js';
@@ -20,7 +20,9 @@ test('filters are conjunctive across categories', () => {
   assert.equal(matches(home(), { ...DEFAULT_FILTERS, zone: 'elm' }, ctx), false);
   assert.equal(matches(home(), { ...DEFAULT_FILTERS, saved: true }, ctx), false);
   assert.equal(matches(home({ id: 2 }), { ...DEFAULT_FILTERS, saved: true }, ctx), true);
-  assert.equal(matches(home({ scare_level: 'intense' }), { ...DEFAULT_FILTERS, noIntense: true }, ctx), false);
+  assert.equal(matches(home({ scare_level: 'intense' }), { ...DEFAULT_FILTERS, noScares: true }, ctx), false);
+  assert.equal(matches(home({ jump_scares: true }), { ...DEFAULT_FILTERS, noScares: true }, ctx), false, 'jump scares and intense setups are one "big scares" filter');
+  assert.equal(matches(home({ scare_level: 'mild' }), { ...DEFAULT_FILTERS, noScares: true }, ctx), true);
   assert.equal(isLowSensory(home({ loud_audio: true })), false);
   assert.equal(activeFilterCount({ ...DEFAULT_FILTERS, candy: true, zone: 'x', q: ' ' }), 2);
 });
@@ -159,4 +161,18 @@ test('nearby suggestions stay in the route\'s walkable trips, nearest first, wit
   assert.deepEqual(s.map((x) => x.home.id), [3, 2]);
   assert.ok(s[0].meters > 30 && s[0].meters < 36);
   assert.deepEqual(suggestNearby(route, candidates, { zonesEnabled: false, limit: 1 }).map((x) => x.home.id), [4], 'without zones everything is one trip');
+});
+
+test('walking areas filter several zones; old jump/intense filters become "no big scares"; counts per choice', () => {
+  const c = { ...ctx, areas: [['oak', 'elm'], ['lake']] };
+  assert.equal(matches(home({ zone: 'elm' }), { ...DEFAULT_FILTERS, zone: 'area:0' }, c), true);
+  assert.equal(matches(home({ zone: 'lake' }), { ...DEFAULT_FILTERS, zone: 'area:0' }, c), false);
+  assert.equal(matches(home({ zone: 'lake' }), { ...DEFAULT_FILTERS, zone: 'area:9' }, c), false, 'an unknown area matches nothing');
+  assert.deepEqual(normalizeFilters({ noJumps: true, candy: true, bogus: 1 }), { candy: true, noScares: true });
+  assert.deepEqual(normalizeFilters({ noIntense: false, zone: 'oak' }), { zone: 'oak' });
+  const homes = [home({ id: 1, zone: 'oak' }), home({ id: 3, zone: 'elm', candy: false, nonfood: true }), home({ id: 4, zone: 'lake', adult_drinks: true })];
+  const counts = choiceCounts(homes, { ...DEFAULT_FILTERS, candy: true }, c, { toggles: ['candy', 'adult', 'nonfood'], zones: ['all', 'area:0', 'lake'] });
+  assert.deepEqual(counts.toggles, { candy: 2, adult: 1, nonfood: 0 });
+  assert.deepEqual(counts.zones, { all: 2, 'area:0': 1, lake: 1 });
+  assert.equal(choiceCounts(homes, DEFAULT_FILTERS, c, { toggles: ['candy'], keep: (h) => h.id !== 1 }).toggles.candy, 1, 'keep() limits what is counted');
 });

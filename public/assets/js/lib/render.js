@@ -14,19 +14,19 @@ export const pinClass = (h) => (isScary(h) ? 'scary' : h.low_noise ? 'quiet' : '
 export function tagsHtml(h) {
   const t = [];
   if (h.candy) t.push(['🍬 Candy', 'candy']);
-  if (h.low_noise) t.push(['💚 Low noise', 'quiet']);
-  if (h.nonfood) t.push(['🪀 Non-food', 'teal']);
-  if (h.scare_level === 'intense') t.push(['👻 Intense scares', 'spooky']);
+  if (h.low_noise) t.push(['🧩 Low noise', 'quiet']);
+  if (h.nonfood) t.push(['🎃 Non-food', 'teal', 'teal-pumpkin']); // Teal Pumpkin Project: non-food treats
+  // Visitors see one "big scares" idea for jump scares or an intense setup.
+  if (isScary(h)) t.push(['😱 Big scares', 'spooky']);
   else if (h.scare_level === 'mild') t.push(['🎃 Mild scares', 'spooky']);
-  if (h.jump_scares) t.push(['😱 Jump scares', 'spooky']);
-  if (h.flashing_lights) t.push(['⚡ Flashing', 'strobe']);
+  if (h.flashing_lights) t.push(['🔦 Flashing lights', 'strobe']);
   if (h.loud_audio) t.push(['🔊 Loud audio', 'strobe']);
   if (h.adult_drinks) t.push(['🍺 21+', 'drinks']);
-  if (h.stroller_friendly) t.push(['👶 Stroller-friendly', 'quiet']);
+  if (h.stroller_friendly) t.push(['👶 Kid-friendly', 'quiet']);
   // Icon and words are separate so the compact list can show icons only (the words stay for screen readers).
-  return t.map(([label, cls]) => {
+  return t.map(([label, cls, iconCls]) => {
     const [icon, ...words] = label.split(' ');
-    return `<span class="tag ${cls}" title="${words.join(' ')}"><span aria-hidden="true">${icon}</span><span class="tag-text"> ${words.join(' ')}</span></span>`;
+    return `<span class="tag ${cls}" title="${words.join(' ')}"><span aria-hidden="true"${iconCls ? ` class="${iconCls}"` : ''}>${icon}</span><span class="tag-text"> ${words.join(' ')}</span></span>`;
   }).join('');
 }
 
@@ -65,9 +65,12 @@ export function pinHtml(h, { dim, number }) {
 }
 
 /** Leaflet style for a zone outline; with a selected zone, it stands out and the others recede. */
-export function zoneStyle(z, selected) {
+export function zoneStyle(z, selection) {
+  // selection: nothing, one zone key, or a Set of keys (a walking area).
+  const keys = selection instanceof Set ? selection : new Set(selection ? [selection] : []);
+  const selected = keys.size > 0;
   if (z.status === 'coming_soon') return { color: '#a59cb2', weight: 1, dashArray: '2 6', fill: true, fillColor: '#a59cb2', fillOpacity: selected ? 0.04 : 0.10, opacity: selected ? 0.5 : 0.9 };
-  if (selected && z.key === selected) return { color: '#f07936', weight: 3, dashArray: null, fill: true, fillColor: '#f07936', fillOpacity: 0.12, opacity: 1 };
+  if (keys.has(z.key)) return { color: '#f07936', weight: 3, dashArray: null, fill: true, fillColor: '#f07936', fillOpacity: 0.12, opacity: 1 };
   if (selected) return { color: '#7d8f86', weight: 1, dashArray: '4 6', fill: true, fillColor: '#1c1b29', fillOpacity: 0.10, opacity: 0.5 };
   return { color: z.residential ? '#7d8f86' : '#a59cb2', weight: 1, dashArray: '4 6', fill: !z.residential, fillOpacity: 0.06, opacity: 1 };
 }

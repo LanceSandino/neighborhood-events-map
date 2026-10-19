@@ -81,6 +81,18 @@ final class ZoneStatusAndReviewTest extends AppTestCase
         self::assertSame('outside_boundary', $claim(40.05)['error']['code'], 'nowhere near any zone');
     }
 
+    public function testWalkingAreaNamesAppearInTheZoneFilterAndMustFitTheGroups(): void
+    {
+        $this->configureCommunity(['routing' => ['groups' => [['west', 'east']], 'group_labels' => ['Main']]]);
+        $html = (string) $this->client->request('GET', '/')->html();
+        self::assertStringContainsString('<optgroup label="Walking areas"><option value="area:0" data-label="Main (West side, East side)">', $html);
+        self::assertSame(['Main'], $this->json('GET', '/api/community')['routing']['group_labels']);
+
+        $this->expectException(\App\Community\ConfigException::class);
+        $this->expectExceptionMessage('routing.group_labels has more names than routing.groups has groups.');
+        $this->configureCommunity(['routing' => ['groups' => [['west', 'east']], 'group_labels' => ['Main', 'Extra']]]);
+    }
+
     public function testInvalidZoneStatusIsRejected(): void
     {
         $this->expectException(\App\Community\ConfigException::class);

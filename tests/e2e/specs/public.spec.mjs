@@ -164,7 +164,7 @@ test('homes not handing out stay off the list and routes; filters show their cou
   await expect(page.locator('#filterCount')).toBeHidden();
   await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
   await page.locator('#btnFilters').click();
-  await page.locator('[data-filter="noJumps"]').click();
+  await page.locator('[data-filter="noScares"]').click();
   await expect(page.locator('#filterCount')).toHaveText('2');
   await page.locator('#btnReset').click();
   await expect(page.locator('#filterCount')).toBeHidden();
@@ -348,4 +348,17 @@ test('a remembered "My current location" start is used straight away on the next
   await expect(page.locator('#routeStart')).toHaveValue('here');
   await expect(page.locator('#routeItems .route-item b').first()).toHaveText(target.address);
   await ctx.close();
+});
+
+test('each filter shows how many homes it would list', async ({ page, request }) => {
+  const open = (await (await request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const candy = page.getByRole('button', { name: 'Candy', exact: true });
+  await expect(candy.locator('.fcount')).toHaveText(String(open.filter((h) => h.candy).length));
+  const bigScares = open.filter((h) => h.jump_scares || h.scare_level === 'intense').length;
+  await expect(page.locator('[data-filter="noScares"] .fcount')).toHaveText(String(open.length - bigScares));
+  await page.getByRole('button', { name: 'Low sensory', exact: true }).click();
+  await expect(page.locator('#listCount')).toHaveText(`${await page.locator('[data-filter="lowSensory"] .fcount').textContent()} showing`);
 });

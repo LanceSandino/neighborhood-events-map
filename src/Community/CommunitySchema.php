@@ -31,7 +31,7 @@ final class CommunitySchema
         '🚶 Stay on sidewalks and driveways; don’t cut across lawns or gardens.',
         '🔦 Carry a flashlight or glow stick and wear something reflective after dark.',
         '👀 Little ones stay with a grown-up; older kids stay in a group and check in.',
-        '🥜 Check treats before eating, especially for allergies. A teal pumpkin means non-food treats.',
+        '🥜 Check treats before eating, especially for allergies. A teal pumpkin (the Teal Pumpkin Project) means the home offers non-food treats.',
         '🐶 Some homes have pets: wait at the door and never open gates.',
         '🙏 Say thank you, be patient with little ones, and be kind to anyone with sensory needs or who isn’t taking part.',
     ];
@@ -196,6 +196,12 @@ final class CommunitySchema
             }
         }
 
+        // Optional names for the walkable groups ("Main", "Lakeside"…), in the same order as routing.groups.
+        $groupLabels = array_map(static fn ($l) => self::text($l, 24), self::arr($ro['group_labels'] ?? []));
+        if (\count($groupLabels) > \count($groups)) {
+            $e[] = 'routing.group_labels has more names than routing.groups has groups.';
+        }
+
         $reminders = self::reminders($c['reminders'] ?? [], $e);
 
         if ([] !== $e) {
@@ -259,6 +265,7 @@ final class CommunitySchema
             ],
             'routing' => [
                 'groups' => $groups,
+                'group_labels' => array_values($groupLabels),
                 'crossings_verified' => (bool) ($ro['crossings_verified'] ?? false),
                 'provider_enabled' => (bool) ($ro['provider_enabled'] ?? false),
             ],

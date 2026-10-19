@@ -9,6 +9,8 @@ import { esc } from './lib/render.js';
 import { time12 } from './lib/time.js';
 import { toast } from './lib/modal.js';
 
+/** Listing yes/no fields; the form shows only those the community offers (partials/_listing_checks). */
+const LISTING_FLAGS = ['candy', 'nonfood', 'adult_drinks', 'low_noise', 'jump_scares', 'flashing_lights', 'loud_audio', 'stroller_friendly'];
 const $ = (s, root = document) => root.querySelector(s);
 let expiresAt = 0;
 let idleMinutes = 30;
@@ -62,7 +64,7 @@ function homeCard(home, eventDate) {
     form.scare_level.value = l.scare_level;
     form.published.value = String(l.published);
     form.note.value = l.note;
-    for (const k of ['candy', 'nonfood', 'adult_drinks', 'low_noise', 'jump_scares', 'flashing_lights', 'loud_audio', 'stroller_friendly']) form[k].checked = !!l[k];
+    for (const k of LISTING_FLAGS) if (form[k]) form[k].checked = !!l[k];
   }
   node.querySelectorAll('[data-status]').forEach((b) => b.setAttribute('aria-pressed', String(l?.status === b.dataset.status)));
   const showError = (e) => { const el = $('[data-f="error"]', node); el.textContent = friendlyError(e); el.classList.remove('hide'); };
@@ -79,7 +81,7 @@ function homeCard(home, eventDate) {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const body = { start: form.start.value, end: form.end.value, scare_level: form.scare_level.value, published: form.published.value === 'true', note: form.note.value };
-    for (const k of ['candy', 'nonfood', 'adult_drinks', 'low_noise', 'jump_scares', 'flashing_lights', 'loud_audio', 'stroller_friendly']) body[k] = form[k].checked;
+    for (const k of LISTING_FLAGS) body[k] = form[k] ? form[k].checked : false; // options the organizer turned off are not offered
     patch(body, 'Saved. The public map updates right away.');
   });
   $('[data-f="release"]', node).addEventListener('click', async () => {

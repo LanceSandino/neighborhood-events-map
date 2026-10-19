@@ -258,4 +258,15 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "v0.4.0-beta.5"
   author: "Lance Sandino"
   timestamp: "2026-10-19T08:45:00Z"
+
+- id: CU-20261019-13
+  type: feature
+  title: "Walking areas in the zone filter, per-choice counts, combined big-scares filter, kid-friendly label"
+  description: "zone_areas() turns routing.groups (+ optional routing.group_labels, validated to fit the groups) into area:<n> filter choices; matches() resolves them through ctx.areas; zoneStyle accepts a Set so an area is highlighted and fitted as one. choiceCounts() gives the result count for every toggle and zone option (handing-out homes only). noJumps/noIntense merged into noScares with normalizeFilters() for stored and shared filters; one Big scares tag. Stroller label renamed Kid-friendly (field unchanged). Listing options for both resident forms come from partials/_listing_checks.html.twig (feature-gated, same icons and words as the filters; me.js tolerates hidden options); non-food is the Teal Pumpkin Project sign (tinted 🎃), flashing lights 🔦 everywhere. Summary tiles reordered with a 21+ count; server low-sensory stat aligned with the client definition."
+  impact: low
+  affected_modules: ["public/assets/js/lib/filters.js", "public/assets/js/lib/render.js", "public/assets/js/home.js", "public/assets/js/admin/community.js", "src/Twig/AppExtension.php", "src/Community/CommunitySchema.php", "src/Community/CommunityPresenter.php", "templates/"]
+  related_tests: ["tests/js/lib.test.mjs (walking areas, normalizeFilters, choiceCounts, big scares)", "tests/Unit/Twig/AppExtensionTest.php::testWalkingAreasForTheZoneFilter", "tests/Integration/ZoneStatusAndReviewTest.php::testWalkingAreaNamesAppearInTheZoneFilterAndMustFitTheGroups", "tests/e2e/specs/public.spec.mjs::each filter shows how many homes it would list"]
+  commit_ref: "v0.5.0-beta.1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T09:30:00Z"
 ```

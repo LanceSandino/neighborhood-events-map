@@ -7,7 +7,7 @@
  */
 import { api } from './lib/api.js';
 import { createStore } from './lib/store.js';
-import { DEFAULT_FILTERS, matches, activeFilterCount } from './lib/filters.js';
+import { DEFAULT_FILTERS, matches, activeFilterCount, normalizeFilters, choiceCounts, isLowSensory } from './lib/filters.js';
 import { nowInZone, time12 } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
 import { planStops, applyOrder, moveStop, suggestNearby } from './lib/route.js';
@@ -19,10 +19,10 @@ const C = boot.community;
 let homes = boot.homes;
 const zoneLabels = Object.fromEntries(C.zones.map((z) => [z.key, z.label]));
 const store = createStore(C.community.id, C.event.date.slice(0, 4));
-let filters = { ...DEFAULT_FILTERS, ...store.get().filters };
+let filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
 // A shared link (?f=<filters>&stops=<ids>&start=<id>) opens exactly that view.
 const shared = readSharedLink();
-if (shared.filters) { filters = { ...DEFAULT_FILTERS, ...shared.filters }; store.set({ filters }); }
+if (shared.filters) { filters = { ...DEFAULT_FILTERS, ...normalizeFilters(shared.filters) }; store.set({ filters }); }
 let activeId = null;
 let routeNumbers = new Map();
 let currentPlan = [];
@@ -33,7 +33,7 @@ let locating = false;
 const $ = (sel) => document.querySelector(sel);
 const ctx = () => {
   const n = nowInZone(C.event.timezone);
-  return { today: n.date, eventDate: C.event.date, nowMinutes: n.minutes, zoneLabels, saved: store.get().saved };
+  return { today: n.date, eventDate: C.event.date, nowMinutes: n.minutes, zoneLabels, saved: store.get().saved, areas: C.routing.groups || [] };
 };
 const visible = () => homes.filter((h) => matches(h, filters, ctx()));
 /** Handing out treats now or later tonight; paused, out of candy and done homes are not. */
@@ -71,14 +71,18 @@ function initMap() {
   }
 }
 
-/** Selecting a phase/zone outlines it, shades the rest and zooms to it; "all" restores the overview. */
+/** Selecting a phase/zone or a walking area outlines it, shades the rest and zooms to it; "all" restores the overview. */
 function highlightZone(key, { fit = true } = {}) {
   if (!map || !zoneLayers.size) return;
-  const selected = key && key !== 'all' && zoneLayers.has(key) ? key : null;
+  const keys = key && key.startsWith('area:') ? (C.routing.groups[Number(key.slice(5))] || []) : (key && key !== 'all' ? [key] : []);
+  const selected = new Set(keys.filter((k) => zoneLayers.has(k)));
   for (const { zone, layer } of zoneLayers.values()) layer.setStyle(zoneStyle(zone, selected));
   if (!fit) return;
-  if (selected) map.fitBounds(zoneLayers.get(selected).layer.getBounds(), { padding: [30, 30], animate: !reducedMotion() });
-  else fitAll();
+  if (selected.size) {
+    const bounds = L.latLngBounds([]);
+    for (const k of selected) bounds.extend(zoneLayers.get(k).layer.getBounds());
+    map.fitBounds(bounds, { padding: [30, 30], animate: !reducedMotion() });
+  } else fitAll();
 }
 
 function fitAll() {
@@ -134,12 +138,27 @@ function render() {
   $('#btnFilters').setAttribute('aria-label', count ? `Filters, ${count} active` : 'Filters');
   $('#savedCount').textContent = saved.filter((id) => homes.some((h) => h.id === id)).length;
   $('#statHomes').textContent = homes.length;
-  $('#statCandy').textContent = homes.filter((h) => h.candy).length;
-  $('#statGentle').textContent = homes.filter((h) => h.low_noise && !h.flashing_lights && !h.jump_scares && !h.loud_audio && h.scare_level !== 'intense').length;
+  if ($('#statCandy')) $('#statCandy').textContent = homes.filter((h) => h.candy).length;
+  if ($('#statAdult')) $('#statAdult').textContent = homes.filter((h) => h.adult_drinks).length;
+  $('#statGentle').textContent = homes.filter(isLowSensory).length;
+  renderChoiceCounts(c);
   for (const btn of document.querySelectorAll('[data-filter]')) btn.setAttribute('aria-pressed', String(!!filters[btn.dataset.filter]));
   $('#btnReset').classList.toggle('hide', activeFilterCount(filters) === 0);
   renderPins(ids);
   if (activeId && !homes.some((h) => h.id === activeId)) selectHome(null);
+}
+
+/** Each filter and zone choice shows how many homes handing out it would list (with the other filters kept). */
+function renderChoiceCounts(c) {
+  const buttons = [...document.querySelectorAll('[data-filter]')];
+  const zoneSel = $('#zone');
+  const counts = choiceCounts(homes, filters, c, { toggles: buttons.map((b) => b.dataset.filter), zones: zoneSel ? [...zoneSel.options].map((o) => o.value) : [], keep: isOpen });
+  for (const b of buttons) {
+    let s = b.querySelector('.fcount');
+    if (!s) { s = document.createElement('span'); s.className = 'fcount'; s.setAttribute('aria-hidden', 'true'); b.append(s); }
+    s.textContent = String(counts.toggles[b.dataset.filter]);
+  }
+  if (zoneSel) for (const o of zoneSel.options) o.textContent = `${o.dataset.label || o.textContent} · ${counts.zones[o.value]}`;
 }
 
 function setFilters(patch) {
@@ -248,7 +267,7 @@ function showRoute({ open = true } = {}) {
     + (userSkipped ? `<p class="form-caption route-order">${userSkipped} skipped. <button type="button" class="link-button" data-unskip>Bring them back</button></p>` : '');
   $('#routeItems').innerHTML = source + (currentPlan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
     + currentPlan.map((g, gi) => {
-    const label = g.zones.length ? g.zones.map((z) => zoneLabels[z] || z).join(', ') : (currentPlan.length > 1 ? `Area ${gi + 1}` : '');
+    const label = tripLabel(g, gi);
     return `${label ? `<h3 class="route-group-title">${currentPlan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
       <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
       ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
@@ -286,10 +305,19 @@ function startFromHere() {
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
 
+/** A trip's name: the walking area's name ("Main (1–3)") when it has one, else its zones in map order. */
+function tripLabel(g, gi) {
+  const area = g.key.startsWith('group-') ? document.querySelector(`#zone option[value="area:${g.key.slice(6)}"]`) : null;
+  if (area) return area.dataset.label;
+  const order = C.zones.map((z) => z.key);
+  if (g.zones.length) return [...g.zones].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((z) => zoneLabels[z] || z).join(', ');
+  return currentPlan.length > 1 ? `Area ${gi + 1}` : '';
+}
+
 function routeText() {
   let n = 0;
   return `${C.community.name} Halloween — my stops (${manualOrder ? 'my order' : 'suggested order'}, not walking directions)\n` + currentPlan.map((g, gi) =>
-    (currentPlan.length > 1 ? `\nTrip ${gi + 1}${g.zones.length ? ' (' + g.zones.map((z) => zoneLabels[z] || z).join(', ') + ')' : ''}\n` : '')
+    (currentPlan.length > 1 ? `\nTrip ${gi + 1}${tripLabel(g, gi) ? ` (${tripLabel(g, gi)})` : ''}\n` : '')
     + g.stops.map((h) => `${++n}. ${h.address} (${time12(h.start)}–${time12(h.end)})`).join('\n')).join('\n')
     + `\n\nOpen on the map: ${shareLink()}`;
 }
@@ -471,7 +499,7 @@ function bind() {
     toast(await copyText(url) ? 'Link copied — anyone with it sees these stops.' : 'Copy the link below to share these stops.');
   });
   $('#btnRouteMap').addEventListener('click', showRouteOnMap);
-  if (filters.noJumps || filters.noFlashing || filters.noLoud || filters.noIntense || filters.nonfood || filters.adult || filters.stroller || filters.saved || filters.time !== 'any') {
+  if (filters.noScares || filters.noFlashing || filters.noLoud || filters.nonfood || filters.adult || filters.stroller || filters.saved || filters.time !== 'any') {
     $('#moreFilters').classList.add('open');
     more.setAttribute('aria-expanded', 'true');
   }

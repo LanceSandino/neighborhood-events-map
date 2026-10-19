@@ -101,7 +101,7 @@ function render() {
       ${field('mAttr', 'Tile attribution *', s.map.tiles.attribution)}
       ${field('mZoom', 'Default zoom', s.map.zoom, 'type="number" min="10" max="19"')}
       ${area('mNotes', 'Crossing / safety notes (one per line)', s.map.crossing_notes.join('\n'))}
-      ${area('rGroups', 'Walkable zone groups (one group per line, keys separated by commas)', s.routing.groups.map((g) => g.join(', ')).join('\n'), 'Zones in different groups are always shown as separate trips. Only group zones you have verified are safely walkable together.')}
+      ${area('rGroups', 'Walkable zone groups (one group per line, keys separated by commas; optional name first, e.g. "Main: phase-1, phase-2")', s.routing.groups.map((g, i) => `${(s.routing.group_labels || [])[i] ? `${s.routing.group_labels[i]}: ` : ''}${g.join(', ')}`).join('\n'), 'Named or multi-zone groups also appear as walking areas in the map’s zone filter, e.g. “Main (1–3)”. Zones in different groups are always shown as separate trips. Only group zones you have verified are safely walkable together.')}
       <div class="field full"><label class="check-chip"><input type="checkbox" id="rVerified" ${s.routing.crossings_verified ? 'checked' : ''}> I verified safe pedestrian crossings for the groups above</label></div>
     </div></div>
     <div class="modal-actions"><button type="submit" class="primary">Save settings</button></div>
@@ -146,7 +146,9 @@ async function save(e) {
   s.map.tiles = { ...s.map.tiles, url: $('#mTiles').value, attribution: $('#mAttr').value };
   s.map.zoom = Number($('#mZoom').value);
   s.map.crossing_notes = lines('#mNotes');
-  s.routing.groups = lines('#rGroups').map((l) => l.split(',').map((k) => k.trim()).filter(Boolean));
+  const groupLines = lines('#rGroups').map((l) => (l.includes(':') ? [l.slice(0, l.indexOf(':')).trim(), l.slice(l.indexOf(':') + 1)] : ['', l]));
+  s.routing.groups = groupLines.map(([, keys]) => keys.split(',').map((k) => k.trim()).filter(Boolean));
+  s.routing.group_labels = groupLines.map(([name]) => name);
   s.routing.crossings_verified = $('#rVerified').checked;
   const res = await call('/api/admin/community', { method: 'PUT', body: { settings: s } });
   settings = res.settings;

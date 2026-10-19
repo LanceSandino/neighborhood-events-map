@@ -60,16 +60,10 @@
           <div class="field"><label for="regStatus">Status tonight</label><select id="regStatus"><option value="active">Handing out</option><option value="paused">Paused for now</option></select></div>
           <div class="field full">
             <span class="label" id="treatsLabel">Treats &amp; environment</span>
-            <div class="checks" role="group" aria-labelledby="treatsLabel">
-              {% if c.features.candy %}<label class="check-chip"><input type="checkbox" name="candy" checked> 🍬 Candy</label>{% endif %}
-              {% if c.features.nonfood_treats %}<label class="check-chip"><input type="checkbox" name="nonfood"> 🪀 Non-food treats</label>{% endif %}
-              {% if c.features.adult_refreshments %}<label class="check-chip"><input type="checkbox" name="adult_drinks"> 🍺 Adult refreshments · 21+</label>{% endif %}
-              <label class="check-chip"><input type="checkbox" name="low_noise" checked> 💚 Low noise</label>
-              <label class="check-chip"><input type="checkbox" name="jump_scares"> 😱 Jump scares</label>
-              <label class="check-chip"><input type="checkbox" name="flashing_lights"> ⚡ Flashing lights</label>
-              <label class="check-chip"><input type="checkbox" name="loud_audio"> 🔊 Loud music/sounds</label>
-              <label class="check-chip"><input type="checkbox" name="stroller_friendly"> 👶 Stroller-friendly</label>
+            <div class="checks" role="group" aria-labelledby="treatsLabel" aria-describedby="treatsHelp">
+              {% include 'partials/_listing_checks.html.twig' with {c: c, defaults: true} only %}
             </div>
+            <span class="form-caption" id="treatsHelp">The same choices visitors filter by. Low noise with no flashing lights, loud audio or big scares (jump scares or an intense setup) is listed as 🧩 Low sensory.</span>
             <span class="error" data-error="offerings"></span>
           </div>
           <div class="field full"><label for="regNote">Short public note (optional)</label><textarea id="regNote" maxlength="400" placeholder="e.g. Allergy-friendly bin on the porch (no children’s names)…"></textarea><span class="form-caption"><span id="noteCount">0</span>/400</span><span class="error" data-error="note"></span></div>
