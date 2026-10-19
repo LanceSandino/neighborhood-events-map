@@ -104,7 +104,7 @@ jobs:
       - name: Session lifecycle smoke test (restart durability, cookie flags, logout)
         run: python3 scripts/smoke_session.py
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: { name: e2e-results, path: tests/e2e/test-results, retention-days: 7 }
       - if: always()
         run: docker compose logs app --tail=200 || true
