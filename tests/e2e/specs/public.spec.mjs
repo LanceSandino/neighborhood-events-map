@@ -65,7 +65,7 @@ test('map failure still leaves a readable list', async ({ page, request }) => {
   expect(n).toBeGreaterThan(await openNow(request));
 });
 
-for (const [w, h] of [[375, 812], [430, 932], [768, 1024], [1440, 1000]]) {
+for (const [w, h] of [[375, 812], [430, 932], [956, 440], [768, 1024], [1180, 820], [1440, 1000]]) {
   test(`no horizontal overflow and 44px targets at ${w}px (+ screenshots)`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     for (const [name, base] of [['demo', DEMO], ['ventura', VENTURA]]) {
@@ -242,4 +242,110 @@ test('"What\'s new" opens release notes with a source link; My house → List my
   await expect(page.locator('#registerModal')).toBeVisible();
   await page.locator('#registerModal .close-modal').click();
   await expect(page.locator('#registerModal')).toBeHidden();
+});
+
+test('Appearance panel: Light over a dark system (kept after reload), Auto again, accessibility options', async ({ browser }) => {
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  await politeTiles(page);
+  await page.goto(DEMO + '/privacy');
+  const lum = () => page.evaluate(() => { const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/\d+/g).map(Number); return 0.2126 * r + 0.7152 * g + 0.0722 * b; });
+  expect(await lum()).toBeLessThan(40);
+  await page.getByRole('button', { name: 'Appearance and accessibility' }).click();
+  const panel = page.getByRole('dialog', { name: 'Appearance' });
+  await panel.getByRole('button', { name: '☀️ Light' }).click();
+  expect(await lum()).toBeGreaterThan(200);
+  await panel.getByLabel(/Larger text/).check();
+  await panel.getByLabel(/Reduce motion/).check();
+  await panel.getByRole('button', { name: 'Done' }).click();
+  await page.reload();
+  expect(await lum(), 'applied before paint on the next page').toBeGreaterThan(200);
+  expect(await page.evaluate(() => [document.documentElement.dataset.text, document.documentElement.dataset.motion, getComputedStyle(document.documentElement).scrollBehavior])).toEqual(['large', 'reduce', 'auto']);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 'larger text never scrolls sideways').toBeLessThanOrEqual(0);
+  await page.getByRole('button', { name: 'Appearance and accessibility' }).click();
+  await expect(panel.getByRole('button', { name: '☀️ Light' })).toHaveAttribute('aria-pressed', 'true');
+  await panel.getByRole('button', { name: 'Reset' }).click();
+  expect(await lum()).toBeLessThan(40);
+  expect(await page.evaluate(() => localStorage.getItem('nhm:appearance'))).toBeNull();
+  await ctx.close();
+});
+
+test('route: skip stops, bring them back, add nearby suggestions, switch between saved and all matching', async ({ page }) => {
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const openHomes = (await (await page.request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
+  // No favourites: every matching home; skip one.
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  const items = page.locator('#routeItems .route-item');
+  await expect(items).toHaveCount(openHomes.length);
+  const first = (await items.first().locator('b').textContent()).trim();
+  await page.getByRole('button', { name: `Skip ${first}` }).click();
+  await expect(items).toHaveCount(openHomes.length - 1);
+  await expect(page.locator('#routeLink')).not.toHaveValue(new RegExp(`\\b${openHomes.find((h) => h.address === first).id}\\b`));
+  await page.getByRole('button', { name: 'Bring them back' }).click();
+  await expect(items).toHaveCount(openHomes.length);
+  await page.keyboard.press('Escape');
+  // One favourite: suggestions nearby can be added; "All matching" shows everything again.
+  await page.locator(`.home-card .save[data-save="${openHomes[0].id}"]`).click();
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  await expect(items).toHaveCount(1);
+  const add = page.locator('[data-add-stop]').first();
+  await expect(add).toBeVisible();
+  await add.click();
+  await expect(items).toHaveCount(2);
+  await page.getByRole('button', { name: /^All matching/ }).click();
+  await expect(items).toHaveCount(openHomes.length);
+  await page.getByRole('button', { name: /^🧡 Saved/ }).click();
+  await expect(items).toHaveCount(2);
+});
+
+test('phone in landscape: no side rail, bottom bar shown, list and map side by side', async ({ page }) => {
+  await page.setViewportSize({ width: 956, height: 440 });
+  await page.goto(DEMO + '/');
+  await expect(page.locator('.sidebar')).toBeHidden();
+  await expect(page.locator('.mobile-bottom')).toBeVisible();
+  const [list, map] = await Promise.all([page.locator('.list-pane').boundingBox(), page.locator('#mapPane').boundingBox()]);
+  expect(Math.abs(list.y - map.y)).toBeLessThan(2);
+  expect(map.height).toBeLessThanOrEqual(440);
+});
+
+test('compact list: one row per home with icons, remembered after reload; long notes are clamped on cards', async ({ page }) => {
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const note = page.locator('#homeCards .card-note').first();
+  await expect(note).toBeVisible();
+  expect(await note.evaluate((n) => getComputedStyle(n).webkitLineClamp)).toBe('2');
+  await page.getByRole('button', { name: 'Compact list' }).click();
+  await expect(page.locator('#homeCards')).toHaveClass(/compact/);
+  await expect(page.locator('#homeCards .card-note').first()).toBeHidden();
+  await expect(page.locator('#homeCards .note-icon').first()).toBeVisible();
+  const tallest = await page.locator('#homeCards .home-card').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().height)));
+  expect(tallest).toBeLessThan(80);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Compact list' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Cards' }).click();
+  await expect(page.locator('#homeCards')).not.toHaveClass(/compact/);
+});
+
+test('a remembered "My current location" start is used straight away on the next visit', async ({ browser }) => {
+  const ctx = await browser.newContext({ permissions: ['geolocation'] });
+  const page = await ctx.newPage();
+  await politeTiles(page);
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const openHomes = (await (await page.request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
+  const target = openHomes[openHomes.length - 1];
+  await ctx.setGeolocation({ latitude: target.lat, longitude: target.lon });
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  await page.locator('#routeStart').selectOption('here');
+  await expect(page.locator('#routeItems .route-item b').first()).toHaveText(target.address);
+  // Next visit: the choice is remembered, the position is asked for again and used without re-choosing.
+  await page.reload();
+  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  await expect(page.locator('#routeStart')).toHaveValue('here');
+  await expect(page.locator('#routeItems .route-item b').first()).toHaveText(target.address);
+  await ctx.close();
 });

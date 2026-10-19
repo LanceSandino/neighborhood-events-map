@@ -62,7 +62,7 @@
             <span class="label" id="treatsLabel">Treats &amp; environment</span>
             <div class="checks" role="group" aria-labelledby="treatsLabel">
               {% if c.features.candy %}<label class="check-chip"><input type="checkbox" name="candy" checked> 🍬 Candy</label>{% endif %}
-              {% if c.features.nonfood_treats %}<label class="check-chip"><input type="checkbox" name="nonfood"> 💙 Non-food treats</label>{% endif %}
+              {% if c.features.nonfood_treats %}<label class="check-chip"><input type="checkbox" name="nonfood"> 🪀 Non-food treats</label>{% endif %}
               {% if c.features.adult_refreshments %}<label class="check-chip"><input type="checkbox" name="adult_drinks"> 🍺 Adult refreshments · 21+</label>{% endif %}
               <label class="check-chip"><input type="checkbox" name="low_noise" checked> 💚 Low noise</label>
               <label class="check-chip"><input type="checkbox" name="jump_scares"> 😱 Jump scares</label>
@@ -136,6 +136,8 @@
     {% if access %}<div class="notice info">{{ access.icon }} <b>{{ access.title }}.</b> {{ access.text }}</div>{% endif %}
     {% if c.community.gate_notice %}<div class="notice">🚪 {{ c.community.gate_notice }}</div>{% elseif not access %}<div class="notice">🚪 This site does not grant access to gated areas.</div>{% endif %}
     {% for note in c.map.crossing_notes %}<div class="notice">⚠️ {{ note }}</div>{% endfor %}
+    <ul class="reminders compact">{% for r in c.community.reminders|slice(0, 4) %}<li>{{ r }}</li>{% endfor %}</ul>
+    <p class="form-caption"><a href="/about#reminders">All reminders</a></p>
     <p class="introtext">Visitors browse anonymously. Filters, favorites and your start point stay on this device. Residents list their own homes by confirming an email link; addresses appear only after they opt in. Sensory labels such as “low noise” or “no flashing lights” are self-reported—please use your own judgment.</p>
     <p class="introtext">Something wrong with a listing? Select it on the map and choose “Report this listing”{% if c.community.contact_url %}, or <a href="{{ c.community.contact_url }}" rel="noopener">contact the organizer</a>{% endif %}.</p>
     <div class="modal-actions"><a class="secondary" href="/about">About {{ c.community.name }}</a><button type="button" class="primary" data-close>Got it!</button></div>

@@ -22,6 +22,9 @@
     <p>A neighborhood map of homes handing out treats on Halloween, with sensory notes and a suggested stop order for trick-or-treaters of all ages — families, friends or solo.</p>
   {% endif %}
 
+  <h2 id="reminders">Trick-or-treat reminders</h2>
+  <ul class="reminders">{% for r in c.community.reminders %}<li>{{ r }}</li>{% endfor %}</ul>
+
   {% if c.community.links ?? [] %}
     <h2>Links</h2>
     <ul class="about-links">{% for l in c.community.links %}<li><a href="{{ l.url }}" rel="noopener noreferrer">{{ l.label }}</a></li>{% endfor %}</ul>

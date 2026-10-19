@@ -42,5 +42,9 @@ final class BrandPaletteTest extends TestCase
         $css = BrandPalette::css('#f07936', '#524077');
         self::assertStringContainsString('--brand:#f07936', $css);
         self::assertStringContainsString('prefers-color-scheme: dark', $css);
+        preg_match_all('~--brand-text:(#[0-9a-f]{6})~', $css, $m);
+        self::assertCount(3, $m[1], 'light, system dark and chosen dark');
+        self::assertSame($m[1][1], $m[1][2], 'a chosen dark appearance uses the same brand text as system dark');
+        self::assertStringContainsString(':root:not([data-theme="light"])', $css, 'a chosen light appearance wins over system dark');
     }
 }

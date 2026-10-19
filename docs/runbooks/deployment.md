@@ -54,6 +54,17 @@ ingress:
 
 `cloudflared` sends `X-Forwarded-Proto: https` and the client IP in `X-Forwarded-For`. nginx trusts these only from loopback and from its own network gateway — the address every connection through the published `127.0.0.1` port arrives from — so a host-level `cloudflared` works without configuration. If cloudflared (or another proxy) runs as a container on the stack's network instead, set `NGINX_TRUSTED_PROXIES` to its address. nginx then sets `HTTPS=on` for PHP (secure cookies, HSTS) and logs no query strings. Check the access log (`docker compose logs nginx`) shows real visitor IPs; if every line shows the same private address, per-IP limits would treat all visitors as one. Never route the tunnel to PostgreSQL or Mailpit (Mailpit is not part of the production stack).
 
+### Cloudflare free plan (optional extra layer)
+
+The app defends itself without Cloudflare: proof-of-work, persistent per-IP/per-mailbox/global limits and honeypots on every email or claim request, a response-time floor, nginx request and connection limits per client, body caps and timeouts. Cloudflare's free plan adds an outer layer:
+
+- **Security → Bots:** turn on *Bot Fight Mode*.
+- **Security → WAF:** keep the free managed rules on; add the one free *rate limiting rule*, for example 30 requests per 10 seconds per IP on paths starting with `/api/auth/`, `/api/addresses/` and `/api/disputes`, action *Block* for 1 minute.
+- **SSL/TLS:** *Full*, plus *Always Use HTTPS*.
+- **Speed → Optimization:** leave *Rocket Loader*, *Email Address Obfuscation* and automatic script injection **off**. They rewrite pages, and the strict Content-Security-Policy blocks what they inject.
+- **Caching:** respect origin headers. Scripts and styles use fingerprinted URLs (`/assets/v<version>.<hash>/…`), so an update never mixes old and new code, and pages, the API and sign-in are `no-store`.
+- **Zero Trust → Access** can keep the site private while you test; remove the Access policy when you open it to the public.
+
 ## 4. Verify
 
 - Visit the hostname on a phone; check the event badge, map tiles and attribution.

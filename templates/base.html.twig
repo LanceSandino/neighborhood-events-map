@@ -2,6 +2,8 @@
 {%- set community = c.community -%}
 {%- set branding = c.branding -%}
 {%- set year = c.event.date|slice(0, 4) -%}
+{%- set place = community.locality ? community.locality ~ (community.region ? ', ' ~ community.region : '') : '' -%}
+{%- set show_place = (branding.show_locality ?? false) and place -%}
 <!doctype html>
 <html lang="en">
 <head>
@@ -10,6 +12,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f7f4">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#15141d">
+  <script src="{{ asset_path('js/theme-init.js') }}"></script>
   <meta name="description" content="{{ community.name }} Halloween: a friendly trick-or-treat map of homes that chose to participate.">
   {% block meta %}{% endblock %}
   <title>{% block title %}{{ community.name }} Halloween{% endblock %}</title>
@@ -25,8 +28,8 @@
 <div class="app">
   <aside class="sidebar" aria-label="Site">
     <a class="brand" href="/">
-      <div class="brand-icon" aria-hidden="true">{% if branding.logo_url %}<img src="{{ branding.logo_url }}" alt="">{% else %}{{ branding.brand_emoji }}{% endif %}</div>
-      <div><div class="brand-name">{{ community.name }}<br>Halloween</div><div class="brand-sub">Community {{ year }}</div></div>
+      <div class="brand-icon{{ branding.logo_url ? ' has-logo' }}" aria-hidden="true">{% if branding.logo_url %}<img src="{{ branding.logo_url }}" alt="">{% else %}{{ branding.brand_emoji }}{% endif %}</div>
+      <div><div class="brand-name">{{ community.name }}<br>Halloween</div><div class="brand-sub">{{ show_place ? place ~ ' · ' ~ year : 'Community ' ~ year }}</div></div>
     </a>
     <div>
       <div class="nav-title" id="nav-title">EXPLORE</div>
@@ -51,17 +54,18 @@
   </aside>
   <div class="main">
     <header class="topline">
-      <span class="crumb">📍 {% if community.locality %}<span class="crumb-loc">{{ community.locality }}{% if community.region %}, {{ community.region }}{% endif %} <span class="sep">/</span> </span>{% endif %}<strong>{{ community.name }} Community</strong></span>
+      <a class="crumb" href="/">{% if branding.logo_url %}<img class="crumb-logo" src="{{ branding.logo_url }}" alt="">{% else %}📍{% endif %} {% if place and not show_place %}<span class="crumb-loc">{{ place }} <span class="sep">/</span> </span>{% endif %}<span class="crumb-name"><strong>{{ community.name }} Community</strong>{% if show_place %}<small class="crumb-sub">{{ place }}</small>{% endif %}</span></a>
       <div class="topright">
         {% if c.demo %}<span class="demo-pill">FICTIONAL DEMO</span>{% elseif c.map.boundary_status == 'pending_review' %}<span class="demo-pill warn" title="House listings open after the organizer approves the boundary">SETUP IN REVIEW</span>{% endif %}
-        <span class="event-pill">🎃 {{ event_badge(c.event.date) }}</span>
+        <a class="event-pill" href="/about" title="Event date, hours and reminders">🎃 {{ event_badge(c.event.date) }}</a>
+        <button type="button" class="top-icon" data-appearance aria-haspopup="dialog" aria-controls="appearanceDialog" aria-label="Appearance and accessibility" title="Appearance and accessibility"><span aria-hidden="true">🎨</span></button>
         <a class="top-add" href="/#list-my-house" data-action="register">+ List your home</a>
       </div>
     </header>
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a><span>No ads · no tracking</span></footer>
+    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · No tracking</span><a href="/changelog" data-whats-new>{{ community.name }} Halloween v{{ app_version }} · What’s new</a>{% block footer_credit %}{% endblock %}</footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">
@@ -79,6 +83,20 @@
   {% include 'partials/_source_links.html.twig' %}
 </dialog>
 <script type="module" src="{{ asset_path('js/whatsnew.js') }}"></script>
+<dialog class="whats-new appearance" id="appearanceDialog" aria-labelledby="appearanceTitle">
+  <button type="button" class="close-modal" data-appearance-close aria-label="Close">×</button>
+  <div class="eyebrow">🎨 Make it comfortable</div>
+  <h2 id="appearanceTitle">Appearance</h2>
+  <div class="seg" role="group" aria-label="Colour theme"><button type="button" data-pref="theme" data-value="auto">🌓 Auto</button><button type="button" data-pref="theme" data-value="light">☀️ Light</button><button type="button" data-pref="theme" data-value="dark">🌙 Dark</button></div>
+  <p class="form-caption">Auto follows your phone or computer’s setting.</p>
+  <h3 class="pref-heading">Accessibility</h3>
+  <label class="pref-row"><span><b>Larger text</b><small>Bigger words and buttons across the site.</small></span><input type="checkbox" data-pref="text" data-value="large"></label>
+  <label class="pref-row"><span><b>More contrast</b><small>Darker text and stronger outlines.</small></span><input type="checkbox" data-pref="contrast" data-value="more"></label>
+  <label class="pref-row"><span><b>Reduce motion</b><small>No smooth scrolling or animated map moves.</small></span><input type="checkbox" data-pref="motion" data-value="reduce"></label>
+  <p class="form-caption">Saved on this device only. Your device’s own accessibility settings are always respected too.</p>
+  <div class="modal-actions"><button type="button" class="secondary" data-appearance-reset>Reset</button><button type="button" class="primary" data-appearance-close>Done</button></div>
+</dialog>
+<script type="module" src="{{ asset_path('js/appearance.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

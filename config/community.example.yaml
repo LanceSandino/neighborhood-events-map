@@ -17,6 +17,7 @@ community:
   access: unspecified               # public | gated_open | gated_guests | private | unspecified
   about: ""                         # About page text; a blank line starts a new paragraph
   links: []                         # e.g. [{ label: "Neighborhood Facebook group", url: "https://www.facebook.com/groups/…" }]
+  reminders: []                     # your own trick-or-treat reminders (one line each, up to 12); empty = built-in list
 event:
   date: "2026-10-31"
   starts_at: "17:00"
@@ -29,6 +30,7 @@ branding:
   headline: "Little ghosts."
   headline_accent: "Big adventures."
   intro: "Find the treats, skip the scares, and plan a route that feels right for you and your crew—one sweet stop at a time."
+  show_locality: false              # true: show "City, ST" (community.locality/region) under the name
 map:
   # A real, reviewed GeoJSON boundary (Polygon/MultiPolygon/FeatureCollection, [longitude, latitude]).
   # Never trace coordinates from a screenshot. Leave null and draw it in /admin/community/map instead.

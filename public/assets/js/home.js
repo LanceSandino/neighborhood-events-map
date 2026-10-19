@@ -10,7 +10,7 @@ import { createStore } from './lib/store.js';
 import { DEFAULT_FILTERS, matches, activeFilterCount } from './lib/filters.js';
 import { nowInZone, time12 } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
-import { planStops, applyOrder, moveStop } from './lib/route.js';
+import { planStops, applyOrder, moveStop, suggestNearby } from './lib/route.js';
 import { initModals, openModal, closeModal, toast } from './lib/modal.js';
 import { initRegistration, openRegistration, openDispute } from './register.js';
 
@@ -28,6 +28,7 @@ let routeNumbers = new Map();
 let currentPlan = [];
 let manualOrder = false;
 let here = null; // the visitor's location for "start from my location": memory only, never stored or sent
+let locating = false;
 
 const $ = (sel) => document.querySelector(sel);
 const ctx = () => {
@@ -39,6 +40,8 @@ const visible = () => homes.filter((h) => matches(h, filters, ctx()));
 const isOpen = (h) => h.status === 'active';
 let showClosed = false;
 const zoneLayers = new Map();
+/** The device setting, or "Reduce motion" chosen in Appearance. */
+const reducedMotion = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------------- Map ---------------- */
 let map = null;
@@ -74,7 +77,7 @@ function highlightZone(key, { fit = true } = {}) {
   const selected = key && key !== 'all' && zoneLayers.has(key) ? key : null;
   for (const { zone, layer } of zoneLayers.values()) layer.setStyle(zoneStyle(zone, selected));
   if (!fit) return;
-  if (selected) map.fitBounds(zoneLayers.get(selected).layer.getBounds(), { padding: [30, 30], animate: !matchMedia('(prefers-reduced-motion: reduce)').matches });
+  if (selected) map.fitBounds(zoneLayers.get(selected).layer.getBounds(), { padding: [30, 30], animate: !reducedMotion() });
   else fitAll();
 }
 
@@ -122,6 +125,9 @@ function render() {
     ? open.map(card).join('') + (open.length ? '' : '<li class="empty">No matching homes are handing out right now.</li>') + toggle + (showClosed ? closed.map(card).join('') : '')
     : `<li class="empty">${homes.length ? 'No homes match these filters. Try a different area or time.' : 'No homes are listed yet. Residents can add theirs with “List your home”.'}</li>`;
   $('#listCount').textContent = `${open.length} showing`;
+  const view = store.get().view === 'compact' ? 'compact' : 'cards';
+  $('#homeCards').classList.toggle('compact', view === 'compact');
+  for (const b of document.querySelectorAll('[data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
   const count = activeFilterCount({ ...filters, q: '' });
   $('#filterCount').textContent = String(count);
   $('#filterCount').classList.toggle('hide', count === 0);
@@ -152,14 +158,14 @@ function selectHome(id, { pan = true } = {}) {
   } else {
     panel.innerHTML = selectedHtml(h, ctx(), store.get().saved.includes(h.id));
     panel.classList.add('open');
-    if (map && pan) map.panTo([h.lat, h.lon], { animate: !matchMedia('(prefers-reduced-motion: reduce)').matches });
+    if (map && pan) map.panTo([h.lat, h.lon], { animate: !reducedMotion() });
     const card = document.querySelector(`.home-card[data-id="${h.id}"]`);
     if (card && card.scrollIntoView && innerWidth > 660) card.scrollIntoView({ block: 'nearest' });
     // Phones show the map above the list: bring the map (and the preview on it) into view.
     if (innerWidth <= 660 && pan) {
       const pane = $('#mapPane');
       const r = pane.getBoundingClientRect();
-      if (r.top < 0 || r.bottom > innerHeight) pane.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      if (r.top < 0 || r.bottom > innerHeight) pane.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
     }
   }
   render();
@@ -197,41 +203,58 @@ function shareLink({ withRoute = true } = {}) {
 /* ---------------- Route (suggested stop order) ---------------- */
 /** Builds the stop list (suggested order, or the visitor's own order) and shows it; opens the sheet unless it is open. */
 function showRoute({ open = true } = {}) {
-  const saved = store.get().saved;
+  const { saved, routeAll } = store.get();
+  const skippedIds = new Set(store.get().skipped);
   const vis = visible();
   const fromLink = shared.stops ? homes.filter((h) => shared.stops.includes(h.id)) : null;
-  const pool = fromLink && fromLink.length ? fromLink : (saved.length ? homes.filter((h) => saved.includes(h.id)) : vis);
-  // Homes that are paused, out of candy or done for the night never go on a route.
-  const chosen = pool.filter(isOpen);
-  const skipped = pool.length - chosen.length;
+  const linked = Boolean(fromLink && fromLink.length);
+  // Saved homes, or (no favourites, or "All matching" chosen) every home matching the filters.
+  const useSaved = !linked && saved.length > 0 && !routeAll;
+  const pool = linked ? fromLink : (useSaved ? homes.filter((h) => saved.includes(h.id)) : vis);
+  // Homes that are paused, out of candy or done for the night never go on a route; skipped ones neither.
+  const handingOut = pool.filter(isOpen);
+  const chosen = handingOut.filter((h) => !skippedIds.has(h.id));
+  const skipped = pool.length - handingOut.length;
+  const userSkipped = handingOut.length - chosen.length;
   const startSel = $('#routeStart');
   const pref = (fromLink && shared.start) || store.get().start || '';
   const startId = Number(pref) || null;
   startSel.innerHTML = '<option value="">The first stop in each area</option>'
     + ('geolocation' in navigator && window.isSecureContext ? `<option value="here" ${pref === 'here' ? 'selected' : ''}>📍 My current location</option>` : '')
     + chosen.map((h) => `<option value="${h.id}" ${h.id === startId ? 'selected' : ''}>${esc(h.address)}</option>`).join('');
+  // "My current location" is remembered as a choice, but the position never is: ask for it again (once).
+  if (pref === 'here' && !here && !locating) startFromHere();
   const start = pref === 'here' && here ? { id: null, lat: here.lat, lon: here.lon } : chosen.find((h) => h.id === startId) || null;
   const order = fromLink && fromLink.length ? (shared.order ? shared.stops : null) : store.get().order;
   manualOrder = Boolean(order && order.length);
   currentPlan = applyOrder(planStops(chosen, { groups: C.routing.groups, zonesEnabled: C.zones.length > 0, start }), order);
-  $('#routeSub').textContent = (fromLink && fromLink.length
+  $('#routeSub').textContent = (linked
     ? 'A stop list someone shared with you. Save the ones you like with ♡.'
-    : saved.length
+    : useSaved
     ? `Your saved stops, in ${manualOrder ? 'your own' : 'a suggested'} order. Separate areas are listed as separate trips.`
-    : 'Homes matching your filters (save favorites ♡ to choose your own). Separate areas are listed as separate trips.')
-    + (skipped ? ` ${skipped} ${skipped === 1 ? 'home is' : 'homes are'} left out because ${skipped === 1 ? 'it is' : 'they are'} not handing out right now.` : '');
+    : `Homes matching your filters${saved.length ? '' : ' (save favorites ♡ to choose your own)'}. Skip any you don’t want with ✕. Separate areas are listed as separate trips.`)
+    + (skipped ? ` ${skipped} ${skipped === 1 ? 'home is' : 'homes are'} left out because ${skipped === 1 ? 'it is' : 'they are'} not handing out right now.` : '')
+    + (pref === 'here' && !here ? ' 📍 Finding your location…' : '');
   let n = 0;
   routeNumbers = new Map();
   const move = (h, i, last, dir) => `<button type="button" class="move" data-move="${dir}" data-id="${h.id}" aria-label="Move ${esc(h.address)} ${dir < 0 ? 'earlier' : 'later'}" ${(dir < 0 ? i === 0 : i === last) ? 'disabled' : ''}>${dir < 0 ? '↑' : '↓'}</button>`;
-  $('#routeItems').innerHTML = currentPlan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
+  const source = !linked && saved.length
+    ? `<div class="route-source" role="group" aria-label="Stops to include"><button type="button" data-route-all="0" aria-pressed="${useSaved}">🧡 Saved (${saved.length})</button><button type="button" data-route-all="1" aria-pressed="${!useSaved}">All matching (${vis.filter(isOpen).length})</button></div>`
+    : '';
+  const ideas = useSaved && chosen.length
+    ? suggestNearby(chosen, vis.filter((h) => isOpen(h) && !skippedIds.has(h.id)), { groups: C.routing.groups, zonesEnabled: C.zones.length > 0 })
+    : [];
+  const extras = (ideas.length ? `<div class="route-suggest"><h3 class="route-group-title">Nearby, not on your list</h3><ul>${ideas.map(({ home: h, meters }) => `<li><div class="route-text"><b>${esc(h.address)}</b><p>About ${Math.max(10, Math.round(meters / 10) * 10)} m from a stop · ${time12(h.start)}–${time12(h.end)}</p></div><button type="button" class="secondary add-stop" data-add-stop="${h.id}" aria-label="Add ${esc(h.address)} to my stops">+ Add</button></li>`).join('')}</ul></div>` : '')
+    + (userSkipped ? `<p class="form-caption route-order">${userSkipped} skipped. <button type="button" class="link-button" data-unskip>Bring them back</button></p>` : '');
+  $('#routeItems').innerHTML = source + (currentPlan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
     + currentPlan.map((g, gi) => {
     const label = g.zones.length ? g.zones.map((z) => zoneLabels[z] || z).join(', ') : (currentPlan.length > 1 ? `Area ${gi + 1}` : '');
     return `${label ? `<h3 class="route-group-title">${currentPlan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
-      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div>${g.stops.length > 1 ? `<span class="route-move">${move(h, i, g.stops.length - 1, -1)}${move(h, i, g.stops.length - 1, 1)}</span>` : ''}</li>`; }).join('')}</ol>
+      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${h.low_noise ? ' · Gentle' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · Intense scares' : ''}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
       ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
       ${C.routing.provider && g.stops.length > 1 ? `<button type="button" class="secondary" data-provider-path="${gi}">Show walking path for this trip</button>` : ''}`;
   }).join('') + (currentPlan.length > 1 ? '<div class="notice">🚧 These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>' : '')
-    : '<div class="empty">No stops yet. Save some homes ♡ or change your filters.</div>';
+    : '<div class="empty">No stops yet. Save some homes ♡ or change your filters.</div>') + extras;
   $('#routeLink').value = shareLink();
   render();
   if (open && !$('#routeModal').classList.contains('open')) openModal('routeModal');
@@ -249,14 +272,16 @@ function reorder(id, delta) {
 
 /** "Start from my location": asks for the position once; it stays in memory on this device. */
 function startFromHere() {
-  if (!navigator.geolocation) return;
+  if (!navigator.geolocation || !window.isSecureContext) { store.set({ start: '' }); return; }
+  locating = true;
+  const done = () => { locating = false; if ($('#routeModal').classList.contains('open')) showRoute({ open: false }); };
   navigator.geolocation.getCurrentPosition((pos) => {
     here = { lat: pos.coords.latitude, lon: pos.coords.longitude };
     showMe();
-    showRoute({ open: false });
+    done();
   }, () => {
     store.set({ start: '' });
-    showRoute({ open: false });
+    done();
     toast('Could not get your location. Choose a starting home instead.');
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
@@ -314,7 +339,7 @@ function showRouteOnMap() {
     const fromHere = $('#routeStart').value === 'here' && here;
     if (fromHere) showMe();
     map.fitBounds([...stops.map((h) => [h.lat, h.lon]), ...(fromHere ? [[here.lat, here.lon]] : [])], { padding: [40, 40], maxZoom: 18 });
-    if (innerWidth <= 660) $('#mapPane').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    if (innerWidth <= 660) $('#mapPane').scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
   }
 }
 
@@ -337,7 +362,7 @@ function locate() {
 /* ---------------- Wiring ---------------- */
 function actions(action) {
   switch (action) {
-    case 'explore': document.getElementById('explore').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return true;
+    case 'explore': document.getElementById('explore').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth' }); return true;
     case 'route': showRoute(); return true;
     case 'register': openRegistration(); return true;
     case 'info': openModal('infoModal'); return true;
@@ -374,6 +399,8 @@ function bind() {
     }
     if (e.target.closest('[data-close-selected]')) { selectHome(null); return; }
     if (e.target.closest('#btnShowClosed')) { showClosed = !showClosed; render(); return; }
+    const viewBtn = e.target.closest('[data-view]');
+    if (viewBtn) { store.set({ view: viewBtn.dataset.view }); render(); return; }
     const card = e.target.closest('.home-card[data-id]');
     if (card) selectHome(Number(card.dataset.id));
   });
@@ -414,11 +441,18 @@ function bind() {
     // A new start means a new suggested order.
     shared.start = null; shared.order = false;
     store.set({ start: e.target.value, order: [] });
-    if (e.target.value === 'here' && !here) startFromHere(); else showRoute({ open: false });
+    showRoute({ open: false }); // asks for the location when "My current location" is chosen
   });
   $('#routeItems').addEventListener('click', (e) => {
     const b = e.target.closest('[data-move]');
     if (b) { reorder(Number(b.dataset.id), Number(b.dataset.move)); return; }
+    const skip = e.target.closest('[data-skip]');
+    if (skip) { store.set({ skipped: [...new Set([...store.get().skipped, Number(skip.dataset.skip)])] }); showRoute({ open: false }); $('#routeStart').focus(); return; }
+    if (e.target.closest('[data-unskip]')) { store.set({ skipped: [] }); showRoute({ open: false }); return; }
+    const add = e.target.closest('[data-add-stop]');
+    if (add) { store.toggleSaved(Number(add.dataset.addStop)); showRoute({ open: false }); toast('Added to your stops.'); return; }
+    const src = e.target.closest('[data-route-all]');
+    if (src) { store.set({ routeAll: src.dataset.routeAll === '1' }); showRoute({ open: false }); return; }
     if (e.target.closest('#btnResetOrder')) {
       if (shared.stops) shared.order = false; else store.set({ order: [] });
       showRoute({ open: false });

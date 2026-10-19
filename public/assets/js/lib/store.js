@@ -1,15 +1,16 @@
 /**
  * @module assets/js/lib/store
- * @description Browser-only preferences (filters, saved homes, chosen start, own stop order) namespaced by
+ * @description Browser-only preferences (filters, saved homes, chosen start, own stop order, skipped stops) namespaced by
  *     community and season year. Nothing here is sent to the server; GPS is never stored.
  */
 export function createStore(communityId, year, storage = globalThis.localStorage) {
   const key = `nhm:${communityId}:${year}`;
-  const defaults = { saved: [], filters: {}, start: '', order: [] };
+  const defaults = { saved: [], filters: {}, start: '', order: [], skipped: [], routeAll: false, view: 'cards' };
   let state;
   try { state = { ...defaults, ...JSON.parse(storage.getItem(key) || '{}') }; } catch { state = { ...defaults }; }
   if (!Array.isArray(state.saved)) state.saved = [];
   if (!Array.isArray(state.order)) state.order = [];
+  if (!Array.isArray(state.skipped)) state.skipped = [];
   return {
     get: () => state,
     set(patch) {

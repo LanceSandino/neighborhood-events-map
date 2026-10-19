@@ -69,6 +69,28 @@ final class LegalPagesTest extends AppTestCase
         self::assertStringContainsString('Gated — residents and guests', (string) $this->client->getResponse()->getContent(), 'the map\'s info sheet shows access too');
     }
 
+    public function testRemindersDefaultOrOrganizerOwnAndTheDateLinksToAbout(): void
+    {
+        $this->configureCommunity();
+        $html = (string) $this->client->request('GET', '/about')->html();
+        self::assertStringContainsString('id="reminders"', $html);
+        self::assertStringContainsString('Take one piece of candy unless a sign or the resident says otherwise.', $html);
+        self::assertStringContainsString('Look, don’t touch: decorations', $html);
+        self::assertStringContainsString('Watch for cars.', $html);
+        $home = (string) $this->client->request('GET', '/')->html();
+        self::assertStringContainsString('<a class="event-pill" href="/about"', $home, 'the event date opens the About page');
+        self::assertStringContainsString('href="/about#reminders"', $home, 'the map guide links all reminders');
+
+        $this->configureCommunity(['community' => ['reminders' => ['Costume parade at 6 PM by the pool.', '  ']]]);
+        $html = (string) $this->client->request('GET', '/about')->html();
+        self::assertStringContainsString('Costume parade at 6 PM by the pool.', $html);
+        self::assertStringNotContainsString('Watch for cars.', $html, 'the organizer list replaces the defaults');
+
+        $this->expectException(\App\Community\ConfigException::class);
+        $this->expectExceptionMessage('community.reminders can have at most 12 lines.');
+        $this->configureCommunity(['community' => ['reminders' => array_fill(0, 13, 'Be nice.')]]);
+    }
+
     public function testPagesStillRenderForSettingsSavedBeforeTheAboutFieldsExisted(): void
     {
         $this->configureCommunity();

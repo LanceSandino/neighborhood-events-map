@@ -236,4 +236,26 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "v0.4.0-beta.5"
   author: "Lance Sandino"
   timestamp: "2026-10-19T08:00:00Z"
+
+- id: CU-20261019-11
+  type: feature
+  title: "Appearance panel with accessibility options; landscape and tablet layout"
+  description: "Header button opens a native dialog: theme Auto/Light/Dark and Larger text (page zoom 1.15 with the Leaflet container counter-zoomed so map hit-testing stays exact), More contrast (same overrides as prefers-contrast) and Reduce motion (CSS plus every scripted scroll/pan). Stored as nhm:appearance on the device; theme-init.js (classic head script, CSP-safe) applies it before paint. Dark tokens apply for system dark unless Light is chosen, or when Dark is chosen; both token blocks are kept identical (unit test); brand text colours follow. Supersedes the system-only decision D-20261019-08. Phones in landscape (max-height 500px) use the rail-less layout with a slim bottom bar, list and map side by side, safe-area padding; tablets get a full-width search row and nowrap action buttons. Version shown once; footer switch removed."
+  impact: low
+  affected_modules: ["public/assets/css/app.css", "public/assets/js/theme-init.js", "public/assets/js/appearance.js", "public/assets/js/home.js", "src/Community/BrandPalette.php", "templates/base.html.twig", "templates/admin/_layout.html.twig", "templates/home/index.html.twig"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs::Appearance panel", "tests/e2e/specs/public.spec.mjs::phone in landscape", "tests/e2e/specs/public.spec.mjs (overflow and targets at 375/430/956x440/768/1180/1440)", "tests/js/lib.test.mjs (dark token blocks identical)", "tests/Unit/Community/BrandPaletteTest.php", "tests/Integration/HeaderBrandingTest.php"]
+  commit_ref: "v0.4.0-beta.5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T08:30:00Z"
+
+- id: CU-20261019-12
+  type: feature
+  title: "Route skip and nearby suggestions; reminders; city under the name; event date links to About"
+  description: "Skipped stop ids (device only) are left out of routes and links, with a restore control; suggestNearby offers up to five open, filter-matching homes in the route's walkable trips within 500 m; a Saved / All matching switch when favourites exist. community.reminders (up to 12 lines; empty = built-in list) on the About page and the map guide. branding.show_locality shows City, ST under the name in the header and rail; logo images keep their transparent background and show in the phone header. The event pill links to /about."
+  impact: low
+  affected_modules: ["public/assets/js/lib/route.js", "public/assets/js/lib/store.js", "public/assets/js/home.js", "src/Community/CommunitySchema.php", "src/Community/CommunityPresenter.php", "templates/", "public/assets/js/admin/community.js", "public/assets/css/app.css"]
+  related_tests: ["tests/js/lib.test.mjs (nearby suggestions)", "tests/e2e/specs/public.spec.mjs::route: skip stops", "tests/Integration/LegalPagesTest.php::testRemindersDefaultOrOrganizerOwnAndTheDateLinksToAbout", "tests/Integration/HeaderBrandingTest.php::testCityUnderTheNameIsAnOption"]
+  commit_ref: "v0.4.0-beta.5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-19T08:45:00Z"
 ```

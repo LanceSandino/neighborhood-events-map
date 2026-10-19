@@ -13,20 +13,37 @@ export function haversine(a, b) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
 
+/** The walkable trip a stop belongs to (an organizer group, its own zone, or one trip without zones). */
+export function tripKey(s, groups, zonesEnabled) {
+  if (!zonesEnabled) return 'all';
+  if (!s.zone) return 'zone-none';
+  const gi = groups.findIndex((g) => g.includes(s.zone));
+  return gi >= 0 ? `group-${gi}` : `zone-${s.zone}`;
+}
+
 export function groupStops(stops, groups, zonesEnabled) {
   const out = new Map();
   for (const s of stops) {
-    let key = 'all';
-    if (zonesEnabled && s.zone) {
-      const gi = groups.findIndex((g) => g.includes(s.zone));
-      key = gi >= 0 ? `group-${gi}` : `zone-${s.zone}`;
-    } else if (zonesEnabled) {
-      key = 'zone-none';
-    }
+    const key = tripKey(s, groups, zonesEnabled);
     if (!out.has(key)) out.set(key, []);
     out.get(key).push(s);
   }
   return out;
+}
+
+/**
+ * Homes worth suggesting next to a route: not already on it, in one of the route's walkable trips, within
+ * `maxMeters` of a stop; nearest first. Never suggests across trips (e.g. over a major road).
+ */
+export function suggestNearby(route, candidates, { groups = [], zonesEnabled = false, maxMeters = 500, limit = 5 } = {}) {
+  const onRoute = new Set(route.map((s) => s.id));
+  const trips = new Set(route.map((s) => tripKey(s, groups, zonesEnabled)));
+  return candidates
+    .filter((h) => !onRoute.has(h.id) && trips.has(tripKey(h, groups, zonesEnabled)))
+    .map((h) => ({ home: h, meters: Math.min(...route.map((s) => haversine(s, h))) }))
+    .filter((x) => x.meters <= maxMeters)
+    .sort((a, b) => a.meters - b.meters)
+    .slice(0, limit);
 }
 
 const pathLength = (p) => p.slice(1).reduce((sum, s, i) => sum + haversine(p[i], s), 0);

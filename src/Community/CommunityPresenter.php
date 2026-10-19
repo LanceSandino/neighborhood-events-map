@@ -19,6 +19,7 @@ final class CommunityPresenter
         private readonly RuntimeConfig $config,
         private readonly RoutingProviderInterface $routing,
         private readonly string $appVersion,
+        private readonly BrandingStore $branding,
     ) {
     }
 
@@ -44,11 +45,12 @@ final class CommunityPresenter
             'configured' => $c->configured,
             // Defaults keep settings saved by older versions valid (fields added later are optional).
             'community' => array_intersect_key($s['community'] + ['about' => '', 'access' => 'unspecified', 'links' => [], 'contact_url' => null, 'gate_notice' => ''],
-                array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links'])),
+                array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links']))
+                + ['reminders' => ($s['community']['reminders'] ?? []) ?: CommunitySchema::DEFAULT_REMINDERS],
             'event' => $s['event'] + ['timezone' => $s['community']['timezone']],
             'branding' => [
-                'logo_url' => null !== $s['branding']['logo'] ? '/branding/'.$s['branding']['logo'] : null,
-            ] + array_intersect_key($s['branding'], array_flip(['brand_emoji', 'primary_color', 'accent_color', 'headline', 'headline_accent', 'intro'])),
+                'logo_url' => $this->branding->url($s['branding']['logo']),
+            ] + array_intersect_key($s['branding'], array_flip(['brand_emoji', 'primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality'])),
             'map' => [
                 'center' => $c->mapCenter(),
                 'zoom' => $s['map']['zoom'],

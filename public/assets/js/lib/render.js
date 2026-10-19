@@ -15,7 +15,7 @@ export function tagsHtml(h) {
   const t = [];
   if (h.candy) t.push(['🍬 Candy', 'candy']);
   if (h.low_noise) t.push(['💚 Low noise', 'quiet']);
-  if (h.nonfood) t.push(['💙 Non-food', 'teal']);
+  if (h.nonfood) t.push(['🪀 Non-food', 'teal']);
   if (h.scare_level === 'intense') t.push(['👻 Intense scares', 'spooky']);
   else if (h.scare_level === 'mild') t.push(['🎃 Mild scares', 'spooky']);
   if (h.jump_scares) t.push(['😱 Jump scares', 'spooky']);
@@ -23,7 +23,11 @@ export function tagsHtml(h) {
   if (h.loud_audio) t.push(['🔊 Loud audio', 'strobe']);
   if (h.adult_drinks) t.push(['🍺 21+', 'drinks']);
   if (h.stroller_friendly) t.push(['👶 Stroller-friendly', 'quiet']);
-  return t.map(([label, cls]) => `<span class="tag ${cls}">${label}</span>`).join('');
+  // Icon and words are separate so the compact list can show icons only (the words stay for screen readers).
+  return t.map(([label, cls]) => {
+    const [icon, ...words] = label.split(' ');
+    return `<span class="tag ${cls}" title="${words.join(' ')}"><span aria-hidden="true">${icon}</span><span class="tag-text"> ${words.join(' ')}</span></span>`;
+  }).join('');
 }
 
 export function metaLine(h, ctx) {
@@ -39,7 +43,7 @@ export function cardHtml(h, ctx, { saved, active }) {
     <div class="card-main">
       <div class="card-line"><b>${esc(h.address)}</b><button type="button" class="save" data-save="${h.id}" aria-pressed="${saved}" aria-label="${saved ? 'Remove from' : 'Save to'} my stops: ${esc(h.address)}">${saved ? '♥' : '♡'}</button></div>
       <div class="card-meta">${metaLine(h, ctx)} ${statusChip}</div>
-      <div class="tags">${tagsHtml(h)}</div>
+      <div class="tags">${tagsHtml(h)}${h.note ? '<span class="tag note-icon" title="Has a note — open the home to read it"><span aria-hidden="true">📝</span><span class="tag-text"> Note</span></span>' : ''}</div>
       ${h.note ? `<p class="card-note">${esc(h.note)}</p>` : ''}
     </div>
   </li>`;

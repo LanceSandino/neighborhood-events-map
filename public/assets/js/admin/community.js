@@ -55,6 +55,7 @@ function render() {
     </div></div>
     <div class="panel"><h2>About page</h2><div class="form-grid">
       ${area('cAbout', 'About the neighborhood and the event', s.community.about, 'Shown on the public About page. Blank lines start a new paragraph. Plain text only.')}
+      ${area('cReminders', 'Trick-or-treat reminders (one per line, up to 12)', (s.community.reminders || []).join('\n'), 'Shown on the About page and in the map guide. Leave empty for the built-in list (porch lights, one candy, don’t touch decorations, watch for cars…).')}
       <div class="field full"><span class="label">Links (e.g. Facebook group, HOA website, event flyer)</span><div id="linkRows">${(s.community.links || []).map(linkRow).join('')}</div>
         <button type="button" class="secondary" id="btnAddLink">+ Add link</button></div>
     </div></div>
@@ -66,6 +67,7 @@ function render() {
     </div><p class="form-caption">Public listings show only homes that opted in for this date. Changing the date to next year hides last season's homes until owners save again.</p></div>
     <div class="panel"><h2>Branding</h2><div class="form-grid">
       ${field('bEmoji', 'Brand emoji', s.branding.brand_emoji, 'maxlength="8"')}
+      <div class="field"><span class="label">Name</span><label class="check-chip"><input type="checkbox" id="bPlace" ${s.branding.show_locality ? 'checked' : ''}> Show city under the name</label></div>
       <div class="field"><span class="label">Logo</span><input type="file" id="bLogo" accept=".svg,.png,.jpg,.jpeg,.webp"> ${s.branding.logo ? `<span class="form-caption">Current: ${esc(s.branding.logo)} <button type="button" class="link-button" id="bLogoRemove">Remove</button></span>` : ''}</div>
       ${field('bPrimary', 'Primary colour', s.branding.primary_color, 'type="color"')}
       ${field('bAccent', 'Accent colour', s.branding.accent_color, 'type="color"')}
@@ -126,11 +128,11 @@ async function save(e) {
   const s = structuredClone(settings);
   Object.assign(s.community, { name: $('#cName').value, subtitle: $('#cSubtitle').value, locality: $('#cLocality').value, region: $('#cRegion').value,
     postal_code: $('#cPostal').value, timezone: $('#cTz').value, gate_notice: $('#cGate').value, contact_url: $('#cContact').value || null,
-    access: $('#cAccess').value, about: $('#cAbout').value,
+    access: $('#cAccess').value, about: $('#cAbout').value, reminders: lines('#cReminders'),
     links: $$('#linkRows .link-row').map((r) => ({ label: $('[data-l=label]', r).value.trim(), url: $('[data-l=url]', r).value.trim() })).filter((l) => l.label || l.url) });
   Object.assign(s.event, { date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
   Object.assign(s.branding, { brand_emoji: $('#bEmoji').value, primary_color: $('#bPrimary').value, accent_color: $('#bAccent').value,
-    headline: $('#bHeadline').value, headline_accent: $('#bHeadlineAccent').value, intro: $('#bIntro').value });
+    headline: $('#bHeadline').value, headline_accent: $('#bHeadlineAccent').value, intro: $('#bIntro').value, show_locality: $('#bPlace').checked });
   Object.assign(s.features, { candy: $('#fCandy').checked, nonfood_treats: $('#fNonfood').checked, adult_refreshments: $('#fAdult').checked,
     sensory_filters: $('#fSensory').checked, optional_zones: $('#fZones').checked, walking_routes: $('#fRoutes').checked });
   s.zones = $$('#zoneRows tr').map((tr) => ({

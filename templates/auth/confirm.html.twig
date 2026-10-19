@@ -14,7 +14,7 @@
         <div class="card-meta">{{ l.start|time12 }}–{{ l.end|time12 }}</div>
         <div class="tags">
           {% if l.candy %}<span class="tag candy">🍬 Candy</span>{% endif %}
-          {% if l.nonfood %}<span class="tag teal">💙 Non-food</span>{% endif %}
+          {% if l.nonfood %}<span class="tag teal">🪀 Non-food</span>{% endif %}
           {% if l.low_noise %}<span class="tag quiet">💚 Low noise</span>{% endif %}
           {% if l.scare_level == 'intense' %}<span class="tag spooky">👻 Intense scares</span>{% elseif l.scare_level == 'mild' %}<span class="tag spooky">🎃 Mild scares</span>{% endif %}
           {% if l.jump_scares %}<span class="tag spooky">😱 Jump scares</span>{% endif %}

@@ -20,7 +20,7 @@ final class BrandPalette
     public static function css(string $primary, string $accent): string
     {
         return sprintf(
-            ":root{--brand:%s;--brand-accent:%s;--brand-ink:%s;--brand-text:%s}\n@media (prefers-color-scheme: dark){:root{--brand-text:%s}}\n",
+            ":root{--brand:%s;--brand-accent:%s;--brand-ink:%s;--brand-text:%s}\n@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){--brand-text:%s}}\n:root[data-theme=\"dark\"]{--brand-text:%5\$s}\n",
             $primary, $accent, self::ink($primary), self::textOn($primary, self::LIGHT_BG), self::textOn($primary, self::DARK_SURFACE),
         );
     }

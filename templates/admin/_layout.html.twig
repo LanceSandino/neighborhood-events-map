@@ -8,6 +8,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f7f4">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#15141d">
+  <script src="{{ asset_path('js/theme-init.js') }}"></script>
   <meta name="csrf-token" content="{{ csrf_token('nhm') }}">
   <title>{{ pages[page] }} · Organizer · {{ c.community.name }}</title>
   <link rel="icon" href="{{ c.branding.logo_url ?? '/assets/img/favicon.svg' }}">

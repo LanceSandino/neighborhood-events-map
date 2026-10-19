@@ -22,6 +22,19 @@ final class CommunitySchema
     public const ACCESS = ['unspecified', 'public', 'gated_open', 'gated_guests', 'private'];
     /** active: shown and listable; coming_soon: drawn as "coming soon", not listable; hidden: not shown at all. */
     public const ZONE_STATUS = ['active', 'coming_soon', 'hidden'];
+    /** Shown on the About page and in the map's guide when an organizer sets no reminders of their own. */
+    public const DEFAULT_REMINDERS = [
+        '💡 Visit homes with a porch light on or someone outside; skip dark houses.',
+        '🍬 Take one piece of candy unless a sign or the resident says otherwise.',
+        '🎃 Look, don’t touch: decorations, props and yards belong to your neighbors.',
+        '🚗 Watch for cars. Cross at corners or marked crossings, never between parked cars.',
+        '🚶 Stay on sidewalks and driveways; don’t cut across lawns or gardens.',
+        '🔦 Carry a flashlight or glow stick and wear something reflective after dark.',
+        '👀 Little ones stay with a grown-up; older kids stay in a group and check in.',
+        '🥜 Check treats before eating, especially for allergies. A teal pumpkin means non-food treats.',
+        '🐶 Some homes have pets: wait at the door and never open gates.',
+        '🙏 Say thank you, be patient with little ones, and be kind to anyone with sensory needs or who isn’t taking part.',
+    ];
 
     public const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     public const DEFAULT_TILE_ATTRIBUTION = '© OpenStreetMap contributors';
@@ -183,6 +196,8 @@ final class CommunitySchema
             }
         }
 
+        $reminders = self::reminders($c['reminders'] ?? [], $e);
+
         if ([] !== $e) {
             throw new ConfigException($e);
         }
@@ -203,6 +218,7 @@ final class CommunitySchema
                 'about' => self::paragraphs($c['about'] ?? '', 1500),
                 'access' => $access,
                 'links' => $links,
+                'reminders' => $reminders,
             ],
             'event' => ['date' => $date, 'starts_at' => $start, 'ends_at' => $end],
             'branding' => [
@@ -213,6 +229,8 @@ final class CommunitySchema
                 'headline' => self::text($b['headline'] ?? 'Little ghosts.', 40),
                 'headline_accent' => self::text($b['headline_accent'] ?? 'Big adventures.', 40),
                 'intro' => self::text($b['intro'] ?? 'Find the treats, skip the scares, and plan a route that feels right for you and your crew—one sweet stop at a time.', 280),
+                // Show "City, ST" (community.locality/region) under the community name.
+                'show_locality' => (bool) ($b['show_locality'] ?? false),
             ],
             'map' => [
                 'center' => $center,
@@ -254,6 +272,29 @@ final class CommunitySchema
     }
 
     /** Free text that keeps paragraph breaks (other control characters become spaces). */
+    /**
+     * Organizer's own trick-or-treat reminders (one short line each, at most 12); empty means the defaults.
+     *
+     * @param list<string> $e
+     *
+     * @return list<string>
+     */
+    private static function reminders(mixed $v, array &$e): array
+    {
+        $out = [];
+        foreach (self::arr($v) as $line) {
+            $line = self::text($line, 200);
+            if ('' !== $line) {
+                $out[] = $line;
+            }
+        }
+        if (\count($out) > 12) {
+            $e[] = 'community.reminders can have at most 12 lines.';
+        }
+
+        return \array_slice($out, 0, 12);
+    }
+
     private static function paragraphs(mixed $v, int $max): string
     {
         $s = str_replace(["\r\n", "\r"], "\n", (string) (\is_scalar($v) ? $v : ''));

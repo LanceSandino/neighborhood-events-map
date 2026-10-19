@@ -5,6 +5,7 @@
 {% set zones = c.zones %}
 {% set zs = zone_summary(zones) %}
 {% block styles %}<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">{% endblock %}
+{% block footer_credit %}<span>Map data © OpenStreetMap contributors</span>{% endblock %}
 {% block body %}
 <section class="intro">
   <div>
@@ -46,7 +47,7 @@
     <button type="button" class="mini-filter" data-filter="noLoud" aria-pressed="false"><span class="fi" aria-hidden="true">🔊</span>No loud audio</button>
     <button type="button" class="mini-filter" data-filter="noIntense" aria-pressed="false"><span class="fi" aria-hidden="true">🎭</span>No intense scares</button>
     {% endif %}
-    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false"><span class="fi" aria-hidden="true">💙</span>Non-food treats</button>{% endif %}
+    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false"><span class="fi" aria-hidden="true">🪀</span>Non-food treats</button>{% endif %}
     {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false"><span class="fi" aria-hidden="true">🍺</span>21+ refreshments</button>{% endif %}
     <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false"><span class="fi" aria-hidden="true">👶</span>Stroller-friendly</button>
     <button type="button" class="mini-filter" data-filter="saved" aria-pressed="false"><span class="fi" aria-hidden="true">🧡</span>Saved only</button>
@@ -61,7 +62,7 @@
   </div>
   <div class="workarea">
     <div class="list-pane">
-      <div class="list-head"><h2>🍭 Treat stops nearby</h2><span id="listCount" aria-live="polite">{{ homes|length }} showing</span></div>
+      <div class="list-head"><h2>🍭 Treat stops nearby</h2><div class="list-tools"><span id="listCount" aria-live="polite">{{ homes|length }} showing</span><div class="view-toggle" role="group" aria-label="List layout"><button type="button" data-view="cards" aria-pressed="true" aria-label="Cards" title="Cards">▦</button><button type="button" data-view="compact" aria-pressed="false" aria-label="Compact list" title="Compact list">☰</button></div></div></div>
       <div class="list-sub" id="listSub">{% if homes|length == 0 %}No homes have listed yet — check back soon!{% else %}Self-reported by residents · tap a card to see it on the map{% endif %}</div>
       <ul class="cards" id="homeCards" aria-label="Participating homes">
         {% for home in homes %}{% include 'home/_card.html.twig' with {home: home, zones: zones} only %}{% else %}<li class="empty">No homes are listed yet. Residents can add theirs with “List your home”.</li>{% endfor %}
@@ -92,7 +93,6 @@
   <div class="bottom-actions"><a class="secondary" href="#list-my-house" data-action="register">🏠 List your home</a><button type="button" class="route-btn" data-action="route">🧭 Build my route →</button></div>
 </div>
 <p class="disclaimer">Listings, hours and sensory details are self-reported by residents and may change. Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{% else %}; this site does not grant access to gated areas{% endif %}.</p>
-<p class="footer-version">{{ c.community.name }} Halloween · v{{ app_version }} · Map data © OpenStreetMap contributors</p>
 <script type="application/json" id="boot">{{ boot|boot_json }}</script>
 {% endblock %}
 

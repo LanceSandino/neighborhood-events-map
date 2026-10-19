@@ -57,6 +57,14 @@ final class BrandingStore
         return $name;
     }
 
+    /** Public URL of a stored logo with a content version, so a replaced logo is never served from a cache. */
+    public function url(?string $name): ?string
+    {
+        $file = null !== $name ? $this->find($name) : null;
+
+        return null === $file ? null : '/branding/'.$name.'?v='.substr((string) hash_file('sha256', $file['path']), 0, 10);
+    }
+
     /** @return array{path:string, type:string}|null */
     public function find(string $name): ?array
     {

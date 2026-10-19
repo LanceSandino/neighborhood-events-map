@@ -1,9 +1,10 @@
 // Unit tests for the DOM-free browser libraries (filters, time, route order, store).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { matches, DEFAULT_FILTERS, isLowSensory, activeFilterCount } from '../../public/assets/js/lib/filters.js';
 import { statusOf, time12, nowInZone } from '../../public/assets/js/lib/time.js';
-import { planStops, orderGroup, haversine, applyOrder, moveStop } from '../../public/assets/js/lib/route.js';
+import { planStops, orderGroup, haversine, applyOrder, moveStop, suggestNearby } from '../../public/assets/js/lib/route.js';
 import { createStore } from '../../public/assets/js/lib/store.js';
 import { zoneStyle } from '../../public/assets/js/lib/render.js';
 
@@ -132,4 +133,30 @@ test('a visitor can reorder stops within a trip; new stops keep their suggested 
   const replanned = [{ key: 'a', zones: [], stops: [{ id: 2 }, { id: 9 }, { id: 1 }, { id: 3 }] }, { key: 'b', zones: [], stops: [{ id: 8 }, { id: 7 }] }];
   assert.deepEqual(applyOrder(replanned, order).map((g) => g.stops.map((s) => s.id)), [[1, 3, 2, 9], [7, 8]]);
   assert.equal(applyOrder(replanned, null), replanned);
+});
+
+test('a chosen Dark appearance uses exactly the same tokens as the system dark appearance', () => {
+  const css = readFileSync(new URL('../../public/assets/css/app.css', import.meta.url), 'utf8');
+  const system = css.match(/@media \(prefers-color-scheme: dark\) \{\n {2}:root:not\(\[data-theme="light"\]\) \{\n([\s\S]*?)\n {2}\}\n\}/);
+  const chosen = css.match(/\n:root\[data-theme="dark"\] \{\n([\s\S]*?)\n\}/);
+  assert.ok(system && chosen, 'both dark blocks exist');
+  const norm = (s) => s.split('\n').map((l) => l.trim()).filter(Boolean).join('\n');
+  assert.equal(norm(chosen[1]), norm(system[1]));
+  assert.match(system[1], /color-scheme: dark/);
+});
+
+test('nearby suggestions stay in the route\'s walkable trips, nearest first, within the distance', () => {
+  const groups = [['north'], ['south']];
+  const route = [{ id: 1, zone: 'north', lat: 40.0500, lon: -75.0 }];
+  const candidates = [
+    { id: 2, zone: 'north', lat: 40.0510, lon: -75.0 }, // ~111 m
+    { id: 3, zone: 'north', lat: 40.0503, lon: -75.0 }, // ~33 m
+    { id: 4, zone: 'south', lat: 40.0501, lon: -75.0 }, // close but another trip (across a road)
+    { id: 5, zone: 'north', lat: 40.0600, lon: -75.0 }, // ~1.1 km
+    { id: 1, zone: 'north', lat: 40.0500, lon: -75.0 }, // already on the route
+  ];
+  const s = suggestNearby(route, candidates, { groups, zonesEnabled: true });
+  assert.deepEqual(s.map((x) => x.home.id), [3, 2]);
+  assert.ok(s[0].meters > 30 && s[0].meters < 36);
+  assert.deepEqual(suggestNearby(route, candidates, { zonesEnabled: false, limit: 1 }).map((x) => x.home.id), [4], 'without zones everything is one trip');
 });
