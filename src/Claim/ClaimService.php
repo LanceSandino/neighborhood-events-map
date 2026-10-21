@@ -112,7 +112,7 @@ final class ClaimService
                 ? ['address_id' => (int) $intent['address_id']]
                 : json_decode((string) $intent['candidate'], true, 16, \JSON_THROW_ON_ERROR);
 
-            return $this->claimInTransaction($db, $input, $userId, $draft, $community, 'email-link');
+            return $this->claimInTransaction($db, $input, $userId, $draft, $community, 'email-link', true);
         });
     }
 
@@ -126,24 +126,25 @@ final class ClaimService
     {
         $draft = ListingDraft::fromInput($listingInput, $community);
 
-        return $this->db->transactional(fn (Connection $db) => $this->claimInTransaction($db, $addressInput, $userId, $draft, $community, 'dashboard'));
+        return $this->db->transactional(fn (Connection $db) => $this->claimInTransaction($db, $addressInput, $userId, $draft, $community, 'dashboard', false));
     }
 
     /**
-     * @param array<string,mixed> $input
+     * @param array<string,mixed> $input    the visitor's address input, or the stored intent's (already matched) target
      * @param array<string,mixed> $draft
+     * @param bool                $fromIntent true when completing a claim intent whose registry id was matched when it was prepared
      */
-    private function claimInTransaction(Connection $db, array $input, int $userId, array $draft, CommunityConfig $community, string $source): ClaimOutcome
+    private function claimInTransaction(Connection $db, array $input, int $userId, array $draft, CommunityConfig $community, string $source, bool $fromIntent): ClaimOutcome
     {
         try {
             $this->assertOpen($community);
             // Re-validate eligibility at completion time: boundary/zone config may have changed since the intent.
-            $target = isset($input['address_id'])
+            $target = !$fromIntent ? $this->eligibility->resolve($input, $community) : (isset($input['address_id'])
                 ? $this->eligibility->registryAddress((int) $input['address_id'], $community)
                 : $this->eligibility->selfEntry([
                     'house_number' => $input['house_number'] ?? '', 'street' => $input['street'] ?? '', 'unit' => $input['unit'] ?? null,
                     'lat' => $input['lat'] ?? null, 'lon' => $input['lon'] ?? null, 'zone_key' => $input['zone_key'] ?? null,
-                ], $community);
+                ], $community));
         } catch (ClaimRejectedException $e) {
             if ('already_claimed' !== $e->reason) {
                 return new ClaimOutcome('closed' === $e->reason ? 'closed' : 'rejected', $e->addressId, null, $e->getMessage());
@@ -184,6 +185,10 @@ final class ClaimService
             $this->audit->record($userId, 'user#'.$userId, 'claim.conflict', 'address', (string) $addressId, ['source' => $source]);
 
             return new ClaimOutcome('already_claimed', $addressId, $target['display'], 'This home is already claimed.');
+        }
+        if (null === $target['address_id']) {
+            // The claim is ours now: an existing unreviewed self-entry (released earlier) takes this resident's pin.
+            $this->registry->repinSelfEntry($addressId, $target['zone_key'], $target['lat'], $target['lon']);
         }
         $this->listings->insert($db, $addressId, $community->eventDate(), $draft);
         if ($review && false !== $db->fetchOne('SELECT 1 FROM listings WHERE address_id = ? AND moderation_hidden', [$addressId])) {

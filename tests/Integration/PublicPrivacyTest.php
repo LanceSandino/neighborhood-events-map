@@ -18,9 +18,9 @@ final class PublicPrivacyTest extends AppTestCase
         $a = $this->addAddress('1', 'Pumpkin Ln', 40.004, -75.004, 'west');
         $b = $this->addAddress('3', 'Pumpkin Ln', 40.004, -75.005, 'west');
         $this->addAddress('5', 'Pumpkin Ln', 40.004, -75.006, 'west'); // never claimed
-        $this->confirm($this->requestLink('a@example.test', ['address' => ['address_id' => $a], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('a@example.test', ['address' => $this->byId($a), 'listing' => self::listing()]));
         $this->client->getCookieJar()->clear();
-        $this->confirm($this->requestLink('b@example.test', ['address' => ['address_id' => $b], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('b@example.test', ['address' => $this->byId($b), 'listing' => self::listing()]));
         $this->db()->executeStatement("UPDATE listings SET event_date = '2025-10-31' WHERE address_id = ?", [$b]);
 
         $this->client->request('GET', '/api/homes');

@@ -4,10 +4,12 @@
  Browser (families, residents, organizers)
    │  HTTPS (Cloudflare Tunnel or reverse proxy)
    ▼
- nginx (unprivileged, 127.0.0.1:8087) ── static assets, query-less access log, sets HTTPS/real client IP
-   │ FastCGI
+ nginx (unprivileged, 127.0.0.1:8087) ── static assets, query-less access log, sets HTTPS/real client IP,
+   │                                       refuses percent-encoded paths
+   │ FastCGI over Unix sockets in a volume shared only by these two containers (no TCP port)
    ▼
- PHP-FPM / Symfony 7.4 (www-data)
+ PHP-FPM / Symfony 7.4 (www-data) ── pool "www" for everything; small pool "mail" for the two
+   │                                  email-sending endpoints (they wait out the response floor)
    ├─ Controllers: pages, public API, auth, owner API, organizer API, routes
    ├─ Security: firewall + MagicLinkAuthenticator, IdleSessionSubscriber, CsrfGuardSubscriber, PoW, Throttle
    ├─ Domain: Community (config + versioned geometry), Geo, Address, Listing, Claim, Dispute, Admin, Audit, Routing
@@ -22,6 +24,7 @@
 - **Public pages/APIs** (`/`, `/api/community`, `/api/homes`) are stateless reads of opted-in listings for the configured event date; they never start or touch a session.
 - **Listing a home:** `GET /api/pow` → browser worker → `POST /api/auth/request-link` (PoW, throttles, eligibility, claim intent, email) → email → `GET /auth/confirm` (read-only page) → `POST /auth/confirm` (consume token, upsert user, atomic claim + listing, rotate session) → `/me`.
 - **Protected requests** (`/me`, `/admin`, `/api/me/*`, `/api/admin/*`): firewall loads the session user → `IdleSessionSubscriber` (expire or extend) → CSRF check for writes → controller.
+- **Paths are canonical:** a percent-encoded path is refused before anything runs (nginx with 400, `CanonicalPathSubscriber` with 404), because Symfony routes on the decoded path while some guards read the raw one.
 
 ## Data model
 

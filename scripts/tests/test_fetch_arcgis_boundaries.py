@@ -345,5 +345,20 @@ class HttpJsonTests(unittest.TestCase):
             self.assertEqual(len(queue), 1, pattern)  # not retried
 
 
+class ReviewMapTest(unittest.TestCase):
+    """Audit run-1 lead 19: popups were HTML strings built from ArcGIS attributes (third-party data)."""
+
+    def test_popups_are_text_only_and_cdn_assets_are_pinned(self):
+        evil = "<img src=x onerror=alert(1)>"
+        layers = {"zones": {"type": "FeatureCollection", "features": [
+            {"type": "Feature", "properties": {"label": evil, "source_name": evil, "plat_book": evil}, "geometry": None}]}}
+        page = gis.review_map_html(layers, "Review & <check>", "desc <b>")
+        self.assertNotIn(evil, page)
+        self.assertNotIn("bindPopup('<b>'", page, "no popup is assembled from HTML strings")
+        self.assertIn(".textContent=", page)
+        self.assertIn('integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="', page)
+        self.assertIn('integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="', page)
+        self.assertIn("Review &amp; &lt;check&gt;", page)
+
 if __name__ == "__main__":
     unittest.main()

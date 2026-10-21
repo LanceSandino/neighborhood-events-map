@@ -81,6 +81,12 @@ final class CommunityConfig
         return null;
     }
 
+    /** A zone the organizer has hidden is not public at all (D-20261019-12): no name, no key, no outline. */
+    public function isHiddenZone(?string $key): bool
+    {
+        return null !== $key && 'hidden' === ($this->zone($key)['status'] ?? null);
+    }
+
     /** @return list<string> keys of zones the organizer has hidden from the public */
     public function hiddenZoneKeys(): array
     {

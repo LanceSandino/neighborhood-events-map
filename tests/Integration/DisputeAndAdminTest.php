@@ -22,7 +22,7 @@ final class DisputeAndAdminTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('61', 'Lantern Way', 40.005, -74.994, 'east');
-        $this->confirm($this->requestLink('squatter@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('squatter@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
         $this->client->getCookieJar()->clear();
 
         return $id;
@@ -40,14 +40,14 @@ final class DisputeAndAdminTest extends AppTestCase
     public function testDisputeNeedsPowStoresTicketAndEmailsOrganizerWithoutRevealingOwner(): void
     {
         $id = $this->claimed();
-        $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => 'real@example.test', 'reason' => $this->reason()]);
+        $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => 'real@example.test', 'reason' => $this->reason()]);
         self::assertSame(400, $this->code());
 
-        $short = $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => 'real@example.test', 'reason' => 'too short', 'pow' => $this->solvePow('dispute')]);
+        $short = $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => 'real@example.test', 'reason' => 'too short', 'pow' => $this->solvePow('dispute')]);
         self::assertSame(422, $this->code());
         self::assertArrayHasKey('reason', $short['error']['fields']);
 
-        $r = $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => 'Real@Example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
+        $r = $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => 'Real@Example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
         self::assertSame(201, $this->code(), json_encode($r));
         self::assertSame('D-000001', $r['ticket']);
         self::assertStringNotContainsString('squatter', json_encode($r));
@@ -64,10 +64,10 @@ final class DisputeAndAdminTest extends AppTestCase
     {
         $id = $this->claimed();
         for ($i = 0; $i < 3; ++$i) {
-            $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => "r{$i}@example.test", 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
+            $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => "r{$i}@example.test", 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
             self::assertSame(201, $this->code());
         }
-        $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => 'r9@example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
+        $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => 'r9@example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
         self::assertSame(429, $this->code());
     }
 
@@ -75,14 +75,14 @@ final class DisputeAndAdminTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('63', 'Lantern Way', 40.005, -74.993, 'east');
-        $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => 'r@example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
+        $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => 'r@example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
         self::assertSame(422, $this->code());
     }
 
     public function testOrganizerTransfersHidesResolvesAndEverythingIsAudited(): void
     {
         $id = $this->claimed();
-        $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => 'real@example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
+        $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => 'real@example.test', 'reason' => $this->reason(), 'pow' => $this->solvePow('dispute')]);
         $oldOwner = (int) $this->db()->fetchOne('SELECT user_id FROM claims WHERE address_id = ?', [$id]);
         $csrf = $this->admin();
 

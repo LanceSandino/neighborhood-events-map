@@ -7,6 +7,9 @@ vendor
 var
 backups
 deploy
+# A deployment's private community config and geometry (git-ignored) must never be baked into an image.
+config/community.yaml
+config/*.geojson
 tests/e2e/node_modules
 tests/e2e/test-results
 tests/e2e/playwright-report

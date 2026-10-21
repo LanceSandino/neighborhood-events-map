@@ -66,7 +66,7 @@ final class EligibilityTest extends AppTestCase
         self::assertSame('pending_review', $c['map']['boundary_status']);
         self::assertNull($c['map']['boundary'], 'unapproved outline is not published');
         self::assertNotNull($c['map']['bbox'], 'map can still fit the area');
-        $r = $this->attempt(['address_id' => $id]);
+        $r = $this->attempt($this->byId($id));
         self::assertSame(403, $this->code());
         self::assertSame('closed', $r['error']['code']);
         $this->client->request('GET', '/');
@@ -77,7 +77,7 @@ final class EligibilityTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('2', 'Pumpkin Ln', 40.005, -75.006, 'west');
-        $token = $this->requestLink('late@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]);
+        $token = $this->requestLink('late@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]);
         $this->repo()->revokeBoundaryApproval();
         $this->confirm($token);
         $me = $this->json('GET', '/api/me');

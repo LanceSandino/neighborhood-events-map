@@ -58,3 +58,35 @@ Not findings (verified controls): stored XSS (escaped in Twig, hex-escaped boot 
 | `NGINX_TRUSTED_PROXIES` | empty | Extra reverse-proxy addresses (e.g. a cloudflared container) |
 | `PURGE_INTERVAL_SECONDS` | 3600 | Maintenance purge interval |
 | `registration.max_homes_per_user` (community settings) | 2 | Homes one verified email can manage |
+
+## Follow-up audit — 0.6.0-beta.1 (2026-10-21)
+
+A second, source-only audit (six phases: recon, coverage-led hunters, verifiers, final critic) produced 19 leads and no confirmed findings, because it ran nothing. Each lead was then checked: with a test that failed on the unchanged code in a local stack, and with read-only checks against the first deployment (public GETs, container listeners, row counts; no writes, no sign-in). All 19 were real in the code, and all are fixed with regression tests (`CHANGES.md` CU-20261021-11 to -19).
+
+| # | Lead | How it was confirmed | Fix | Regression test |
+|---|---|---|---|---|
+| 1 | Encoded protected paths (`/api/m%65`) skipped the idle timeout, and the session CSRF token check too | Local: idle session still got `200`; a same-origin PATCH without the token changed a listing. Live: encoded paths routed normally | Encoded paths refused (nginx `400`, app `404`) | `RequestPathHardeningTest` |
+| 2 | `/_internal_%6Cogout` reached the logout listener (cross-site sign-out) | Live: `302` from the logout listener; local: session ended | Same | `RequestPathHardeningTest` |
+| 3 | A home in a hidden zone was readable by id and routable | Local test | `publicHome()` filters hidden zones | `HiddenZonePrivacyTest` |
+| 4 | PHP-FPM listened on `[::]:9000` (FastCGI from the host and the Docker networks) | Live: the host connected to port 9000 on both networks | Unix sockets in a volume only app and nginx mount | `ContainerConfigTest`; live checks on the local stacks |
+| 5 | A released, unreviewed self-entry kept the earlier claimant's pin | Local test (also a misleading "published" reply under review) | The next resident's own pin | `SelfEntryRepinTest` |
+| 6 | `app:user:delete` could not erase someone who only sent a review request | Local test | Erases review requests and pending links without an account | `CommandsTest` |
+| 7 | `"x<victim@…>"@attacker…` passed validation and was delivered to the victim | Reproduced with PHP and Symfony Mime | Plain local parts only; explicit `Address` objects | `EmailNormalizerTest` |
+| 8 | `--revoke` printed "Revoked" while `ORGANIZER_EMAILS` kept the role | Local test | Fails with an explanation | `CommandsTest` |
+| 9 | The response floor could hold every PHP worker (map included) | Design review: one pool of 12, floor ≥ 700 ms | Email endpoints run in their own pool | `ContainerConfigTest` |
+| 10 | With the global budget full, organizers got `202` and others `429` | Local test | Same `429` for everyone; the organizer's link is still sent | `AbuseHardeningTest` |
+| 11 | Walking sequential registry ids mailed the address text to the caller | Local test; applies to the deployment's imported registry | Requests by id must name the house number | `RegistryIdBindingTest` |
+| 12 | Dashboard claims by id returned the address text | Local test | Same | `RegistryIdBindingTest` |
+| 13 | Listing saves were unlimited and each wrote an audit row | Local test | `RL_LISTING_PER_USER` (60/h per account) | `AbuseHardeningTest` |
+| 14 | Throttle rows were kept 48 h whatever their window | Local test | Purged when they leave their own window; expired challenges at expiry | `ProofOfWorkAndThrottleTest` |
+| 15 | nginx limits keyed on the raw `$request_uri` (`/%61pi/…` had no limit) | Live: encoded API paths answered normally | Keys on `$uri`; encoded paths refused | `ContainerConfigTest` |
+| 16 | Refusals named hidden zones and confirmed their keys and outlines | Local test | Hidden zones never named; hidden rows look unknown | `HiddenZonePrivacyTest` |
+| 17 | A crafted share link broke the map on the visitor's device | Node test | Filters type-checked as own keys | `tests/js/lib.test.mjs` |
+| 18 | No global budget for walking-path provider calls | Code (the provider is off on the deployment) | `RL_ROUTE_GLOBAL` (1000/day, cache misses only) | `RoutePlanTest` |
+| 19 | The importer's review page built popups from third-party HTML | Python test | Text-node popups, SRI on the CDN files | `ReviewMapTest` |
+
+Also hardened: the production entrypoint refuses `APP_DEBUG`, `trusted_hosts` matches the host literally (the dots matched any character), `.dockerignore` keeps a deployment's private `config/community.yaml` and GeoJSON out of images, nginx no longer writes refused `/auth/confirm?t=…` request lines to its error log, and Mailpit's local inbox can require a password (`MAILPIT_UI_AUTH`).
+
+*Residuals (accepted):* nginx counts IPv6 clients per address while the app counts per /64 (the app's limits hold); any refusal inside the public boundary marks a point as not listable; a distributed attacker can still fill the email pool, which delays sign-in but no longer the map.
+
+**Input sanitization review (same day).** Every input was checked. Addresses now accept only ASCII letters, digits, spaces and `. , ' - #` and refuse anything else (before, the normalizer silently stripped it: `1<2` became house 12). All free text goes through one cleaner (`Shared/TextInput`: valid UTF-8, NFC, no control or invisible text-reordering characters, length cap). The tile URL template and links are anchored to URL-safe characters, and a claim transfer's `dispute_id` must belong to that home. JSON bodies, ids, enums, times, booleans, emails, tokens, the sign-in return path and uploads were already strict. Output is always escaped as well. Regression tests: `AddressNormalizerTest`, `TextInputTest`, `InputSanitizationTest`.

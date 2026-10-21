@@ -13,8 +13,12 @@ COPY docker/php/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
 COPY docker/php/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
 COPY --chmod=0755 docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
 COPY --chmod=0755 docker/php/healthcheck.sh /usr/local/bin/app-healthcheck
+# PHP-FPM listens only on Unix sockets in /run/php (a volume shared with nginx, whose user is uid/gid 101):
+# www-data joins gid 101 so the sockets can be handed to that group with mode 0660.
+RUN addgroup -S -g 101 fcgi-nginx && addgroup www-data fcgi-nginx \
+ && install -d -o www-data -g fcgi-nginx -m 0750 /run/php
 ENV COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_NO_INTERACTION=1 \
-    FPM_MAX_CHILDREN=12 FPM_START_SERVERS=3 FPM_MIN_SPARE=2 FPM_MAX_SPARE=6
+    FPM_MAX_CHILDREN=12 FPM_START_SERVERS=3 FPM_MIN_SPARE=2 FPM_MAX_SPARE=6 FPM_MAIL_MAX_CHILDREN=4
 WORKDIR /app
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD app-healthcheck
 ENTRYPOINT ["app-entrypoint"]
@@ -56,4 +60,9 @@ COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/nginx/app-fastcgi.conf /etc/nginx/snippets/app-fastcgi.conf
 COPY --chmod=0755 docker/nginx/trusted-proxy.sh /docker-entrypoint.d/30-trusted-proxy.sh
 COPY --from=prod /app/public /app/public
+# Mount point of the PHP-FPM socket volume, same owner and mode as in the app image (whichever image
+# initializes the volume first, PHP can create its sockets and nginx can reach them).
+USER root
+RUN install -d -o 82 -g 101 -m 0750 /run/php
+USER 101
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1

@@ -31,6 +31,7 @@ final class ClaimRaceTest extends AppTestCase
         $dir = sys_get_temp_dir().'/race-'.bin2hex(random_bytes(4));
         mkdir($dir);
         $startAt = microtime(true) + 1.0;
+        $target = $this->byId($addressId); // read before the kernel shuts down and the workers fork
         static::ensureKernelShutdown();
 
         $pids = [];
@@ -47,7 +48,7 @@ final class ClaimRaceTest extends AppTestCase
                     while (microtime(true) < $startAt) {
                         usleep(500);
                     }
-                    $status = $c->get(ClaimService::class)->claimDirect(['address_id' => $addressId], $draft, $userId, $community)->status;
+                    $status = $c->get(ClaimService::class)->claimDirect($target, $draft, $userId, $community)->status;
                 } catch (\Throwable $e) {
                     $status = 'error: '.$e->getMessage();
                 }

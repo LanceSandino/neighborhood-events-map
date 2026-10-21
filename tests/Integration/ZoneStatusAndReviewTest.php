@@ -41,7 +41,7 @@ final class ZoneStatusAndReviewTest extends AppTestCase
         $lookup = $this->json('GET', '/api/addresses/lookup?q=300%20Lan');
         self::assertSame('East side · coming soon', $lookup['results'][0]['zone_label']);
 
-        foreach ([['address_id' => $lookup['results'][0]['id']], ['house_number' => '302', 'street' => 'Lantern Way', 'lat' => 40.0065, 'lon' => -74.9965]] as $address) {
+        foreach ([$this->byId($lookup['results'][0]['id']), ['house_number' => '302', 'street' => 'Lantern Way', 'lat' => 40.0065, 'lon' => -74.9965]] as $address) {
             $r = $this->json('POST', '/api/auth/request-link', ['email' => 'soon@example.test', 'pow' => $this->solvePow('claim'),
                 'claim' => ['address' => $address, 'listing' => self::listing()]]);
             self::assertSame(422, $this->code());
@@ -118,7 +118,7 @@ final class ZoneStatusAndReviewTest extends AppTestCase
         $this->addAddress('200', 'Lantern Way', 40.004, -74.996, 'east');
 
         // A registry address is published straight away; review only applies to new addresses.
-        $this->confirm($this->requestLink('known@example.test', ['address' => ['address_id' => (int) $this->db()->fetchOne("SELECT id FROM eligible_addresses WHERE house_number = '200'")], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('known@example.test', ['address' => $this->byId((int) $this->db()->fetchOne("SELECT id FROM eligible_addresses WHERE house_number = '200'")), 'listing' => self::listing()]));
         $this->client->getCookieJar()->clear();
         $this->confirm($this->requestLink('new@example.test', ['address' => ['house_number' => '104', 'street' => 'Lantern Way', 'lat' => 40.0065, 'lon' => -74.9965], 'listing' => self::listing()]));
         $me = $this->json('GET', '/api/me');

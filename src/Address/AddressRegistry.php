@@ -109,6 +109,19 @@ final class AddressRegistry
         return (int) $id;
     }
 
+    /**
+     * Moves an unreviewed self-entered address to the pin of the resident who has just claimed it (an earlier
+     * claimant's pin is never inherited). Reviewed and imported addresses are never changed here.
+     */
+    public function repinSelfEntry(int $id, ?string $zoneKey, float $lat, float $lon): void
+    {
+        $this->db->executeStatement(
+            "UPDATE eligible_addresses SET latitude = :lat, longitude = :lon, zone_key = :zone, inside_boundary = TRUE, updated_at = :now
+             WHERE id = :id AND source = 'self_entry' AND reviewed_at IS NULL",
+            ['lat' => $lat, 'lon' => $lon, 'zone' => $zoneKey, 'id' => $id, 'now' => $this->clock->now()->format('Y-m-d H:i:s.uP')],
+        );
+    }
+
     /** @param array<string,mixed> $changes subset of display_address, zone_key, latitude, longitude, enabled */
     public function update(int $id, array $changes, bool $insideBoundary): void
     {

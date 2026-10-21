@@ -22,9 +22,9 @@ framework:
 
 when@prod:
     framework:
-        # Only the public hostname (from APP_BASE_URL) and loopback (container healthchecks) are accepted
-        # as Host; anything else gets 400 before routing. Links in emails always use APP_BASE_URL.
-        trusted_hosts: ['^%env(key:host:url:APP_BASE_URL)%$', '^localhost$', '^127\.0\.0\.1$']
+        # Only the public hostname (from APP_BASE_URL, matched literally) and loopback (container healthchecks)
+        # are accepted as Host; anything else gets 400 before routing. Links in emails always use APP_BASE_URL.
+        trusted_hosts: ['^%env(regex_quote:key:host:url:APP_BASE_URL)%$', '^localhost$', '^127\.0\.0\.1$']
 
 when@test:
     framework:

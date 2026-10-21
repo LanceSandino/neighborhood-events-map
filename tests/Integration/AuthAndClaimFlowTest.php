@@ -17,7 +17,7 @@ final class AuthAndClaimFlowTest extends AppTestCase
         $this->configureCommunity();
         $id = $this->addAddress('101', 'Pumpkin Ln', 40.005, -75.005, 'west');
 
-        $token = $this->requestLink('alice@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing(['note' => '<b>Hi</b> & welcome'])]);
+        $token = $this->requestLink('alice@example.test', ['address' => $this->byId($id), 'listing' => self::listing(['note' => '<b>Hi</b> & welcome'])]);
         self::assertSame([], $this->json('GET', '/api/homes')['homes'], 'not published before confirmation');
 
         // GET (link scanners) does not consume or sign in.
@@ -100,11 +100,11 @@ final class AuthAndClaimFlowTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('7', 'Lantern Way', 40.005, -74.995, 'east');
-        $this->confirm($this->requestLink('owner@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('owner@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
         $this->client->getCookieJar()->clear();
 
         $r = $this->json('POST', '/api/auth/request-link', ['email' => 'other@example.test', 'pow' => $this->solvePow('claim'),
-            'claim' => ['address' => ['address_id' => $id], 'listing' => self::listing()]]);
+            'claim' => ['address' => $this->byId($id), 'listing' => self::listing()]]);
         self::assertSame(409, $this->code());
         self::assertSame('already_claimed', $r['error']['code']);
         self::assertSame('This home is already claimed.', $r['error']['message']);
@@ -117,8 +117,8 @@ final class AuthAndClaimFlowTest extends AppTestCase
         $this->configureCommunity();
         $id = $this->addAddress('9', 'Lantern Way', 40.006, -74.995, 'east');
         // Both start before anyone confirms (no reservation).
-        $t1 = $this->requestLink('first@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing(['note' => 'first'])]);
-        $t2 = $this->requestLink('second@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing(['note' => 'second'])]);
+        $t1 = $this->requestLink('first@example.test', ['address' => $this->byId($id), 'listing' => self::listing(['note' => 'first'])]);
+        $t2 = $this->requestLink('second@example.test', ['address' => $this->byId($id), 'listing' => self::listing(['note' => 'second'])]);
         $this->confirm($t1);
         $this->client->getCookieJar()->clear();
         $this->confirm($t2);

@@ -7,7 +7,10 @@ namespace App\Address;
 /**
  * @module Address/AddressNormalizer
  * @description Canonicalizes US-style street addresses (house number, directionals, suffixes,
- *     unit, whitespace/punctuation) into a stable uniqueness key plus a tidy display form.
+ *     unit, whitespace/punctuation) into a stable uniqueness key plus a tidy display form. Addresses
+ *     never need special characters: input with anything but ASCII letters, digits, spaces and
+ *     . , ' - # is refused (never silently stripped), so markup, look-alike letters from other
+ *     scripts and invisible characters cannot reach the registry.
  *
  * @input Free-text address or (house number, street, unit) parts
  * @output array{house_number:string, street:string, unit:?string, normalized:string, display:string}
@@ -28,19 +31,31 @@ final class AddressNormalizer
         'NORTHEAST' => 'NE', 'NORTHWEST' => 'NW', 'SOUTHEAST' => 'SE', 'SOUTHWEST' => 'SW',
     ];
     private const UNIT_WORDS = ['APT', 'APARTMENT', 'UNIT', 'STE', 'SUITE', 'LOT', '#'];
+    /** Everything an address may contain as typed or imported (\z: no trailing newline either). */
+    private const PLAIN = "~^[A-Za-z0-9 .,'#-]*\z~";
+    public const PLAIN_HINT = "Use only letters, numbers, spaces and . , ' - # in an address.";
+
+    /** True when $s uses only the characters an address may contain. */
+    public static function isPlain(string $s): bool
+    {
+        return 1 === preg_match(self::PLAIN, $s);
+    }
 
     /**
      * @return array{house_number:string, street:string, unit:?string, normalized:string, display:string}
      */
     public function parse(string $address): array
     {
+        self::assertPlain($address);
         $clean = $this->clean($address);
         if (!preg_match('~^(\d{1,6}[A-Z]?)\s+(.+)$~', $clean, $m)) {
             throw new InvalidAddressException('Start the address with the house number, e.g. "123 Pumpkin Ln".');
         }
         $unit = null;
         $rest = $m[2];
-        if (preg_match('~^(.*?)\s+(?:'.implode('|', array_map(fn ($w) => preg_quote($w, '~'), self::UNIT_WORDS)).')\s*([A-Z0-9-]{1,8})$~', $rest, $u)) {
+        // "Apt 4", "Apt #4" and "#4" all name unit 4.
+        $words = implode('|', array_map(fn ($w) => preg_quote($w, '~'), array_diff(self::UNIT_WORDS, ['#'])));
+        if (preg_match('~^(.*?)\s+(?:(?:'.$words.')(?:\s*#)?|#)\s*([A-Z0-9-]{1,8})$~', $rest, $u)) {
             $rest = $u[1];
             $unit = $u[2];
         }
@@ -53,6 +68,7 @@ final class AddressNormalizer
      */
     public function fromParts(string $houseNumber, string $street, ?string $unit = null): array
     {
+        self::assertPlain($houseNumber, $street, $unit ?? '');
         $house = $this->clean($houseNumber);
         if (!preg_match('~^\d{1,6}[A-Z]?$~', $house)) {
             throw new InvalidAddressException('House number must be digits (optionally followed by one letter).');
@@ -94,6 +110,15 @@ final class AddressNormalizer
         }
 
         return implode(' ', $words);
+    }
+
+    private static function assertPlain(string ...$parts): void
+    {
+        foreach ($parts as $part) {
+            if (!self::isPlain($part)) {
+                throw new InvalidAddressException(self::PLAIN_HINT);
+            }
+        }
     }
 
     private function clean(string $s): string

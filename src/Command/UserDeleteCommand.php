@@ -17,7 +17,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * @module Command/UserDeleteCommand
  * @description Data-deletion request handling: removes a resident's account, their claims and listings,
- *     pending intents/tokens and their review requests; keeps only an anonymous audit record.
+ *     pending intents/tokens and their review requests; keeps only an anonymous audit record. Works for
+ *     someone who only asked for a review (no account) as well.
  */
 #[AsCommand('app:user:delete', 'Delete a user account and its homes/listings on request (privacy)')]
 final class UserDeleteCommand extends Command
@@ -36,28 +37,41 @@ final class UserDeleteCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $email = $this->emails->normalize((string) $input->getArgument('email'));
-        $id = null === $email ? false : $this->db->fetchOne('SELECT id FROM users WHERE email_normalized = ?', [$email]);
-        if (false === $id) {
-            $output->writeln('<error>No such user.</error>');
+        if (null === $email) {
+            $output->writeln('<error>Invalid email address.</error>');
 
             return Command::FAILURE;
         }
-        $homes = (int) $this->db->fetchOne('SELECT COUNT(*) FROM claims WHERE user_id = ?', [$id]);
+        $id = $this->db->fetchOne('SELECT id FROM users WHERE email_normalized = ?', [$email]);
+        $homes = false === $id ? 0 : (int) $this->db->fetchOne('SELECT COUNT(*) FROM claims WHERE user_id = ?', [$id]);
+        // A review request needs no account, so its reporter may have no users row: their data is erased too.
+        $reviews = (int) $this->db->fetchOne('SELECT COUNT(*) FROM disputes WHERE reporter_email = ?', [$email]);
+        $pending = (int) $this->db->fetchOne('SELECT (SELECT COUNT(*) FROM auth_link_tokens WHERE email_normalized = :e) + (SELECT COUNT(*) FROM claim_intents WHERE email_normalized = :e)', ['e' => $email]);
+        if (false === $id && 0 === $reviews + $pending) {
+            $output->writeln('<error>No such user, review request or pending link for that address.</error>');
+
+            return Command::FAILURE;
+        }
+        $who = false === $id ? 'the data stored for that address (no account)' : sprintf('user #%d', $id);
         if (!$input->getOption('confirm')) {
-            $output->writeln(sprintf('Would delete user #%d and release %d home(s). Re-run with --confirm.', $id, $homes));
+            $output->writeln(sprintf('Would delete %s, release %d home(s) and erase %d review request(s) and %d pending link(s). Re-run with --confirm.', $who, $homes, $reviews, $pending));
 
             return Command::SUCCESS;
         }
         $this->db->transactional(function (Connection $db) use ($id, $email): void {
-            $db->executeStatement('DELETE FROM claims WHERE user_id = ?', [$id]); // listings cascade
+            if (false !== $id) {
+                $db->executeStatement('DELETE FROM claims WHERE user_id = ?', [$id]); // listings cascade
+            }
             $db->executeStatement('DELETE FROM auth_link_tokens WHERE email_normalized = ?', [$email]);
             $db->executeStatement('DELETE FROM claim_intents WHERE email_normalized = ?', [$email]);
             $db->executeStatement('DELETE FROM disputes WHERE reporter_email = ?', [$email]);
-            $db->executeStatement('UPDATE disputes SET resolved_by = NULL WHERE resolved_by = ?', [$id]);
-            $db->executeStatement('DELETE FROM users WHERE id = ?', [$id]);
+            if (false !== $id) {
+                $db->executeStatement('UPDATE disputes SET resolved_by = NULL WHERE resolved_by = ?', [$id]);
+                $db->executeStatement('DELETE FROM users WHERE id = ?', [$id]);
+            }
         });
-        $this->audit->record(null, 'cli', 'user.deleted', 'user', (string) $id, ['homes_released' => $homes], 'cli');
-        $output->writeln(sprintf('Deleted user #%d and released %d home(s).', $id, $homes));
+        $this->audit->record(null, 'cli', 'user.deleted', 'user', false === $id ? 'none' : (string) $id, ['homes_released' => $homes, 'review_requests' => $reviews], 'cli');
+        $output->writeln(sprintf('Deleted %s, released %d home(s) and erased %d review request(s).', $who, $homes, $reviews));
 
         return Command::SUCCESS;
     }

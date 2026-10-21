@@ -28,7 +28,7 @@ final class Notifier
         $url = rtrim($this->config->baseUrl, '/').'/auth/confirm?t='.rawurlencode($rawToken);
         $message = (new TemplatedEmail())
             ->from(Address::create($this->config->mailFrom))
-            ->to($email)
+            ->to(new Address($email)) // never re-parsed as "name <address>"
             ->subject(null !== $claimAddress
                 ? sprintf('Confirm your %s Halloween listing', $community->name())
                 : sprintf('Your %s Halloween sign-in link', $community->name()))
@@ -45,7 +45,7 @@ final class Notifier
         $message = (new TemplatedEmail())
             ->from(Address::create($this->config->mailFrom))
             ->to($this->config->adminEmail)
-            ->replyTo($dispute['reporter_email'])
+            ->replyTo(new Address((string) $dispute['reporter_email']))
             ->subject(sprintf('[%s Halloween] Review request D-%06d for %s', $community->name(), $dispute['id'], $address))
             ->textTemplate('email/dispute_notice.txt.twig')
             ->context(['dispute' => $dispute, 'address' => $address, 'community' => $community->name(),

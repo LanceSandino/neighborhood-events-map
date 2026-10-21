@@ -83,7 +83,7 @@ final class GeometryAdminTest extends AppTestCase
     {
         $this->configureCommunity(withZones: false);
         $id = $this->addAddress('71', 'Lantern Way', 40.018, -74.992);
-        $this->confirm($this->requestLink('edge@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('edge@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
         $this->client->getCookieJar()->clear();
         $csrf = $this->adminCsrf();
         $small = ['type' => 'Polygon', 'coordinates' => self::sq(-75.01, 40.0, 0.01)];

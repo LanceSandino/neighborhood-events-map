@@ -14,7 +14,7 @@ final class OwnerAuthorizationTest extends AppTestCase
 {
     private function claim(string $email, int $addressId): void
     {
-        $this->confirm($this->requestLink($email, ['address' => ['address_id' => $addressId], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink($email, ['address' => $this->byId($addressId), 'listing' => self::listing()]));
     }
 
     public function testOwnerUpdatesStatusAndPublicMapReflectsItImmediately(): void
@@ -111,9 +111,9 @@ final class OwnerAuthorizationTest extends AppTestCase
         $a = $this->addAddress('51', 'Lantern Way', 40.004, -74.996, 'east');
         $this->signIn('multi@example.test');
         $csrf = $this->csrf();
-        $r = $this->json('POST', '/api/me/homes', ['address' => ['address_id' => $a], 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
+        $r = $this->json('POST', '/api/me/homes', ['address' => $this->byId($a), 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
         self::assertSame(201, $this->code(), json_encode($r));
-        $this->json('POST', '/api/me/homes', ['address' => ['address_id' => $a], 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
+        $this->json('POST', '/api/me/homes', ['address' => $this->byId($a), 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
         self::assertSame(200, $this->code(), 'idempotent: already yours');
     }
 }

@@ -1,9 +1,14 @@
 #!/bin/sh
-# App container entrypoint: refuse unsafe secrets in prod, wait for PostgreSQL,
+# App container entrypoint: refuse unsafe secrets and debug mode in prod, wait for PostgreSQL,
 # apply migrations (MIGRATE_ON_START=1), then exec the given command.
 set -eu
 
 if [ "${APP_ENV:-prod}" = "prod" ]; then
+  # Debug mode shows stack traces, environment values and the profiler to visitors: never in production.
+  case "${APP_DEBUG:-0}" in
+    0|false|"") ;;
+    *) echo "FATAL: APP_DEBUG must be 0 in production (use the dev overlay for debugging)" >&2; exit 64 ;;
+  esac
   case "${APP_SECRET:-}" in
     ""|change-me*|*placeholder*|test*|*example*) echo "FATAL: set a random APP_SECRET (>= 32 chars) in .env" >&2; exit 64 ;;
   esac

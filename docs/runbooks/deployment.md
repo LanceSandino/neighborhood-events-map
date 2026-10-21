@@ -54,7 +54,8 @@ Before real SMTP is ready, set `COMPOSE_FILE=compose.yaml:compose.staging.yaml` 
 
 - **OPcache** is on, never re-checks files, and **preloads** Symfony's hot classes when PHP-FPM starts (`docker/php/php-prod.ini`). Deploys clear it by recreating the containers (see the upgrade runbook).
 - **Composer** autoloading is class-map-authoritative and the Symfony cache is warmed at image build.
-- **PHP-FPM** worker pool: each worker uses about 30–40 MB. Set `FPM_MAX_CHILDREN` to roughly the memory you give PHP divided by 40 MB (default 12 ≈ 512 MB), with `FPM_START_SERVERS`, `FPM_MIN_SPARE` and `FPM_MAX_SPARE` in `.env`; then recreate the `app` container. If the logs show `server reached pm.max_children`, raise it (or add memory).
+- **PHP-FPM** worker pool: each worker uses about 30–40 MB. Set `FPM_MAX_CHILDREN` to roughly the memory you give PHP divided by 40 MB (default 12 ≈ 512 MB), with `FPM_START_SERVERS`, `FPM_MIN_SPARE` and `FPM_MAX_SPARE` in `.env`; then recreate the `app` container. If the logs show `server reached pm.max_children`, raise it (or add memory). The sign-in and review-request endpoints run in a separate small pool (`FPM_MAIL_MAX_CHILDREN`, default 4, started on demand), so a flood of them cannot take the map's workers.
+- **PHP-FPM has no TCP port.** nginx reaches it through Unix sockets in the `php-socket` volume, which only the `app` and `nginx` containers mount, so nothing else on the host or the Docker networks can talk FastCGI to it. Recreating `app` alone is fine: nginx connects to the socket path on every request and needs no restart.
 - **nginx** gzips text responses and caches fingerprinted scripts and styles for a year.
 - Measure performance on the **production** stack (no `COMPOSE_FILE` dev overlay). The development stack re-checks every PHP file, runs a coverage driver and adds `X-Robots-Tag: noindex`, so it scores lower on Lighthouse by design.
 
@@ -96,7 +97,7 @@ The app defends itself without Cloudflare: proof-of-work, persistent per-IP/per-
 
 | Symptom | Check |
 |---|---|
-| 502 from nginx | `docker compose ps`, `docker compose logs app` |
+| 502 from nginx | `docker compose ps`, `docker compose logs app`; nginx logs `connect() to unix:/run/php/…` while PHP-FPM is (re)starting |
 | No emails | `MAILER_DSN`, relay logs, SPF/DKIM; the API returns 503 `mail_unavailable` on transport errors |
 | Everyone throttled | the access log shows one private address for every visitor → set `NGINX_TRUSTED_PROXIES` to your proxy's address; or many neighbors really share one IP → raise `RL_LINK_PER_IP` |
 | `400 Bad Request` on every page | the browser's hostname differs from `APP_BASE_URL` (production accepts only that host) |

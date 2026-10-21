@@ -27,7 +27,7 @@ final class OwnershipHardeningTest extends AppTestCase
         $this->signIn($email);
         $csrf = $this->csrf();
         foreach ($addressIds as $id) {
-            $r = $this->json('POST', '/api/me/homes', ['address' => ['address_id' => $id], 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
+            $r = $this->json('POST', '/api/me/homes', ['address' => $this->byId($id), 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
             self::assertSame(201, $this->code(), json_encode($r));
         }
 
@@ -50,7 +50,7 @@ final class OwnershipHardeningTest extends AppTestCase
         $b = $this->addAddress('53', 'Lantern Way', 40.0045, -74.996, 'east');
         $c = $this->addAddress('55', 'Lantern Way', 40.005, -74.996, 'east');
         $csrf = $this->residentClaims('multi@example.test', $a, $b);
-        $r = $this->json('POST', '/api/me/homes', ['address' => ['address_id' => $c], 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
+        $r = $this->json('POST', '/api/me/homes', ['address' => $this->byId($c), 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
         self::assertSame(409, $this->code());
         self::assertSame('home_limit', $r['error']['code']);
         self::assertStringContainsString('up to 2 homes', $r['error']['message']);
@@ -60,7 +60,7 @@ final class OwnershipHardeningTest extends AppTestCase
         $settings = $this->repo()->current()->settings;
         $settings['registration']['max_homes_per_user'] = 3;
         $this->repo()->saveSettings($settings, null);
-        $this->json('POST', '/api/me/homes', ['address' => ['address_id' => $c], 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
+        $this->json('POST', '/api/me/homes', ['address' => $this->byId($c), 'listing' => self::listing()], ['X-CSRF-Token' => $csrf]);
         self::assertSame(201, $this->code());
     }
 
@@ -72,7 +72,7 @@ final class OwnershipHardeningTest extends AppTestCase
         $c = $this->addAddress('55', 'Lantern Way', 40.005, -74.996, 'east');
         $this->residentClaims('multi@example.test', $a, $b);
         $this->client->getCookieJar()->clear();
-        $this->confirm($this->requestLink('multi@example.test', ['address' => ['address_id' => $c], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('multi@example.test', ['address' => $this->byId($c), 'listing' => self::listing()]));
         $me = $this->json('GET', '/api/me');
         self::assertSame('limit', $me['claim_outcome']['status']);
         self::assertCount(2, $me['homes']);
@@ -100,7 +100,7 @@ final class OwnershipHardeningTest extends AppTestCase
         $csrf = $this->csrf();
         $this->json('DELETE', "/api/me/homes/$id", ['confirm' => 'RELEASE'], ['X-CSRF-Token' => $csrf]);
         self::assertSame(200, $this->code());
-        $this->json('POST', '/api/me/homes', ['address' => ['address_id' => $id], 'listing' => self::listing(['note' => 'Back again'])], ['X-CSRF-Token' => $csrf]);
+        $this->json('POST', '/api/me/homes', ['address' => $this->byId($id), 'listing' => self::listing(['note' => 'Back again'])], ['X-CSRF-Token' => $csrf]);
         self::assertSame(201, $this->code());
         self::assertSame([], $this->json('GET', '/api/homes')['homes'], 'release + re-claim does not undo the organizer\'s decision');
         self::assertTrue($this->json('GET', '/api/me')['homes'][0]['listing']['moderation_hidden']);
@@ -115,7 +115,7 @@ final class OwnershipHardeningTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('7', 'Lantern Way', 40.005, -74.995, 'east');
-        $token = $this->requestLink('neighbor@example.test', ['address' => ['address_id' => $id],
+        $token = $this->requestLink('neighbor@example.test', ['address' => $this->byId($id),
             'listing' => self::listing(['note' => 'Glow sticks at the gate', 'jump_scares' => true, 'scare_level' => 'intense'])]);
         $html = (string) $this->client->request('GET', '/auth/confirm?t='.$token)->html();
         self::assertSame(200, $this->code());

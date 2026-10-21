@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Listing;
 
 use App\Community\CommunityConfig;
+use App\Shared\TextInput;
 use App\Shared\ValidationException;
 
 /**
@@ -92,7 +93,7 @@ final class ListingDraft
             }
         }
         if (\array_key_exists('note', $in)) {
-            $note = \is_string($in['note']) ? trim(preg_replace('~[\x00-\x09\x0B-\x1F\x7F]~u', '', $in['note']) ?? '') : '';
+            $note = TextInput::paragraphs(\is_string($in['note']) ? $in['note'] : '', 4 * self::NOTE_MAX);
             if (mb_strlen($note) > self::NOTE_MAX) {
                 $errors['note'] = 'Keep the note to 400 characters.';
             } else {

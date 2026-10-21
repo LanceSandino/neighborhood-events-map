@@ -381,4 +381,104 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "ci/native-arm-no-duplicates"
   author: "Lance Sandino"
   timestamp: "2026-10-21T06:30:00Z"
+- id: CU-20261021-11
+  type: security
+  title: "Percent-encoded request paths are refused (idle-timeout skip, CSRF-token skip, cross-site logout, nginx limit bypass)"
+  description: "Security audit run-1 leads 1, 2 and 15, confirmed locally and on the first deployment. Symfony routes and authorizes on the decoded path, while IdleSessionSubscriber, CsrfGuardSubscriber's token check and its /_internal_logout block compared the raw Request::getPathInfo(): an idle session still got 200 from /api/m%65, a same-origin PATCH /api/m%65/homes/{id} skipped the session CSRF token, GET /_internal_%6Cogout reached the firewall's logout listener (cross-site sign-out by top-level navigation), and nginx's per-IP API/auth limits were keyed on the raw $request_uri, so /%61pi/... ran with an empty key. No route needs an encoded path: CanonicalPathSubscriber (kernel.request priority 512, before sessions, the guard, the router and the firewall) answers 404 for any path containing '%', and nginx answers 400 first. nginx limit maps now key on the normalized $uri, and limit_req/limit_conn rejections log at info (below the error log level), so a refused /auth/confirm?t=… request line no longer lands in the error log. AdminApiController::moderate chooses hide/unhide by the matched route name, not the raw path."
+  impact: high
+  affected_modules: ["src/Security/CanonicalPathSubscriber.php", "src/Controller/Api/AdminApiController.php", "docker/nginx/default.conf"]
+  related_tests: ["tests/Integration/RequestPathHardeningTest.php (idle timeout, CSRF token, logout, raw-path routing; failed before the fix)", "tests/Unit/Deploy/ContainerConfigTest.php::testNginxRefusesEncodedPathsAndKeysLimitsOnTheNormalizedUri", "local stack: /%61pi/community and /_internal_%6Cogout → 400 from nginx, 150 parallel /api/community calls → 98 × 429"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-12
+  type: security
+  title: "PHP-FPM listens only on Unix sockets shared with nginx; email-sending endpoints get their own pool"
+  description: "Lead 4, confirmed on the first deployment: FPM listened on [::]:9000 with clear_env = no, and the host (and every container on the backend/egress networks) could connect to it; FastCGI can set PHP settings per request and the workers hold the app's secrets. Both pools now listen on Unix sockets in the php-socket volume (www-data:fcgi-nginx gid 101, mode 0660), mounted only by app (rw) and nginx (ro); the healthcheck pings both sockets. Lead 9: the email-sending endpoints wait out the response floor (700 ms + jitter) in a worker, so a distributed flood could hold every worker of the single pool, map included; POST /api/auth/request-link and /api/disputes now run in a separate ondemand pool (FPM_MAIL_MAX_CHILDREN, default 4) and the floor is unchanged (D-20261019-05). Side effect: nginx connects to the socket path per request, so recreating app alone no longer leaves nginx on a stale upstream (the 502 that needed an nginx restart)."
+  impact: high
+  affected_modules: ["docker/php/fpm-pool.conf", "docker/php/healthcheck.sh", "docker/nginx/default.conf", "docker/nginx/app-fastcgi.conf", "Dockerfile", "compose.yaml", ".env.example", "docs/runbooks/deployment.md", "docs/architecture/overview.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php (no TCP listener, socket owner/mode, only app and nginx mount the socket, mail endpoints on the mail pool)", "local dev and production-image stacks: no 9000 listener, a container on the egress network cannot connect, sockets srw-rw---- www-data fcgi-nginx, request-link answered by pool mail, app recreated alone → nginx still 200, fresh php-socket volume works with the read-only production images"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-13
+  type: security
+  title: "Hidden zones stay hidden: no home by id, no named refusals, no review requests"
+  description: "Leads 3 and 16 (D-20261019-12, hidden = not public at all). ListingRepository::publicHome() had no hidden-zone filter, so GET /api/homes/{id} and route planning still returned homes in a hidden zone; publicHome now takes the hidden zone keys like publicHomes(). Claim eligibility named hidden zones and confirmed their keys: a registry row in a hidden zone is now refused exactly like an id that does not exist (not_eligible), a pin inside a hidden zone gets zone_not_open with text that never names the zone (checked before zone_mismatch), a requested hidden zone_key is unknown_zone like a key that never existed, and a pin outside the boundary inside a hidden area is simply outside_boundary. Review requests for a home that is not public (disabled, outside the boundary or in a hidden zone) answer like an unknown id. Coming-soon zones keep their named zone_not_open (they are public). Residual (inherent): any refusal inside the public boundary marks a point as not listable."
+  impact: medium
+  affected_modules: ["src/Listing/ListingRepository.php", "src/Controller/Api/PublicApiController.php", "src/Routing/RoutePlanner.php", "src/Community/CommunityConfig.php", "src/Address/AddressEligibility.php", "src/Dispute/DisputeService.php", "src/Controller/Api/DisputeApiController.php"]
+  related_tests: ["tests/Integration/HiddenZonePrivacyTest.php (failed before the fix)", "tests/Integration/ZoneStatusAndReviewTest.php"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-14
+  type: security
+  title: "A claim or review request by registry id must also name the house number"
+  description: "Leads 11 and 12. Registry ids are sequential; an anonymous claim by bare id mailed the address text to the caller's own mailbox (and the confirmation page showed it), and a dashboard claim by id returned it, so walking ids harvested the unclaimed inventory that the narrow lookup protects. AddressEligibility::resolve() now requires the house number the visitor looked up with any address_id (case-insensitive); a bare or mismatched id is refused exactly like one that does not exist, before any intent, mail or claim. Review requests by id do the same. The confirmation step re-checks the id it already matched. The browser sends the house number from the chosen display address (lib/address.js); display addresses always start with it (all 916 rows of the first deployment checked)."
+  impact: medium
+  affected_modules: ["src/Address/AddressEligibility.php", "src/Claim/ClaimService.php", "src/Dispute/DisputeService.php", "src/Controller/Api/DisputeApiController.php", "public/assets/js/register.js", "public/assets/js/lib/address.js", "tests/Support/AppTestCase.php (byId helper)"]
+  related_tests: ["tests/Integration/RegistryIdBindingTest.php (failed before the fix)", "tests/js/lib.test.mjs (houseNumberOf)", "every integration test that claims by id now goes through AppTestCase::byId()"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-15
+  type: security
+  title: "A released, unreviewed self-entered address takes the next resident's own pin"
+  description: "Lead 5. A self-entered address stays in the registry after release or unclaim; the next resident who typed it was resolved to that row and inherited the earlier claimant's unverified pin (and, with review on, got a 'published' reply while the listing stayed hidden). An unreviewed, enabled, unclaimed self_entry row is now treated as a new self-entry: the resident's pin is validated, and once their claim insert succeeds AddressRegistry::repinSelfEntry() moves the row to it (only source = self_entry AND reviewed_at IS NULL). Review applies again. Reviewed and imported addresses keep their pins."
+  impact: medium
+  affected_modules: ["src/Address/AddressEligibility.php", "src/Address/AddressRegistry.php", "src/Claim/ClaimService.php"]
+  related_tests: ["tests/Integration/SelfEntryRepinTest.php (failed before the fix)", "tests/Integration/ClaimRaceTest.php"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-16
+  type: security
+  title: "Identity integrity: plain email local parts, honest organizer revoke, erasure without an account, no organizer oracle"
+  description: "Lead 7: \"x<victim@evil.test>\"@attacker.test passed FILTER_VALIDATE_EMAIL and Symfony Mime delivered it to victim@evil.test, splitting the account identity (and its per-mailbox budget) from the mailbox that got the link; EmailNormalizer now accepts only dot-atom local parts of letters, digits and . _ + ' - and Notifier passes new Address() objects. Lead 8: app:admin:grant --revoke printed 'Revoked' while ORGANIZER_EMAILS kept the role; it now removes the database grant and fails with an explanation. Lead 6: app:user:delete refused anyone without a users row, so a reporter who only sent a review request could not be erased; it now deletes their review requests and pending links too. Lead 10: with the global sign-in budget full, organizers got 202 and everyone else 429, which told anyone able to fill the budget which address is an organizer's; organizers now get the same 429 while their link is still sent (D-20261019-05 unchanged: organizers are never locked out)."
+  impact: medium
+  affected_modules: ["src/Security/EmailNormalizer.php", "src/Mail/Notifier.php", "src/Command/AdminGrantCommand.php", "src/Command/UserDeleteCommand.php", "src/Controller/Api/AuthApiController.php"]
+  related_tests: ["tests/Unit/Security/EmailNormalizerTest.php (quoted, percent and query-like local parts)", "tests/Integration/CommandsTest.php::testRevokingAnOrganizerListedInTheEnvironmentFailsLoudly", "tests/Integration/CommandsTest.php::testDeletionAlsoErasesSomeoneWhoOnlyAskedForAReview", "tests/Integration/AbuseHardeningTest.php::testOrganizersAreNotLockedOutByTheGlobalLinkBudget (now also asserts the identical reply)"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-17
+  type: security
+  title: "Bounded storage and quotas: listing-save limit, global walking-path budget, per-bucket purge"
+  description: "Lead 13: a resident's listing saves had no limit of their own and each wrote an audit row; listing_user (RL_LISTING_PER_USER, default 60/h per account). Lead 18: walking-path provider calls (cache misses) now share route_global (RL_ROUTE_GLOBAL, default 1000/day), so many clients cannot spend the API key's quota (the provider is off by default). Lead 14: throttle events were all kept 48 h whatever their window; Throttle::purge() now deletes each bucket's events once they leave its own window (minutes for pow_ip) and unknown buckets after the longest window, which also fixes windows longer than 48 h being cut short. Expired proof-of-work challenges are purged at expiry (verify() refuses them anyway) instead of a day later."
+  impact: low
+  affected_modules: ["src/Security/Throttle.php", "src/Security/ProofOfWork.php", "src/Shared/RuntimeConfig.php", "src/Controller/Api/MeApiController.php", "src/Routing/RoutePlanner.php", "config/services.yaml", "compose.yaml", ".env.example", ".env.dist"]
+  related_tests: ["tests/Integration/AbuseHardeningTest.php::testResidentListingSavesAreRateLimitedPerAccount", "tests/Integration/RoutePlanTest.php::testProviderCallsShareOneGlobalBudget", "tests/Integration/ProofOfWorkAndThrottleTest.php::testPurgeDropsThrottleEventsOnceTheirOwnWindowHasPassed", "tests/Integration/ProofOfWorkAndThrottleTest.php::testExpiredChallengesArePurgedRightAway"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-18
+  type: security
+  title: "Untrusted share-link filters are type-checked; the ArcGIS review page builds popups from text"
+  description: "Lead 17: a share link with ?f= carrying {\"q\":5} or {\"zone\":7} threw inside matches() and was saved to the visitor's device, breaking the map until site data was cleared; normalizeFilters() keeps only own keys of DEFAULT_FILTERS with the right type (strings capped at 80 characters) and readSharedLink uses it. Lead 19: the importer's local review page assembled Leaflet popups from ArcGIS attributes (third-party data) as HTML strings; popups are now text nodes, and the Leaflet CDN files carry SRI hashes (the same bytes as public/vendor/leaflet)."
+  impact: low
+  affected_modules: ["public/assets/js/lib/filters.js", "public/assets/js/home.js", "scripts/fetch_arcgis_boundaries.py"]
+  related_tests: ["tests/js/lib.test.mjs (shared or stored filters of the wrong type are dropped)", "scripts/tests/test_fetch_arcgis_boundaries.py::ReviewMapTest", "node --check on the generated review-page script"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-19
+  type: security
+  title: "Production configuration guards; local conveniences stay opt-in"
+  description: "The production entrypoint refuses APP_DEBUG other than 0. trusted_hosts matches APP_BASE_URL's host literally (new %env(regex_quote:…)% processor; the dots were 'any character'). .dockerignore excludes a deployment's private config/community.yaml and config/*.geojson so a local build cannot bake them into an image. Local and staging only: Mailpit's UI (it shows every sign-in link) stays on 127.0.0.1 and can now require a password with MAILPIT_UI_AUTH when MAILPIT_BIND=0.0.0.0 is used for LAN testing; HTTP_BIND still defaults to 127.0.0.1."
+  impact: low
+  affected_modules: ["docker/php/entrypoint.sh", "src/Shared/RegexQuoteEnvVarProcessor.php", "config/packages/framework.yaml", ".dockerignore", "compose.dev.yaml", "compose.staging.yaml", ".env.example"]
+  related_tests: ["tests/Unit/Shared/RegexQuoteEnvVarProcessorTest.php", "production image: APP_DEBUG=1 → FATAL, exit 64", "production image with APP_BASE_URL=http://map.example.org: Host mapXexample.org → 400 (the previous image let it through to the app)", "mailpit v1.27: MP_UI_AUTH empty → open UI, set → 401 without credentials"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-20
+  type: security
+  title: "Every input sanitized: plain-character addresses, one free-text cleaner, anchored URLs"
+  description: "Owner request: verify all input is sanitized; addresses never need special characters. Addresses: AddressNormalizer refused nothing before cleaning, so '1<2' became house 12, 'Peña' became 'PEA' and look-alike letters from other scripts or invisible characters could create a second same-looking address; now any address input (self-entry, organizer add/CSV import, community street list) with anything but ASCII letters, digits, spaces and . , ' - # is refused with one message, the lookup returns nothing for such a query, and an organizer's display_address edit must be a spelling of the same address (plain, house number first, same normalized key; it was free text up to 160 characters). 'Apt #4' now parses as unit 4 (it became part of the street). Free text: listing notes, review reasons, organizer notes and reasons, and every community setting go through Shared/TextInput: valid UTF-8, NFC, no control characters, no bidirectional overrides, zero-width spaces, BOM or soft hyphens (zero-width joiners stay for emoji), length-capped; the four slightly different hand-written copies are gone. The tile URL template is anchored and limited to URL-safe characters (it reaches the CSP and Leaflet), links refuse quotes, angle brackets, backslashes and backticks, and a claim transfer's dispute_id must name a review request for that home. Other inputs were checked and already strict: JSON bodies (size, depth, valid UTF-8), ids and limits (integers, clamped), enums (status, scare level, purpose), times, booleans, emails, tokens, the sign-in return path, uploaded logos, CSV and GeoJSON. Production data was checked first: every address and street uses only letters, digits and spaces."
+  impact: medium
+  affected_modules: ["src/Address/AddressNormalizer.php", "src/Shared/TextInput.php", "src/Listing/ListingDraft.php", "src/Dispute/DisputeService.php", "src/Admin/ClaimAdministration.php", "src/Community/CommunitySchema.php", "src/Controller/Api/PublicApiController.php", "src/Controller/Api/AdminApiController.php"]
+  related_tests: ["tests/Unit/Address/AddressNormalizerTest.php::testSpecialCharactersAreRefused (13 cases, all accepted before)", "tests/Unit/Address/AddressNormalizerTest.php::testParseRefusesSpecialCharactersAndKeepsOrdinaryPunctuation", "tests/Unit/Shared/TextInputTest.php", "tests/Integration/InputSanitizationTest.php (self-entry, lookup, note, review reason and organizer email, organizer address and display edit, settings, moderation reason, transfer dispute_id)"]
+  commit_ref: "fix/security-validation"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T07:30:00Z"
 ```

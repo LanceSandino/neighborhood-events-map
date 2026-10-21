@@ -60,6 +60,49 @@ final class AddressNormalizerTest extends TestCase
         (new AddressNormalizer())->parse($in);
     }
 
+    /**
+     * Addresses never need special characters: anything outside letters, digits, spaces and . , ' - # is
+     * refused instead of being silently stripped (which turned "1<2" into 12 and "Peña" into "PEA"), and
+     * look-alike letters from other scripts cannot create a second "same-looking" address.
+     *
+     * @return iterable<string, array{0:string,1:string,2:?string}>
+     */
+    public static function specialCharacters(): iterable
+    {
+        yield 'markup in the street' => ['12', 'Pumpkin<script> Ln', null];
+        yield 'quote' => ['12', 'Pump"kin Ln', null];
+        yield 'semicolon' => ['12', 'Pumpkin Ln; DROP', null];
+        yield 'ampersand' => ['12', 'Pumpkin & Ln', null];
+        yield 'percent' => ['12', 'Pumpkin%20Ln', null];
+        yield 'non-ASCII letter' => ['12', 'Peña Ln', null];
+        yield 'Cyrillic look-alike' => ['12', "\u{0420}umpkin Ln", null];
+        yield 'full-width digits' => ["\u{FF11}\u{FF12}", 'Pumpkin Ln', null];
+        yield 'markup in the house number' => ['1<2', 'Pumpkin Ln', null];
+        yield 'markup in the unit' => ['12', 'Pumpkin Ln', '<b>4'];
+        yield 'emoji' => ['12', "Pumpkin \u{1F383} Ln", null];
+        yield 'right-to-left override' => ['12', "Pumpkin\u{202E} Ln", null];
+        yield 'tab' => ['12', "Pumpkin\tLn", null];
+    }
+
+    #[DataProvider('specialCharacters')]
+    public function testSpecialCharactersAreRefused(string $house, string $street, ?string $unit): void
+    {
+        $this->expectException(InvalidAddressException::class);
+        $this->expectExceptionMessage('letters, numbers');
+        (new AddressNormalizer())->fromParts($house, $street, $unit);
+    }
+
+    public function testParseRefusesSpecialCharactersAndKeepsOrdinaryPunctuation(): void
+    {
+        $n = new AddressNormalizer();
+        self::assertSame("12 ST JOHNS RD", $n->parse("12 St. John's Road")['normalized']);
+        self::assertSame('45 N MAIN ST UNIT 4-B', $n->parse('45 N. Main St, Apt #4-B')['normalized']);
+        self::assertTrue(AddressNormalizer::isPlain("12 St. John's Rd, #4"));
+        self::assertFalse(AddressNormalizer::isPlain('12 Pumpkin <Ln>'));
+        $this->expectException(InvalidAddressException::class);
+        $n->parse('12 Pumpkin Ln<img src=x>');
+    }
+
     public function testFromPartsValidatesUnit(): void
     {
         $this->expectException(InvalidAddressException::class);

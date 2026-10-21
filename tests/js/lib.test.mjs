@@ -8,6 +8,7 @@ import { planStops, orderGroup, haversine, applyOrder, moveStop, suggestNearby }
 import { createStore } from '../../public/assets/js/lib/store.js';
 import { maskRings, panLimit, WORLD } from '../../public/assets/js/lib/map-focus.js';
 import { zoneStyle } from '../../public/assets/js/lib/render.js';
+import { houseNumberOf } from '../../public/assets/js/lib/address.js';
 
 const home = (o) => ({ id: 1, address: '1 Pumpkin Ln', zone: 'oak', lat: 40.03, lon: -74.99, start: '17:00', end: '21:00', candy: true, nonfood: false,
   adult_drinks: false, low_noise: true, jump_scares: false, flashing_lights: false, loud_audio: false, scare_level: 'gentle', stroller_friendly: false, note: '', status: 'active', ...o });
@@ -272,4 +273,22 @@ test('large neighborhoods: every stop is kept and ordering stays fast (no 20-sto
   const length = (p) => p.slice(1).reduce((sum, s, i) => sum + haversine(p[i], s), 0);
   const nn = planStops(stops, { groups: [['main']], zonesEnabled: true }); // still a sensible, untangled walk
   assert.ok(length(nn[0].stops) < length(stops) * 0.5, 'much shorter than the unordered list');
+});
+
+test('a claim or review by registry id names the house number from the display address', () => {
+  assert.equal(houseNumberOf('12 Pumpkin Ln'), '12');
+  assert.equal(houseNumberOf('  12A Lantern Way Unit 3 '), '12A');
+  assert.equal(houseNumberOf(''), '');
+  assert.equal(houseNumberOf(undefined), '');
+});
+
+test('shared or stored filters of the wrong type are dropped, so a crafted link cannot break the map', () => {
+  // Audit run-1 lead 17: {"q":5} or {"zone":7} from a share link threw in matches() and was then saved.
+  const bad = JSON.parse('{"q":5,"zone":7,"time":["now"],"candy":"yes","saved":1,"constructor":"x","toString":"y","__proto__":{"candy":true},"noFlashing":true}');
+  assert.deepEqual(normalizeFilters(bad), { noFlashing: true });
+  assert.deepEqual(normalizeFilters({ q: 'x'.repeat(500), zone: 'area:1', time: '18:30' }), { q: 'x'.repeat(80), zone: 'area:1', time: '18:30' });
+  assert.deepEqual(normalizeFilters(null), {});
+  assert.deepEqual(normalizeFilters([true]), {});
+  const f = { ...DEFAULT_FILTERS, ...normalizeFilters(bad) };
+  assert.equal(matches(home(), f, ctx), true, 'filtering still works');
 });

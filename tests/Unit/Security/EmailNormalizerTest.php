@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Traceability: hardening (email relay abuse) — addresses must name a real mail domain, and rate limits
- * count provider aliases (+tags, Gmail dots) of one mailbox together.
+ * count provider aliases (+tags, Gmail dots) of one mailbox together; audit run-1 lead 7 (plain local parts only).
  */
 #[CoversClass(EmailNormalizer::class)]
 final class EmailNormalizerTest extends TestCase
@@ -25,6 +25,15 @@ final class EmailNormalizerTest extends TestCase
         yield 'dot-less domain' => ['root@localhost', null];
         yield 'CRLF injection' => ["a@example.org\r\nBcc: x@example.org", null];
         yield 'empty' => ['', null];
+        // Security audit run-1 lead 7: a quoted local part is valid RFC 5321, but Symfony Mime re-parses
+        // `"x<victim@evil.test>"@attacker.test` as "name <addr>" and delivers to victim@evil.test, so the
+        // account identity and the mailbox the link goes to would differ. Only plain (dot-atom) local parts.
+        yield 'quoted local part with an angle address' => ['"a<victim@evil.test>"@attacker.test', null];
+        yield 'quoted local part' => ['"jane doe"@example.org', null];
+        yield 'percent hack' => ['jane%victim.test@example.org', null];
+        yield 'query-like characters' => ['a?b=c&d@example.org', null];
+        yield 'apostrophe is a real name' => ["O'Brien@Example.org", "o'brien@example.org"];
+        yield 'dots, dashes, underscores and tags' => ['first.last-x_y+tag@example.org', 'first.last-x_y+tag@example.org'];
     }
 
     #[DataProvider('inputs')]

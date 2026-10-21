@@ -6,8 +6,27 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Security
+- Web addresses with percent-encoded characters in the path are refused. They could skip the sign-in idle timeout and a page-freshness check, sign a visitor out from another site, and slip past the server's request limits.
+- PHP no longer listens on a network port: the web server reaches it through a private socket, so nothing else on the server can talk to it. Sign-in and review-request emails run in their own small worker pool, so a flood of them can't slow down the map.
+- Homes in a hidden area are no longer shown when opened by number, and "you can't list here" messages never name a hidden area.
+- Choosing an address from the list now also sends its house number, so nobody can collect the neighborhood's address list by trying numbers one after another.
+- A home released by an earlier claimant no longer keeps that person's map pin; the next resident places their own.
+- Email addresses must be plain addresses (no quoted names inside), so a sign-in link always goes to the address that signs in.
+- Organizers get the same "too many requests" reply as everyone else when the hourly sign-in budget is full (their link is still sent), so the reply never reveals who is an organizer.
+- Saving your listing is limited to 60 times an hour, walking-path lookups share a daily budget that protects the provider's quota, and rate-limit records are deleted as soon as they stop counting.
+- A shared map link with broken filter settings can no longer break the map on your device.
+- Addresses accept only letters, numbers, spaces and `. , ' - #`; anything else is refused instead of being quietly changed. Notes, review requests and organizer texts lose hidden characters that could make text read differently than it is.
+- Production refuses to start in debug mode, accepts only its exact web address, and never bakes a deployment's private settings into an image.
+
+### Changed
+- `app:admin:grant --revoke` now fails and explains why when `ORGANIZER_EMAILS` still lists the address; `app:user:delete` also erases someone who only sent a review request.
+- Local and staging only: Mailpit's inbox page can require a password (`MAILPIT_UI_AUTH`) for testing from phones on your network.
+
 ### Fixed
 - Building from source on Docker hosts that use the containerd image store no longer fails with "image already exists" (the maintenance service reuses the app image).
+- Recreating only the app container no longer leaves the web server answering 502.
+- "Apt #4" is read as unit 4.
 
 ## [0.6.0-beta.1] - 2026-10-21
 

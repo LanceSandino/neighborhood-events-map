@@ -220,7 +220,7 @@ final class AdminApiController
     }
 
     #[Route('/addresses/{id}', requirements: ['id' => '\d+'], methods: ['PATCH'])]
-    public function updateAddress(#[CurrentUser] User $admin, int $id, Request $request, AddressRegistry $registry): JsonResponse
+    public function updateAddress(#[CurrentUser] User $admin, int $id, Request $request, AddressRegistry $registry, AddressNormalizer $normalizer): JsonResponse
     {
         $row = $registry->find($id) ?? throw new ValidationException(['id' => 'Unknown address.']);
         $b = JsonBody::decode($request) + ['lat' => $row['latitude'], 'lon' => $row['longitude'], 'zone_key' => $row['zone_key']];
@@ -230,7 +230,18 @@ final class AdminApiController
             $changes['enabled'] = (bool) $b['enabled'];
         }
         if (isset($b['display_address']) && '' !== trim((string) $b['display_address'])) {
-            $changes['display_address'] = mb_substr(trim((string) $b['display_address']), 0, 160);
+            // Only another spelling of the same address (capitals, spacing, abbreviations): plain characters,
+            // the house number first (visitors send it back with a claim by id), never a different address.
+            $display = preg_replace('~\s+~', ' ', trim((string) $b['display_address'])) ?? '';
+            try {
+                $same = $normalizer->parse($display)['normalized'] === $row['normalized_address'];
+            } catch (InvalidAddressException $e) {
+                throw new ValidationException(['display_address' => $e->getMessage()]);
+            }
+            if (!$same || mb_strlen($display) > 160) {
+                throw new ValidationException(['display_address' => 'Change only how this address is written (capitals, spacing); add a new address for a different one.']);
+            }
+            $changes['display_address'] = $display;
         }
         $registry->update($id, $changes, $inside);
         $this->audit->record($admin->id, 'admin#'.$admin->id, 'address.updated', 'address', (string) $id,
@@ -285,7 +296,7 @@ final class AdminApiController
     #[Route('/listings/{id}/unhide', requirements: ['id' => '\d+'], methods: ['POST'], name: 'admin_listing_unhide')]
     public function moderate(#[CurrentUser] User $admin, int $id, Request $request, ClaimAdministration $claims): JsonResponse
     {
-        $hide = str_ends_with($request->getPathInfo(), '/hide');
+        $hide = 'admin_listing_hide' === $request->attributes->get('_route'); // the matched route, never the raw path
         $claims->moderate($id, $hide, (string) (JsonBody::decode($request)['reason'] ?? ''), $admin->id);
 
         return new JsonResponse(['hidden' => $hide]);

@@ -63,7 +63,8 @@ final class PublicApiController
     #[Route('/api/homes/{id}', name: 'api_home', requirements: ['id' => '\d{1,12}'], methods: ['GET'])]
     public function home(int $id): JsonResponse
     {
-        $home = $this->listings->publicHome($id, $this->community->current()->eventDate());
+        $c = $this->community->current();
+        $home = $this->listings->publicHome($id, $c->eventDate(), $c->hiddenZoneKeys());
 
         return null === $home ? ApiError::response(404, 'not_found', 'That home is not listed.') : self::fresh(new JsonResponse(['home' => $home]));
     }
@@ -78,6 +79,9 @@ final class PublicApiController
             return new JsonResponse(['results' => []], 200, ['Cache-Control' => 'no-store']);
         }
         $q = mb_substr(trim((string) $request->query->get('q', '')), 0, 80);
+        if (!AddressNormalizer::isPlain($q)) {
+            return new JsonResponse(['results' => []], 200, ['Cache-Control' => 'no-store']); // no address has special characters
+        }
         $prefixes = [strtoupper(preg_replace('~\s+~', ' ', preg_replace('~[^A-Za-z0-9 -]~', ' ', $q) ?? '') ?? '')];
         try {
             $prefixes[] = $this->normalizer->parse($q)['normalized'];

@@ -69,22 +69,30 @@ def collection(features: list[dict], **extra) -> dict:
     return {"type": "FeatureCollection", **extra, "features": features}
 
 
+# Subresource Integrity of the pinned Leaflet 1.9.4 files (same bytes as public/vendor/leaflet/).
+LEAFLET_CSS_SRI = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+LEAFLET_JS_SRI = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+
+
 def review_map_html(layers: dict[str, dict], title: str, description: str) -> str:
-    """Self-contained Leaflet review page (for local owner review only)."""
+    """Self-contained Leaflet review page (for local owner review only).
+
+    Layer attributes come from a third-party ArcGIS service, so popups are built from text nodes only.
+    """
     colors = ["#f07936", "#524077", "#40967b", "#d36c64", "#3b82f6", "#a16207", "#0f766e", "#9333ea", "#64748b"]
     payload = json.dumps(layers, separators=(",", ":")).replace("<", "\\u003c")  # no </script> breakout
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)}</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="{LEAFLET_CSS_SRI}" crossorigin="">
 <style>html,body,#map{{height:100%;margin:0;font:14px system-ui}}#note{{position:absolute;z-index:999;left:50px;top:10px;background:#fff;padding:8px 12px;border-radius:8px;box-shadow:0 2px 8px #0003;max-width:60%}}</style>
 </head><body><div id="note"><b>Review only — approved: false.</b> {html.escape(description)} Plat boundaries may not equal HOA eligibility. Toggle layers top-right.</div><div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="{LEAFLET_JS_SRI}" crossorigin=""></script>
 <script>
 const layers={payload};const colors={json.dumps(colors)};
 const map=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',{{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}}).addTo(map);
 const overlays={{}};let all=L.featureGroup();let i=0;
-for(const [name,fc] of Object.entries(layers)){{const c=colors[i++%colors.length];const lyr=L.geoJSON(fc,{{style:{{color:c,weight:2,fillOpacity:name==='boundary'?0.03:0.18,dashArray:name==='boundary'?'6 6':null}},onEachFeature:(f,l)=>l.bindPopup('<b>'+(f.properties.label||name)+'</b><br>'+(f.properties.source_name||'')+'<br>OBJECTID '+(f.properties.source_objectid??'')+'<br>Plat book '+(f.properties.plat_book??'')+' p. '+(f.properties.plat_pages??''))}});overlays[name]=lyr;if(name!=='boundary')lyr.addTo(map);all.addLayer(lyr);}}
+for(const [name,fc] of Object.entries(layers)){{const c=colors[i++%colors.length];const lyr=L.geoJSON(fc,{{style:{{color:c,weight:2,fillOpacity:name==='boundary'?0.03:0.18,dashArray:name==='boundary'?'6 6':null}},onEachFeature:(f,l)=>{{const p=f.properties||{{}};const d=document.createElement('div');const b=document.createElement('b');b.textContent=p.label||name;d.append(b);for(const t of [p.source_name||'','OBJECTID '+(p.source_objectid??''),'Plat book '+(p.plat_book??'')+' p. '+(p.plat_pages??'')])d.append(document.createElement('br'),t);l.bindPopup(d);}}}});overlays[name]=lyr;if(name!=='boundary')lyr.addTo(map);all.addLayer(lyr);}}
 L.control.layers(null,overlays,{{collapsed:false}}).addTo(map);map.fitBounds(all.getBounds());
 </script></body></html>
 """

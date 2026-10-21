@@ -15,11 +15,23 @@ export const DEFAULT_FILTERS = {
 export const isBigScare = (h) => h.jump_scares || h.scare_level === 'intense';
 export const isLowSensory = (h) => h.low_noise && !h.flashing_lights && !h.loud_audio && !isBigScare(h);
 
-/** Filters saved or shared by older versions (separate jump/intense filters) become the combined one. */
+/**
+ * Filters saved or shared by older versions (separate jump/intense filters) become the combined one. A share
+ * link is untrusted input: only known filters of the right type are kept (a {"q":5} would break filtering and
+ * be remembered on this device), checked as own keys so names like "constructor" never count.
+ */
 export function normalizeFilters(f) {
-  const { noJumps, noIntense, ...rest } = f || {};
-  const out = Object.fromEntries(Object.entries(rest).filter(([k]) => k in DEFAULT_FILTERS));
-  if (noJumps || noIntense) out.noScares = true;
+  if (!f || typeof f !== 'object' || Array.isArray(f)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(f)) {
+    if (!Object.hasOwn(DEFAULT_FILTERS, k)) continue;
+    if (typeof DEFAULT_FILTERS[k] === 'boolean') {
+      if (typeof v === 'boolean') out[k] = v;
+    } else if (typeof v === 'string') {
+      out[k] = v.slice(0, 80);
+    }
+  }
+  if (f.noJumps === true || f.noIntense === true) out.noScares = true;
   return out;
 }
 

@@ -89,7 +89,7 @@ final class ErrorPathsTest extends AppTestCase
         }
         $id = $this->addAddress('3', 'Lantern Way', 40.005, -74.995, 'east');
         $r = $this->json('POST', '/api/auth/request-link', ['email' => 'f@example.test', 'pow' => $this->solvePow('claim'),
-            'claim' => ['address' => ['address_id' => $id], 'listing' => ['candy' => true, 'adult_drinks' => true, 'nonfood' => true]]]);
+            'claim' => ['address' => $this->byId($id), 'listing' => ['candy' => true, 'adult_drinks' => true, 'nonfood' => true]]]);
         self::assertSame(422, $this->code(), 'every offering disabled → nothing valid to offer');
         self::assertArrayHasKey('offerings', $r['error']['fields']);
     }

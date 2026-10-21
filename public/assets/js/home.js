@@ -215,7 +215,7 @@ function readSharedLink() {
   try {
     if (q.get('f')) {
       const json = JSON.parse(atob(q.get('f').replace(/-/g, '+').replace(/_/g, '/')));
-      out.filters = Object.fromEntries(Object.entries(json).filter(([k]) => k in DEFAULT_FILTERS));
+      out.filters = normalizeFilters(json);
     }
   } catch { /* ignore a damaged link */ }
   const ids = (q.get('stops') || '').split('.').map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 60);

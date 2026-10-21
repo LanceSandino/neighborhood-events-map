@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Dispute;
 
+use App\Address\AddressEligibility;
 use App\Address\AddressRegistry;
 use App\Audit\AuditLog;
 use App\Community\CommunityConfig;
 use App\Mail\Notifier;
+use App\Shared\TextInput;
 use App\Shared\ValidationException;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
@@ -36,19 +38,24 @@ final class DisputeService
 
     /**
      * Checks a request before any per-home or global budget is spent, so invalid requests cannot be
-     * used to block review requests for a home.
+     * used to block review requests for a home. Like a claim by id, the request names the house number
+     * the visitor saw, so walking ids cannot tell claimed homes from others.
      *
      * @return array{reason:string, address:array<string,mixed>}
      */
-    public function validate(int $addressId, string $reason): array
+    public function validate(int $addressId, string $reason, CommunityConfig $community, string $houseNumber): array
     {
-        $reason = trim(preg_replace('~[\x00-\x09\x0B-\x1F\x7F]~u', '', $reason) ?? '');
+        $reason = TextInput::paragraphs($reason, 4 * self::REASON_MAX);
         $len = mb_strlen($reason);
         if ($len < self::REASON_MIN || $len > self::REASON_MAX) {
             throw new ValidationException(['reason' => sprintf('Please explain in %d–%d characters (you have %d).', self::REASON_MIN, self::REASON_MAX, $len)]);
         }
         $address = $this->addresses->find($addressId);
-        if (null === $address || !$this->addresses->isClaimed($addressId)) {
+        // Only public homes can be reviewed: a disabled, out-of-boundary or hidden-zone row answers like an unknown id.
+        $public = null !== $address && $address['enabled'] && $address['inside_boundary']
+            && !$community->isHiddenZone(null === $address['zone_key'] ? null : (string) $address['zone_key'])
+            && AddressEligibility::sameHouseNumber($houseNumber, (string) $address['house_number']);
+        if (!$public || !$this->addresses->isClaimed($addressId)) {
             throw new ValidationException(['address_id' => 'That home is not currently claimed, so there is nothing to review.']);
         }
 
@@ -56,9 +63,9 @@ final class DisputeService
     }
 
     /** @return array{id:int, ticket:string, notified:bool} */
-    public function open(int $addressId, string $reporterEmail, string $reason, CommunityConfig $community): array
+    public function open(int $addressId, string $reporterEmail, string $reason, CommunityConfig $community, string $houseNumber): array
     {
-        ['reason' => $reason, 'address' => $address] = $this->validate($addressId, $reason);
+        ['reason' => $reason, 'address' => $address] = $this->validate($addressId, $reason, $community, $houseNumber);
         $now = $this->clock->now()->format('Y-m-d H:i:s.uP');
         $id = (int) $this->db->fetchOne(
             'INSERT INTO disputes (address_id, reporter_email, reason, created_at) VALUES (?, ?, ?, ?) RETURNING id',
@@ -102,11 +109,11 @@ final class DisputeService
         }
         $n = $this->db->executeStatement(
             'UPDATE disputes SET status = :s, resolution_note = :n, resolved_by = :a, resolved_at = :t WHERE id = :id',
-            ['s' => $status, 'n' => mb_substr(trim($note), 0, 2000), 'a' => 'open' === $status ? null : $adminId,
+            ['s' => $status, 'n' => TextInput::paragraphs($note, 2000), 'a' => 'open' === $status ? null : $adminId,
                 't' => 'open' === $status ? null : $this->clock->now()->format('Y-m-d H:i:s.uP'), 'id' => $id],
         );
         if ($n > 0) {
-            $this->audit->record($adminId, 'admin#'.$adminId, 'dispute.'.$status, 'dispute', (string) $id, ['note' => mb_substr($note, 0, 200)], 'admin');
+            $this->audit->record($adminId, 'admin#'.$adminId, 'dispute.'.$status, 'dispute', (string) $id, ['note' => TextInput::line($note, 200)], 'admin');
         }
 
         return $n > 0;

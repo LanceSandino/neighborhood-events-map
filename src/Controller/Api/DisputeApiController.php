@@ -42,11 +42,12 @@ final class DisputeApiController
             return self::accepted(DisputeService::ticket(random_int(100_000, 999_999)));
         }
         $addressId = (int) ($body['address_id'] ?? 0);
-        $disputes->validate($addressId, (string) ($body['reason'] ?? ''));
+        $house = \is_scalar($body['house_number'] ?? null) ? (string) $body['house_number'] : '';
+        $disputes->validate($addressId, (string) ($body['reason'] ?? ''), $community->current(), $house);
         // Per-home and global budgets are spent only by valid requests (no blocking a home with junk).
         $throttle->hit('dispute_address', 'address:'.$addressId);
         $throttle->hit('dispute_global', 'global');
-        $result = $disputes->open($addressId, $email, (string) ($body['reason'] ?? ''), $community->current());
+        $result = $disputes->open($addressId, $email, (string) ($body['reason'] ?? ''), $community->current(), $house);
 
         return self::accepted($result['ticket']);
     }

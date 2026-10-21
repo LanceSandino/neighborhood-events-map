@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Community;
 
 use App\Address\AddressNormalizer;
+use App\Shared\TextInput;
 
 /**
  * @module Community/CommunitySchema
@@ -121,7 +122,9 @@ final class CommunitySchema
         }
         $tiles = self::arr($m['tiles'] ?? []);
         $tileUrl = (string) ($tiles['url'] ?? self::DEFAULT_TILE_URL);
-        if (!preg_match('~^https://(\{s\}\.)?[a-z0-9.-]+(:\d+)?/\S*\{z\}\S*\{x\}\S*\{y\}~i', $tileUrl)) {
+        // Anchored and limited to URL-safe characters: the template reaches the CSP img-src and Leaflet.
+        $seg = '[A-Za-z0-9._\~/{}@-]*';
+        if (!preg_match('~^https://(\{s\}\.)?[a-z0-9-]+(\.[a-z0-9-]+)+(:\d{1,5})?/'.$seg.'\{z\}'.$seg.'\{x\}'.$seg.'\{y\}'.$seg.'(\?[A-Za-z0-9._\~=&{}%-]*)?\z~i', $tileUrl)) {
             $e[] = 'map.tiles.url must be an https URL template containing {z}, {x} and {y}.';
         }
         $attribution = self::text($tiles['attribution'] ?? self::DEFAULT_TILE_ATTRIBUTION, 200);
@@ -161,8 +164,12 @@ final class CommunitySchema
             $e[] = 'registration.address_mode must be registry, self_entry or both.';
         }
         $streets = [];
-        foreach (self::arr($r['street_allowlist'] ?? []) as $s) {
-            $n = $this->normalizer->normalizeStreet((string) $s);
+        foreach (self::arr($r['street_allowlist'] ?? []) as $i => $s) {
+            if (!\is_string($s) || !AddressNormalizer::isPlain($s)) {
+                $e[] = sprintf("registration.street_allowlist[%s]: use only letters, numbers, spaces and . , ' - in street names.", $i);
+                continue;
+            }
+            $n = $this->normalizer->normalizeStreet($s);
             if ('' !== $n) {
                 $streets[$n] = $n;
             }
@@ -304,17 +311,12 @@ final class CommunitySchema
 
     private static function paragraphs(mixed $v, int $max): string
     {
-        $s = str_replace(["\r\n", "\r"], "\n", (string) (\is_scalar($v) ? $v : ''));
-        $s = preg_replace(['~[\x00-\x09\x0B-\x1F\x7F]~u', '~\n{3,}~'], [' ', "\n\n"], $s) ?? '';
-
-        return mb_substr(trim($s), 0, $max);
+        return TextInput::paragraphs($v, $max);
     }
 
     private static function text(mixed $v, int $max): string
     {
-        $s = trim(preg_replace('~[\x00-\x1F\x7F]~u', ' ', (string) (\is_scalar($v) ? $v : '')) ?? '');
-
-        return mb_substr($s, 0, $max);
+        return TextInput::line($v, $max);
     }
 
     private static function time(mixed $v): ?string
@@ -344,6 +346,6 @@ final class CommunitySchema
     {
         $s = \is_string($v) ? trim($v) : '';
 
-        return preg_match('~^(https://|mailto:)\S{3,200}$~i', $s) ? $s : null;
+        return preg_match('~^(https://|mailto:)[^\s"\'<>\\\\`]{3,200}\z~i', $s) ? $s : null;
     }
 }

@@ -38,11 +38,11 @@ final class AbuseHardeningTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('7', 'Lantern Way', 40.005, -74.995, 'east');
-        $this->confirm($this->requestLink('owner@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('owner@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
         $this->client->getCookieJar()->clear();
         $before = $this->buckets();
 
-        $this->linkRequest('other@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]);
+        $this->linkRequest('other@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]);
         self::assertSame(409, $this->code());
         $this->linkRequest('other@example.test', ['address' => ['house_number' => '5', 'street' => 'Pumpkin Ln', 'lat' => 40.05, 'lon' => -75.0], 'listing' => self::listing()]);
         self::assertSame(422, $this->code(), 'outside the boundary');
@@ -58,7 +58,7 @@ final class AbuseHardeningTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('7', 'Lantern Way', 40.005, -74.995, 'east');
-        $r = $this->linkRequest('someone@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]);
+        $r = $this->linkRequest('someone@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]);
         self::assertSame(202, $this->code());
         self::assertNull($r['address'], 'the client already knows the address it picked; arbitrary ids reveal nothing');
         $r = $this->linkRequest('selfie@example.test', ['address' => ['house_number' => '15', 'street' => 'Pumpkin Lane', 'lat' => 40.004, 'lon' => -75.006], 'listing' => self::listing()]);
@@ -96,10 +96,17 @@ final class AbuseHardeningTest extends AppTestCase
         for ($i = 0; $i < 200; ++$i) {
             $this->db()->insert('throttle_events', ['bucket' => 'link_global', 'key_hash' => $key, 'occurred_at' => $now]);
         }
-        $this->linkRequest('resident@example.test');
+        $resident = $this->linkRequest('resident@example.test');
         self::assertSame(429, $this->code(), 'the global cap still protects the mail relay');
-        $this->linkRequest('boss@example.test');
-        self::assertSame(202, $this->code(), 'an organizer can always get a sign-in link');
+        self::assertCount(0, self::getMailerMessages());
+        $boss = $this->linkRequest('boss@example.test');
+        // Audit run-1 lead 10: a different reply would tell anyone who can fill the budget which address
+        // is an organizer's. The reply is the same; the organizer's link is sent anyway.
+        self::assertSame(429, $this->code(), 'answered exactly like everyone else');
+        self::assertSame($resident['error'], $boss['error']);
+        $mail = self::getMailerMessages();
+        self::assertCount(1, $mail, 'an organizer can always get a sign-in link');
+        self::assertSame('boss@example.test', $mail[0]->getTo()[0]->getAddress());
     }
 
     public function testHoneypotSubmissionsLookAcceptedButDoNothing(): void
@@ -167,7 +174,7 @@ final class AbuseHardeningTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('61', 'Lantern Way', 40.005, -74.994, 'east');
-        $this->confirm($this->requestLink('owner@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('owner@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
         $this->client->getCookieJar()->clear();
 
         return $id;
@@ -175,7 +182,7 @@ final class AbuseHardeningTest extends AppTestCase
 
     private function dispute(int $id, string $reason, array $extra = []): array
     {
-        return $this->json('POST', '/api/disputes', ['address_id' => $id, 'reporter_email' => 'real@example.test', 'reason' => $reason, 'pow' => $this->solvePow('dispute')] + $extra);
+        return $this->json('POST', '/api/disputes', ['address_id' => $id, 'house_number' => $this->byId($id)['house_number'], 'reporter_email' => 'real@example.test', 'reason' => $reason, 'pow' => $this->solvePow('dispute')] + $extra);
     }
 
     public function testInvalidReviewRequestsDoNotUseUpAHomesBudget(): void
@@ -218,5 +225,23 @@ final class AbuseHardeningTest extends AppTestCase
         self::assertMatchesRegularExpression('~^D-\d{6}$~', $r['ticket']);
         self::assertSame(0, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM disputes'));
         self::assertCount(0, self::getMailerMessages(), 'no notice was emailed for this request');
+    }
+
+    public function testResidentListingSavesAreRateLimitedPerAccount(): void
+    {
+        // Audit run-1 lead 13: every save writes an audit row, and saves had no limit of their own.
+        $this->configureCommunity();
+        $id = $this->addAddress('9', 'Lantern Way', 40.005, -74.995, 'east');
+        $this->confirm($this->requestLink('busy@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
+        $csrf = $this->csrf();
+        for ($i = 1; $i <= 60; ++$i) {
+            $this->json('PATCH', "/api/me/homes/$id", ['note' => "Edit $i"], ['X-CSRF-Token' => $csrf]);
+            self::assertSame(200, $this->code(), "save $i");
+        }
+        $r = $this->json('PATCH', "/api/me/homes/$id", ['note' => 'One too many'], ['X-CSRF-Token' => $csrf]);
+        self::assertSame(429, $this->code());
+        self::assertSame('rate_limited', $r['error']['code']);
+        self::assertSame('Edit 60', $this->db()->fetchOne('SELECT note FROM listings WHERE address_id = ?', [$id]));
+        self::assertSame(60, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE action = 'listing.updated'"));
     }
 }

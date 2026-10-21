@@ -31,6 +31,9 @@ services:
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      # Sign-in links land here. Loopback-only by default; if you set MAILPIT_BIND=0.0.0.0 to test from
+      # phones on your LAN, also set MAILPIT_UI_AUTH="user:password" so nobody else can read them.
+      MP_UI_AUTH: ${MAILPIT_UI_AUTH:-}
     networks: [backend, egress]   # internal-only networks cannot publish the (localhost-only) UI port
 
   backup:

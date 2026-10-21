@@ -9,6 +9,7 @@ import { api, ApiError, friendlyError } from './lib/api.js';
 import { solvePow } from './lib/pow.js';
 import { openModal } from './lib/modal.js';
 import { esc } from './lib/render.js';
+import { houseNumberOf } from './lib/address.js';
 
 let C = null;
 let selected = null; // { address_id, address } | { house_number, street, unit, lat, lon, zone_key, address }
@@ -214,7 +215,7 @@ async function submit() {
   const bar = $('#powBar');
   try {
     const pow = await solvePow('claim', (p) => { bar.style.width = `${Math.round(p * 100)}%`; });
-    const address = selected.address_id ? { address_id: selected.address_id } : { house_number: selected.house_number, street: selected.street, unit: selected.unit, lat: selected.lat, lon: selected.lon, zone_key: selected.zone_key };
+    const address = selected.address_id ? { address_id: selected.address_id, house_number: houseNumberOf(selected.address) } : { house_number: selected.house_number, street: selected.street, unit: selected.unit, lat: selected.lat, lon: selected.lon, zone_key: selected.zone_key };
     const res = await api('/api/auth/request-link', { method: 'POST', body: { email, pow, website: $('#regWebsite')?.value || '', claim: { address, listing: details() } } });
     form.hidden = true;
     const ok = $('#registerSuccess');
@@ -270,6 +271,7 @@ function initPinMap() {
 
 /* ---------------- Dispute / report ---------------- */
 let disputeAddressId = null;
+let disputeHouse = '';
 
 const DISPUTE_TEXT = {
   claimed: { title: 'Ask the organizer to review', after: ' is already claimed. Tell the organizer why you think this is a mistake. They review requests by hand; nothing changes automatically and the current owner is never revealed.' },
@@ -279,6 +281,7 @@ const DISPUTE_TEXT = {
 /** @param {'claimed'|'report'} mode claimed = "this home is already claimed" review; report = a listing on the map */
 export function openDispute(addressId, address, mode = 'claimed') {
   disputeAddressId = addressId;
+  disputeHouse = houseNumberOf(address);
   const text = DISPUTE_TEXT[mode] || DISPUTE_TEXT.claimed;
   $('#disputeTitle').textContent = text.title;
   const intro = $('#disputeIntro');
@@ -308,7 +311,7 @@ function initDispute() {
     btn.disabled = true;
     try {
       const pow = await solvePow('dispute', (p) => { $('#dPowBar').style.width = `${Math.round(p * 100)}%`; });
-      const res = await api('/api/disputes', { method: 'POST', body: { address_id: disputeAddressId, reporter_email: email, reason, pow, website: $('#dWebsite')?.value || '' } });
+      const res = await api('/api/disputes', { method: 'POST', body: { address_id: disputeAddressId, house_number: disputeHouse, reporter_email: email, reason, pow, website: $('#dWebsite')?.value || '' } });
       form.hidden = true;
       const ok = $('#disputeSuccess');
       ok.innerHTML = `<b>🎟️ Request ${esc(res.ticket)} sent.</b><br>${esc(res.message)}<div class="modal-actions"><button type="button" class="secondary" data-close>Close</button></div>`;

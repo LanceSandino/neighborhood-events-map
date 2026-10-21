@@ -16,7 +16,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * @module Command/AdminGrantCommand
- * @description Out-of-band organizer role management (the web app can never self-assign it).
+ * @description Out-of-band organizer role management (the web app can never self-assign it). A revoke
+ *     fails loudly while ORGANIZER_EMAILS still lists the address, which keeps the role.
  */
 #[AsCommand('app:admin:grant', 'Grant (or --revoke) the organizer role for an email address')]
 final class AdminGrantCommand extends Command
@@ -42,6 +43,12 @@ final class AdminGrantCommand extends Command
         $grant = !$input->getOption('revoke');
         $user = $this->users->setAdmin($email, $grant);
         $this->audit->record(null, 'cli', $grant ? 'admin.granted' : 'admin.revoked', 'user', (string) $user->id, [], 'cli');
+        if (!$grant && $user->isAdmin) {
+            $output->writeln(sprintf('<error>Removed the database grant for %s (user #%d), but it is still an organizer because ORGANIZER_EMAILS lists it. '
+                .'Remove it from ORGANIZER_EMAILS in .env and recreate the app container to revoke the role.</error>', $email, $user->id));
+
+            return Command::FAILURE;
+        }
         $output->writeln(sprintf('%s organizer role for %s (user #%d). They sign in with an email link at /login.', $grant ? 'Granted' : 'Revoked', $email, $user->id));
 
         return Command::SUCCESS;

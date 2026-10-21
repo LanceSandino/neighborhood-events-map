@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Audit\AuditLog;
+use App\Command\AdminGrantCommand;
+use App\Security\EmailNormalizer;
+use App\Security\UserRepository;
 use App\Tests\Support\AppTestCase;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -33,6 +37,20 @@ final class CommandsTest extends AppTestCase
         self::assertFalse((bool) $this->db()->fetchOne("SELECT is_admin FROM users WHERE email_normalized = 'boss@example.test'"));
         self::assertSame(1, $this->cmd('app:admin:grant', ['email' => 'not-an-email'])->getStatusCode());
         self::assertSame(2, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE source = 'cli'"));
+    }
+
+    public function testRevokingAnOrganizerListedInTheEnvironmentFailsLoudly(): void
+    {
+        // Audit run-1 lead 8: ORGANIZER_EMAILS keeps the role, so "Revoked" would be a false success.
+        $users = new UserRepository($this->db(), $this->clock, 'boss@example.test');
+        $this->cmd('app:admin:grant', ['email' => 'boss@example.test']);
+        $t = new CommandTester(new AdminGrantCommand($users, new EmailNormalizer(), static::getContainer()->get(AuditLog::class)));
+        $t->execute(['email' => 'boss@example.test', '--revoke' => true]);
+        self::assertSame(1, $t->getStatusCode());
+        self::assertStringContainsString('still an organizer because ORGANIZER_EMAILS lists it', $t->getDisplay());
+        self::assertStringNotContainsString('Revoked organizer role', $t->getDisplay());
+        self::assertFalse((bool) $this->db()->fetchOne("SELECT is_admin FROM users WHERE email_normalized = 'boss@example.test'"), 'the database grant is gone');
+        self::assertTrue($users->isOrganizerEmail('boss@example.test'), 'and the environment still grants the role');
     }
 
     public function testBootstrapExportAndReimportRoundTrip(): void
@@ -92,7 +110,7 @@ final class CommandsTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('1', 'Pumpkin Ln', 40.005, -75.005, 'west');
-        $this->confirm($this->requestLink('season@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('season@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
         $this->db()->executeStatement("UPDATE listings SET event_date = '2025-10-31'");
         self::assertStringContainsString('Unpublished 1 listing', $this->cmd('app:season:archive')->getDisplay());
         self::assertFalse((bool) $this->db()->fetchOne('SELECT published FROM listings'));
@@ -113,7 +131,7 @@ final class CommandsTest extends AppTestCase
     {
         $this->configureCommunity();
         $id = $this->addAddress('2', 'Pumpkin Ln', 40.005, -75.004, 'west');
-        $this->confirm($this->requestLink('forget-me@example.test', ['address' => ['address_id' => $id], 'listing' => self::listing()]));
+        $this->confirm($this->requestLink('forget-me@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
         $this->requestLink('forget-me@example.test'); // a pending token as well
         self::assertStringContainsString('Re-run with --confirm', $this->cmd('app:user:delete', ['email' => 'forget-me@example.test'])->getDisplay());
         self::assertSame(1, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM claims'));
@@ -124,6 +142,31 @@ final class CommandsTest extends AppTestCase
         }
         self::assertSame(0, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE details::text LIKE '%forget-me%'"));
         self::assertSame(1, $this->cmd('app:user:delete', ['email' => 'forget-me@example.test'])->getStatusCode());
+    }
+
+    public function testDeletionAlsoErasesSomeoneWhoOnlyAskedForAReview(): void
+    {
+        // Audit run-1 lead 6: a review request needs no account, so its reporter has no users row.
+        $this->configureCommunity();
+        $id = $this->addAddress('2', 'Pumpkin Ln', 40.005, -75.004, 'west');
+        $this->confirm($this->requestLink('owner@example.test', ['address' => $this->byId($id), 'listing' => self::listing()]));
+        $this->client->getCookieJar()->clear();
+        $this->json('POST', '/api/disputes', $this->byId($id) + ['reporter_email' => 'reporter@example.test',
+            'reason' => str_repeat('This is my house and I live here. ', 7), 'pow' => $this->solvePow('dispute')]);
+        self::assertSame(201, $this->code());
+        $this->requestLink('reporter@example.test'); // a link they never used
+        self::assertSame(0, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM users WHERE email_normalized = 'reporter@example.test'"));
+
+        $dry = $this->cmd('app:user:delete', ['email' => 'reporter@example.test']);
+        self::assertSame(0, $dry->getStatusCode(), $dry->getDisplay());
+        self::assertStringContainsString('1 review request', $dry->getDisplay());
+        self::assertSame(1, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM disputes'));
+        $t = $this->cmd('app:user:delete', ['email' => 'reporter@example.test', '--confirm' => true]);
+        self::assertSame(0, $t->getStatusCode(), $t->getDisplay());
+        self::assertSame(0, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM disputes WHERE reporter_email = 'reporter@example.test'"));
+        self::assertSame(0, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM auth_link_tokens WHERE email_normalized = 'reporter@example.test'"));
+        self::assertSame(1, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM claims'), 'the owner keeps their home');
+        self::assertSame(1, $this->cmd('app:user:delete', ['email' => 'nobody@example.test'])->getStatusCode(), 'nothing stored: still an error');
     }
 
     public function testDemoSeedRefusesOutsideDemoMode(): void

@@ -50,6 +50,12 @@ final class RuntimeConfig
         return [(int) $m[1], (int) $m[2]];
     }
 
+    /** @return array<string,int> window in seconds of every configured rate-limit bucket */
+    public function windows(): array
+    {
+        return array_map(static fn (array $l) => $l[1], $this->limits);
+    }
+
     /** @return array{0:int,1:int} */
     public function limit(string $bucket): array
     {

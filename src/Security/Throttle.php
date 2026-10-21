@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Shared\RuntimeConfig;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
 
@@ -51,9 +52,24 @@ final class Throttle
         });
     }
 
-    public function purge(int $olderThanSeconds = 172_800): int
+    /**
+     * Deletes events once they are older than their own bucket's window: nothing older can count any more,
+     * so a flood is stored no longer than its limit needs (minutes for pow_ip, not days). Events of buckets
+     * that are no longer configured go after the longest window.
+     */
+    public function purge(): int
     {
-        return $this->db->executeStatement('DELETE FROM throttle_events WHERE occurred_at < :t', ['t' => self::ts($this->clock->now()->modify("-{$olderThanSeconds} seconds"))]);
+        $now = $this->clock->now();
+        $windows = $this->config->windows();
+        $deleted = 0;
+        foreach ($windows as $bucket => $seconds) {
+            $deleted += $this->db->executeStatement('DELETE FROM throttle_events WHERE bucket = :b AND occurred_at < :t',
+                ['b' => $bucket, 't' => self::ts($now->modify("-{$seconds} seconds"))]);
+        }
+        $longest = [] === $windows ? 172_800 : max($windows);
+
+        return $deleted + $this->db->executeStatement('DELETE FROM throttle_events WHERE bucket NOT IN (:buckets) AND occurred_at < :t',
+            ['buckets' => array_keys($windows), 't' => self::ts($now->modify("-{$longest} seconds"))], ['buckets' => ArrayParameterType::STRING]);
     }
 
     private static function ts(\DateTimeImmutable $t): string

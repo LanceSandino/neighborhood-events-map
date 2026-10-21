@@ -146,7 +146,8 @@ final class ProofOfWork
 
     public function purge(): int
     {
-        return $this->db->executeStatement('DELETE FROM pow_challenges WHERE expires_at < ?', [self::ts($this->clock->now()->modify('-1 day'))]);
+        // An expired challenge is refused by verify() anyway, so it is deleted as soon as it expires.
+        return $this->db->executeStatement('DELETE FROM pow_challenges WHERE expires_at < ?', [self::ts($this->clock->now())]);
     }
 
     private static function ts(\DateTimeImmutable $t): string

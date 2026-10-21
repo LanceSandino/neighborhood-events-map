@@ -87,6 +87,12 @@ abstract class AppTestCase extends WebTestCase
         return static::getContainer()->get(AddressRegistry::class)->insert($parts, $zone, $lat, $lon, 'import', true, true);
     }
 
+    /** Claim or review target by registry id, with the house number a visitor looked up (the server matches both). */
+    protected function byId(int $addressId): array
+    {
+        return ['address_id' => $addressId, 'house_number' => (string) $this->db()->fetchOne('SELECT house_number FROM eligible_addresses WHERE id = ?', [$addressId])];
+    }
+
     /** @return list<bool> claimed flag of each registry lookup result for $query */
     protected function claimedFlags(string $query): array
     {

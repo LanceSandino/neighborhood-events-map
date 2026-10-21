@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Security\ProofOfWork;
+use App\Security\Throttle;
 use App\Tests\Support\AppTestCase;
 
 /**
@@ -144,5 +145,26 @@ final class ProofOfWorkAndThrottleTest extends AppTestCase
         self::assertSame(429, $this->code(), 'throttle is per client, not per purpose');
         $this->json('GET', '/api/pow?purpose=admin');
         self::assertSame(400, $this->code(), 'unknown purpose rejected');
+    }
+
+    public function testPurgeDropsThrottleEventsOnceTheirOwnWindowHasPassed(): void
+    {
+        // Audit run-1 lead 14: every event was kept 48 h whatever its window (pow_ip counts 10 minutes),
+        // so floods were stored far longer than any limit needed, and windows over 48 h were cut short.
+        $now = $this->clock->now();
+        $at = fn (int $secondsAgo) => $now->modify("-$secondsAgo seconds")->format('Y-m-d H:i:s.uP');
+        foreach ([['pow_ip', 700], ['pow_ip', 300], ['link_ip', 700], ['dispute_ip', 90_000], ['dispute_ip', 80_000], ['retired_bucket', 90_000]] as [$bucket, $ago]) {
+            $this->db()->insert('throttle_events', ['bucket' => $bucket, 'key_hash' => 'k', 'occurred_at' => $at($ago)]);
+        }
+        self::assertSame(3, static::getContainer()->get(Throttle::class)->purge());
+        $left = $this->db()->fetchFirstColumn('SELECT bucket FROM throttle_events ORDER BY bucket, occurred_at');
+        self::assertSame(['dispute_ip', 'link_ip', 'pow_ip'], $left, 'only events still inside their own window are kept');
+    }
+
+    public function testExpiredChallengesArePurgedRightAway(): void
+    {
+        $this->solvePow('login');
+        $this->clock->sleep(3 * 60); // past the 2-minute challenge lifetime
+        self::assertSame(1, static::getContainer()->get(ProofOfWork::class)->purge());
     }
 }

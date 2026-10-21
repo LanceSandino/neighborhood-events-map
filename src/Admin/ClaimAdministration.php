@@ -8,6 +8,7 @@ use App\Audit\AuditLog;
 use App\Listing\ListingRepository;
 use App\Security\EmailNormalizer;
 use App\Security\UserRepository;
+use App\Shared\TextInput;
 use App\Shared\ValidationException;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
@@ -36,6 +37,10 @@ final class ClaimAdministration
         $to = $this->emails->normalize($email) ?? throw new ValidationException(['email' => 'Enter a valid email address.']);
         $target = $this->users->ensure($to);
 
+        if (null !== $disputeId && false === $this->db->fetchOne('SELECT 1 FROM disputes WHERE id = ? AND address_id = ?', [$disputeId, $addressId])) {
+            throw new ValidationException(['dispute_id' => 'That review request is not about this home.']);
+        }
+
         return $this->db->transactional(function (Connection $db) use ($addressId, $target, $adminId, $disputeId): array {
             $from = $db->fetchOne('SELECT user_id FROM claims WHERE address_id = ? FOR UPDATE', [$addressId]);
             if (false === $from) {
@@ -57,7 +62,7 @@ final class ClaimAdministration
                 throw new ValidationException(['address_id' => 'That address is not claimed.']);
             }
             $this->audit->record($adminId, 'admin#'.$adminId, 'claim.unclaimed', 'address', (string) $addressId,
-                ['from_user_id' => (int) $from, 'reason' => mb_substr($reason, 0, 300)], 'admin');
+                ['from_user_id' => (int) $from, 'reason' => TextInput::line($reason, 300)], 'admin');
 
             return (int) $from;
         });
@@ -65,10 +70,11 @@ final class ClaimAdministration
 
     public function moderate(int $addressId, bool $hide, string $reason, int $adminId): void
     {
-        if (!$this->listings->setModeration($addressId, $hide, '' !== trim($reason) ? mb_substr(trim($reason), 0, 300) : null)) {
+        $reason = TextInput::line($reason, 300);
+        if (!$this->listings->setModeration($addressId, $hide, '' !== $reason ? $reason : null)) {
             throw new ValidationException(['address_id' => 'That address has no listing.']);
         }
-        $this->audit->record($adminId, 'admin#'.$adminId, $hide ? 'listing.hidden' : 'listing.unhidden', 'address', (string) $addressId, ['reason' => mb_substr($reason, 0, 300)], 'admin');
+        $this->audit->record($adminId, 'admin#'.$adminId, $hide ? 'listing.hidden' : 'listing.unhidden', 'address', (string) $addressId, ['reason' => $reason], 'admin');
     }
 
     /** Private CSV export (organizer only): address, zone, owner email, claim time, listing status. */

@@ -11,6 +11,7 @@ use App\Security\ClientIdentity;
 use App\Security\EmailNormalizer;
 use App\Security\MagicLinkTokens;
 use App\Security\ProofOfWork;
+use App\Security\RateLimitedException;
 use App\Security\ResponseFloorSubscriber;
 use App\Security\SessionPolicy;
 use App\Security\Throttle;
@@ -86,8 +87,16 @@ final class AuthApiController
             $echo = 'self_entry' === $prepared['source'] ? $prepared['address'] : null;
         }
         $this->throttle->hit('link_email', $this->emails->throttleKey($email));
-        if (!$this->users->isOrganizerEmail($email)) {
-            $this->throttle->hit('link_global', 'global'); // organizers can always sign in
+        // Organizers can always sign in, but a full global budget answers them exactly like everyone else
+        // (their link is still sent), so the reply never tells whether an address belongs to an organizer.
+        $globalFull = null;
+        try {
+            $this->throttle->hit('link_global', 'global');
+        } catch (RateLimitedException $e) {
+            if (!$this->users->isOrganizerEmail($email)) {
+                throw $e;
+            }
+            $globalFull = $e;
         }
 
         $raw = $this->tokens->issue($email, $purpose, $intentId, $minutes);
@@ -99,6 +108,9 @@ final class AuthApiController
             return ApiError::response(503, 'mail_unavailable', 'We could not send email right now. Please try again in a few minutes.');
         }
         $this->logger->info('Magic link issued', ['to' => EmailNormalizer::mask($email), 'purpose' => $purpose]);
+        if (null !== $globalFull) {
+            throw $globalFull;
+        }
 
         return self::accepted($email, $minutes, $echo);
     }

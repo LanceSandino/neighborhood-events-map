@@ -29,6 +29,7 @@ x-app-env: &app-env
   FPM_START_SERVERS: ${FPM_START_SERVERS:-3}
   FPM_MIN_SPARE: ${FPM_MIN_SPARE:-2}
   FPM_MAX_SPARE: ${FPM_MAX_SPARE:-6}
+  FPM_MAIL_MAX_CHILDREN: ${FPM_MAIL_MAX_CHILDREN:-4}   # separate pool for the email-sending endpoints
   AUTH_RESPONSE_JITTER_MS: ${AUTH_RESPONSE_JITTER_MS:-250}
   SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-nhm_session}
   POW_DIFFICULTY: ${POW_DIFFICULTY:-16}
@@ -43,6 +44,8 @@ x-app-env: &app-env
   RL_ROUTE_PER_IP: ${RL_ROUTE_PER_IP:-30/600}
   RL_CLAIM_PER_USER: ${RL_CLAIM_PER_USER:-10/3600}
   RL_DISPUTE_GLOBAL: ${RL_DISPUTE_GLOBAL:-60/86400}
+  RL_LISTING_PER_USER: ${RL_LISTING_PER_USER:-60/3600}
+  RL_ROUTE_GLOBAL: ${RL_ROUTE_GLOBAL:-1000/86400}
   ROUTING_PROVIDER: ${ROUTING_PROVIDER:-none}
   ROUTING_API_KEY: ${ROUTING_API_KEY:-}
   MIGRATE_ON_START: ${MIGRATE_ON_START:-1}
@@ -87,6 +90,7 @@ services:
     volumes:
       - branding:/app/var/branding
       - ./deploy/community:/app/deploy/community:ro
+      - php-socket:/run/php   # PHP-FPM's Unix sockets, shared only with nginx (FPM has no TCP port)
     depends_on:
       postgres: { condition: service_healthy }
     networks: [backend, egress]
@@ -130,6 +134,8 @@ services:
       - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}:8080"   # HTTP_BIND=0.0.0.0 only for testing from other devices on your LAN
     environment:
       NGINX_TRUSTED_PROXIES: ${NGINX_TRUSTED_PROXIES:-}   # extra proxy addresses/CIDRs (space-separated), if any
+    volumes:
+      - php-socket:/run/php:ro   # connects to PHP-FPM's sockets; a recreated app container needs no nginx restart
     depends_on:
       app: { condition: service_healthy }
     networks: [egress]
@@ -174,3 +180,4 @@ networks:
 volumes:
   pgdata: {}
   branding: {}
+  php-socket: {}

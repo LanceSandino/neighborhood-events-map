@@ -6,6 +6,7 @@ namespace App\Routing;
 
 use App\Community\CommunityConfig;
 use App\Listing\ListingRepository;
+use App\Security\Throttle;
 use App\Shared\ValidationException;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
@@ -14,7 +15,8 @@ use Psr\Clock\ClockInterface;
  * @module Routing/RoutePlanner
  * @description Optional provider-reported walking path for ONE trip: requires an organizer-enabled
  *     provider, verified crossings, 2-20 public stops, all inside a single configured walkable group.
- *     Responses are cached (24 h). Never connects separate groups; never fabricates geometry.
+ *     Responses are cached (24 h); provider calls share one global budget. Never connects separate
+ *     groups; never fabricates geometry.
  */
 final class RoutePlanner
 {
@@ -25,6 +27,7 @@ final class RoutePlanner
         private readonly ListingRepository $listings,
         private readonly Connection $db,
         private readonly ClockInterface $clock,
+        private readonly Throttle $throttle,
     ) {
     }
 
@@ -49,7 +52,7 @@ final class RoutePlanner
         }
         $stops = [];
         foreach ($ids as $id) {
-            $home = $this->listings->publicHome($id, $c->eventDate()) ?? throw new ValidationException(['stops' => 'One of those homes is not listed.']);
+            $home = $this->listings->publicHome($id, $c->eventDate(), $c->hiddenZoneKeys()) ?? throw new ValidationException(['stops' => 'One of those homes is not listed.']);
             $stops[] = $home;
         }
         if ($c->zonesEnabled()) {
@@ -74,6 +77,8 @@ final class RoutePlanner
         if (false !== $cached) {
             $route = json_decode((string) $cached, true, 64, \JSON_THROW_ON_ERROR);
         } else {
+            // Provider calls share one global budget (RL_ROUTE_GLOBAL), so many clients cannot spend the API quota.
+            $this->throttle->hit('route_global', 'global');
             $route = $this->provider->walkingRoute($points);
             $this->db->executeStatement(
                 'INSERT INTO route_cache (fingerprint, provider, profile, response, expires_at) VALUES (:f, :p, :pr, :r, :e)

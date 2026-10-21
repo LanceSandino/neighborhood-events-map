@@ -97,6 +97,7 @@ final class MeApiController
     #[Route('/api/me/homes/{id}', name: 'api_me_home_update', requirements: ['id' => '\d{1,12}'], methods: ['PATCH'])]
     public function update(#[CurrentUser] User $user, Request $request, int $id): JsonResponse
     {
+        $this->throttle->hit('listing_user', 'user:'.$user->id); // every save writes an audit record
         $homes = $this->residentHomes->of($user);
         $row = $homes->find($id);
         if (null === $row) {
