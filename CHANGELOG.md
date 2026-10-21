@@ -12,6 +12,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 ### Changed
 - "What's new" never shows unreleased changes.
 
+### Fixed
+- Dark mode on iPhone and iPad: the map now turns dark too, the zone labels on the map follow the theme, and drop-down menus no longer show as grey boxes.
+
 ## [0.5.0-beta.4] - 2026-10-19
 
 ### Changed

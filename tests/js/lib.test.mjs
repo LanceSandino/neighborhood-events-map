@@ -147,6 +147,26 @@ test('a chosen Dark appearance uses exactly the same tokens as the system dark a
   assert.match(system[1], /color-scheme: dark/);
 });
 
+test('the dark map also works in Safari and its overrides beat leaflet.css', () => {
+  const css = readFileSync(new URL('../../public/assets/css/app.css', import.meta.url), 'utf8');
+  // WebKit draws Leaflet's positioned tiles as separate layers and ignores a filter set on their pane.
+  assert.doesNotMatch(css, /\.leaflet-tile-pane \{[^}]*filter/, 'no dark filter on the tile pane');
+  assert.match(css, /\n\.leaflet-container img\.leaflet-tile \{[^}]*filter: var\(--tile-filter\)/, 'each tile image is filtered');
+  // home.js adds leaflet.css after app.css, so a plain .leaflet-container or .boundary-label rule loses to Leaflet's defaults.
+  assert.match(css, /\nhtml \.leaflet-container \{[^}]*background: var\(--map-bg\)/, 'map background beats leaflet.css');
+  assert.match(css, /\n\.leaflet-container \.boundary-label \{[^}]*background: var\(--glass\)/, 'zone labels use theme tokens');
+  assert.doesNotMatch(css, /\n\.boundary-label \{/, 'no unscoped zone-label rule left behind');
+});
+
+test('selects are drawn by the page in token colours, not by iOS', () => {
+  const css = readFileSync(new URL('../../public/assets/css/app.css', import.meta.url), 'utf8');
+  // iOS Safari paints native selects with its own grey and ignores background-color, so dark mode showed grey boxes.
+  const rule = css.match(/\nselect:not\(\[multiple\]\):not\(\[size\]\) \{([^}]*)\}/);
+  assert.ok(rule, 'one rule styles every single-choice select');
+  assert.match(rule[1], /-webkit-appearance: none; appearance: none;/);
+  assert.match(rule[1], /var\(--muted\)/, 'the chevron uses a theme token');
+});
+
 test('nearby suggestions stay in the route\'s walkable trips, nearest first, within the distance', () => {
   const groups = [['north'], ['south']];
   const route = [{ id: 1, zone: 'north', lat: 40.0500, lon: -75.0 }];

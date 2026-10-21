@@ -291,4 +291,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "v0.5.0-beta.4"
   author: "Lance Sandino"
   timestamp: "2026-10-19T19:15:00Z"
+- id: CU-20261020-02
+  type: fix
+  title: "Dark mode on iPhone: dark map tiles, themed zone labels and selects"
+  description: "On iOS (WebKit) Auto/Dark left the map bright: the dark tile filter sat on .leaflet-tile-pane, which WebKit ignores because Leaflet's positioned tiles are separate layers; it now sits on each img.leaflet-tile. Since CU-20261019-15 home.js adds leaflet.css after app.css, so Leaflet's defaults beat the equal-specificity overrides (white #fff/#222 zone labels, #ddd map background, Helvetica map font, #333 attribution text); those overrides are now scoped under .leaflet-container/html. iOS Safari paints native selects grey and ignores background-color, so single-choice selects are drawn with appearance:none and a token-coloured chevron (native look restored under forced-colors). Verified in Playwright WebKit (iPhone 15) and Chromium at 375/430/768/1440 px, light and dark, with the new stylesheet served into the live page: tiles filtered only in dark, labels/selects use theme tokens, no horizontal scroll. The dead 11 px attribution rule was dropped (Leaflet's 12 px applied anyway)."
+  impact: low
+  affected_modules: ["public/assets/css/app.css", "tests/js/lib.test.mjs"]
+  related_tests: ["tests/js/lib.test.mjs: the dark map also works in Safari and its overrides beat leaflet.css", "tests/js/lib.test.mjs: selects are drawn by the page in token colours, not by iOS", "Playwright WebKit/Chromium computed-style and screenshot check (manual, light and dark)"]
+  commit_ref: "fix/ios-dark-map"
+  author: "Lance Sandino"
+  timestamp: "2026-10-20T22:30:00Z"
 ```

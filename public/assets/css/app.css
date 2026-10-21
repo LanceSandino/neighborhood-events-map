@@ -89,6 +89,11 @@ button, input, select, textarea { font: inherit; }
 html { -webkit-tap-highlight-color: transparent; text-size-adjust: 100%; }
 button, a, select, label, .home-card { touch-action: manipulation; }
 select { background-color: var(--surface); color: var(--text); }
+/* iOS Safari paints native selects with its own grey fill and ignores background-color, so they stayed grey
+   boxes in dark mode: draw them without the native look, with a chevron in token colours. */
+select:not([multiple]):not([size]) { -webkit-appearance: none; appearance: none; padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
 ::placeholder { color: var(--muted-2); opacity: 1; }
 h1, h2 { text-wrap: balance; }
 .metric b, .card-meta, .route-index, .map-selected p, table.data, .stat b { font-variant-numeric: tabular-nums; }
@@ -265,11 +270,13 @@ a.crumb:hover strong { color: var(--link); }
 .map-selected .tags { margin-top: 9px; }
 .map-selected .primary { margin-top: 11px; padding: 8px 12px; font-size: 12px; }
 .map-selected .link-button { padding-left: 0; }
-.leaflet-container { font: inherit; background: var(--map-bg); }
-.leaflet-tile-pane { filter: var(--tile-filter); }
-.leaflet-control-attribution { background: var(--glass) !important; color: var(--muted); }
-.leaflet-control-attribution a { color: var(--link); }
-.leaflet-control-attribution { font-size: 11px; }
+/* home.js adds leaflet.css after this file, so Leaflet overrides are scoped under .leaflet-container (or
+   html) to win whatever the order. The dark filter sits on each tile: WebKit (Safari, every iOS browser)
+   draws Leaflet's positioned tiles as separate layers and ignores a filter set on their pane. */
+html .leaflet-container { font: inherit; background: var(--map-bg); }
+.leaflet-container img.leaflet-tile { filter: var(--tile-filter); }
+.leaflet-container .leaflet-control-attribution { background: var(--glass) !important; color: var(--muted); }
+.leaflet-container .leaflet-control-attribution a { color: var(--link); }
 
 /* Leaflet pin (DOM icon): same shape as the prototype pins */
 .pin-icon { background: transparent; border: 0; }
@@ -281,7 +288,7 @@ a.crumb:hover strong { color: var(--link); }
 .pin.inactive { filter: grayscale(.7); opacity: .65; }
 .pin-icon.active .pin, .pin-icon:hover .pin { transform: rotate(-45deg) scale(1.14); }
 .pin-number { position: absolute; top: -8px; right: -8px; transform: rotate(45deg); background: var(--night); color: #fff; border-radius: 50%; min-width: 18px; height: 18px; font-size: 12px; font-weight: 900; display: grid; place-items: center; border: 2px solid #fff; }
-.boundary-label { background: var(--glass); border: 0; border-radius: 6px; font-weight: 900; color: var(--muted); font-size: 12px; box-shadow: none; padding: 2px 6px; }
+.leaflet-container .boundary-label { background: var(--glass); border: 0; border-radius: 6px; font-weight: 900; color: var(--muted); font-size: 12px; box-shadow: none; padding: 2px 6px; }
 
 /* ---- Bottom bar ----------------------------------------------------------- */
 .bottom-bar { margin-top: 16px; padding: 15px 17px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); display: flex; gap: 15px; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
@@ -585,4 +592,5 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 @media (forced-colors: active) {
   .pin, .legend-bullet, .steps li.done { forced-color-adjust: none; }
   .check-chip, .mini-filter, .filter-button, .secondary, .home-card { border: 1px solid CanvasText; }
+  select:not([multiple]):not([size]) { -webkit-appearance: auto; appearance: auto; background-image: none; }
 }
