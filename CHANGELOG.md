@@ -11,6 +11,10 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ### Changed
 - "What's new" never shows unreleased changes.
+- One page for families: **My route** now sits right under the map (between the map and the list on phones), with **Share** and **Show on map** at the top. The copy-as-text button and the link box are gone.
+- Save routes by name (for example "Little kids" and "Big kids"): each keeps its own saved homes and filters, and you switch between them from a short list. They stay on your phone only.
+- The bottom tabs are now **Map · Rules · My house**.
+- The map stays on the neighborhood: everything outside it is dimmed, and you can't pan or zoom far away.
 
 ### Fixed
 - Dark mode on iPhone and iPad: the map now turns dark too, the zone labels on the map follow the theme, and drop-down menus no longer show as grey boxes.

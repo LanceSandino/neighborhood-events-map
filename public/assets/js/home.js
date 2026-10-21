@@ -1,18 +1,20 @@
 /**
  * @module assets/js/home
  * @description Public family page controller: filters (localStorage), synchronized list + Leaflet
- *     map, favorites, selected-home panel, suggested stop order, info/house sheets, and the
- *     registration/dispute flows (register.js). Works without the map; the list is always usable.
- * @dependencies lib/*, register.js, Leaflet (global L, optional)
+ *     map kept on the neighborhood, favorites, selected-home panel, the inline "My route" panel
+ *     (route-panel.js), Rules/house sheets, and the registration/dispute flows (register.js). Works
+ *     without the map; the list is always usable.
+ * @dependencies lib/*, route-panel.js, register.js, Leaflet (global L, optional)
  */
 import { api } from './lib/api.js';
 import { createStore } from './lib/store.js';
 import { DEFAULT_FILTERS, matches, activeFilterCount, normalizeFilters, choiceCounts, isLowSensory } from './lib/filters.js';
-import { nowInZone, time12 } from './lib/time.js';
+import { nowInZone } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
-import { planStops, applyOrder, moveStop, suggestNearby } from './lib/route.js';
+import { focusMap } from './lib/map-focus.js';
 import { initModals, openModal, closeModal, toast } from './lib/modal.js';
 import { initRegistration, openRegistration, openDispute } from './register.js';
+import { createRoutePanel } from './route-panel.js';
 
 const boot = JSON.parse(document.getElementById('boot').textContent);
 const C = boot.community;
@@ -20,15 +22,16 @@ let homes = boot.homes;
 const zoneLabels = Object.fromEntries(C.zones.map((z) => [z.key, z.label]));
 const store = createStore(C.community.id, C.event.date.slice(0, 4));
 let filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
-// A shared link (?f=<filters>&stops=<ids>&start=<id>) opens exactly that view.
+// A shared link (?f=<filters>&stops=<ids>&start=<id>) opens exactly that view, in the unsaved route so a saved one stays as it was.
 const shared = readSharedLink();
+if ((shared.filters || shared.stops) && store.get().activeRoute) {
+  store.switchRoute(null);
+  filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
+}
 if (shared.filters) { filters = { ...DEFAULT_FILTERS, ...normalizeFilters(shared.filters) }; store.set({ filters }); }
 let activeId = null;
-let routeNumbers = new Map();
-let currentPlan = [];
-let manualOrder = false;
 let here = null; // the visitor's location for "start from my location": memory only, never stored or sent
-let locating = false;
+let route = null; // the "My route" panel (route-panel.js)
 
 const $ = (sel) => document.querySelector(sel);
 const ctx = () => {
@@ -62,6 +65,7 @@ function initMap() {
       zoneLayers.set(z.key, { zone: z, layer });
     }
     fitAll();
+    focusMap(L, map, { boundary: C.map.boundary, bbox: C.map.bbox }); // dim outside the neighborhood; stay near it
     if (filters.zone && filters.zone !== 'all') highlightZone(filters.zone);
     map.on('click', () => selectHome(null));
     $('#mapFallback').hidden = true;
@@ -98,7 +102,7 @@ function renderPins(visibleIds) {
   if (!map) return;
   for (const [id, m] of markers) if (!homes.some((h) => h.id === id)) { m.remove(); markers.delete(id); }
   for (const h of homes) {
-    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: routeNumbers.get(h.id) }), iconSize: [37, 37], iconAnchor: [5, 36] });
+    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id) }), iconSize: [37, 37], iconAnchor: [5, 36] });
     let m = markers.get(h.id);
     if (!m) {
       m = L.marker([h.lat, h.lon], { icon, keyboard: true, title: h.address, alt: h.address, riseOnHover: true });
@@ -136,7 +140,6 @@ function render() {
   $('#filterCount').textContent = String(count);
   $('#filterCount').classList.toggle('hide', count === 0);
   $('#btnFilters').setAttribute('aria-label', count ? `Filters, ${count} active` : 'Filters');
-  $('#savedCount').textContent = saved.filter((id) => homes.some((h) => h.id === id)).length;
   $('#statHomes').textContent = homes.length;
   if ($('#statCandy')) $('#statCandy').textContent = homes.filter((h) => h.candy).length;
   if ($('#statAdult')) $('#statAdult').textContent = homes.filter((h) => h.adult_drinks).length;
@@ -144,6 +147,7 @@ function render() {
   renderChoiceCounts(c);
   for (const btn of document.querySelectorAll('[data-filter]')) btn.setAttribute('aria-pressed', String(!!filters[btn.dataset.filter]));
   $('#btnReset').classList.toggle('hide', activeFilterCount(filters) === 0);
+  route.render(); // stop order first: the pins show its numbers
   renderPins(ids);
   if (activeId && !homes.some((h) => h.id === activeId)) selectHome(null);
 }
@@ -205,189 +209,19 @@ function readSharedLink() {
   return out;
 }
 
-/** Link to this exact view: the active filters and, for a route, its stops and starting point. */
-function shareLink({ withRoute = true } = {}) {
-  const url = new URL('/', location.origin);
-  const changed = Object.fromEntries(Object.entries(filters).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(DEFAULT_FILTERS[k])));
-  if (Object.keys(changed).length) url.searchParams.set('f', btoa(JSON.stringify(changed)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
-  if (withRoute && currentPlan.length) {
-    url.searchParams.set('stops', currentPlan.flatMap((g) => g.stops.map((h) => h.id)).join('.'));
-    const start = Number($('#routeStart').value) || null; // "my location" is never put in a link
-    if (start) url.searchParams.set('start', String(start));
-    if (manualOrder) url.searchParams.set('o', '1');
-  }
-  return url.toString();
-}
-
-/* ---------------- Route (suggested stop order) ---------------- */
-/** Builds the stop list (suggested order, or the visitor's own order) and shows it; opens the sheet unless it is open. */
-function showRoute({ open = true } = {}) {
-  const { saved, routeAll } = store.get();
-  const skippedIds = new Set(store.get().skipped);
-  const vis = visible();
-  const fromLink = shared.stops ? homes.filter((h) => shared.stops.includes(h.id)) : null;
-  const linked = Boolean(fromLink && fromLink.length);
-  // Saved homes, or (no favourites, or "All matching" chosen) every home matching the filters.
-  const useSaved = !linked && saved.length > 0 && !routeAll;
-  const pool = linked ? fromLink : (useSaved ? homes.filter((h) => saved.includes(h.id)) : vis);
-  // Homes that are paused, out of candy or done for the night never go on a route; skipped ones neither.
-  const handingOut = pool.filter(isOpen);
-  const chosen = handingOut.filter((h) => !skippedIds.has(h.id));
-  const skipped = pool.length - handingOut.length;
-  const userSkipped = handingOut.length - chosen.length;
-  const startSel = $('#routeStart');
-  const pref = (fromLink && shared.start) || store.get().start || '';
-  const startId = Number(pref) || null;
-  startSel.innerHTML = '<option value="">The first stop in each area</option>'
-    + ('geolocation' in navigator && window.isSecureContext ? `<option value="here" ${pref === 'here' ? 'selected' : ''}>📍 My current location</option>` : '')
-    + chosen.map((h) => `<option value="${h.id}" ${h.id === startId ? 'selected' : ''}>${esc(h.address)}</option>`).join('');
-  // "My current location" is remembered as a choice, but the position never is: ask for it again (once).
-  if (pref === 'here' && !here && !locating) startFromHere();
-  const start = pref === 'here' && here ? { id: null, lat: here.lat, lon: here.lon } : chosen.find((h) => h.id === startId) || null;
-  const order = fromLink && fromLink.length ? (shared.order ? shared.stops : null) : store.get().order;
-  manualOrder = Boolean(order && order.length);
-  currentPlan = applyOrder(planStops(chosen, { groups: C.routing.groups, zonesEnabled: C.zones.length > 0, start }), order);
-  $('#routeSub').textContent = (linked
-    ? 'A stop list someone shared with you. Save the ones you like with ♡.'
-    : useSaved
-    ? `Only your ${saved.length} saved ${saved.length === 1 ? 'home' : 'homes'}, in ${manualOrder ? 'your own' : 'a suggested'} order. Choose “All matching” to see every home.`
-    : `Every home handing out that matches your filters${saved.length ? '' : ' (save favorites ♡ to choose your own)'}. Skip any with ✕.`)
-    + (pref === 'here' && !here ? ' 📍 Finding your location…' : '');
-  let n = 0;
-  routeNumbers = new Map();
-  const move = (h, i, last, dir) => `<button type="button" class="move" data-move="${dir}" data-id="${h.id}" aria-label="Move ${esc(h.address)} ${dir < 0 ? 'earlier' : 'later'}" ${(dir < 0 ? i === 0 : i === last) ? 'disabled' : ''}>${dir < 0 ? '↑' : '↓'}</button>`;
-  const source = !linked && saved.length
-    ? `<div class="route-source" role="group" aria-label="Stops to include"><button type="button" data-route-all="0" aria-pressed="${useSaved}">🧡 Saved (${saved.length})</button><button type="button" data-route-all="1" aria-pressed="${!useSaved}">All matching (${vis.filter(isOpen).length})</button></div>`
-    : '';
-  const ideas = useSaved && chosen.length
-    ? suggestNearby(chosen, vis.filter((h) => isOpen(h) && !skippedIds.has(h.id)), { groups: C.routing.groups, zonesEnabled: C.zones.length > 0 })
-    : [];
-  const extras = (ideas.length ? `<div class="route-suggest"><h3 class="route-group-title">Nearby, not on your list</h3><ul>${ideas.map(({ home: h, meters }) => `<li><div class="route-text"><b>${esc(h.address)}</b><p>About ${Math.max(10, Math.round(meters / 10) * 10)} m from a stop · ${time12(h.start)}–${time12(h.end)}</p></div><button type="button" class="secondary add-stop" data-add-stop="${h.id}" aria-label="Add ${esc(h.address)} to my stops">+ Add</button></li>`).join('')}</ul></div>` : '')
-
-  const stopCount = currentPlan.reduce((n, g) => n + g.stops.length, 0);
-  const status = `<p class="route-status" role="status"><b>${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}</b>${currentPlan.length > 1 ? ` in ${currentPlan.length} trips` : ''}${start ? ` · from ${start.id ? esc(start.address) : 'your location'}` : ''}${skipped ? ` · ${skipped} not handing out now` : ''}${userSkipped ? ` · ${userSkipped} skipped <button type="button" class="link-button" data-unskip>Bring back</button>` : ''}</p>`;
-  $('#routeItems').innerHTML = source + (!linked && !useSaved ? filterSummary() : '') + status + (currentPlan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
-    + currentPlan.map((g, gi) => {
-    const label = tripLabel(g, gi);
-    return `${label ? `<h3 class="route-group-title">${currentPlan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
-      <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; routeNumbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${isLowSensory(h) ? ' · 🧩 Sensory-friendly' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · 👻 Big scares' : ''}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
-      ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
-      ${C.routing.provider && g.stops.length > 1 ? `<button type="button" class="secondary" data-provider-path="${gi}">Show walking path for this trip</button>` : ''}`;
-  }).join('') + (currentPlan.length > 1 ? '<div class="notice">🚧 These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>' : '')
-    : '<div class="empty">No stops yet. Save some homes ♡ or change your filters.</div>') + extras;
-  $('#routeLink').value = shareLink();
+/** A saved route was opened (or saved or deleted): its filters become the page's filters. */
+function applyStoredFilters() {
+  filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
+  syncControls();
+  highlightZone(filters.zone || 'all');
   render();
-  if (open && !$('#routeModal').classList.contains('open')) openModal('routeModal');
 }
 
-/** The filters shaping a filter-based route, as chips, with a way back to change them. */
-function filterSummary() {
-  const chips = [];
-  const zone = $('#zone');
-  if (zone && zone.value !== 'all') chips.push(zone.selectedOptions[0]?.dataset.label || zone.value);
-  for (const b of document.querySelectorAll('[data-filter][aria-pressed="true"]')) {
-    const icon = b.querySelector('.fi')?.outerHTML || '';
-    const words = [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
-    chips.push({ icon, words });
-  }
-  const time = $('#time');
-  if (time && time.value !== 'any') chips.push(`🕐 ${time.selectedOptions[0]?.textContent || time.value}`);
-  if ((filters.q || '').trim()) chips.push(`🔍 “${filters.q.trim()}”`);
-  if (!chips.length) return '<p class="form-caption route-filters">Showing every home handing out. <button type="button" class="link-button" data-edit-filters>Add filters</button></p>';
-  const html = chips.map((c) => `<span class="route-chip">${typeof c === 'string' ? esc(c) : `${c.icon}${esc(c.words)}`}</span>`).join('');
-  return `<div class="route-filters" aria-label="Filters used for these stops"><span class="label">Filtered by</span>${html}<button type="button" class="link-button" data-edit-filters>Change</button></div>`;
-}
-
-/** Moves a stop within its trip and keeps the new order (on this device, or in the shared view). */
-function reorder(id, delta) {
-  const order = moveStop(currentPlan, id, delta);
-  if (shared.stops) { shared.stops = order; shared.order = true; } else store.set({ order });
-  showRoute({ open: false });
-  const again = document.querySelector(`#routeItems [data-move="${delta}"][data-id="${id}"]:not([disabled])`)
-    || document.querySelector(`#routeItems [data-move="${-delta}"][data-id="${id}"]`);
-  if (again) again.focus();
-}
-
-/** "Start from my location": asks for the position once; it stays in memory on this device. */
-function startFromHere() {
-  if (!navigator.geolocation || !window.isSecureContext) { store.set({ start: '' }); return; }
-  locating = true;
-  const done = () => { locating = false; if ($('#routeModal').classList.contains('open')) showRoute({ open: false }); };
-  navigator.geolocation.getCurrentPosition((pos) => {
-    here = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-    showMe();
-    done();
-  }, () => {
-    store.set({ start: '' });
-    done();
-    toast('Could not get your location. Choose a starting home instead.');
-  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
-}
-
-/** A trip's name: the walking area's name ("Main (1–3)") when it has one, else its zones in map order. */
-function tripLabel(g, gi) {
-  const area = g.key.startsWith('group-') ? document.querySelector(`#zone option[value="area:${g.key.slice(6)}"]`) : null;
-  if (area) return area.dataset.label;
-  const order = C.zones.map((z) => z.key);
-  if (g.zones.length) return [...g.zones].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((z) => zoneLabels[z] || z).join(', ');
-  return currentPlan.length > 1 ? `Area ${gi + 1}` : '';
-}
-
-function routeText() {
-  let n = 0;
-  return `${C.community.name} Halloween — my stops (${manualOrder ? 'my order' : 'suggested order'}, not walking directions)\n` + currentPlan.map((g, gi) =>
-    (currentPlan.length > 1 ? `\nTrip ${gi + 1}${tripLabel(g, gi) ? ` (${tripLabel(g, gi)})` : ''}\n` : '')
-    + g.stops.map((h) => `${++n}. ${h.address} (${time12(h.start)}–${time12(h.end)})`).join('\n')).join('\n')
-    + `\n\nOpen on the map: ${shareLink()}`;
-}
-
-let pathLayer = null;
-async function showProviderPath(gi) {
-  const g = currentPlan[gi];
-  try {
-    const { route } = await api('/api/routes/plan', { method: 'POST', body: { stops: g.stops.map((h) => h.id) } });
-    if (map) {
-      if (pathLayer) pathLayer.remove();
-      pathLayer = L.geoJSON(route.geometry, { style: { color: '#302a40', weight: 4, opacity: 0.75 } }).addTo(map);
-      map.fitBounds(pathLayer.getBounds(), { padding: [30, 30] });
-    }
-    toast(`${route.notice} About ${Math.round(route.distance_m / 100) / 10} km.`, 6000);
-  } catch (e) {
-    toast(e.message || 'No walking path is available. Use the suggested stop order.');
-  }
-}
-
-/**
- * Copies text on every browser: the Clipboard API where it is allowed (HTTPS), otherwise a hidden
- * textarea with execCommand('copy'), which also works on iPhone over plain HTTP.
- */
-async function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    try { await navigator.clipboard.writeText(text); return true; } catch { /* fall through */ }
-  }
-  const area = document.createElement('textarea');
-  area.value = text;
-  area.setAttribute('readonly', '');
-  area.className = 'copy-buffer';
-  document.body.appendChild(area);
-  area.select();
-  area.setSelectionRange(0, text.length);
-  let ok = false;
-  try { ok = document.execCommand('copy'); } catch { ok = false; }
-  area.remove();
-  return ok;
-}
-
-/** Closes the stop list and shows the numbered stops on the map. */
-function showRouteOnMap() {
-  closeModal(document.getElementById('routeModal'));
-  const stops = currentPlan.flatMap((g) => g.stops);
-  if (map && stops.length) {
-    const fromHere = $('#routeStart').value === 'here' && here;
-    if (fromHere) showMe();
-    map.fitBounds([...stops.map((h) => [h.lat, h.lon]), ...(fromHere ? [[here.lat, here.lon]] : [])], { padding: [40, 40], maxZoom: 18 });
-    if (innerWidth <= 660) $('#mapPane').scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
-  }
+/** Puts the current filters into the search box, zone and time pickers. */
+function syncControls() {
+  $('#search').value = filters.q || '';
+  if ($('#zone')) $('#zone').value = filters.zone || 'all';
+  $('#time').value = filters.time || 'any';
 }
 
 /* ---------------- Location (stays on this device) ---------------- */
@@ -410,7 +244,7 @@ function locate() {
 function actions(action) {
   switch (action) {
     case 'explore': document.getElementById('explore').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth' }); return true;
-    case 'route': showRoute(); return true;
+    case 'route': route.open(); return true;
     case 'register': openRegistration(); return true;
     case 'info': openModal('infoModal'); return true;
     case 'house': openModal('houseModal'); return true;
@@ -436,8 +270,6 @@ function bind() {
       if (activeId === id) selectHome(id, { pan: false }); else render();
       return;
     }
-    const pathBtn = e.target.closest('[data-provider-path]');
-    if (pathBtn) { showProviderPath(Number(pathBtn.dataset.providerPath)); return; }
     const report = e.target.closest('[data-report]');
     if (report) {
       const h = homes.find((x) => x.id === Number(report.dataset.report));
@@ -462,16 +294,14 @@ function bind() {
     $('#moreFilters').classList.toggle('open', open);
     more.setAttribute('aria-expanded', String(open));
   });
+  syncControls();
   const search = $('#search');
-  search.value = filters.q || '';
   search.addEventListener('input', () => setFilters({ q: search.value }));
   const zone = $('#zone');
   if (zone) {
-    zone.value = filters.zone || 'all';
     zone.addEventListener('change', () => { setFilters({ zone: zone.value }); highlightZone(zone.value); });
   }
   const time = $('#time');
-  time.value = filters.time || 'any';
   time.addEventListener('change', () => setFilters({ time: time.value }));
   $('#btnReset').addEventListener('click', () => {
     filters = { ...DEFAULT_FILTERS };
@@ -484,46 +314,6 @@ function bind() {
   $('#btnZoomIn').addEventListener('click', () => map && map.zoomIn());
   $('#btnZoomOut').addEventListener('click', () => map && map.zoomOut());
   $('#btnLocate').addEventListener('click', locate);
-  $('#routeStart').addEventListener('change', (e) => {
-    // A new start means a new suggested order.
-    shared.start = null; shared.order = false;
-    store.set({ start: e.target.value, order: [] });
-    showRoute({ open: false }); // asks for the location when "My current location" is chosen
-  });
-  $('#routeItems').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-move]');
-    if (b) { reorder(Number(b.dataset.id), Number(b.dataset.move)); return; }
-    const skip = e.target.closest('[data-skip]');
-    if (skip) { store.set({ skipped: [...new Set([...store.get().skipped, Number(skip.dataset.skip)])] }); showRoute({ open: false }); $('#routeStart').focus(); return; }
-    if (e.target.closest('[data-unskip]')) { store.set({ skipped: [] }); showRoute({ open: false }); return; }
-    const add = e.target.closest('[data-add-stop]');
-    if (add) { store.toggleSaved(Number(add.dataset.addStop)); showRoute({ open: false }); toast('Added to your stops.'); return; }
-    if (e.target.closest('[data-edit-filters]')) {
-      closeModal($('#routeModal'));
-      $('#explore').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth' });
-      if ($('#moreFilters') && !$('#moreFilters').classList.contains('open')) $('#btnFilters').click();
-      return;
-    }
-    const src = e.target.closest('[data-route-all]');
-    if (src) { store.set({ routeAll: src.dataset.routeAll === '1' }); showRoute({ open: false }); return; }
-    if (e.target.closest('#btnResetOrder')) {
-      if (shared.stops) shared.order = false; else store.set({ order: [] });
-      showRoute({ open: false });
-      $('#routeStart').focus();
-    }
-  });
-  $('#routeLink').addEventListener('focus', (e) => e.target.select());
-  $('#btnCopyRoute').addEventListener('click', async () => {
-    toast(await copyText(routeText()) ? 'Stop list copied.' : 'Copy did not work here; select the list and copy it.');
-  });
-  $('#btnShareRoute').addEventListener('click', async () => {
-    const url = shareLink();
-    if (navigator.share) {
-      try { await navigator.share({ title: `${C.community.name} Halloween stops`, text: 'My trick-or-treat stops', url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
-    }
-    toast(await copyText(url) ? 'Link copied — anyone with it sees these stops.' : 'Copy the link below to share these stops.');
-  });
-  $('#btnRouteMap').addEventListener('click', showRouteOnMap);
   if (filters.noScares || filters.noFlashing || filters.noLoud || filters.nonfood || filters.adult || filters.stroller || filters.saved || filters.time !== 'any') {
     $('#moreFilters').classList.add('open');
     more.setAttribute('aria-expanded', 'true');
@@ -554,6 +344,8 @@ if (!document.querySelector('link[href="/vendor/leaflet/leaflet.css"]')) {
   document.head.append(css);
 }
 
+route = createRoutePanel({ C, store, shared, homes: () => homes, visible, isOpen, filters: () => filters, map: () => map,
+  here: () => here, setHere: (pos) => { here = pos; showMe(); }, render, applyStoredFilters, reducedMotion });
 bind();
 initRegistration({ community: C, onPublishedHint: () => {} });
 render();
@@ -562,5 +354,6 @@ addEventListener('load', () => { if (map) { render(); map.invalidateSize(); } })
 setInterval(refresh, 60000); // public data only; never touches a signed-in session
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 addEventListener('hashchange', routeFromHash);
-routeFromHash();
-if (shared.stops) showRoute();
+// A link to a sheet or to My route opens once the page (and the map above the route) has its final layout.
+const whenLoaded = (fn) => (document.readyState === 'complete' ? fn() : addEventListener('load', fn, { once: true }));
+whenLoaded(() => { routeFromHash(); if (shared.stops) route.open(); });

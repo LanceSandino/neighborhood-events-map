@@ -95,13 +95,10 @@
       </div>
       <div class="map-footer"><span>⚠️ Listings are self-reported. Pins show only homes that chose to participate.</span><strong id="footerZones">{% if zs %}{{ zs.title }}{% endif %}</strong></div>
     </div>
+    {% include 'home/_route.html.twig' %}
   </div>
 </section>
 
-<div class="bottom-bar">
-  <div><b>✨ Your Halloween, your way</b><p><span id="savedCount">0</span> saved stops · Plan a gentle stroll or a spooky adventure for you and your crew.</p></div>
-  <div class="bottom-actions"><a class="secondary" href="#list-my-house" data-action="register">🏠 List your home</a><button type="button" class="route-btn" data-action="route">🧭 Build my route →</button></div>
-</div>
 <p class="disclaimer">Listings, hours and sensory details are self-reported by residents and may change. Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{% else %}; this site does not grant access to gated areas{% endif %}.</p>
 <script type="application/json" id="boot">{{ boot|boot_json }}</script>
 {% endblock %}

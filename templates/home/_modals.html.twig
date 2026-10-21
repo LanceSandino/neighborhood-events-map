@@ -105,25 +105,10 @@
   </div>
 </div>
 
-<div class="modal-wrap" id="routeModal" role="dialog" aria-modal="true" aria-labelledby="routeTitle" hidden>
-  <div class="modal wide">
-    <button type="button" class="close-modal" data-close aria-label="Close">×</button>
-    <div class="eyebrow">✨ Your adventure</div>
-    <h2 id="routeTitle">Your trick-or-treat stops</h2>
-    <p class="introtext" id="routeSub">A suggested stop order based on your saved homes and filters.</p>
-    <div class="field full"><label for="routeStart">Start from</label><select id="routeStart"><option value="">The first stop in each area</option></select></div>
-    <div id="routeItems" aria-live="polite"></div>
-    <div class="notice" id="routeNotice">🚸 This is a suggested order of stops, not walking directions. It never connects separate areas across major roads, water or gates. Use sidewalks and marked crossings.</div>
-    {% for note in c.map.crossing_notes %}<div class="notice">⚠️ {{ note }}</div>{% endfor %}
-    <div class="field full route-link"><label for="routeLink">Link to these stops and filters</label><input id="routeLink" readonly></div>
-    <div class="modal-actions"><button type="button" class="secondary" id="btnRouteMap">🗺️ Show on map</button><button type="button" class="secondary" id="btnShareRoute">Share</button><button type="button" class="primary" id="btnCopyRoute">Copy stop list</button></div>
-  </div>
-</div>
-
 <div class="modal-wrap" id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle" hidden>
   <div class="modal">
     <button type="button" class="close-modal" data-close aria-label="Close">×</button>
-    <div class="eyebrow">🎃 Quick guide</div>
+    <div class="eyebrow">📋 Rules &amp; tips</div>
     <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
     {% set access = access_info(c.community.access ?? null) %}
     <div class="guide-facts">

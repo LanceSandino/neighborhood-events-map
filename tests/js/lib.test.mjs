@@ -6,6 +6,7 @@ import { matches, DEFAULT_FILTERS, isLowSensory, activeFilterCount, normalizeFil
 import { statusOf, time12, nowInZone } from '../../public/assets/js/lib/time.js';
 import { planStops, orderGroup, haversine, applyOrder, moveStop, suggestNearby } from '../../public/assets/js/lib/route.js';
 import { createStore } from '../../public/assets/js/lib/store.js';
+import { maskRings, panLimit, WORLD } from '../../public/assets/js/lib/map-focus.js';
 import { zoneStyle } from '../../public/assets/js/lib/render.js';
 
 const home = (o) => ({ id: 1, address: '1 Pumpkin Ln', zone: 'oak', lat: 40.03, lon: -74.99, start: '17:00', end: '21:00', candy: true, nonfood: false,
@@ -97,6 +98,51 @@ test('store is namespaced by community and year and survives storage failures', 
   assert.deepEqual(b.get().saved, [1]);
 });
 
+test('saved routes keep their own stops, filters, start and order; edits follow the active route', () => {
+  const mem = new Map();
+  const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  const s = createStore('maple-hollow-demo', '2026', storage);
+  s.toggleSaved(1); s.toggleSaved(2); s.set({ filters: { candy: true }, start: '2', order: [2, 1] });
+  const little = s.saveRoute('  Little kids  ');
+  assert.equal(s.get().activeRoute, little);
+  assert.deepEqual(s.get().routes.map((r) => r.name), ['Little kids']);
+  // A second route starts from a copy and changes on its own.
+  const big = s.saveRoute('Big kids');
+  s.toggleSaved(3); s.set({ filters: { noScares: false, adult: true } });
+  s.switchRoute(little);
+  assert.deepEqual([s.get().saved, s.get().filters, s.get().start, s.get().order], [[1, 2], { candy: true }, '2', [2, 1]]);
+  s.switchRoute(big);
+  assert.deepEqual([s.get().saved, s.get().filters], [[1, 2, 3], { noScares: false, adult: true }]);
+  // The unsaved draft comes back as it was; saved routes survive a reload.
+  s.switchRoute(null);
+  assert.deepEqual(s.get().saved, [1, 2]);
+  s.toggleSaved(9);
+  const again = createStore('maple-hollow-demo', '2026', storage);
+  assert.deepEqual(again.get().routes.map((r) => r.name), ['Little kids', 'Big kids']);
+  assert.equal(again.get().activeRoute, null);
+  assert.deepEqual(again.get().saved, [1, 2, 9]);
+  // Deleting the active route returns to the draft; names are trimmed, capped and never empty.
+  again.switchRoute(big);
+  again.deleteRoute(big);
+  assert.equal(again.get().activeRoute, null);
+  assert.deepEqual(again.get().saved, [1, 2, 9]);
+  assert.equal(again.get().routes.length, 1);
+  assert.equal(again.saveRoute(''), null);
+  const long = again.saveRoute('x'.repeat(90));
+  assert.equal(again.get().routes.find((r) => r.id === long).name.length, 40);
+  // A route someone shared is saved as given, and the visitor's own unsaved route stays as it was.
+  again.switchRoute(null);
+  const shared = again.saveRoute('From Sam', { saved: [5, 6], order: [6, 5], filters: { candy: true } });
+  assert.deepEqual([again.get().saved, again.get().order, again.get().activeRoute], [[5, 6], [6, 5], shared]);
+  again.switchRoute(null);
+  assert.deepEqual(again.get().saved, [1, 2, 9]);
+  // A damaged entry is dropped instead of breaking the page.
+  mem.set(again.key, JSON.stringify({ routes: [{ id: 'a' }, 'junk', { id: 'b', name: 'Ok', saved: [4] }], activeRoute: 'zzz' }));
+  const fixed = createStore('maple-hollow-demo', '2026', storage);
+  assert.deepEqual(fixed.get().routes.map((r) => r.id), ['b']);
+  assert.equal(fixed.get().activeRoute, null);
+});
+
 test('selecting a zone makes it stand out and the others recede', () => {
   const z = (key, residential = true) => ({ key, residential });
   assert.equal(zoneStyle(z('a'), null).weight, 1);
@@ -156,6 +202,23 @@ test('the dark map also works in Safari and its overrides beat leaflet.css', () 
   assert.match(css, /\nhtml \.leaflet-container \{[^}]*background: var\(--map-bg\)/, 'map background beats leaflet.css');
   assert.match(css, /\n\.leaflet-container \.boundary-label \{[^}]*background: var\(--glass\)/, 'zone labels use theme tokens');
   assert.doesNotMatch(css, /\n\.boundary-label \{/, 'no unscoped zone-label rule left behind');
+});
+
+test('the map dims everything outside the boundary and stays near the neighborhood', () => {
+  const square = [[-75, 40], [-74.99, 40], [-74.99, 40.01], [-75, 40.01], [-75, 40]];
+  const one = maskRings({ type: 'Polygon', coordinates: [square, [[-74.996, 40.004], [-74.995, 40.004], [-74.995, 40.005], [-74.996, 40.004]]] });
+  assert.deepEqual(one[0], WORLD, 'the world comes first');
+  assert.equal(one.length, 2, 'only the outline is cut out; holes inside the boundary stay clear');
+  assert.deepEqual(one[1][0], [40, -75], 'GeoJSON [lon, lat] becomes Leaflet [lat, lon]');
+  const two = maskRings({ type: 'MultiPolygon', coordinates: [[square], [square.map(([x, y]) => [x + 0.02, y])]] });
+  assert.equal(two.length, 3);
+  assert.equal(maskRings(null), null);
+  assert.equal(maskRings({ type: 'Polygon', coordinates: [[[0, 0], [1, 1]]] }), null, 'a broken outline dims nothing');
+  const [[s, w], [n, e]] = panLimit({ minLat: 40, maxLat: 40.01, minLon: -75, maxLon: -74.98 });
+  assert.ok(Math.abs(s - 39.994) < 1e-9 && Math.abs(n - 40.016) < 1e-9);
+  assert.ok(Math.abs(w + 75.012) < 1e-9 && Math.abs(e + 74.968) < 1e-9);
+  const [[s2], [n2]] = panLimit({ minLat: 40, maxLat: 40, minLon: -75, maxLon: -75 });
+  assert.ok(n2 - s2 >= 0.006 - 1e-9, 'a single point still gets a few hundred metres');
 });
 
 test('selects are drawn by the page in token colours, not by iOS', () => {

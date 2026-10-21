@@ -35,7 +35,7 @@ test('filters affect list and pins together and persist after reload; favorites 
   guard.assertClean();
 });
 
-test('selecting a card opens the map preview; keyboard works; route sheet lists saved stops', async ({ page }) => {
+test('selecting a card opens the map preview; keyboard works; My route lists saved stops on the same page', async ({ page }) => {
   await page.goto(DEMO + '/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -44,14 +44,13 @@ test('selecting a card opens the map preview; keyboard works; route sheet lists 
   await page.keyboard.press('Enter');
   await expect(page.locator('#mapSelected')).toHaveClass(/open/);
   await expect(page.locator('#mapSelected b')).toHaveText(await card.locator('.card-line b').textContent());
+  await expect(page.locator('#route')).toHaveClass(/empty/);
   for (const i of [0, 3, 5]) await page.locator('.home-card .save').nth(i).click();
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
-  await expect(page.locator('#routeModal')).toBeVisible();
+  await expect(page.locator('#route')).toBeVisible();
   await expect(page.locator('#routeItems .route-item')).toHaveCount(3);
   await expect(page.locator('#routeNotice')).toContainText('not walking directions');
   await expect(page.locator('.leaflet-marker-icon .pin-number')).toHaveCount(3);
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#routeModal')).toBeHidden();
+  await expect(page.locator('#savedCount')).toHaveText('3');
 });
 
 test('map failure still leaves a readable list', async ({ page, request }) => {
@@ -139,7 +138,7 @@ test('form check chips are compact and aligned (register step 2)', async ({ page
   expect(new Set(chips.map((c) => c.h)).size).toBe(1);
 });
 
-test('homes not handing out stay off the list and routes; filters show their count; copy and show-on-map work', async ({ page, request }) => {
+test('homes not handing out stay off the list and routes; filters show their count; share and show-on-map work', async ({ page, request }) => {
   const all = (await (await request.get(DEMO + '/api/homes')).json()).homes;
   const closed = all.filter((h) => h.status !== 'active');
   expect(closed.length).toBeGreaterThan(0);
@@ -152,14 +151,14 @@ test('homes not handing out stay off the list and routes; filters show their cou
   await expect(page.locator('.home-card')).toHaveCount(all.length);
   await page.locator('#btnShowClosed').click();
   // A route built from every visible home leaves the closed ones out and says so.
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  await page.getByRole('button', { name: /^Plan with all \d+ matching homes$/ }).click();
   await expect(page.locator('#routeItems .route-item')).toHaveCount(all.length - closed.length);
   await expect(page.locator('.route-status')).toContainText(`${closed.length} not handing out now`);
-  await page.locator('#btnCopyRoute').click();
-  await expect(page.locator('.toast')).toContainText('Stop list copied.');
+  await expect(page.locator('#btnCopyRoute')).toHaveCount(0);
+  await page.locator('#btnShareRoute').click();
+  await expect(page.locator('.toast')).toContainText(/Link copied|Copy this link/);
   await page.locator('#btnRouteMap').click();
-  await expect(page.locator('#routeModal')).toBeHidden();
-  await expect(page.locator('.leaflet-marker-icon .pin-number').first()).toBeVisible();
+  await expect(page.locator('.leaflet-marker-icon .pin-number').first()).toBeInViewport();
   // Active filters are counted on the Filters button.
   await expect(page.locator('#filterCount')).toBeHidden();
   await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
@@ -176,9 +175,8 @@ test('a shared link opens the same stops and filters', async ({ page, browser })
   await page.reload();
   for (const i of [0, 2]) await page.locator('.home-card .save').nth(i).click();
   await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
   const stops = await page.locator('#routeItems .route-item b').allTextContents();
-  const link = await page.locator('#routeLink').inputValue();
+  const link = await page.locator('#btnShareRoute').getAttribute('data-url');
   expect(link).toContain('stops=');
   expect(link).toContain('f=');
   // Someone else (fresh browser, nothing saved) opens the link.
@@ -186,11 +184,17 @@ test('a shared link opens the same stops and filters', async ({ page, browser })
   const other = await ctx.newPage();
   await politeTiles(other);
   await other.goto(link.replace(/^https?:\/\/[^/]+/, DEMO));
-  await expect(other.locator('#routeModal')).toBeVisible();
+  await expect(other.locator('#route')).toBeInViewport();
   await expect(other.locator('#routeSub')).toContainText('shared with you');
   expect(await other.locator('#routeItems .route-item b').allTextContents()).toEqual(stops);
-  await other.keyboard.press('Escape');
   await expect(other.getByRole('button', { name: 'Sensory-friendly', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  // They keep it as one of their own routes; the link is no longer needed.
+  await other.locator('#btnSaveRoute').click();
+  await other.locator('#routeName').fill('From a friend');
+  await other.locator('#routeNameForm').getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(other.locator('#routePick option:checked')).toHaveText('From a friend');
+  expect(other.url()).not.toContain('stops=');
+  expect(await other.locator('#routeItems .route-item b').allTextContents()).toEqual(stops);
   await ctx.close();
 });
 
@@ -204,17 +208,14 @@ test('route: reorder stops, keep the order, share it; start from my location', a
   await page.reload();
   const openHomes = (await (await page.request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
   for (const h of openHomes.slice(0, 3)) await page.locator(`.home-card .save[data-save="${h.id}"]`).click();
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
   const names = () => page.locator('#routeItems .route-item b').allTextContents();
   const before = await names();
   expect(before).toHaveLength(3);
   await page.getByRole('button', { name: `Move ${before[0]} later` }).click();
   expect(await names()).toEqual([before[1], before[0], before[2]]);
   await expect(page.getByRole('button', { name: `Move ${before[0]} later` })).toBeFocused();
-  await expect(page.locator('#routeLink')).toHaveValue(/[?&]o=1/);
-  await page.keyboard.press('Escape');
+  await expect(page.locator('#btnShareRoute')).toHaveAttribute('data-url', /[?&]o=1/);
   await page.reload();
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
   expect(await names(), 'own order survives a reload').toEqual([before[1], before[0], before[2]]);
   await page.getByRole('button', { name: 'Use the suggested order' }).click();
   expect(await names()).toEqual(before);
@@ -223,7 +224,7 @@ test('route: reorder stops, keep the order, share it; start from my location', a
   await ctx.setGeolocation({ latitude: target.lat, longitude: target.lon });
   await page.locator('#routeStart').selectOption('here');
   await expect(page.locator('#routeItems .route-item b').first()).toHaveText(before[2]);
-  await expect(page.locator('#routeLink')).not.toHaveValue(/start=|lat|lon/);
+  await expect(page.locator('#btnShareRoute')).not.toHaveAttribute('data-url', /start=|lat|lon/);
   await ctx.close();
 });
 
@@ -276,20 +277,19 @@ test('route: skip stops, bring them back, add nearby suggestions, switch between
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   const openHomes = (await (await page.request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
-  // No favourites: every matching home; skip one.
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  // No favourites: every matching home (on request); skip one.
+  await page.getByRole('button', { name: /^Plan with all \d+ matching homes$/ }).click();
   const items = page.locator('#routeItems .route-item');
   await expect(items).toHaveCount(openHomes.length);
   const first = (await items.first().locator('b').textContent()).trim();
   await page.getByRole('button', { name: `Skip ${first}` }).click();
   await expect(items).toHaveCount(openHomes.length - 1);
-  await expect(page.locator('#routeLink')).not.toHaveValue(new RegExp(`\\b${openHomes.find((h) => h.address === first).id}\\b`));
+  await expect(page.locator('#btnShareRoute')).not.toHaveAttribute('data-url', new RegExp(`\\b${openHomes.find((h) => h.address === first).id}\\b`));
   await page.getByRole('button', { name: 'Bring back' }).click();
   await expect(items).toHaveCount(openHomes.length);
-  await page.keyboard.press('Escape');
   // One favourite: suggestions nearby can be added; "All matching" shows everything again.
+  await page.getByRole('button', { name: /^🧡 Saved/ }).click();
   await page.locator(`.home-card .save[data-save="${openHomes[0].id}"]`).click();
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
   await expect(items).toHaveCount(1);
   const add = page.locator('[data-add-stop]').first();
   await expect(add).toBeVisible();
@@ -341,12 +341,11 @@ test('a remembered "My current location" start is used straight away on the next
   const openHomes = (await (await page.request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
   const target = openHomes[openHomes.length - 1];
   await ctx.setGeolocation({ latitude: target.lat, longitude: target.lon });
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
+  await page.getByRole('button', { name: /^Plan with all \d+ matching homes$/ }).click();
   await page.locator('#routeStart').selectOption('here');
   await expect(page.locator('#routeItems .route-item b').first()).toHaveText(target.address);
   // Next visit: the choice is remembered, the position is asked for again and used without re-choosing.
   await page.reload();
-  await page.getByRole('button', { name: '🧭 Build my route →' }).click();
   await expect(page.locator('#routeStart')).toHaveValue('here');
   await expect(page.locator('#routeItems .route-item b').first()).toHaveText(target.address);
   await ctx.close();
@@ -363,4 +362,59 @@ test('each filter shows how many homes it would list', async ({ page, request })
   await expect(page.locator('[data-filter="noScares"] .fcount')).toHaveText(String(open.length - bigScares));
   await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
   await expect(page.locator('#listCount')).toHaveText(`${await page.locator('[data-filter="lowSensory"] .fcount').textContent()} showing`);
+});
+
+test('saved routes keep their own homes and filters; switch between them, survive a reload, delete one', async ({ page }) => {
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const openHomes = (await (await page.request.get(DEMO + '/api/homes')).json()).homes.filter((h) => h.status === 'active');
+  const save = (h) => page.locator(`.home-card .save[data-save="${h.id}"]`).click();
+  const names = () => page.locator('#routeItems .route-item b').allTextContents();
+  const saveAs = async (name) => {
+    await page.locator('#btnSaveRoute').click();
+    await page.locator('#routeName').fill(name);
+    await page.locator('#routeNameForm').getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.locator('#routePick option:checked')).toHaveText(name);
+  };
+  await save(openHomes[0]); await save(openHomes[1]);
+  await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
+  await saveAs('Little kids');
+  const little = await names();
+  expect(little).toHaveLength(2);
+  // A second route from the unsaved one: other homes, other filters.
+  await page.locator('#routePick').selectOption({ label: 'My unsaved route' });
+  await page.getByRole('button', { name: 'Sensory-friendly', exact: true }).click();
+  await save(openHomes[0]); await save(openHomes[1]); await save(openHomes[2]);
+  await saveAs('Big kids');
+  expect(await names()).toEqual([openHomes[2].address]);
+  await expect(page.getByRole('button', { name: 'Sensory-friendly', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  // Switching brings back that route's homes and filters, also after a reload.
+  await page.locator('#routePick').selectOption({ label: 'Little kids' });
+  expect(await names()).toEqual(little);
+  await expect(page.getByRole('button', { name: 'Sensory-friendly', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.reload();
+  await expect(page.locator('#routePick option:checked')).toHaveText('Little kids');
+  expect(await names()).toEqual(little);
+  page.once('dialog', (d) => d.accept());
+  await page.locator('#btnDeleteRoute').click();
+  await expect(page.locator('#routePick option')).toHaveText(['My unsaved route', 'Big kids']);
+});
+
+test('bottom tabs are Map, Rules and My house; Rules opens the guide; the map stays on the neighborhood', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(DEMO + '/');
+  await expect(page.locator('.mobile-bottom a')).toHaveText(['🗺️Map', '📋Rules', '🏠My house']);
+  await page.locator('.mobile-bottom [data-action="info"]').click();
+  await expect(page.locator('#infoModal')).toBeVisible();
+  await expect(page.locator('#infoModal .eyebrow')).toContainText('Rules');
+  await page.keyboard.press('Escape');
+  // Outside the boundary is dimmed, and zooming far out keeps the neighborhood large on screen (zoom buttons are desktop-only).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.reload();
+  await expect(page.locator('path.outside-mask')).toHaveCount(1);
+  for (let i = 0; i < 8; i++) await page.locator('#btnZoomOut').click();
+  await page.waitForTimeout(800);
+  const [area, map] = await Promise.all([page.locator('path[stroke="#f07936"]').first().boundingBox(), page.locator('#map').boundingBox()]);
+  expect(area.width, 'the neighborhood still fills a good part of the map').toBeGreaterThan(map.width * 0.25);
 });
