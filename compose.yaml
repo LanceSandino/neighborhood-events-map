@@ -1,5 +1,7 @@
 # Neighborhood Halloween Map — production-style stack (single host, self-hosted).
-# Usage: cp .env.example .env && edit secrets && docker compose up -d --build
+# Usage: cp .env.example .env && edit secrets, then either
+#   docker compose pull && docker compose up -d --wait     (published images; pin APP_IMAGE_TAG to a release)
+#   docker compose up -d --build --wait                    (build from this source checkout)
 # nginx binds ONLY to 127.0.0.1:${HTTP_PORT}; publish it through Cloudflare Tunnel or an HTTPS proxy.
 # PostgreSQL is on an internal network with no published port.
 name: ${COMPOSE_PROJECT_NAME:-halloween}
@@ -79,7 +81,7 @@ services:
 
   app:
     build: { context: ., target: prod }
-    image: neighborhood-halloween-app:${APP_IMAGE_TAG:-local}
+    image: ${APP_IMAGE:-ghcr.io/lancesandino/neighborhood-events-map}:${APP_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment: *app-env
     volumes:
@@ -100,7 +102,7 @@ services:
   # stale route-cache rows and idle sessions (app:maintenance:purge). Same image, no published ports.
   maintenance:
     build: { context: ., target: prod }
-    image: neighborhood-halloween-app:${APP_IMAGE_TAG:-local}
+    image: ${APP_IMAGE:-ghcr.io/lancesandino/neighborhood-events-map}:${APP_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -120,7 +122,7 @@ services:
 
   nginx:
     build: { context: ., target: nginx }
-    image: neighborhood-halloween-nginx:${APP_IMAGE_TAG:-local}
+    image: ${NGINX_IMAGE:-ghcr.io/lancesandino/neighborhood-events-map-nginx}:${APP_IMAGE_TAG:-latest}
     restart: unless-stopped
     ports:
       - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}:8080"   # HTTP_BIND=0.0.0.0 only for testing from other devices on your LAN

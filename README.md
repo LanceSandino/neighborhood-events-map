@@ -47,7 +47,7 @@ docker compose exec app php bin/console app:admin:grant you@example.org   # or l
 - Site: <http://localhost:8087> · Mailpit (all email in dev): <http://localhost:8025>
 - Organizer console: <http://localhost:8087/admin> (sign in at `/login` with the granted email; the link arrives in Mailpit)
 
-Production-style run (no dev overlay, baked image, non-root PHP, unprivileged nginx): leave `COMPOSE_FILE` unset and run `docker compose up -d --build`.
+Production-style run (no dev overlay, baked image, non-root PHP, unprivileged nginx): leave `COMPOSE_FILE` unset and run `docker compose pull && docker compose up -d` to use the published images (amd64 and arm64; pin `APP_IMAGE_TAG` to a release), or `docker compose up -d --build` to build from source. See [deployment](docs/runbooks/deployment.md).
 
 ## Configure your own neighborhood
 

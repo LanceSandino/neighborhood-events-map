@@ -7,16 +7,20 @@
 - Docker Engine with Compose v2; a non-root deploy user in the `docker` group.
 - Choose a free loopback port (default `8087`); nothing else needs to be exposed.
 
+Nothing is built on the server: each release is published as ready-made images for amd64 and arm64
+(`ghcr.io/<owner>/neighborhood-events-map` and `…-nginx`). The server only needs that release's compose files
+(a shallow clone, or the release's source archive) plus your `.env` and community folder.
+
 ```bash
-git clone https://github.com/<owner>/neighborhood-events-map.git /srv/halloween
-cd /srv/halloween
-git checkout v0.4.0-beta.4            # or the release tag you are deploying
+git clone --depth 1 --branch vX.Y.Z https://github.com/<owner>/neighborhood-events-map.git /srv/neighborhood-events-map
+cd /srv/neighborhood-events-map
 cp .env.example .env && chmod 600 .env
 ```
 
 Edit `.env` (production values; keep `COMPOSE_FILE` commented out):
 
 ```
+APP_IMAGE_TAG=X.Y.Z                                 # the release you deploy (never "latest" in production)
 APP_SECRET=<openssl rand -hex 32>
 POSTGRES_PASSWORD=<openssl rand -hex 32>
 APP_BASE_URL=https://halloween.example.org
@@ -33,13 +37,14 @@ Put your community folder in place: `mkdir -p deploy/community && cp config/comm
 ## 2. Start
 
 ```bash
-docker compose up -d --build --wait
+docker compose pull                       # the published images for this host's CPU
+docker compose up -d --wait
 docker compose ps                         # app/nginx/postgres healthy, backup running
 curl -s http://127.0.0.1:8087/healthz     # {"status":"ok",...}
 docker compose exec app php bin/console app:admin:grant organizer@example.org
 ```
 
-Migrations run automatically on start (`MIGRATE_ON_START=1`). The container refuses to start with a placeholder or short `APP_SECRET`.
+To build from the checked-out source instead of pulling, run `docker compose up -d --build --wait` (the images get the same names, tagged locally). Migrations run automatically on start (`MIGRATE_ON_START=1`). The container refuses to start with a placeholder or short `APP_SECRET`.
 
 ### Staging behind a tunnel (production image, test email)
 

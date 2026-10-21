@@ -321,4 +321,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/compact-filters"
   author: "Lance Sandino"
   timestamp: "2026-10-21T02:30:00Z"
+- id: CU-20261020-04
+  type: feature
+  title: "Publish multi-arch app and nginx images to GitHub Container Registry; pull-based deploys"
+  description: ".github/workflows/images.yml builds the prod and nginx Dockerfile targets for linux/amd64 and linux/arm64 (QEMU + buildx, GitHub Actions cache) and pushes ghcr.io/<owner>/neighborhood-events-map and -nginx: vX.Y.Z tags give :X.Y.Z and :latest, pushes to main give :edge and :sha-<short>; each image gets OCI labels, an SBOM, max-mode provenance and a signed build-provenance attestation (attest-build-provenance). compose.yaml now names those images (APP_IMAGE / NGINX_IMAGE overridable, APP_IMAGE_TAG default latest) and keeps the build sections, so `docker compose pull && up` runs a release with no build on the server while `up --build` still builds from source under the same names. Deployment, upgrade/rollback and release runbooks, README and .env.example describe pinning APP_IMAGE_TAG and pulling (D-20261020-04). Packages are made public by the owner in package settings after the first publish."
+  impact: low
+  affected_modules: [".github/workflows/images.yml", "compose.yaml", ".env.example", "README.md", "docs/runbooks/deployment.md", "docs/runbooks/upgrade-rollback.md", "docs/runbooks/release.md", "DECISIONS.md"]
+  related_tests: ["actionlint 1.7.7 on .github/workflows/*.yml (clean)", "docker compose config --images resolves the GHCR names and a pinned APP_IMAGE_TAG"]
+  commit_ref: "feature/published-images"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T01:30:00Z"
 ```
