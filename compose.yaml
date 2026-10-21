@@ -3,7 +3,7 @@
 # Usage: cp .env.example .env && edit secrets, then either
 #   docker compose pull && docker compose up -d --wait     (published images; pin APP_IMAGE_TAG to a release)
 #   docker compose up -d --build --wait                    (build from this source checkout)
-# nginx binds ONLY to 127.0.0.1:${HTTP_PORT}; publish it through Cloudflare Tunnel or an HTTPS proxy.
+# nginx binds ONLY to 127.0.0.1:${HTTP_PORT}; publish it through an HTTPS reverse proxy or tunnel (docs/runbooks/deployment.md).
 # PostgreSQL is on an internal network with no published port.
 name: ${COMPOSE_PROJECT_NAME:-halloween}
 
@@ -47,6 +47,7 @@ x-app-env: &app-env
   RL_DISPUTE_GLOBAL: ${RL_DISPUTE_GLOBAL:-60/86400}
   RL_LISTING_PER_USER: ${RL_LISTING_PER_USER:-60/3600}
   RL_ROUTE_GLOBAL: ${RL_ROUTE_GLOBAL:-1000/86400}
+  CLOUDFLARE_WEB_ANALYTICS: ${CLOUDFLARE_WEB_ANALYTICS:-0}   # only behind Cloudflare: docs/examples/cloudflare.md
   ROUTING_PROVIDER: ${ROUTING_PROVIDER:-none}
   ROUTING_API_KEY: ${ROUTING_API_KEY:-}
   MIGRATE_ON_START: ${MIGRATE_ON_START:-1}

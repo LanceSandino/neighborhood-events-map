@@ -57,6 +57,49 @@ final class PublicPrivacyTest extends AppTestCase
         self::assertStringContainsString('no-store', (string) $this->client->getResponse()->headers->get('Cache-Control'));
     }
 
+    /** Analytics are off unless the operator turns them on (D-20261021-34): nothing is allowed, nothing is claimed. */
+    public function testCloudflareWebAnalyticsIsOffUnlessConfigured(): void
+    {
+        $this->configureCommunity();
+        $html = (string) $this->client->request('GET', '/')->html();
+        self::assertStringNotContainsString('cloudflareinsights', (string) $this->client->getResponse()->headers->get('Content-Security-Policy'));
+        self::assertStringContainsString('No ads · No tracking', $html);
+        $this->client->request('GET', '/privacy');
+        $privacy = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('no advertising, no analytics and no tracking', $privacy);
+        self::assertStringNotContainsString('Cloudflare Web Analytics', $privacy);
+    }
+
+    /**
+     * CLOUDFLARE_WEB_ANALYTICS=1 (a site proxied by Cloudflare, Web Analytics automatic setup on): the policy allows only
+     * Cloudflare's beacon host, its reports go to the site's own /cdn-cgi/rum, and the footer and privacy page say so.
+     * The app adds no script itself; Cloudflare injects it.
+     */
+    public function testCloudflareWebAnalyticsWhenConfiguredIsAllowedAndDisclosed(): void
+    {
+        $_ENV['CLOUDFLARE_WEB_ANALYTICS'] = $_SERVER['CLOUDFLARE_WEB_ANALYTICS'] = '1';
+        try {
+            static::ensureKernelShutdown();
+            $this->client = static::createClient([], ['HTTP_ORIGIN' => 'http://localhost', 'REMOTE_ADDR' => '127.0.0.1']);
+            $this->clock = static::mockTime('2026-10-31 22:00:00 UTC');
+            $this->configureCommunity();
+            $html = (string) $this->client->request('GET', '/')->html();
+            $csp = (string) $this->client->getResponse()->headers->get('Content-Security-Policy');
+            self::assertStringContainsString("script-src 'self' https://static.cloudflareinsights.com;", $csp);
+            self::assertStringContainsString("connect-src 'self';", $csp, 'reports go to the site itself (/cdn-cgi/rum)');
+            self::assertStringNotContainsString('unsafe-inline', $csp);
+            self::assertStringNotContainsString('static.cloudflareinsights.com/beacon', $html, 'Cloudflare injects the beacon, not the app');
+            self::assertStringContainsString('No ads · Cookie-free visit statistics', $html);
+            $this->client->request('GET', '/privacy');
+            $privacy = (string) $this->client->getResponse()->getContent();
+            self::assertStringContainsString('Cloudflare Web Analytics', $privacy);
+            self::assertStringNotContainsString('no analytics', $privacy);
+        } finally {
+            unset($_ENV['CLOUDFLARE_WEB_ANALYTICS'], $_SERVER['CLOUDFLARE_WEB_ANALYTICS']);
+            static::ensureKernelShutdown();
+        }
+    }
+
     public function testAnonymousCrossOriginPostIsBlocked(): void
     {
         $this->configureCommunity();

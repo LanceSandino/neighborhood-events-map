@@ -5,14 +5,21 @@
 <article class="page-card legal">
   <div class="eyebrow">🔒 Privacy</div>
   <h1>Privacy notice</h1>
+  {% if cloudflare_web_analytics %}
+  <p class="legal-lead">This is a free, volunteer-run neighborhood map. It has <b>no advertising and no tracking</b>, counts visits with cookie-free statistics (below), and never sells or shares personal information.</p>
+  {% else %}
   <p class="legal-lead">This is a free, volunteer-run neighborhood map. It has <b>no advertising, no analytics and no tracking</b>, and it never sells or shares personal information.</p>
+  {% endif %}
 
   <h2>If you are browsing the map</h2>
   <ul>
     <li><b>No account, no cookies.</b> Browsing, filtering and planning stops set no cookies.</li>
     <li><b>Saved on this device only.</b> Your favorites, filters, start point, stop order, skipped stops, list layout and appearance and accessibility choices are kept in this browser’s local storage so they are still there next time. They are never sent to us. <button type="button" class="link-button" id="btnClearLocal">Clear saved data on this device</button> <span id="clearStatus" class="form-caption" role="status"></span></li>
     <li><b>Your location stays on your phone.</b> “Show my location” and “Start from my current location” work only after your browser asks you and you allow it; the position is used on this page only — never saved, put in shared links or sent to us.</li>
-    <li><b>Map pictures.</b> The map background is loaded from OpenStreetMap’s tile servers, which receive your IP address and browser details like any website you visit (see the <a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener">OpenStreetMap Foundation privacy policy</a>). They set no cookies here. Everything else — pages, scripts, fonts — comes from this site.</li>
+    <li><b>Map pictures.</b> The map background is loaded from OpenStreetMap’s tile servers, which receive your IP address and browser details like any website you visit (see the <a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener">OpenStreetMap Foundation privacy policy</a>). They set no cookies here. Everything else — pages, scripts, fonts — comes from this site{% if cloudflare_web_analytics %}, apart from the statistics script below{% endif %}.</li>
+    {% if cloudflare_web_analytics %}
+    <li><b>Visit statistics.</b> This site uses <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/" rel="noopener">Cloudflare Web Analytics</a> to count page views and measure how fast pages load. Its small script, loaded from Cloudflare, sets no cookies, stores nothing on your device and does not identify or follow you; Cloudflare, which already delivers this site, sees the page address, your browser type and your country.</li>
+    {% endif %}
   </ul>
 
   <h2>If you list your home</h2>

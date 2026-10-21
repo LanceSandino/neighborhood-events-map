@@ -2,8 +2,8 @@
 # Generates /tmp/nginx-trusted-proxy.conf at container start (nginx image entrypoint hook).
 # Trusted for X-Forwarded-For / X-Forwarded-Proto: loopback and this container's default gateway —
 # the source address of connections through the published 127.0.0.1 port, i.e. the host's reverse
-# proxy or Cloudflare Tunnel — plus any CIDRs in NGINX_TRUSTED_PROXIES (space-separated), e.g. a
-# cloudflared container on the same network. Every other peer is taken at its real address.
+# proxy or tunnel — plus any CIDRs in NGINX_TRUSTED_PROXIES (space-separated), e.g. a
+# proxy or tunnel container on the same network. Every other peer is taken at its real address.
 set -eu
 out=/tmp/nginx-trusted-proxy.conf
 gw=$(awk '$2 == "00000000" { print $3; exit }' /proc/net/route 2>/dev/null || true)

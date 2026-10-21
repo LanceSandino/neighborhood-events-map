@@ -36,6 +36,9 @@ parameters:
     # Public source code link in the "What's new" dialog; set APP_SOURCE_URL to your fork, or empty to hide it.
     env(APP_SOURCE_URL): 'https://github.com/LanceSandino/neighborhood-events-map'
     app.source_url: '%env(APP_SOURCE_URL)%'
+    # Optional Cloudflare Web Analytics, only for a site proxied by Cloudflare (D-20261021-34). Off by default.
+    env(CLOUDFLARE_WEB_ANALYTICS): '0'
+    app.cloudflare_web_analytics: '%env(bool:CLOUDFLARE_WEB_ANALYTICS)%'
     app.branding_dir: '%kernel.project_dir%/var/branding'
 
 services:
@@ -92,6 +95,10 @@ services:
         arguments:
             $floorMs: '%env(int:AUTH_RESPONSE_FLOOR_MS)%'
             $jitterMs: '%env(int:AUTH_RESPONSE_JITTER_MS)%'
+
+    App\Shared\SecurityHeadersSubscriber:
+        arguments:
+            $cloudflareWebAnalytics: '%app.cloudflare_web_analytics%'
 
     App\Community\BrandingStore:
         arguments:

@@ -2,7 +2,7 @@
 
 ```
  Browser (families, residents, organizers)
-   │  HTTPS (Cloudflare Tunnel or reverse proxy)
+   │  HTTPS (any reverse proxy or tunnel)
    ▼
  nginx (unprivileged, 127.0.0.1:8087) ── static assets, query-less access log, sets HTTPS/real client IP,
    │                                       refuses percent-encoded paths

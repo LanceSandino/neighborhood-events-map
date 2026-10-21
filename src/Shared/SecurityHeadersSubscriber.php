@@ -12,11 +12,15 @@ use Symfony\Component\HttpKernel\KernelEvents;
 /**
  * @module Shared/SecurityHeadersSubscriber
  * @description Adds a strict Content-Security-Policy (no inline script/style; tile host from config),
- *     framing/referrer/permissions headers, and no-store caching for private areas.
+ *     framing/referrer/permissions headers, and no-store caching for private areas. With CLOUDFLARE_WEB_ANALYTICS
+ *     on, scripts may also come from Cloudflare's beacon host: Cloudflare injects the cookie-free Web Analytics beacon
+ *     into pages of a site it proxies, and the beacon reports to the site's own /cdn-cgi/rum ('self').
  */
 final class SecurityHeadersSubscriber implements EventSubscriberInterface
 {
-    public function __construct(private readonly CommunityRepository $community)
+    public const CLOUDFLARE_BEACON_HOST = 'https://static.cloudflareinsights.com';
+
+    public function __construct(private readonly CommunityRepository $community, private readonly bool $cloudflareWebAnalytics = false)
     {
     }
 
@@ -66,7 +70,9 @@ final class SecurityHeadersSubscriber implements EventSubscriberInterface
             // DB unavailable: keep the default tile host.
         }
 
-        return "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: {$tiles}; font-src 'self'; "
+        $scripts = "'self'".($this->cloudflareWebAnalytics ? ' '.self::CLOUDFLARE_BEACON_HOST : '');
+
+        return "default-src 'self'; script-src {$scripts}; style-src 'self'; img-src 'self' data: blob: {$tiles}; font-src 'self'; "
             ."connect-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'";
     }
 }

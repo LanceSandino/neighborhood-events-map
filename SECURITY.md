@@ -36,4 +36,4 @@ Expired links, PoW challenges, claim intents, throttle events, sessions and rout
 
 ## Operator checklist
 
-Random `APP_SECRET` (≥ 32 chars; the container refuses placeholders and test values), strong `POSTGRES_PASSWORD` (the container refuses the development default), `APP_DEBUG=0` (the production container refuses anything else), HTTPS in front (Cloudflare Tunnel or proxy), authenticated SMTP relay with SPF/DKIM, daily backups with a tested restore, `composer audit` before upgrades, and keep `.env` and `deploy/` out of Git.
+Random `APP_SECRET` (≥ 32 chars; the container refuses placeholders and test values), strong `POSTGRES_PASSWORD` (the container refuses the development default), `APP_DEBUG=0` (the production container refuses anything else), HTTPS in front (a reverse proxy or tunnel), authenticated SMTP relay with SPF/DKIM, daily backups with a tested restore, `composer audit` before upgrades, and keep `.env` and `deploy/` out of Git.

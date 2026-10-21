@@ -761,4 +761,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/nginx-asset-capture"
   author: "Lance Sandino"
   timestamp: "2026-10-21T13:50:00Z"
+- id: CU-20261021-49
+  type: feature
+  title: "Optional cookie-free Cloudflare Web Analytics (CLOUDFLARE_WEB_ANALYTICS, off by default); Cloudflare documented as one optional example"
+  description: "Cloudflare's automatic Web Analytics setup injects a beacon script from static.cloudflareinsights.com into pages of a site it proxies; the strict Content-Security-Policy blocked it, so it measured nothing. CLOUDFLARE_WEB_ANALYTICS=1 (env, default 0) adds that host to script-src in SecurityHeadersSubscriber; connect-src stays 'self' because a proxied site's beacon reports to its own /cdn-cgi/rum. The app never adds the beacon itself, so the setting does nothing without Cloudflare. When it is on, the footer reads \"No ads · Cookie-free visit statistics\" and the privacy page describes Cloudflare Web Analytics (Twig global cloudflare_web_analytics). Docs: the deployment runbook now covers any HTTPS reverse proxy or tunnel (with a Caddy example), and the Cloudflare tunnel, free-plan settings, the Bot Fight Mode CSP note and Web Analytics moved to the optional docs/examples/cloudflare.md; README, SECURITY.md, the architecture overview and config comments no longer present Cloudflare as the way to deploy."
+  impact: low
+  affected_modules: ["src/Shared/SecurityHeadersSubscriber.php", "config/services.yaml", "config/packages/twig.yaml", "templates/base.html.twig", "templates/legal/privacy.html.twig", "compose.yaml", ".env.example", ".env.dist", "docs/examples/cloudflare.md", "docs/runbooks/deployment.md", "README.md"]
+  related_tests: ["tests/Integration/PublicPrivacyTest.php: testCloudflareWebAnalyticsIsOffUnlessConfigured", "tests/Integration/PublicPrivacyTest.php: testCloudflareWebAnalyticsWhenConfiguredIsAllowedAndDisclosed (failed before the setting existed)"]
+  commit_ref: "feature/cloudflare-web-analytics"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T14:20:00Z"
 ```

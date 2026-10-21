@@ -1,4 +1,4 @@
-# Deployment — self-hosted Docker host (e.g. an Ubuntu home server) with Cloudflare Tunnel
+# Deployment — self-hosted Docker host (e.g. an Ubuntu home server)
 
 > Do not deploy to a live server or change its existing services without the owner's explicit go-ahead.
 
@@ -59,29 +59,24 @@ Before real SMTP is ready, set `COMPOSE_FILE=compose.yaml:compose.staging.yaml` 
 - **nginx** gzips text responses and caches fingerprinted scripts and styles for a year.
 - Measure performance on the **production** stack (no `COMPOSE_FILE` dev overlay). The development stack re-checks every PHP file, runs a coverage driver and adds `X-Robots-Tag: noindex`, so it scores lower on Lighthouse by design.
 
-## 3. Cloudflare Tunnel
+## 3. HTTPS in front
 
-Reuse the host's existing `cloudflared` (recommended) and add an ingress rule:
+The stack serves plain HTTP on `127.0.0.1` only. Put something in front that holds the HTTPS certificate for your hostname and forwards requests to `http://127.0.0.1:8087`: a reverse proxy on the same host (Caddy, nginx, Traefik) or a tunnel service. Whatever you choose must:
 
-```yaml
-ingress:
-  - hostname: events.example.org
-    service: http://127.0.0.1:8087
-  - service: http_status:404
+- keep the original `Host` header (the `APP_BASE_URL` host; production answers `400` to any other host);
+- send `X-Forwarded-Proto: https` and the visitor's address in `X-Forwarded-For`.
+
+nginx trusts these headers only from loopback and from its own network gateway, where every connection through the published `127.0.0.1` port arrives, so a proxy on the same host works without configuration. If your proxy runs as a container on the stack's network instead, set `NGINX_TRUSTED_PROXIES` to its address. nginx then sets `HTTPS=on` for PHP (secure `__Host-` cookie, HSTS) and logs no query strings. Check that `docker compose logs nginx` shows real visitor addresses: if every line shows the same private address, all visitors share one rate-limit budget. Never expose PostgreSQL or Mailpit (Mailpit is not part of the production stack).
+
+For example, Caddy on the same host gets and renews the certificate itself and sends the headers above:
+
+```caddy
+events.example.org {
+    reverse_proxy 127.0.0.1:8087
+}
 ```
 
-`cloudflared` sends `X-Forwarded-Proto: https` and the client IP in `X-Forwarded-For`. nginx trusts these only from loopback and from its own network gateway — the address every connection through the published `127.0.0.1` port arrives from — so a host-level `cloudflared` works without configuration. If cloudflared (or another proxy) runs as a container on the stack's network instead, set `NGINX_TRUSTED_PROXIES` to its address. nginx then sets `HTTPS=on` for PHP (secure cookies, HSTS) and logs no query strings. Check the access log (`docker compose logs nginx`) shows real visitor IPs; if every line shows the same private address, per-IP limits would treat all visitors as one. Never route the tunnel to PostgreSQL or Mailpit (Mailpit is not part of the production stack).
-
-### Cloudflare free plan (optional extra layer)
-
-The app defends itself without Cloudflare: proof-of-work, persistent per-IP/per-mailbox/global limits and honeypots on every email or claim request, a response-time floor, nginx request and connection limits per client, body caps and timeouts. Cloudflare's free plan adds an outer layer:
-
-- **Security → Bots:** turn on *Bot Fight Mode*.
-- **Security → WAF:** keep the free managed rules on; add the one free *rate limiting rule*, for example 30 requests per 10 seconds per IP on paths starting with `/api/auth/`, `/api/addresses/` and `/api/disputes`, action *Block* for 1 minute.
-- **SSL/TLS:** *Full*, plus *Always Use HTTPS*.
-- **Speed → Optimization:** leave *Rocket Loader*, *Email Address Obfuscation* and automatic script injection **off**. They rewrite pages, and the strict Content-Security-Policy blocks what they inject.
-- **Caching:** respect origin headers. Scripts and styles use fingerprinted URLs (`/assets/v<version>.<hash>/…`), so an update never mixes old and new code, and pages, the API and sign-in are `no-store`.
-- **Zero Trust → Access** can keep the site private while you test; remove the Access policy when you open it to the public.
+Already using Cloudflare for your domain? [docs/examples/cloudflare.md](../examples/cloudflare.md) is an optional example with Cloudflare Tunnel, free-plan security settings and optional cookie-free Web Analytics (`CLOUDFLARE_WEB_ANALYTICS`).
 
 ## 4. Verify
 
@@ -102,4 +97,4 @@ The app defends itself without Cloudflare: proof-of-work, persistent per-IP/per-
 | Everyone throttled | the access log shows one private address for every visitor → set `NGINX_TRUSTED_PROXIES` to your proxy's address; or many neighbors really share one IP → raise `RL_LINK_PER_IP` |
 | `400 Bad Request` on every page | the browser's hostname differs from `APP_BASE_URL` (production accepts only that host) |
 | Grey map | tile URL/policy; CSP `img-src` follows the configured tile host |
-| Cookies not Secure | tunnel must send `X-Forwarded-Proto: https` |
+| Cookies not Secure | the proxy or tunnel must send `X-Forwarded-Proto: https` |

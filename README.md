@@ -2,7 +2,7 @@
 
 A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. A Christmas lights map and a garage sale map are next: see the [roadmap](ROADMAP.md).
 
-**Status:** `0.7.0-beta.3` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.7.0-beta.4` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|
@@ -75,9 +75,9 @@ python3 scripts/fetch_arcgis_addresses.py  --config examples/ventura-reserve/gis
 
 The boundary imports **pending review**, exactly like a new deployment. No resident data is in the repository: there are no listings or claims, and the address inventory is fetched to the git-ignored `deploy/private/` folder only when you run the second command. To try registration end to end, import that CSV with `bin/console app:addresses:import` and approve the boundary in the console. Provenance and data notes: [examples/ventura-reserve/README.md](examples/ventura-reserve/README.md). For your own county, copy [`examples/gis-sources.example.json`](examples/gis-sources.example.json).
 
-## Deploying (home server + Cloudflare Tunnel)
+## Deploying (any Docker host behind HTTPS)
 
-nginx listens only on `127.0.0.1:${HTTP_PORT}` (default 8087); PostgreSQL has no published port. Point a Cloudflare Tunnel (or any HTTPS reverse proxy) at `http://127.0.0.1:8087`, set `APP_BASE_URL=https://your-hostname` and a real SMTP relay in `MAILER_DSN`. Step by step: [docs/runbooks/deployment.md](docs/runbooks/deployment.md). Backups run daily (`backup` service, 14-day retention); restore with `bin/restore.sh` — see [docs/runbooks/backup-restore.md](docs/runbooks/backup-restore.md). Upgrades/rollback: [docs/runbooks/upgrade-rollback.md](docs/runbooks/upgrade-rollback.md). Event day (Halloween night): [docs/runbooks/event-day.md](docs/runbooks/event-day.md).
+nginx listens only on `127.0.0.1:${HTTP_PORT}` (default 8087); PostgreSQL has no published port. Point an HTTPS reverse proxy or tunnel (Caddy, nginx, Traefik, Cloudflare Tunnel …) at `http://127.0.0.1:8087`, set `APP_BASE_URL=https://your-hostname` and a real SMTP relay in `MAILER_DSN`. Step by step: [docs/runbooks/deployment.md](docs/runbooks/deployment.md); an optional Cloudflare example is in [docs/examples/cloudflare.md](docs/examples/cloudflare.md). Backups run daily (`backup` service, 14-day retention); restore with `bin/restore.sh` — see [docs/runbooks/backup-restore.md](docs/runbooks/backup-restore.md). Upgrades/rollback: [docs/runbooks/upgrade-rollback.md](docs/runbooks/upgrade-rollback.md). Event day (Halloween night): [docs/runbooks/event-day.md](docs/runbooks/event-day.md).
 
 ## Testing
 
@@ -97,13 +97,13 @@ The same gates run in GitHub Actions ([.github/workflows/ci.yml](.github/workflo
 Production readiness is blocked on real-world inputs, not code:
 
 - For each deployment: the organizer's approval of the boundary and zones, and a review of the address inventory (county address points; border cases).
-- Production hostname, Cloudflare Tunnel route and a deliverability-tested SMTP relay.
+- Production hostname, an HTTPS proxy or tunnel, and a deliverability-tested SMTP relay.
 - Verified safe pedestrian crossings before enabling any routing groups/provider.
 - The published container images must be public on GitHub Container Registry for `docker compose pull` to work without signing in.
 
 ## Privacy and accessibility
 
-No ads, no analytics, no tracking: public pages set no cookies, and the only cookie is the sign-in session after a resident confirms a link. Favorites and filters stay in the visitor's browser. Every page links a privacy notice (`/privacy`), terms of use (`/terms`) and an accessibility statement (`/accessibility`); set `community.contact_url` (e.g. `mailto:`) so visitors can reach the organizer. The UI targets WCAG 2.1 AA and is checked automatically (axe-core) in light and dark; colour is never the only signal. These pages describe the software's behaviour — they are not legal advice.
+No ads and no tracking; no analytics unless the operator turns on cookie-free Cloudflare Web Analytics (`CLOUDFLARE_WEB_ANALYTICS`, off by default; the privacy page and footer then say so). Public pages set no cookies, and the only cookie is the sign-in session after a resident confirms a link. Favorites and filters stay in the visitor's browser. Every page links a privacy notice (`/privacy`), terms of use (`/terms`) and an accessibility statement (`/accessibility`); set `community.contact_url` (e.g. `mailto:`) so visitors can reach the organizer. The UI targets WCAG 2.1 AA and is checked automatically (axe-core) in light and dark; colour is never the only signal. These pages describe the software's behaviour — they are not legal advice.
 
 ## Important limitation
 

@@ -6,6 +6,14 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.7.0-beta.4] - 2026-10-21
+
+### Added
+- Optional, cookie-free **Cloudflare Web Analytics** for sites behind Cloudflare: set `CLOUDFLARE_WEB_ANALYTICS=1` and Cloudflare's visit statistics work; the footer and privacy page then say so. Off by default, and it changes nothing on sites that don't use Cloudflare.
+
+### Changed
+- The deployment guide works with any HTTPS reverse proxy or tunnel (with a Caddy example); Cloudflare is now an optional example in `docs/examples/cloudflare.md`.
+
 ## [0.7.0-beta.3] - 2026-10-21
 
 ### Fixed

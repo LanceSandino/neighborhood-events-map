@@ -1,6 +1,12 @@
 # Test and verification report
 
-## Latest run — 2026-10-21, release 0.7.0-beta.3
+## Latest run — 2026-10-21, release 0.7.0-beta.4
+
+0.7.0-beta.3 plus optional Cloudflare Web Analytics (CU-20261021-49): PHPUnit **269 tests, 5130 assertions** OK; PHPStan no errors.
+With `CLOUDFLARE_WEB_ANALYTICS=1` on the demo stack: the policy's `script-src` adds only `https://static.cloudflareinsights.com`, the
+privacy page and footer disclose it (no horizontal overflow at 375 and 1440 px, light and dark), and the axe checks pass (20/20).
+
+## Run — 2026-10-21, release 0.7.0-beta.3
 
 0.7.0-beta.2 plus the nginx asset fix (CU-20261021-48). The development overlay now mounts the checkout's nginx config, so these
 runs exercise it: Playwright **78 passed, 2 skipped** (chromium + webkit-iphone); `ContainerConfigTest` 8/8 (the new numbered-capture

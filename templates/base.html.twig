@@ -65,7 +65,7 @@
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · No tracking</span><span class="footer-id">{{ community.name }} {{ event_name }} · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
+    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>{{ cloudflare_web_analytics ? 'No ads · Cookie-free visit statistics' : 'No ads · No tracking' }}</span><span class="footer-id">{{ community.name }} {{ event_name }} · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">
