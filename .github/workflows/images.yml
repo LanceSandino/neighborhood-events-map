@@ -130,7 +130,7 @@ jobs:
       - name: Digest for the attestation
         id: digest
         run: echo "value=$(docker buildx imagetools inspect "${{ steps.name.outputs.ref }}:sha-${GITHUB_SHA::7}" --format '{{json .Manifest}}' | jq -r .digest)" >> "$GITHUB_OUTPUT"
-      - uses: actions/attest-build-provenance@96b4a1ef7235a096b17240c259729fdd70c83d45 # v2
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         if: ${{ !github.event.repository.private }}
         with:
           subject-name: ${{ steps.name.outputs.ref }}
