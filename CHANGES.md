@@ -351,4 +351,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/compose-single-build"
   author: "Lance Sandino"
   timestamp: "2026-10-21T05:00:00Z"
+- id: CU-20261021-04
+  type: fix
+  title: "CI: pcov from its pinned GitHub release; build attestation only for public repositories"
+  description: "After the 0.6.0-beta.1 push, the e2e job failed building the dev image because pecl.php.net answered \"No releases available\" / \"cannot download\" to GitHub runners (it still served other clients). The dev stage now downloads pcov v1.0.12's tagged source from GitHub, checks a pinned SHA-256 and installs it with docker-php-ext-install (the documented pattern for PECL extensions). The Images workflow pushed both images (:0.6.0-beta.1, :latest) but its attest-build-provenance step failed: GitHub refuses attestations for user-owned private repositories; the step now runs only when the repository is public (images keep their buildx provenance and SBOM)."
+  impact: none
+  affected_modules: ["Dockerfile", ".github/workflows/images.yml"]
+  related_tests: ["docker build --target dev, then php -m lists pcov (local)", "actionlint 1.7.7 clean", "CI e2e job and Images workflow on the next push to main"]
+  commit_ref: "fix/ci-pcov-attest"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:30:00Z"
 ```

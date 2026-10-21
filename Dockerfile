@@ -21,8 +21,16 @@ ENTRYPOINT ["app-entrypoint"]
 CMD ["php-fpm"]
 
 FROM php-base AS dev
-RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
- && pecl install pcov-1.0.12 && docker-php-ext-enable pcov \
+# pcov (coverage) from its tagged source on GitHub, checked against a pinned SHA-256: pecl.php.net refuses
+# downloads from CI runners. Bump both ARGs together.
+ARG PCOV_VERSION=1.0.12
+ARG PCOV_SHA256=fdd07cad8e2ff42f0c9f095d84aeef11dab0fde7a008805f61883cbcb1b3f12b
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS curl \
+ && curl -fsSL --retry 3 -o /tmp/pcov.tar.gz "https://github.com/krakjoe/pcov/archive/refs/tags/v${PCOV_VERSION}.tar.gz" \
+ && echo "${PCOV_SHA256}  /tmp/pcov.tar.gz" | sha256sum -c - \
+ && mkdir -p /usr/src/php/ext/pcov && tar xzf /tmp/pcov.tar.gz -C /usr/src/php/ext/pcov --strip-components=1 \
+ && docker-php-ext-install pcov \
+ && rm -rf /tmp/pcov.tar.gz /usr/src/php/ext/pcov \
  && apk del .build-deps
 # Loaded after zz-app.ini (alphabetical) so dev overrides win.
 COPY docker/php/php-dev.ini "$PHP_INI_DIR/conf.d/zzz-app-dev.ini"

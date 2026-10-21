@@ -68,7 +68,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
           provenance: mode=max
           sbom: true
+      # GitHub stores attestations only for public repositories (user-owned private repos are refused);
+      # the image still carries its buildx provenance and SBOM.
       - uses: actions/attest-build-provenance@v2
+        if: ${{ !github.event.repository.private }}
         with:
           subject-name: ${{ steps.name.outputs.ref }}
           subject-digest: ${{ steps.build.outputs.digest }}
