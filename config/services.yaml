@@ -97,6 +97,10 @@ services:
         arguments:
             $directory: '%app.branding_dir%'
 
+    App\Security\Session\HostCookieStorageFactory:
+        decorates: session.storage.factory.native
+        arguments: ['@.inner']
+
     App\Security\Session\PgSessionHandler:
         arguments:
             $connection: '@doctrine.dbal.default_connection'

@@ -79,7 +79,11 @@ final class CommunityConfigsTest extends AppTestCase
 
         // After organizer approval the geometry decides eligibility (self-entry is used here only to
         // exercise the plats; the example itself uses the county address registry).
+        self::assertNull($c['map']['bbox'], 'the plats\' extent stays private until approval');
         $this->repo()->approveBoundary(null);
+        $bbox = $this->json('GET', '/api/community')['map']['bbox'];
+        self::assertIsArray($bbox, 'the approved outline and its extent are public');
+        self::assertLessThan($bbox['maxLat'], $bbox['minLat']);
         $settings = $this->repo()->current()->settings;
         $settings['registration']['address_mode'] = 'both';
         $settings['registration']['street_allowlist'] = ['Test St'];

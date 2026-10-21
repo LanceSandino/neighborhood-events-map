@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Audit\AccountLedger;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
 
@@ -11,14 +12,17 @@ use Psr\Clock\ClockInterface;
  * @module Security/UserRepository
  * @description Persistence for passwordless users keyed by normalized email. The organizer role is
  *     only granted out-of-band — `app:admin:grant` or ORGANIZER_EMAILS in the server environment —
- *     never self-assigned; a verified sign-in link proves control of the listed address.
+ *     never self-assigned; a verified sign-in link proves control of the listed address. Role changes go to the
+ *     account ledger, so a restored backup cannot bring a revoked organizer back.
  */
 final class UserRepository
 {
     /** @var array<string,true> organizers named in configuration (ORGANIZER_EMAILS) */
     private readonly array $configuredOrganizers;
 
-    public function __construct(private readonly Connection $db, private readonly ClockInterface $clock, string $organizerEmails = '')
+    private const COLUMNS = 'id, email_normalized, is_admin, sessions_ended_at';
+
+    public function __construct(private readonly Connection $db, private readonly ClockInterface $clock, private readonly AccountLedger $ledger, string $organizerEmails = '')
     {
         $list = [];
         foreach (preg_split('~[\s,;]+~', strtolower($organizerEmails)) ?: [] as $e) {
@@ -38,14 +42,14 @@ final class UserRepository
 
     public function find(int $id): ?User
     {
-        $row = $this->db->fetchAssociative('SELECT id, email_normalized, is_admin FROM users WHERE id = ?', [$id]);
+        $row = $this->db->fetchAssociative('SELECT '.self::COLUMNS.' FROM users WHERE id = ?', [$id]);
 
         return false === $row ? null : $this->hydrate($row);
     }
 
     public function findByEmail(string $email): ?User
     {
-        $row = $this->db->fetchAssociative('SELECT id, email_normalized, is_admin FROM users WHERE email_normalized = ?', [$email]);
+        $row = $this->db->fetchAssociative('SELECT '.self::COLUMNS.' FROM users WHERE email_normalized = ?', [$email]);
 
         return false === $row ? null : $this->hydrate($row);
     }
@@ -57,7 +61,7 @@ final class UserRepository
         $row = $this->db->fetchAssociative(
             'INSERT INTO users (email_normalized, verified_at, created_at, last_login_at) VALUES (:e, :now, :now, :now)
              ON CONFLICT (email_normalized) DO UPDATE SET verified_at = COALESCE(users.verified_at, EXCLUDED.verified_at), last_login_at = EXCLUDED.last_login_at
-             RETURNING id, email_normalized, is_admin',
+             RETURNING '.self::COLUMNS,
             ['e' => $email, 'now' => $now],
         );
 
@@ -70,7 +74,7 @@ final class UserRepository
         $row = $this->db->fetchAssociative(
             'INSERT INTO users (email_normalized, created_at) VALUES (:e, :now)
              ON CONFLICT (email_normalized) DO UPDATE SET email_normalized = EXCLUDED.email_normalized
-             RETURNING id, email_normalized, is_admin',
+             RETURNING '.self::COLUMNS,
             ['e' => $email, 'now' => $this->clock->now()->format('Y-m-d H:i:s.uP')],
         );
 
@@ -80,16 +84,26 @@ final class UserRepository
     public function setAdmin(string $email, bool $admin): User
     {
         $user = $this->ensure($email);
-        $this->db->executeStatement('UPDATE users SET is_admin = :a WHERE id = :id', ['a' => $admin, 'id' => $user->id], ['a' => 'boolean']);
+        $this->db->transactional(function (Connection $db) use ($user, $admin): void {
+            $db->executeStatement('UPDATE users SET is_admin = :a WHERE id = :id', ['a' => $admin, 'id' => $user->id], ['a' => 'boolean']);
+            $this->ledger->record($admin ? 'admin.granted' : 'admin.revoked', $user->id);
+        });
 
-        return new User($user->id, $user->email, $admin || isset($this->configuredOrganizers[$user->email]));
+        return new User($user->id, $user->email, $admin || isset($this->configuredOrganizers[$user->email]), $user->sessionsEndedAt);
+    }
+
+    /** "Sign out everywhere": every session of this user that began up to now is over (IdleSessionSubscriber). */
+    public function endSessions(int $id): void
+    {
+        $this->db->executeStatement('UPDATE users SET sessions_ended_at = ? WHERE id = ?', [$this->clock->now()->format('Y-m-d H:i:s.uP'), $id]);
     }
 
     /** @param array<string,mixed> $row */
     private function hydrate(array $row): User
     {
         $email = (string) $row['email_normalized'];
+        $ended = null === $row['sessions_ended_at'] ? null : (new \DateTimeImmutable((string) $row['sessions_ended_at']))->getTimestamp();
 
-        return new User((int) $row['id'], $email, (bool) $row['is_admin'] || isset($this->configuredOrganizers[$email]));
+        return new User((int) $row['id'], $email, (bool) $row['is_admin'] || isset($this->configuredOrganizers[$email]), $ended);
     }
 }

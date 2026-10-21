@@ -24,7 +24,8 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
  *     Elapsed >= idle window → session destroyed server-side, 401 {code:"session_expired"} (API)
  *     or redirect to the sign-in page. Only interactive requests extend the window; requests marked
  *     background (X-NHM-Background: 1) and the session-status probe never do. Sessions also end a fixed
- *     time after sign-in (AUTH_SESSION_MAX_HOURS, default 12) however active they are. Client timers are hints only.
+ *     time after sign-in (AUTH_SESSION_MAX_HOURS, default 12) however active they are, and every session that began
+ *     before the user chose "Sign out everywhere" ends too. Client timers are hints only.
  *
  * @dependencies Security/SessionPolicy, clock, token storage
  */
@@ -62,11 +63,13 @@ final class IdleSessionSubscriber implements EventSubscriberInterface
         $now = $this->clock->now()->getTimestamp();
         $idle = !\is_int($last) || $now - $last >= $this->policy->idleSeconds();
         $tooOld = \is_int($loginAt) && $now - $loginAt >= $this->policy->maxSessionSeconds();
-        if ($idle || $tooOld) {
+        // "Sign out everywhere" ends every session that began before (or in the same second as) the request.
+        $ended = null !== $user->sessionsEndedAt && (!\is_int($loginAt) || $loginAt <= $user->sessionsEndedAt);
+        if ($idle || $tooOld || $ended) {
             $session->invalidate();
             $this->tokens->setToken(null);
-            $this->audit->record($user->id, 'user#'.$user->id, 'auth.session_expired', 'user', (string) $user->id, [], 'system');
-            $event->setResponse($this->expiredResponse($request));
+            $this->audit->record($user->id, 'user#'.$user->id, $ended ? 'auth.session_ended' : 'auth.session_expired', 'user', (string) $user->id, [], 'system');
+            $event->setResponse($this->expiredResponse($request, $ended));
 
             return;
         }
@@ -80,10 +83,12 @@ final class IdleSessionSubscriber implements EventSubscriberInterface
         return '1' === $request->headers->get(self::BACKGROUND_HEADER) || '/api/me/session' === $request->getPathInfo();
     }
 
-    private function expiredResponse(Request $request): \Symfony\Component\HttpFoundation\Response
+    private function expiredResponse(Request $request, bool $ended = false): \Symfony\Component\HttpFoundation\Response
     {
         if (str_starts_with($request->getPathInfo(), '/api/')) {
-            return ApiError::response(401, 'session_expired', 'Your session ended after inactivity. Email yourself a new sign-in link.');
+            return $ended
+                ? ApiError::response(401, 'session_expired', 'You were signed out on every device. Email yourself a new sign-in link.')
+                : ApiError::response(401, 'session_expired', 'Your session ended after inactivity. Email yourself a new sign-in link.');
         }
         $next = $request->isMethod('GET') ? $request->getPathInfo() : '/me';
 

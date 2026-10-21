@@ -56,3 +56,6 @@ pre.json { background: var(--surface-3); border: 1px solid var(--border); border
 /* Zone names on the boundary editor: drag them to where they read best on the public map. */
 .zone-name-handle { background: transparent; border: 0; }
 .zone-name-handle span { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; padding: 2px 8px; border-radius: 6px; background: var(--surface); color: var(--text); border: 1px dashed var(--muted); font-size: 12px; font-weight: 900; cursor: move; box-shadow: var(--shadow-sm); }
+
+/* A form that only wraps one button (the CSV export is a POST) lays out like the button itself. */
+.inline-form { display: contents; }

@@ -17,6 +17,7 @@ import sys
 import tempfile
 import unittest
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -297,11 +298,13 @@ class ConfigTests(unittest.TestCase):
 
 
 class FakeResponse:
-    def __init__(self, body, status=200, ctype="application/json; charset=utf-8"):
+    def __init__(self, body, status=200, ctype="application/json; charset=utf-8", length=None):
         self.body, self.status, self.headers = body, status, {"Content-Type": ctype}
+        if length is not None:
+            self.headers["Content-Length"] = str(length)
 
-    def read(self):
-        return self.body
+    def read(self, n=-1):
+        return self.body if n < 0 else self.body[:n]
 
     def __enter__(self):
         return self
@@ -345,6 +348,35 @@ class HttpJsonTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, pattern):
                 self.call(queue)
             self.assertEqual(len(queue), 1, pattern)  # not retried
+
+
+class TransportHardeningTests(unittest.TestCase):
+    """Public-readiness hardening note: the importer accepted http:// layer URLs and read any response size."""
+
+    def test_layer_urls_must_be_https(self):
+        for url in ("http://gis.example.gov/arcgis/rest/services/Plats/MapServer/1", "file:///etc/passwd", "ftp://x/y"):
+            with self.assertRaisesRegex(RuntimeError, "https://"):
+                arcgis_common.query_url(url)
+        self.assertEqual(arcgis_common.query_url("https://gis.example.gov/x/MapServer/1"), "https://gis.example.gov/x/MapServer/1/query")
+        with self.assertRaisesRegex(RuntimeError, "https only"):
+            arcgis_common.http_json("http://gis.example.gov/q", {}, user_agent="test", opener=lambda *a, **k: self.fail("fetched"))
+
+    def test_redirects_may_not_leave_https(self):
+        handler = arcgis_common.HttpsOnlyRedirects()
+        req = urllib.request.Request("https://gis.example.gov/q?f=json")
+        with self.assertRaisesRegex(RuntimeError, "non-https"):
+            handler.redirect_request(req, None, 302, "Found", {}, "http://gis.example.gov/q?f=json")
+        self.assertEqual(handler.redirect_request(req, None, 302, "Found", {}, "https://mirror.example.gov/q").full_url,
+                         "https://mirror.example.gov/q")
+
+    def test_oversized_responses_are_refused_without_retry(self):
+        for response in (FakeResponse(b'{"a":"' + b"x" * 64 + b'"}'), FakeResponse(b"{}", length=10_000)):
+            queue = [response, FakeResponse(b"{}")]
+            opener = lambda req, timeout: queue.pop(0)
+            with self.assertRaisesRegex(RuntimeError, "larger than 32 bytes"):
+                arcgis_common.http_json("https://gis.example.gov/q", {}, user_agent="t", opener=opener, max_bytes=32, sleep=lambda s: None)
+            self.assertEqual(len(queue), 1)  # not retried
+        self.assertEqual(arcgis_common.MAX_RESPONSE_BYTES, 64 * 1024 * 1024)
 
 
 class ReviewMapTest(unittest.TestCase):

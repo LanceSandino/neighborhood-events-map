@@ -109,3 +109,29 @@ test('session-expired sign-in returns an organizer to the page they were on', as
   await expect(page).toHaveURL(/\/admin\/disputes$/);
   await expect(page.getByRole('heading', { name: 'Review requests' })).toBeVisible();
 });
+
+test('organizer downloads the claims list as a CSV (a CSRF-checked POST, never a plain link)', async ({ page }) => {
+  const guard = watchConsole(page);
+  const since = Date.now() - 1000;
+  await page.goto(VENTURA + '/login?next=%2Fadmin');
+  await page.locator('#loginEmail').fill(ORGANIZER);
+  await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
+  await expect(page.locator('#loginSuccess')).toBeVisible({ timeout: 60_000 });
+  let msg;
+  for (let i = 0; i < 30 && !msg; i++) {
+    const res = await fetch(`${VENTURA_MAILPIT}/api/v1/search?query=${encodeURIComponent('to:' + ORGANIZER)}`).then((r) => r.json());
+    msg = res.messages.find((m) => Date.parse(m.Created) >= since);
+    if (!msg) await new Promise((r) => setTimeout(r, 500));
+  }
+  const full = await fetch(`${VENTURA_MAILPIT}/api/v1/message/${msg.ID}`).then((r) => r.json());
+  await page.goto(VENTURA + full.Text.match(/\/auth\/confirm\?t=[A-Za-z0-9_-]{43}/)[0]);
+  await page.getByRole('button', { name: 'Confirm sign-in' }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+
+  await expect(page.locator('a[href*="claims.csv"]')).toHaveCount(0);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export claims (CSV, private)' }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^claims-[\d-]+\.csv$/);
+  expect(fs.readFileSync(await download.path(), 'utf8')).toMatch(/^address_id,address,zone/);
+  await expect(page.locator('.checklist')).toBeVisible(); // still on the console
+  guard.assertClean();
+});

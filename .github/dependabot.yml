@@ -5,7 +5,10 @@ updates:
     directory: "/"
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
-  - package-ecosystem: docker
+  - package-ecosystem: docker           # Dockerfile base images (pinned by digest)
+    directory: "/"
+    schedule: { interval: weekly }
+  - package-ecosystem: docker-compose   # postgres and mailpit images in compose*.yaml (pinned by digest)
     directory: "/"
     schedule: { interval: weekly }
   - package-ecosystem: github-actions

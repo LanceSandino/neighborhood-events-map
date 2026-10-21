@@ -65,7 +65,9 @@ final class EligibilityTest extends AppTestCase
         self::assertFalse($c['registration']['open']);
         self::assertSame('pending_review', $c['map']['boundary_status']);
         self::assertNull($c['map']['boundary'], 'unapproved outline is not published');
-        self::assertNotNull($c['map']['bbox'], 'map can still fit the area');
+        // Public-readiness hardening note: the extent of an unapproved outline was public too.
+        self::assertNull($c['map']['bbox'], 'nor its extent');
+        self::assertNotNull($c['map']['center'], 'the map still opens on the area');
         $r = $this->attempt($this->byId($id));
         self::assertSame(403, $this->code());
         self::assertSame('closed', $r['error']['code']);

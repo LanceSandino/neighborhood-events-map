@@ -1,6 +1,8 @@
 #!/bin/bash
 # Restore a backup made by bin/backup-now.sh or the daily backup loop.
 # DESTRUCTIVE: replaces the current database contents. Stops the app first, restores, restarts.
+# Accounts deleted and organizer roles changed after the backup stay deleted and changed: the current account
+# ledger (ids and times only) is saved first and re-applied to the restored database (app:ledger:replay).
 # Usage: bin/restore.sh <backup-file-name> [extra docker compose args]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -13,7 +15,26 @@ if ! [[ "$file" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.dump$ ]]; then
 fi
 read -r -p "Restore $file over the CURRENT database? Type RESTORE to continue: " answer
 [ "$answer" = "RESTORE" ] || { echo "Aborted."; exit 1; }
-docker compose "$@" stop app nginx
-docker compose "$@" exec -T backup sh -c "test -f '/backups/$file' && pg_restore --clean --if-exists --no-owner --dbname=\"\$PGDATABASE\" '/backups/$file'"
-docker compose "$@" start app nginx
+docker compose "$@" exec -T backup test -f "/backups/$file" || { echo "No such backup in the backup directory: $file" >&2; exit 2; }
+
+ledger=$(umask 077 && mktemp)
+trap 'rm -f "$ledger"' EXIT
+if ! docker compose "$@" exec -T app php bin/console app:ledger:export > "$ledger"; then
+  echo "WARNING: could not read the current account ledger (is the app running?). Only the backup's own ledger" >&2
+  echo "         will be re-applied: accounts deleted or organizers changed after the backup must be redone by hand." >&2
+  : > "$ledger"
+fi
+
+docker compose "$@" stop nginx maintenance app
+docker compose "$@" exec -T backup sh -c "pg_restore --clean --if-exists --no-owner --dbname=\"\$PGDATABASE\" '/backups/$file'"
+# The app runs pending migrations when it starts; re-apply the ledger before nginx lets anyone in.
+docker compose "$@" start app
+for _ in $(seq 1 60); do
+  docker compose "$@" exec -T app app-healthcheck >/dev/null 2>&1 && break
+  sleep 2
+done
+docker compose "$@" exec -T app php bin/console app:ledger:replay --merge=- < "$ledger"
+# Development stacks run maintenance only on demand (a profile), so it may have no container to start.
+if [ -n "$(docker compose "$@" ps -a -q maintenance 2>/dev/null)" ]; then docker compose "$@" start maintenance; fi
+docker compose "$@" start nginx
 echo "Restored $file. Check: curl -s http://127.0.0.1:\${HTTP_PORT:-8087}/healthz"

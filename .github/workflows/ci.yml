@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
         env: { POSTGRES_USER: halloween, POSTGRES_PASSWORD: halloween, POSTGRES_DB: halloween }
         ports: ['5432:5432']
         options: --health-cmd "pg_isready -U halloween" --health-interval 5s --health-timeout 5s --health-retries 20

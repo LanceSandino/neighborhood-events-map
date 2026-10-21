@@ -114,8 +114,17 @@ final class DisputeAndAdminTest extends AppTestCase
         $details = json_decode($transfer['details'], true);
         self::assertEquals(['from_user_id' => $oldOwner, 'to_user_id' => $newOwner, 'dispute_id' => 1], $details);
 
+        // Public-readiness hardening note: the export writes an audit event, so it is a CSRF-checked POST, never a GET.
+        $exports = fn () => (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE action = 'claims.exported'");
         $this->client->request('GET', '/api/admin/export/claims.csv');
+        self::assertSame(405, $this->code());
+        $this->client->request('POST', '/api/admin/export/claims.csv', ['_csrf' => 'stale']);
+        self::assertSame(403, $this->code());
+        self::assertSame(0, $exports(), 'neither wrote an audit event');
+        $this->client->request('POST', '/api/admin/export/claims.csv', ['_csrf' => $csrf]);
         self::assertSame(200, $this->code());
+        self::assertSame(1, $exports());
+        self::assertStringStartsWith('attachment; filename="claims-', (string) $this->client->getResponse()->headers->get('Content-Disposition'));
         $csv = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('real@example.test', $csv);
         self::assertStringStartsWith('address_id,address,zone', $csv);

@@ -41,6 +41,44 @@ final class GeoJsonParserTest extends TestCase
         self::assertCount(2, $fc[1]['shape']->polygons);
     }
 
+    /**
+     * Public-readiness hardening note: the vertex cap ran only after every ring's self-intersection check (which
+     * compares every pair of segments), so an oversized upload still cost all of that work. Five self-intersecting
+     * zig-zag rings of 4,999 positions each (each under the per-ring cap, 24,995 in all) must be refused for their
+     * size alone, before any ring is examined.
+     */
+    public function testTheVertexCapIsCheckedBeforeAnyRingIsExamined(): void
+    {
+        $features = [];
+        for ($f = 0; $f < 5; ++$f) {
+            // A lopsided bow-tie (its first and third edges cross), each edge cut into 1,249 short segments.
+            $corners = [[0.0, 0.0], [0.004, 0.004], [0.004, 0.0], [0.0, 0.002]];
+            $ring = [];
+            foreach ($corners as $c => [$x, $y]) {
+                [$nx, $ny] = $corners[($c + 1) % 4];
+                for ($i = 0; $i < 1249; ++$i) {
+                    $ring[] = [-75.0 + $f * 0.01 + $x + ($nx - $x) * $i / 1249, 40.03 + $y + ($ny - $y) * $i / 1249];
+                }
+            }
+            $ring[] = $ring[0];
+            $features[] = ['type' => 'Feature', 'properties' => [], 'geometry' => ['type' => 'Polygon', 'coordinates' => [$ring]]];
+        }
+        self::assertCount(4997, $features[0]['geometry']['coordinates'][0]);
+        try {
+            (new GeoJsonParser())->parse(['type' => 'FeatureCollection', 'features' => $features]);
+            self::fail('an oversized upload must be refused');
+        } catch (GeometryException $e) {
+            self::assertSame(['Too many vertices (24985); the limit is 20000.'], $e->errors, 'refused for its size, before the ring checks');
+        }
+        // The same rings one at a time are within the cap, and the ring checks do run (they are self-intersecting).
+        try {
+            (new GeoJsonParser())->parse(['type' => 'FeatureCollection', 'features' => [$features[0]]]);
+            self::fail('a self-intersecting ring must be refused');
+        } catch (GeometryException $e) {
+            self::assertSame(['Feature 1 exterior ring is self-intersecting.'], $e->errors);
+        }
+    }
+
     public function testAcceptsPolygonWithValidHole(): void
     {
         $r = (new GeoJsonParser())->parse(['type' => 'Polygon', 'coordinates' => [self::ring(-75.0, 40.03, 0.01), self::ring(-74.996, 40.034, 0.002)]]);

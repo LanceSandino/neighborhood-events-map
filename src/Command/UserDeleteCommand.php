@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Admin\AccountErasure;
 use App\Audit\AuditLog;
 use App\Security\EmailNormalizer;
 use Doctrine\DBAL\Connection;
@@ -17,13 +18,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * @module Command/UserDeleteCommand
  * @description Data-deletion request handling: removes a resident's account, their claims and listings,
- *     pending intents/tokens and their review requests; keeps only an anonymous audit record. Works for
- *     someone who only asked for a review (no account) as well.
+ *     pending intents/tokens and their review requests (Admin/AccountErasure); keeps only an anonymous audit
+ *     record and the ledger entry that keeps the deletion in force after a restore. Works for someone who only
+ *     asked for a review (no account) as well.
  */
 #[AsCommand('app:user:delete', 'Delete a user account and its homes/listings on request (privacy)')]
 final class UserDeleteCommand extends Command
 {
-    public function __construct(private readonly Connection $db, private readonly EmailNormalizer $emails, private readonly AuditLog $audit)
+    public function __construct(private readonly Connection $db, private readonly EmailNormalizer $emails, private readonly AuditLog $audit, private readonly AccountErasure $erasure)
     {
         parent::__construct();
     }
@@ -58,18 +60,7 @@ final class UserDeleteCommand extends Command
 
             return Command::SUCCESS;
         }
-        $this->db->transactional(function (Connection $db) use ($id, $email): void {
-            if (false !== $id) {
-                $db->executeStatement('DELETE FROM claims WHERE user_id = ?', [$id]); // listings cascade
-            }
-            $db->executeStatement('DELETE FROM auth_link_tokens WHERE email_normalized = ?', [$email]);
-            $db->executeStatement('DELETE FROM claim_intents WHERE email_normalized = ?', [$email]);
-            $db->executeStatement('DELETE FROM disputes WHERE reporter_email = ?', [$email]);
-            if (false !== $id) {
-                $db->executeStatement('UPDATE disputes SET resolved_by = NULL WHERE resolved_by = ?', [$id]);
-                $db->executeStatement('DELETE FROM users WHERE id = ?', [$id]);
-            }
-        });
+        $this->erasure->erase(false === $id ? null : (int) $id, $email);
         $this->audit->record(null, 'cli', 'user.deleted', 'user', false === $id ? 'none' : (string) $id, ['homes_released' => $homes, 'review_requests' => $reviews], 'cli');
         $output->writeln(sprintf('Deleted %s, released %d home(s) and erased %d review request(s).', $who, $homes, $reviews));
 

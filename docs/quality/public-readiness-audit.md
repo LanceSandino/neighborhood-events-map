@@ -6,10 +6,10 @@ Released as 0.7.0-beta.1 (squash of `chore/public-ready` rebuilt on the map fixe
 
 ## Verdict
 
-The code and history are ready for a public repository once the owner has made the decisions listed at the end.
+The code and history are ready for a public repository. The owner made the decisions listed at the end on 2026-10-21; switching the visibility is the remaining step.
 - Scans of the tree, every commit and tag on GitHub and this branch, and the pull-request patches found no credential, no personal data and none of the owner's private words.
 - All automated gates pass.
-- All 19 leads of the follow-up security audit are fixed in 0.6.0-beta.2, each with tests; this branch adds four small hardening items on top. The remaining hardening notes are listed in section 6.
+- All 19 leads of the follow-up security audit are fixed in 0.6.0-beta.2, each with tests; 0.7.0-beta.1 adds four small hardening items on top, and 0.7.0-beta.2 closes every remaining hardening note (section 6).
 
 ## 1. Secrets, personal data and private words
 
@@ -29,11 +29,11 @@ The release scanner checks credentials (key, token and assigned-secret shapes, c
 
 | Item | Status |
 |---|---|
-| `LICENSE` | MIT, copyright Lance Sandino. `composer.json` said `proprietary` (skeleton default): fixed to `MIT`. The license still needs the owner's confirmation (D-20261018-10) |
+| `LICENSE` | MIT, copyright Lance Sandino. `composer.json` said `proprietary` (skeleton default): fixed to `MIT`. Confirmed by the owner (D-20261021-24) |
 | `SECURITY.md` | Points to GitHub private vulnerability reporting, which the owner must enable after going public. Links the hardening report, including the follow-up audit fixed in 0.6.0-beta.2 |
 | `CONTRIBUTING.md` | Event-neutral; links the roadmap, conduct and security policy; uses the fictional demo for screenshots |
 | `CODE_OF_CONDUCT.md` | **Added** (it was missing) |
-| `ROADMAP.md` | **Added**: Christmas lights and garage sale event types, with ADR 0010 and D-20261021-19 to -23 |
+| `ROADMAP.md` | **Added**: Christmas lights and garage sale event types, with ADR 0010 and D-20261021-19 to -23 (accepted by the owner) |
 | `.gitignore` | Ignored only `deploy/private/`, while the docs put an operator's own `community.yaml` and boundary in `deploy/community/`: **fixed** to `/deploy/` |
 | `.dockerignore` | Excludes `.env*`, `deploy`, the private `config/community.yaml` and `config/*.geojson` (0.6.0-beta.2), tests, docs, scripts, CI and caches |
 | `AGENTS.md`, `CHANGES.md`, `DECISIONS.md` | Published on purpose (route D-20261019-03). They carry no private data, and the scans include them |
@@ -51,7 +51,7 @@ The release scanner checks credentials (key, token and assigned-secret shapes, c
   - releases are drafts, which are not public;
   - there are no issues;
   - docker build-record artifacts expire by retention.
-  - The repository description still says "trick-or-treat map" (owner action below).
+  - The repository description is event-neutral (updated 2026-10-21).
 - **Images:** the release and `edge` images are pullable anonymously from GHCR. Their content is the scanned release tree, minus the `.dockerignore` exclusions.
 
 ## 4. Dependencies
@@ -76,7 +76,7 @@ The release scanner checks credentials (key, token and assigned-secret shapes, c
   - the demo community is fictional and gated behind `APP_DEMO=1`;
   - the Ventura Reserve example ships only Orange County open-data plat polygons with their source recorded, and no address points, listings or claims;
   - its review page is now regenerated with the escaping generator;
-  - the county's reuse terms need the owner's confirmation (below).
+  - the county's reuse terms are accepted by the owner (D-20261021-25).
 
 ## 6. Security audit — fixed in 0.6.0-beta.2, with this branch's additions
 
@@ -113,18 +113,18 @@ The independent, source-only audit (run 1) found 19 leads. All are fixed in `6d6
 - shared filters keep only a real "visit at" time and zone keys of at most 60 characters — `tests/js/lib.test.mjs`;
 - the new `event.name` setting goes through the same `TextInput` cleaning — `CommunitySchemaTest`.
 
-**Hardening notes still open.** Each was re-checked against the merged code.
-- nginx limits key on the full IPv6 address while the app keys per /64, and `limit_conn 40` is above the `www` pool's 12 workers.
-- Interrupted backups leave `.partial` files that never rotate.
-- A restore brings back deleted accounts and revoked organizers.
-- The `maintenance` service still inherits the mail and routing secrets it does not use.
-- Base images are pinned by tag, not digest.
-- The GIS importer accepts `http://` layer URLs and has no response-size cap.
-- A `__Host-` session cookie is documented but not the default, because renaming the cookie would sign everyone out.
-- There is no "sign out everywhere".
-- The public payload carries the bounding box of a boundary that is not approved yet.
-- GeoJSON self-intersection checks run before the vertex cap.
-- The claims CSV export is a GET that writes an audit event.
+**Hardening notes — all closed in 0.7.0-beta.2.** Each was re-checked against the merged code, then fixed with a regression test that fails on the old code. Details and tests: [hardening report](../security/hardening-report.md#hardening-notes-closed--070-beta2-2026-10-21).
+- nginx keys its limits per IPv6 /64, like the app, and one client network keeps at most 6 requests in PHP (2 on the email endpoints), below each pool's size.
+- Interrupted backups no longer leave `.partial` files behind.
+- A restore re-applies the account ledger, so deleted accounts and revoked organizers stay that way.
+- The `maintenance` service gets no mail or routing credentials.
+- Base images are pinned by digest.
+- The GIS importer fetches over https only and caps responses at 64 MB.
+- Over HTTPS the session cookie is `__Host-nhm_session` by default.
+- Residents can sign out everywhere (organizers: `app:user:sign-out`).
+- The public payload carries nothing of an unapproved boundary, not even its extent.
+- GeoJSON uploads are checked against the vertex cap before any ring is examined.
+- The claims CSV export is a CSRF-checked POST.
 
 ## 7. Event-neutral naming
 
@@ -135,7 +135,7 @@ The product is now the "neighborhood events map", and the community's event is t
 | Settings saved before `event.name` existed | **Migrated on read** (default Halloween) | existing installs keep their wording |
 | `COMPOSE_PROJECT_NAME` / `POSTGRES_DB` / `POSTGRES_USER` default `halloween` | Kept | changing them orphans volumes and data |
 | `halloween-*.dump` backup names | Kept | retention and restore of existing backups |
-| `nhm:*` localStorage keys, `nhm_session` cookie, `nhm` CSRF id, `X-NHM-Background` | Kept | saved routes, sessions and open pages |
+| `nhm:*` localStorage keys, `nhm_session` cookie name, `nhm` CSRF id, `X-NHM-Background` | Kept (over HTTPS the cookie gets the `__Host-` prefix, D-20261021-26) | saved routes, sessions and open pages |
 | GHCR image names | Kept (already neutral) | deployed tags |
 | Migration descriptions | Kept | migrations are history |
 | `MAIL_FROM` default, compose/Dockerfile headers, dev image tag, importer User-Agents, e2e package name | Renamed | not persisted anywhere |
@@ -158,16 +158,20 @@ All commands were run from the branch worktree against two local stacks.
 | Dependencies | `composer audit --locked`, `npm audit --package-lock-only`, `composer validate`, `composer install --dry-run` | no advisories, 0 vulnerabilities, valid, nothing to install |
 | Module structure | module-structure fitness check (external tool) | **87.5 / 100 PASS** |
 
+**Re-run with the hardening fixes (0.7.0-beta.2, same stacks):** PHPUnit 266 tests OK; PHPStan no errors; node:test 29/29; Python 42/42; Playwright 78 passed, 2 skipped; session smoke 13/13 behind a simulated HTTPS proxy (the cookie is `__Host-nhm_session`); module-structure check 88.0 / 100 PASS. A real backup → delete + revoke → `bin/restore.sh` drill kept the deletion and the revocation.
+
 The module-structure check reports:
 - module size 100, headers 95.7, deep imports 100, cycles 0 and fan-out 97.6;
 - code_root 69.0 and testability 15.9 below their targets — both accepted deviations (D-20261018-13, D-20261018-14).
 
-## 9. Decisions and actions for the owner before switching to public
+## 9. Owner's decisions (2026-10-21)
 
-1. Confirm the **MIT license** (LICENSE and composer.json now agree) — D-20261018-10.
-2. Confirm the **reuse terms** of the Orange County plat polygons in `examples/ventura-reserve/`, or remove the example.
-3. Confirm the **roadmap architecture** (ADR 0010; D-20261021-19 to -23, marked "owner to confirm"), and that the Halloween-era identifiers stay as listed in section 7 (D-20261021-18).
-4. After switching, turn on **private vulnerability reporting**. SECURITY.md and the code of conduct point to it.
-5. Update the repository **description and topics** (currently "neighborhood trick-or-treat map").
-6. Decide on the **open hardening notes** in section 6.
-7. **Refresh the screenshots** after the last map change lands. They predate the zone-label and pin work on `fix/zone-labels`.
+1. **License:** MIT confirmed (D-20261021-24).
+2. **Orange County plat polygons** in `examples/ventura-reserve/`: reuse terms accepted; the example stays (D-20261021-25).
+3. **Roadmap architecture:** ADR 0010 and D-20261021-19 to -23 accepted. The Halloween-era identifiers stay as listed in section 7 (D-20261021-18).
+4. **Private vulnerability reporting:** to be turned on right after the switch to public. SECURITY.md and the code of conduct point to it.
+5. **Repository description and topics:** updated to the event-neutral wording.
+6. **Open hardening notes:** all fixed in 0.7.0-beta.2 (section 6).
+7. **Screenshots:** refreshed from the fictional demo and the real-plat example after the zone-label and pin work.
+
+Remaining: the owner's go-ahead to switch the repository to public.

@@ -3,6 +3,7 @@
  * @description Setup checklist, counts, warnings and the registration switch.
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
+import { csrfToken } from '../lib/api.js';
 
 async function load() {
   const o = await call('/api/admin/overview');
@@ -28,7 +29,7 @@ async function load() {
       ${item(o.registration.open ? true : 'warn', o.registration.open ? 'House listings are OPEN' : 'House listings are closed', esc(o.registration.reason || ''))}
     </ul>
     ${b.warnings.map((w) => `<div class="notice">⚠️ ${esc(w)}</div>`).join('')}
-    <div class="modal-actions"><button type="button" class="${o.registration.enabled ? 'secondary' : 'primary'}" id="btnReg">${o.registration.enabled ? (o.registration.open ? 'Close house listings' : 'Turn off listings (they open after boundary approval)') : 'Allow house listings'}</button><a class="secondary" href="/api/admin/export/claims.csv">Export claims (CSV, private)</a></div></div>
+    <div class="modal-actions"><button type="button" class="${o.registration.enabled ? 'secondary' : 'primary'}" id="btnReg">${o.registration.enabled ? (o.registration.open ? 'Close house listings' : 'Turn off listings (they open after boundary approval)') : 'Allow house listings'}</button><form class="inline-form" method="post" action="/api/admin/export/claims.csv"><input type="hidden" name="_csrf" value="${esc(csrfToken())}"><button type="submit" class="secondary">Export claims (CSV, private)</button></form></div></div>
     <div class="panel"><h2>Geometry versions</h2><div class="table-wrap"><table class="data"><thead><tr><th>Version</th><th>Created</th><th>Zones</th><th>Approved</th><th>Active</th></tr></thead><tbody>
       ${o.versions.map((v) => `<tr><td>v${v.version}</td><td class="nowrap">${esc(fmtDate(v.created_at))}</td><td>${v.zones}</td><td>${v.approved_at ? esc(fmtDate(v.approved_at)) : '—'}</td><td>${v.active ? 'yes' : ''}</td></tr>`).join('') || '<tr><td colspan="5">No geometry yet.</td></tr>'}
     </tbody></table></div></div>`;

@@ -14,9 +14,11 @@ use App\Security\SessionKeys;
 use App\Security\SessionPolicy;
 use App\Security\Throttle;
 use App\Security\User;
+use App\Security\UserRepository;
 use App\Shared\ApiError;
 use App\Shared\JsonBody;
 use Psr\Clock\ClockInterface;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -40,6 +42,7 @@ final class MeApiController
         private readonly ClockInterface $clock,
         private readonly AuditLog $audit,
         private readonly Throttle $throttle,
+        private readonly UserRepository $users,
     ) {
     }
 
@@ -64,6 +67,17 @@ final class MeApiController
     public function session(Request $request): JsonResponse
     {
         return new JsonResponse(['session' => $this->sessionInfo($request)]);
+    }
+
+    /** Ends every session of this user, on every device, this one included (IdleSessionSubscriber enforces it). */
+    #[Route('/api/me/sign-out-everywhere', name: 'api_me_sign_out_everywhere', methods: ['POST'])]
+    public function signOutEverywhere(#[CurrentUser] User $user, Security $security): JsonResponse
+    {
+        $this->users->endSessions($user->id);
+        $this->audit->record($user->id, 'user#'.$user->id, 'auth.signed_out_everywhere', 'user', (string) $user->id);
+        $security->logout(false);
+
+        return new JsonResponse(['ok' => true], 200, ['Cache-Control' => 'no-store']);
     }
 
     #[Route('/api/me/homes', name: 'api_me_homes', methods: ['GET'])]

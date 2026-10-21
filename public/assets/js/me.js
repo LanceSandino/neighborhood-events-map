@@ -139,6 +139,12 @@ $('#btnLogout').addEventListener('click', async () => {
   try { await api('/api/auth/logout', { method: 'POST' }); } catch { /* already signed out */ }
   location.href = '/';
 });
+// Ends every session of this account (a lost phone, a shared computer), this one included.
+$('#btnLogoutAll').addEventListener('click', async () => {
+  if (!window.confirm('Sign out on every device, including this one? You can sign in again with an email link.')) return;
+  try { await api('/api/me/sign-out-everywhere', { method: 'POST' }); } catch (e) { if (!handleAuthError(e)) { toast(friendlyError(e)); return; } }
+  location.href = '/';
+});
 load();
 tick();
 setInterval(tick, 30000);

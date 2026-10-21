@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Audit\AccountLedger;
 use App\Audit\AuditLog;
 use App\Command\AdminGrantCommand;
 use App\Security\EmailNormalizer;
@@ -42,7 +43,7 @@ final class CommandsTest extends AppTestCase
     public function testRevokingAnOrganizerListedInTheEnvironmentFailsLoudly(): void
     {
         // Audit run-1 lead 8: ORGANIZER_EMAILS keeps the role, so "Revoked" would be a false success.
-        $users = new UserRepository($this->db(), $this->clock, 'boss@example.test');
+        $users = new UserRepository($this->db(), $this->clock, new AccountLedger($this->db(), $this->clock), 'boss@example.test');
         $this->cmd('app:admin:grant', ['email' => 'boss@example.test']);
         $t = new CommandTester(new AdminGrantCommand($users, new EmailNormalizer(), static::getContainer()->get(AuditLog::class)));
         $t->execute(['email' => 'boss@example.test', '--revoke' => true]);

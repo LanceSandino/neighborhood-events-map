@@ -2,7 +2,7 @@
 
 A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. A Christmas lights map and a garage sale map are next: see the [roadmap](ROADMAP.md).
 
-**Status:** `0.7.0-beta.1` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.7.0-beta.2` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|
@@ -99,7 +99,6 @@ Production readiness is blocked on real-world inputs, not code:
 - For each deployment: the organizer's approval of the boundary and zones, and a review of the address inventory (county address points; border cases).
 - Production hostname, Cloudflare Tunnel route and a deliverability-tested SMTP relay.
 - Verified safe pedestrian crossings before enabling any routing groups/provider.
-- The owner's confirmation of the license (MIT proposed) and of the county data's reuse terms for the real-plat example.
 - The published container images must be public on GitHub Container Registry for `docker compose pull` to work without signing in.
 
 ## Privacy and accessibility
@@ -116,4 +115,4 @@ Claiming is **first verified email wins**. Controlling an email address is not p
 
 ## License
 
-Proposed: [MIT](LICENSE) — pending the owner's confirmation before any public release. Map data © OpenStreetMap contributors. Fonts: Nunito and DM Sans (SIL OFL 1.1). Leaflet (BSD-2-Clause), Leaflet.draw (MIT).
+[MIT](LICENSE). Map data © OpenStreetMap contributors. Fonts: Nunito and DM Sans (SIL OFL 1.1). Leaflet (BSD-2-Clause), Leaflet.draw (MIT).

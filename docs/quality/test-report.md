@@ -1,6 +1,23 @@
 # Test and verification report
 
-## Latest run — 2026-10-21, release 0.7.0-beta.1
+## Latest run — 2026-10-21, release 0.7.0-beta.2
+
+Gates on `fix/hardening-notes` (0.7.0-beta.1 + the closed hardening notes), dev stacks of that tree:
+
+| Gate | Result |
+|---|---|
+| PHPUnit (unit + integration, PostgreSQL 17) | **OK — 266 tests, 5116 assertions** |
+| Coverage (pcov) | Lines **94.08 %** (2607/2771) ✓ ≥ 85 · Methods 79.95 % (only fully covered methods count) · Branches **n/a** (pcov has no branch metric) |
+| PHPStan level 6 · `composer audit --locked` | No errors · no advisories |
+| Migrations | `Version20261021000001` down and up again on the test database |
+| node:test | **29/29 pass** |
+| Python (GIS importers, operator scripts) | **42/42 pass** |
+| Playwright E2E (chromium + webkit-iphone) | **78 passed, 2 skipped** (location tests need HTTPS in WebKit); the layout tests at six widths re-run after the legend fix: 34/34 |
+| Session smoke test (simulated HTTPS proxy) | **13/13 checks**, cookie `__Host-nhm_session` |
+| nginx `$client_net` in real nginx 1.31 | 771 IPv6 addresses (every zero-group shape) → their /64, IPv4 and IPv4-mapped → the IPv4 address |
+| Backup and restore drill | Real backups in `postgres:17-alpine`; backup → delete one account, revoke one organizer → `bin/restore.sh` → both stay deleted/revoked |
+
+## Run — 2026-10-21, release 0.7.0-beta.1
 
 Final gates on the release branch (0.6.0-beta.2 + map fixes + public-readiness work), dev stacks of that tree:
 PHPUnit 254 tests / 1904 assertions OK; PHPStan level 6 no errors; node:test 29/29; Playwright 76 passed, 2 skipped

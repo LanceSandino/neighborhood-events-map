@@ -83,6 +83,13 @@ for (const [w, h] of [[375, 812], [430, 932], [956, 440], [768, 1024], [1180, 82
       const small = await page.evaluate(() => [...document.querySelectorAll('.controls button, .controls select, .mobile-bottom a, .bottom-actions a, .bottom-actions button, .map-tools button')]
         .filter((e) => e.offsetParent && e.getBoundingClientRect().height < 40).map((e) => e.id || e.textContent.trim()));
       expect(small, `${name} ${w}px small targets`).toEqual([]);
+      // The OpenStreetMap credit must stay readable: the legend never covers it.
+      const covered = await page.evaluate(() => {
+        const l = document.querySelector('.map-legend')?.getBoundingClientRect();
+        const a = document.querySelector('.leaflet-control-attribution')?.getBoundingClientRect();
+        return Boolean(l && a && l.left < a.right && a.left < l.right && l.top < a.bottom && a.top < l.bottom);
+      });
+      expect(covered, `${name} ${w}px: the map legend covers the OpenStreetMap credit`).toBe(false);
       await page.screenshot({ path: `${SHOTS}/${name}-${w}.png`, fullPage: w <= 430 });
     }
   });

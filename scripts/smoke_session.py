@@ -3,7 +3,7 @@
 
 @module smoke_session
 @description Solves a real PoW, requests a link, reads it from Mailpit, checks that GET does not sign in,
-    confirms by POST (as if behind an HTTPS tunnel), verifies cookie flags, restarts the app container to
+    confirms by POST (as if behind an HTTPS tunnel), verifies the cookie's __Host- name and flags, restarts the app container to
     prove sessions are durable in PostgreSQL, then logs out and proves the old cookie is dead.
 @dependencies Python 3 stdlib, docker compose (for the restart step)
 Usage: python3 scripts/smoke_session.py [--base http://localhost:8087] [--mailpit http://localhost:8025]
@@ -38,7 +38,7 @@ def main() -> int:
 
     def remember(resp_headers):
         for c in resp_headers.get_all("Set-Cookie") or []:
-            if c.lower().startswith("nhm_session="):
+            if re.match(r"(__host-)?nhm_session=", c.lower()):
                 value = c.split(";")[0]
                 if value.endswith("=deleted") or "max-age=0" in c.lower():
                     headers.pop("Cookie", None)
@@ -102,8 +102,10 @@ def main() -> int:
     form = urllib.parse.urlencode({"t": link, "_csrf": csrf}).encode()
     st, hdrs, _ = req("POST", "/auth/confirm", form, {"Content-Type": "application/x-www-form-urlencoded"}, raw=True)
     cookies = hdrs.get_all("Set-Cookie") or []
-    sess = next((x for x in cookies if x.lower().startswith("nhm_session=")), "")
+    sess = next((x for x in cookies if re.match(r"(__host-)?nhm_session=", x.lower())), "")
     check("POST confirm signs in (303 → /me)", st in (200, 303), str(st))
+    check("session cookie is __Host-nhm_session behind HTTPS proxy (Path=/, no Domain)",
+          sess.startswith("__Host-nhm_session=") and "path=/;" in sess.lower().replace(" ", "") + ";" and "domain=" not in sess.lower(), sess)
     check("session cookie is Secure behind HTTPS proxy", "secure" in sess.lower(), sess)
     check("session cookie is HttpOnly", "httponly" in sess.lower(), sess)
     check("session cookie is SameSite=Lax", "samesite=lax" in sess.lower(), sess)

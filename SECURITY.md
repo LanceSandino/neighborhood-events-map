@@ -25,13 +25,13 @@ Audit and hardening results: [docs/security/hardening-report.md](docs/security/h
 
 ## Data retention and deletion
 
-Expired links, PoW challenges, claim intents, throttle events, sessions and route-cache rows are purged hourly by the `maintenance` service (`bin/console app:maintenance:purge`). Backups are private (`0600` files in a `0700` directory) and never contain session rows. Listings from past event dates stop being public automatically. Account deletion on request: `bin/console app:user:delete <email> --confirm`.
+Expired links, PoW challenges, claim intents, throttle events, sessions and route-cache rows are purged hourly by the `maintenance` service (`bin/console app:maintenance:purge`). Backups are private (`0600` files in a `0700` directory) and never contain session rows. Listings from past event dates stop being public automatically. Account deletion on request: `bin/console app:user:delete <email> --confirm`. Deletions and organizer-role changes are also kept in an account ledger (ids and times only), and `bin/restore.sh` re-applies it, so restoring an older backup never brings a deleted account or a revoked organizer back. Residents can end every session of their account with **Sign out everywhere** on My house.
 
 ## Known, accepted limitations
 
 - Controlling an email address is not proof of living at a home ("first verified email wins"). Organizers resolve disputes manually.
 - Self-reported sensory labels are not guarantees.
-- Rate limits are per IP (IPv6 per /64); many neighbors behind one IP may need higher per-IP limits (configurable).
+- Rate limits are per client network (an IPv4 address or an IPv6 /64, in nginx and in the app alike); many neighbors behind one IP may need higher per-IP limits (configurable).
 - A distributed attacker who solves proof-of-work for many requests can still use up the global hourly sign-in mail budget for residents (organizers are exempt). It protects the mail relay and is configurable.
 
 ## Operator checklist

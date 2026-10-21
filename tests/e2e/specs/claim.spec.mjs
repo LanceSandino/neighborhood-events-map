@@ -119,3 +119,33 @@ test('report a listing from the map files a dispute that reaches the organizer i
   expect(inbox.length).toBeGreaterThan(0);
   expect(inbox[0].Subject).toMatch(/Review request D-\d{6}/);
 });
+
+test('Sign out everywhere on My house ends the resident\'s session on their other devices', async ({ browser, request }) => {
+  const email = uniqueEmail('everywhere');
+  const device = async () => {
+    const page = await (await browser.newContext()).newPage();
+    const since = Date.now() - 1000;
+    await page.goto(DEMO + '/login');
+    await page.locator('#loginEmail').fill(email);
+    await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
+    await expect(page.locator('#loginSuccess')).toBeVisible({ timeout: 60_000 });
+    await page.goto((await latestLink(request, email, { since })).url);
+    await page.getByRole('button', { name: 'Confirm sign-in' }).click();
+    await expect(page).toHaveURL(/\/me$/);
+    return page;
+  };
+  const phone = await device();
+  const laptop = await device();
+  const guard = watchConsole(phone);
+
+  phone.once('dialog', (d) => d.accept());
+  await phone.getByRole('button', { name: 'Sign out everywhere' }).click();
+  await expect(phone).toHaveURL(DEMO + '/');
+  await phone.goto(DEMO + '/me');
+  await expect(phone).toHaveURL(/\/login/);
+
+  await laptop.goto(DEMO + '/me');
+  await expect(laptop).toHaveURL(/\/login\?expired=1/);
+  await expect(laptop.getByRole('heading', { name: 'Session expired' })).toBeVisible();
+  guard.assertClean();
+});

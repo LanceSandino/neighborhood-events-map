@@ -2,10 +2,10 @@
 """Shared HTTP and JSON helpers for the ArcGIS importer scripts.
 
 @module arcgis_common
-@description Strict ArcGIS REST GET (HTTP status, content type, ArcGIS ``error``
-    object and ``exceededTransferLimit`` checks; retries on transport errors and
-    malformed JSON; SHA-256 of the raw bytes), layer URL validation and
-    deterministic JSON writing.
+@description Strict ArcGIS REST GET over https only (redirects included; HTTP status,
+    content type, response-size cap, ArcGIS ``error`` object and ``exceededTransferLimit``
+    checks; retries on transport errors and malformed JSON; SHA-256 of the raw bytes),
+    layer URL validation and deterministic JSON writing.
 @input  ArcGIS REST ``/query`` endpoints
 @output Parsed JSON objects with raw-response SHA-256 digests; deterministic JSON files
 @dependencies Python 3.10+ standard library only
@@ -25,25 +25,43 @@ from pathlib import Path
 from typing import Any, Callable
 
 ACCEPT = "application/json, application/geo+json"
+# One page of an ArcGIS query is at most a few MB; a larger answer is refused rather than read into memory.
+MAX_RESPONSE_BYTES = 64 * 1024 * 1024
 Fetch = Callable[[dict], tuple]
 
 
+class HttpsOnlyRedirects(urllib.request.HTTPRedirectHandler):
+    """Follows a redirect only to another https:// URL: the official data never travels over plain http."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not str(newurl).lower().startswith("https://"):
+            raise RuntimeError(f"Refusing a redirect from {req.full_url} to a non-https URL: {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_HTTPS_ONLY = urllib.request.build_opener(HttpsOnlyRedirects)
+
+
 def query_url(layer_url: Any, where: str = "layer_url") -> str:
-    """Validate an ArcGIS layer URL (http/https only, never file:) and return its /query endpoint."""
-    if not isinstance(layer_url, str) or not re.match(r"^https?://[^/\s]+/\S+$", layer_url.strip()):
-        raise RuntimeError(f"{where} must be an http(s) ArcGIS layer URL, got {layer_url!r}")
+    """Validate an ArcGIS layer URL (https only, never http: or file:) and return its /query endpoint."""
+    if not isinstance(layer_url, str) or not re.match(r"^https://[^/\s]+/\S+$", layer_url.strip()):
+        raise RuntimeError(f"{where} must be an https:// ArcGIS layer URL, got {layer_url!r}")
     base = layer_url.strip().rstrip("/")
     return base if base.endswith("/query") else base + "/query"
 
 
-def http_json(url: str, params: dict, *, user_agent: str, opener=urllib.request.urlopen,
-              timeout: float = 45.0, attempts: int = 3, sleep=time.sleep) -> tuple[dict, str]:
+def http_json(url: str, params: dict, *, user_agent: str, opener=None, timeout: float = 45.0, attempts: int = 3,
+              sleep=time.sleep, max_bytes: int = MAX_RESPONSE_BYTES) -> tuple[dict, str]:
     """GET ``url`` with ``params``, returning (parsed JSON object, sha256 of the raw bytes).
 
     Transport errors and malformed JSON are retried with backoff and then reported.
-    A non-200 status, a non-JSON content type, an ArcGIS ``error`` object or a truncated
-    (``exceededTransferLimit``) response raises immediately: those are never silently accepted.
+    A non-https URL or redirect, a non-200 status, a non-JSON content type, a response over ``max_bytes``,
+    an ArcGIS ``error`` object or a truncated (``exceededTransferLimit``) response raises immediately:
+    those are never silently accepted.
     """
+    if not url.lower().startswith("https://"):
+        raise RuntimeError(f"Official GIS data is fetched over https only, not {url}")
+    opener = opener or _HTTPS_ONLY.open
     full = url + "?" + urllib.parse.urlencode(params)
     last_error: Exception | None = None
     for attempt in range(attempts):
@@ -53,7 +71,12 @@ def http_json(url: str, params: dict, *, user_agent: str, opener=urllib.request.
                 status = getattr(response, "status", 200)
                 headers = getattr(response, "headers", None)
                 ctype = headers.get("Content-Type", "") if headers else ""
-                raw = response.read()
+                length = str(headers.get("Content-Length", "") if headers else "")
+                if length.isdigit() and int(length) > max_bytes:
+                    raise RuntimeError(f"Response from {full} is larger than {max_bytes} bytes")
+                raw = response.read(max_bytes + 1)  # never more than the cap, whatever the server sends
+            if len(raw) > max_bytes:
+                raise RuntimeError(f"Response from {full} is larger than {max_bytes} bytes")
             if status != 200:
                 raise RuntimeError(f"HTTP {status} from {full}")
             if ctype and "json" not in ctype.lower() and "text/plain" not in ctype.lower():

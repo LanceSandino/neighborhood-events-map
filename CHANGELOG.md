@@ -6,6 +6,29 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.7.0-beta.2] - 2026-10-21
+
+### Added
+- **Sign out everywhere** on My house ends your session on every device (organizers: `app:user:sign-out <email>`).
+
+### Changed
+- The organizer's **Export claims** is now a button (the download works as before).
+- Over HTTPS the sign-in cookie is named `__Host-nhm_session`, which browsers protect from other subdomains. Upgrading signs everyone out once.
+
+### Fixed
+- The map legend no longer covers the OpenStreetMap credit on phones and tablets.
+
+### Security
+- nginx counts an IPv6 visitor's whole /64 as one client, like the app, and one client can keep at most 6 requests in PHP (2 on the email pages), so nobody can occupy every worker.
+- Restoring an older backup keeps accounts deleted and organizers revoked since that backup (`bin/restore.sh` re-applies an account ledger of ids and times).
+- An interrupted backup no longer leaves a partial file behind, and `bin/backup-now.sh` never leaves a truncated dump.
+- The maintenance container no longer receives mail or routing credentials.
+- Every base image is pinned by digest (Dependabot keeps them current).
+- The GIS importer fetches over https only and refuses responses over 64 MB.
+- The public map data carries nothing of a boundary that is not approved yet, not even its extent.
+- Oversized GeoJSON uploads are refused before the expensive shape checks run.
+- The claims export can no longer be triggered by a link.
+
 ## [0.7.0-beta.1] - 2026-10-21
 
 ### Added

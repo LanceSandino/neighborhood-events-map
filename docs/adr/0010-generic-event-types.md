@@ -1,6 +1,6 @@
 # ADR 0010 — Generic, code-defined event types
 
-**Status.** Proposed (2026-10-21); the owner confirms it before roadmap stage 1. Decisions D-20261021-19 to -23.
+**Status.** Accepted (proposed and confirmed by the owner on 2026-10-21). Decisions D-20261021-19 to -23.
 
 **Context.** The app was built for Halloween trick-or-treating. Neighborhoods also want a Christmas lights map and a garage sale map. These have different listing fields, dates, filters, statuses and copy. Claims, sign-in, abuse controls, moderation, privacy and the map are the same for all of them. Nothing about a particular neighborhood may go into code (D-20261018-01).
 

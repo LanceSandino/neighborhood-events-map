@@ -41,7 +41,7 @@ abstract class AppTestCase extends WebTestCase
         $this->client = static::createClient([], ['HTTP_ORIGIN' => 'http://localhost', 'REMOTE_ADDR' => '127.0.0.1']);
         $this->clock = static::mockTime('2026-10-31 22:00:00 UTC'); // 6 PM America/New_York on Halloween
         $this->db()->executeStatement('TRUNCATE community_settings, community_geometries, eligible_addresses, users, claims, claim_intents,
-            listings, auth_link_tokens, pow_challenges, throttle_events, disputes, audit_events, sessions, route_cache RESTART IDENTITY CASCADE');
+            listings, auth_link_tokens, pow_challenges, throttle_events, disputes, audit_events, sessions, route_cache, account_ledger RESTART IDENTITY CASCADE');
         $this->repo()->reset();
     }
 

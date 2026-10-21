@@ -47,23 +47,23 @@ final class GeoJsonParser
         if ([] === $features) {
             throw new GeometryException(['No Polygon or MultiPolygon features found.']);
         }
+        // The vertex cap comes first: the ring checks below compare every pair of segments, so an oversized
+        // upload is refused before any of that work is done.
+        $total = array_sum(array_map(static fn (array $f) => self::positionCount($f[0]), $features));
+        if ($total > self::MAX_VERTICES) {
+            throw new GeometryException([sprintf('Too many vertices (%d); the limit is %d.', $total, self::MAX_VERTICES)]);
+        }
 
         $errors = [];
         $result = [];
-        $total = 0;
         foreach ($features as $i => [$geometry, $properties]) {
             $label = sprintf('Feature %d', $i + 1);
             try {
                 $polygons = $this->polygonsFromGeometry($geometry, $label);
-                $shape = new PolygonSet($polygons);
-                $total += $shape->vertexCount();
-                $result[] = ['properties' => $properties, 'shape' => $shape];
+                $result[] = ['properties' => $properties, 'shape' => new PolygonSet($polygons)];
             } catch (GeometryException $e) {
                 array_push($errors, ...$e->errors);
             }
-        }
-        if ($total > self::MAX_VERTICES) {
-            $errors[] = sprintf('Too many vertices (%d); the limit is %d.', $total, self::MAX_VERTICES);
         }
         if ([] === $errors && null !== $expectedCenter) {
             $errors = $this->checkLocation($result, $expectedCenter);
@@ -73,6 +73,28 @@ final class GeoJsonParser
         }
 
         return $result;
+    }
+
+    /** Number of positions in a Polygon or MultiPolygon, counted without validating it (anything else counts 0). */
+    private static function positionCount(mixed $geometry): int
+    {
+        if (!\is_array($geometry) || !\is_array($geometry['coordinates'] ?? null)) {
+            return 0;
+        }
+        $coords = $geometry['coordinates'];
+        $polygons = match ($geometry['type'] ?? null) {
+            'Polygon' => [$coords],
+            'MultiPolygon' => $coords,
+            default => [],
+        };
+        $n = 0;
+        foreach ($polygons as $rings) {
+            foreach (\is_array($rings) ? $rings : [] as $ring) {
+                $n += \is_array($ring) ? \count($ring) : 0;
+            }
+        }
+
+        return $n;
     }
 
     /** @return list<array{0: mixed, 1: array<string,mixed>}> */

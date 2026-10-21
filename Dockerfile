@@ -1,14 +1,15 @@
 # syntax=docker/dockerfile:1.7
 # Neighborhood events map — application images.
 # Targets: dev (PHP-FPM + pcov, bind-mounted source), prod (PHP-FPM, baked code), nginx (static + proxy).
-ARG PHP_VERSION=8.3
+# Every base image is pinned by its multi-arch digest, so a rebuild cannot pick up a moved or replaced tag;
+# Dependabot (docker ecosystem) proposes the new digest when a tag moves.
 
-FROM php:${PHP_VERSION}-fpm-alpine AS php-base
+FROM php:8.3-fpm-alpine@sha256:454b11c8907e32878ce92e87b13c14e1bbe6e1b10f4f96d4a19c9b62ec675d41 AS php-base
 RUN apk add --no-cache icu-libs libpq libzip fcgi tzdata \
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev postgresql-dev libzip-dev linux-headers \
  && docker-php-ext-install -j"$(nproc)" intl pdo_pgsql opcache pcntl zip \
  && apk del .build-deps
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac /usr/bin/composer /usr/bin/composer
 COPY docker/php/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
 COPY docker/php/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
 COPY --chmod=0755 docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
@@ -55,7 +56,7 @@ RUN composer dump-autoload --no-dev --classmap-authoritative \
  && chown -R www-data:www-data var
 USER www-data
 
-FROM nginxinc/nginx-unprivileged:1.31-alpine AS nginx
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS nginx
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/nginx/app-fastcgi.conf /etc/nginx/snippets/app-fastcgi.conf
 COPY --chmod=0755 docker/nginx/trusted-proxy.sh /docker-entrypoint.d/30-trusted-proxy.sh

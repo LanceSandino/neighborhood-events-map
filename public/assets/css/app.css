@@ -253,7 +253,9 @@ a.crumb:hover strong { color: var(--link); }
 .map-logo span { color: var(--muted); font-weight: 600; }
 .map-tools { position: absolute; top: 15px; right: 15px; display: grid; gap: 7px; z-index: 650; }
 .map-tools button { height: 40px; width: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; box-shadow: var(--shadow-sm); font-size: 18px; color: var(--text); }
-.map-legend { position: absolute; bottom: 14px; left: 14px; z-index: 500; background: var(--glass); border-radius: 11px; padding: 11px 13px; box-shadow: 0 4px 18px #514f4f25; display: flex; gap: 14px; align-items: center; color: var(--text-2); font-size: 12px; font-weight: 800; }
+/* The legend sits above the map credit (Leaflet's 20px attribution line at the bottom edge), which must stay readable. */
+.map-legend { position: absolute; bottom: 28px; left: 14px; max-width: calc(100% - 28px); z-index: 500; background: var(--glass); border-radius: 11px; padding: 11px 13px; box-shadow: 0 4px 18px #514f4f25; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; color: var(--text-2); font-size: 12px; font-weight: 800; }
+.map-legend span { white-space: nowrap; }
 .legend-bullet { height: 9px; width: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 .legend-bullet.candy { background: var(--pin-candy); } .legend-bullet.gentle { background: var(--pin-gentle); } .legend-bullet.spooky { background: var(--pin-spooky); }
 .legend-bullet.adult { background: var(--pin-adult); }
@@ -526,7 +528,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   .card-line b { font-size: 12px; }
   .card-meta { font-size: 12px; }
   .tag { font-size: 11px; }
-  .map-legend { bottom: 8px; left: 8px; gap: 8px; font-size: 11px; padding: 7px 9px; }
+  .map-legend { bottom: 26px; left: 8px; max-width: calc(100% - 16px); gap: 3px 8px; font-size: 11px; padding: 7px 9px; }
   .map-logo { top: 9px; left: 9px; font-size: 12px; padding: 7px; }
   .map-footer { font-size: 11px; padding: 10px; }
   .map-tools { right: 8px; top: 9px; }

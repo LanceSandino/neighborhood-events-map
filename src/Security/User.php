@@ -8,7 +8,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @module Security/User
- * @description Authenticated resident/organizer identity (passwordless; no credentials stored).
+ * @description Authenticated resident/organizer identity (passwordless; no credentials stored). sessionsEndedAt
+ *     (Unix time) is when the user last chose "Sign out everywhere": sessions that began before it are over.
  */
 final class User implements UserInterface
 {
@@ -16,6 +17,7 @@ final class User implements UserInterface
         public readonly int $id,
         public readonly string $email,
         public readonly bool $isAdmin,
+        public readonly ?int $sessionsEndedAt = null,
     ) {
     }
 
@@ -35,7 +37,7 @@ final class User implements UserInterface
 
     public function __serialize(): array
     {
-        return ['id' => $this->id, 'email' => $this->email, 'isAdmin' => $this->isAdmin];
+        return ['id' => $this->id, 'email' => $this->email, 'isAdmin' => $this->isAdmin, 'sessionsEndedAt' => $this->sessionsEndedAt];
     }
 
     public function __unserialize(array $data): void
@@ -43,5 +45,6 @@ final class User implements UserInterface
         $this->id = $data['id'];
         $this->email = $data['email'];
         $this->isAdmin = $data['isAdmin'];
+        $this->sessionsEndedAt = $data['sessionsEndedAt'] ?? null;
     }
 }

@@ -51,11 +51,13 @@ final class CommunityPresenter
             'branding' => [
                 'logo_url' => $this->branding->url($s['branding']['logo']),
             ] + array_intersect_key($s['branding'], array_flip(['brand_emoji', 'primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality'])),
+            // Nothing of a boundary that is not approved yet is published, not even its extent: until then the
+            // map opens on the configured center (or the boundary's middle) and zoom.
             'map' => [
                 'center' => $c->mapCenter(),
                 'zoom' => $s['map']['zoom'],
                 'tiles' => $s['map']['tiles'],
-                'bbox' => $c->boundary?->bbox(),
+                'bbox' => $approved ? $c->boundary->bbox() : null,
                 'boundary' => $approved ? $c->boundary->toGeometry() : null,
                 'boundary_status' => null === $c->boundary ? 'none' : ($approved ? 'approved' : 'pending_review'),
                 'crossing_notes' => $s['map']['crossing_notes'],

@@ -328,7 +328,8 @@ final class AdminApiController
         return new JsonResponse(['events' => $this->audit->recent(max(1, min(1000, (int) $request->query->get('limit', 200))))]);
     }
 
-    #[Route('/export/claims.csv', methods: ['GET'])]
+    /** A POST (with the CSRF token as a form field): the export writes an audit event, so no link or prefetch may trigger it. */
+    #[Route('/export/claims.csv', methods: ['POST'])]
     public function exportClaims(#[CurrentUser] User $admin, ClaimAdministration $claims): Response
     {
         $this->audit->record($admin->id, 'admin#'.$admin->id, 'claims.exported', 'claims', null, [], 'admin');

@@ -15,7 +15,7 @@ The repository and its history are kept free of private data (DECISIONS D-202610
 1. Scan the tree **and every commit and tag** for a private word list kept outside the repository (deployment name, locality, street names, host names, personal emails); it must print nothing:
    `git grep -n -i -F -f ~/private-words.txt $(git rev-list --all) -- . ; git log --all --format='%an %ae %cn %ce %s %b' | grep -i -F -f ~/private-words.txt`
 2. Confirm there are no workflow runs, artifacts, caches or draft releases from before the scrub (`gh run list`, `gh api repos/<owner>/<repo>/actions/artifacts`, `gh release list`).
-3. Confirm the license (MIT proposed) and the reuse terms of any committed county plat data (see the example's README).
+3. The license is MIT (D-20261021-24). Any newly committed county plat data needs its reuse terms checked and recorded in the example's README (the Ventura Reserve terms were accepted, D-20261021-25).
 4. The two container packages are public (package settings → visibility) and linked to the repository; their images contain only the app (no `.env`, `deploy/` or tests — see `.dockerignore`).
 5. Check `deploy/` is still ignored (`git check-ignore -v deploy/private/x deploy/community/community.yaml`) and nothing under it is tracked (`git ls-files deploy` prints nothing).
 6. Pull-request refs (`refs/pull/*/head`) become public too and cannot be deleted by the owner: check every one is based on the current history (`git ls-remote origin 'refs/pull/*'`). The last full check is in [docs/quality/public-readiness-audit.md](../quality/public-readiness-audit.md).

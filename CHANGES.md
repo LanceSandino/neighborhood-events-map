@@ -621,4 +621,134 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "chore/public-ready"
   author: "Lance Sandino"
   timestamp: "2026-10-21T08:20:00Z"
+- id: CU-20261021-35
+  type: fix
+  title: "security: nginx keys its limits per client network (IPv4 address or IPv6 /64), like the app"
+  description: "Public-readiness hardening note: nginx keyed limit_req and limit_conn on $binary_remote_addr, so one IPv6 subscriber or server (a whole /64) had 2^64 separate nginx budgets, while the app's persistent limits key on the /64 (Security/ClientIdentity). A new map $client_net turns nginx's compressed IPv6 text into the /64's four groups (one pattern per compression shape; IPv4-mapped addresses become their IPv4 address) and every limit zone keys on it. Verified in real nginx 1.31 (771 addresses: every zero/non-zero group pattern three times, plus IPv4 and IPv4-mapped) and pinned by a test that applies the map's own patterns to nginx's text form of all 256 shapes."
+  impact: low
+  affected_modules: ["docker/nginx/default.conf"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testNginxKeysIpv6ClientsByTheirSlash64LikeTheApp (failed on the old config: no $client_net map)"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:10:00Z"
+- id: CU-20261021-36
+  type: fix
+  title: "security: one client network can keep at most 6 requests in PHP (2 on the email endpoints)"
+  description: "Public-readiness hardening note: limit_conn perip 40 applied everywhere, above the www pool's 12 workers, so one client could occupy every PHP worker. The locations that reach PHP (/ for pages and the API, /api/admin/, and the two email endpoints) now set their own caps: 6 (half the default www pool) and 2 (half the mail pool); static files keep 40. nginx applies the limits of the first location a request matches, so the caps sit there and not in the internal /index.php location."
+  impact: low
+  affected_modules: ["docker/nginx/default.conf", "docs/runbooks/deployment.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testNginxCapsOneClientsRequestsInPhpBelowThePoolSizes", "tests/Unit/Deploy/ContainerConfigTest.php: testNginxRoutesMailEndpointsToTheirPoolAndNeverToATcpUpstream"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:11:00Z"
+- id: CU-20261021-37
+  type: fix
+  title: "Interrupted backups no longer leave .partial files behind; backup-now writes a partial file first"
+  description: "Public-readiness hardening note: a dump cut off by a container stop left its hidden .partial file forever (rotation only matched finished dumps), and bin/backup-now.sh wrote straight to the final name, so an interrupted run left a truncated file that looked like a backup. The daily loop now removes partial files older than an hour before each dump (a manual backup may be running), and backup-now writes .halloween-<stamp>.dump.partial and renames it only after pg_dump succeeds. BACKUP_PATH and BACKUP_ONCE let the tests run one pass of the loop."
+  impact: low
+  affected_modules: ["docker/postgres/backup-loop.sh", "bin/backup-now.sh", "docs/runbooks/backup-restore.md"]
+  related_tests: ["scripts/tests/test_operator_scripts.py: BackupLoopTests (3 tests)"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:12:00Z"
+- id: CU-20261021-38
+  type: feature
+  title: "A restore keeps accounts deleted and organizers revoked after the backup (account ledger)"
+  description: "Public-readiness hardening note: restoring an older backup brought back accounts deleted since (with their homes and review requests) and organizers revoked since. Deletions (Admin/AccountErasure, now shared by app:user:delete), erased review requests and organizer grants and revocations (UserRepository::setAdmin) write an append-only account_ledger row (ids and times only) in the same transaction. bin/restore.sh exports the live ledger (app:ledger:export), stops nginx, maintenance and the app, restores, starts the app (migrations run), merges the saved ledger back and replays it (app:ledger:replay), and only then starts nginx. An entry touches only rows created at or before it, so a newer row that reuses an id is safe; the latest role change per account decides; replaying again changes nothing; a malformed saved ledger changes nothing. Migration Version20261021000001 creates the table (IF NOT EXISTS, so a restore of an older backup keeps it). Real drill on a development stack: backup, delete one account and revoke another organizer, restore → both stay deleted/revoked."
+  impact: medium
+  affected_modules: ["src/Audit/AccountLedger.php", "src/Admin/AccountErasure.php", "src/Admin/LedgerReplay.php", "src/Command/LedgerExportCommand.php", "src/Command/LedgerReplayCommand.php", "src/Command/UserDeleteCommand.php", "src/Security/UserRepository.php", "migrations/Version20261021000001.php", "bin/restore.sh"]
+  related_tests: ["tests/Integration/AccountLedgerTest.php: testARestoreCannotBringBackADeletedAccountOrARevokedOrganizer", "tests/Integration/AccountLedgerTest.php: testAnEntryNeverTouchesARowCreatedAfterIt", "tests/Integration/AccountLedgerTest.php: testAMalformedSavedLedgerChangesNothing", "tests/Integration/CommandsTest.php"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:13:00Z"
+- id: CU-20261021-39
+  type: fix
+  title: "security: the maintenance container gets no mail or routing credentials"
+  description: "Public-readiness hardening note: maintenance inherited the whole app environment, including MAILER_DSN (SMTP credentials), ROUTING_API_KEY and ORGANIZER_EMAILS, though the purge sends no mail and calls no provider. compose.yaml overrides them with null://null and empty values."
+  impact: low
+  affected_modules: ["compose.yaml"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testTheMaintenanceContainerGetsNoMailOrRoutingCredentials"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:14:00Z"
+- id: CU-20261021-40
+  type: chore
+  title: "security: every base image is pinned by its multi-arch digest"
+  description: "Public-readiness hardening note: base images were pinned by tag only, so a rebuild could pick up a moved or replaced tag. php:8.3-fpm-alpine, composer:2, nginxinc/nginx-unprivileged:1.31-alpine (Dockerfile), postgres:17-alpine (compose.yaml app database and backup, CI service) and axllent/mailpit:v1.27 (dev and staging overlays) now carry their index digests; the unused PHP_VERSION build argument is gone. Dependabot's docker and new docker-compose ecosystems propose new digests."
+  impact: low
+  affected_modules: ["Dockerfile", "compose.yaml", "compose.dev.yaml", "compose.staging.yaml", ".github/workflows/ci.yml", ".github/dependabot.yml"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testBaseImagesArePinnedByDigest"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:15:00Z"
+- id: CU-20261021-41
+  type: fix
+  title: "security: the GIS importer fetches over https only and refuses responses over 64 MB"
+  description: "Public-readiness hardening note: query_url accepted http:// layer URLs, urllib followed redirects to http://, and http_json read whole responses into memory. Layer URLs must be https://, http_json refuses a non-https URL, the default opener follows a redirect only to another https:// URL, and a response over MAX_RESPONSE_BYTES (64 MB) is refused by its Content-Length or by the bytes actually read (never more than the cap is read); these errors are not retried."
+  impact: low
+  affected_modules: ["scripts/arcgis_common.py"]
+  related_tests: ["scripts/tests/test_fetch_arcgis_boundaries.py: TransportHardeningTests (3 tests)"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:16:00Z"
+- id: CU-20261021-42
+  type: fix
+  title: "security: over HTTPS the session cookie is __Host-nhm_session by default"
+  description: "Public-readiness hardening note: the __Host- prefix (Secure, Path=/, no Domain, so no sibling subdomain or plain-http page can set or overwrite the cookie) was only documented. Security/Session/HostCookieStorageFactory decorates the native session storage factory and names the cookie __Host-<SESSION_COOKIE_NAME> for requests that arrive over HTTPS (nginx passes HTTPS=on behind the tunnel). Plain-http installs and names that already have a __Host- or __Secure- prefix are unchanged. Upgrading signs current HTTPS sessions out once."
+  impact: low
+  affected_modules: ["src/Security/Session/HostCookieStorageFactory.php", "config/services.yaml", "docs/runbooks/deployment.md", "scripts/smoke_session.py"]
+  related_tests: ["tests/Unit/Security/HostCookieStorageFactoryTest.php", "scripts/smoke_session.py: session cookie is __Host-nhm_session behind HTTPS proxy (Path=/, no Domain)"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:17:00Z"
+- id: CU-20261021-43
+  type: feature
+  title: "Sign out everywhere: My house button and app:user:sign-out"
+  description: "Public-readiness hardening note: logout ended only the current session. users.sessions_ended_at (migration Version20261021000001) records a \"Sign out everywhere\"; IdleSessionSubscriber ends every session that began at or before it (audit auth.session_ended; the API answers 401 \"You were signed out on every device\", pages redirect to sign-in). Residents use POST /api/me/sign-out-everywhere (CSRF-checked; My house → Sign out everywhere, after a confirmation), operators app:user:sign-out <email>. The privacy notice mentions it."
+  impact: low
+  affected_modules: ["src/Security/User.php", "src/Security/UserRepository.php", "src/Security/Session/IdleSessionSubscriber.php", "src/Controller/Api/MeApiController.php", "src/Command/UserSignOutCommand.php", "templates/me/index.html.twig", "public/assets/js/me.js", "templates/legal/privacy.html.twig"]
+  related_tests: ["tests/Integration/SignOutEverywhereTest.php (2 tests)", "tests/e2e/specs/claim.spec.mjs: Sign out everywhere on My house ends the resident's session on their other devices"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:18:00Z"
+- id: CU-20261021-44
+  type: fix
+  title: "security: nothing of an unapproved boundary is public, not even its extent"
+  description: "Public-readiness hardening note: /api/community withheld an unapproved boundary's outline but published its bounding box (map.bbox). It is now null until the boundary is approved; the public map opens on the configured center (or the boundary's middle) and zoom, as it already did without a boundary. EligibilityTest's earlier \"map can still fit the area\" expectation is replaced by this rule."
+  impact: low
+  affected_modules: ["src/Community/CommunityPresenter.php"]
+  related_tests: ["tests/Integration/EligibilityTest.php: testUnreviewedBoundaryClosesClaimsButNotBrowsing", "tests/Integration/CommunityConfigsTest.php: testVenturaReserveRealPlatExample"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:19:00Z"
+- id: CU-20261021-45
+  type: fix
+  title: "security: GeoJSON uploads are checked against the vertex cap before any ring is examined"
+  description: "Public-readiness hardening note: GeoJsonParser counted vertices only after every ring had been validated, including the self-intersection check that compares every pair of segments, so an oversized upload (many rings just under the 5,000-position ring cap) still cost all of that work. Positions are now counted first, without validating anything, and an upload over 20,000 is refused at once."
+  impact: low
+  affected_modules: ["src/Geo/GeoJsonParser.php"]
+  related_tests: ["tests/Unit/Geo/GeoJsonParserTest.php: testTheVertexCapIsCheckedBeforeAnyRingIsExamined (failed on the old code: three self-intersection errors instead of the size error)"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:20:00Z"
+- id: CU-20261021-46
+  type: fix
+  title: "security: the claims CSV export is a CSRF-checked POST"
+  description: "Public-readiness hardening note: GET /api/admin/export/claims.csv wrote an audit event, so a prefetch or a cross-site link could add one. The route accepts only POST with the CSRF token as a form field; the organizer overview shows an Export claims button in a small form (the download keeps the page); GET answers 405."
+  impact: low
+  affected_modules: ["src/Controller/Api/AdminApiController.php", "public/assets/js/admin/overview.js", "public/assets/css/admin.css", "docs/runbooks/event-day.md"]
+  related_tests: ["tests/Integration/DisputeAndAdminTest.php: testOrganizerTransfersHidesResolvesAndEverythingIsAudited", "tests/e2e/specs/admin.spec.mjs: organizer downloads the claims list as a CSV (a CSRF-checked POST, never a plain link)"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:21:00Z"
+- id: CU-20261021-47
+  type: fix
+  title: "The map legend no longer covers the OpenStreetMap credit"
+  description: "Since 0.7.0-beta.1 added 🍺 21+ to the legend, the legend overlapped Leaflet's attribution line (the OpenStreetMap credit, which must stay readable) at every width up to 1180 px, and at 375 px it wrapped mid-label over it. Measured on the demo stack: overlap at 375, 390, 430, 768, 956 and 1180 px. The legend now sits above the 20 px credit line (bottom 28 px, 26 px on phones), may wrap between items but never inside one, and is capped to the map's width; no overlap remains at any tested width."
+  impact: low
+  affected_modules: ["public/assets/css/app.css"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs: no horizontal overflow and 44px targets at <width>px (+ screenshots) — the legend never covers the OpenStreetMap credit (chromium and WebKit, six widths, both stacks)"]
+  commit_ref: "fix/hardening-notes"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:40:00Z"
 ```
