@@ -12,7 +12,7 @@ services:
       MAILER_DSN: smtp://mailpit:1025
 
   mailpit:
-    image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+    image: axllent/mailpit:v1.31@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
     restart: unless-stopped
     ports:
       - "${MAILPIT_BIND:-127.0.0.1}:${MAILPIT_UI_PORT:-8025}:8025"
