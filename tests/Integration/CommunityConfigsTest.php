@@ -72,7 +72,9 @@ final class CommunityConfigsTest extends AppTestCase
         self::assertSame([], $this->json('GET', '/api/homes')['homes'], 'a real-data example never ships listings');
         $html = (string) $this->client->request('GET', '/')->html();
         self::assertStringContainsString('3 phases', $html);
-        self::assertStringContainsString('1–3', $html);
+        foreach (['Phase 1', 'Phase 2', 'Phase 3'] as $phase) {
+            self::assertStringContainsString('data-label="'.$phase.'"', $html, 'the phase picker lists every claimable phase');
+        }
         self::assertStringContainsString('SETUP IN REVIEW', $html);
 
         // After organizer approval the geometry decides eligibility (self-entry is used here only to
