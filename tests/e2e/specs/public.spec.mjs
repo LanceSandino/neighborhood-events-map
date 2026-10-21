@@ -405,6 +405,9 @@ test('bottom tabs are Map, Rules and My house; Rules opens the guide; the map st
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(DEMO + '/');
   await expect(page.locator('.mobile-bottom a')).toHaveText(['🗺️Map', '📋Rules', '🏠My house']);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.locator('.sidebar .nav a'), 'the desktop sidebar offers the same three places').toHaveText([/Map$/, /Rules$/, /My house$/]);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('.mobile-bottom [data-action="info"]').click();
   await expect(page.locator('#infoModal')).toBeVisible();
   await expect(page.locator('#infoModal .eyebrow')).toContainText('Rules');

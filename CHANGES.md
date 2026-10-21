@@ -331,4 +331,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/published-images"
   author: "Lance Sandino"
   timestamp: "2026-10-21T01:30:00Z"
+- id: CU-20261021-02
+  type: feature
+  title: "Desktop sidebar offers the same Map · Rules · My house as the phone tabs"
+  description: "The sidebar's five links (map, walking route, list my house, manage my house, about) became the three phone-tab destinations: Map (#explore), Rules (the guide sheet, active on /about) and My house (the sheet with List my house / Manage my listing, active on /me and sign-in). My route is on the map page. The privacy page now points to My house (Manage my listing)."
+  impact: low
+  affected_modules: ["templates/base.html.twig", "templates/legal/privacy.html.twig", "tests/e2e/specs/public.spec.mjs"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs: bottom tabs are Map, Rules and My house; Rules opens the guide; the map stays on the neighborhood (now also checks the desktop sidebar)", "tests/e2e/specs/a11y.spec.mjs (all pages, light and dark)"]
+  commit_ref: "feature/sidebar-tabs"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T04:00:00Z"
 ```

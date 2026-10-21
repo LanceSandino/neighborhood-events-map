@@ -14,7 +14,7 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 - "What's new" never shows unreleased changes.
 - One page for families: **My route** now sits right under the map (between the map and the list on phones), with **Share** and **Show on map** at the top. The copy-as-text button and the link box are gone.
 - Save routes by name (for example "Little kids" and "Big kids"): each keeps its own saved homes and filters, and you switch between them from a short list. They stay on your phone only.
-- The bottom tabs are now **Map · Rules · My house**.
+- The bottom tabs are now **Map · Rules · My house**, and the sidebar on computers offers the same three.
 - The map stays on the neighborhood: everything outside it is dimmed, and you can't pan or zoom far away.
 - Simpler filters, the same on phones and computers: Candy, Sensory-friendly, 21+ and Saved are icons with their counts (the summary cards above them are gone); Filters opens the rest. The map zooms to the homes that match whenever you change a filter.
 

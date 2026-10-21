@@ -35,11 +35,10 @@
       <div class="nav-title" id="nav-title">EXPLORE</div>
       <nav class="nav" aria-labelledby="nav-title">
         {% set nav = nav ?? 'map' %}
-        <a href="/#explore" class="{{ nav == 'map' ? 'active' }}" data-action="explore" {% if nav == 'map' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🗺️</span> Trick-or-treat map</a>
-        <a href="/#route" data-action="route"><span class="nav-icon" aria-hidden="true">🧭</span> My walking route</a>
-        <a href="/#list-my-house" data-action="register"><span class="nav-icon" aria-hidden="true">🏠</span> List my house</a>
-        <a href="/me" class="{{ nav == 'me' ? 'active' }}" {% if nav == 'me' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🔑</span> Manage my house</a>
-        <a href="/about" class="{{ nav == 'about' ? 'active' }}" {% if nav == 'about' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">ℹ️</span> About &amp; event info</a>
+        {# The same three places as the phone tabs (Map · Rules · My house); My route lives on the map page. #}
+        <a href="/#explore" class="{{ nav == 'map' ? 'active' }}" data-action="explore" {% if nav == 'map' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🗺️</span> Map</a>
+        <a href="/#info" class="{{ nav == 'about' ? 'active' }}" data-action="info" {% if nav == 'about' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">📋</span> Rules</a>
+        <a href="/#my-house" class="{{ nav == 'me' ? 'active' }}" data-action="house" {% if nav == 'me' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🏠</span> My house</a>
       </nav>
     </div>
     <div class="side-bottom">
