@@ -6,6 +6,8 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.6.0-beta.1] - 2026-10-21
+
 ### Added
 - Ready-made images for every release (amd64 and arm64) on GitHub Container Registry: a server runs `docker compose pull && docker compose up -d` with the release pinned in `APP_IMAGE_TAG`, so nothing is built on the server. Building from source still works.
 - `compose.staging.yaml`: run the production image and settings with Mailpit for sign-in emails, to test behind a tunnel before real SMTP is set up.
