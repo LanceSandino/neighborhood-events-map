@@ -361,4 +361,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/ci-pcov-attest"
   author: "Lance Sandino"
   timestamp: "2026-10-21T05:30:00Z"
+- id: CU-20261021-05
+  type: chore
+  title: "Images: edge builds are amd64-only; releases stay amd64 + arm64"
+  description: "Owner request to keep GitHub Actions minutes low while the repository is private (public repositories get standard runners free). arm64 is built under QEMU emulation and took 25-33 runner minutes per image on a cold cache (about 1 minute when cached). Pushes to main now publish :edge for linux/amd64 only and skip QEMU; vX.Y.Z tags still publish linux/amd64 + linux/arm64, which ARM servers such as the production host pull. No macOS runners are used anywhere."
+  impact: none
+  affected_modules: [".github/workflows/images.yml", "docs/runbooks/release.md"]
+  related_tests: ["actionlint 1.7.7 clean", "next push to main: Images run builds linux/amd64 only"]
+  commit_ref: "ci/edge-amd64-only"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T06:00:00Z"
 ```

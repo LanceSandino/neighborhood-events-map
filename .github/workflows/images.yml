@@ -1,7 +1,8 @@
-# Publish the app and nginx images to GitHub Container Registry for linux/amd64 and linux/arm64, so a server
-# runs `docker compose pull && docker compose up -d` instead of building from source.
-#   vX.Y.Z tag      -> :X.Y.Z and :latest   (servers pin a version in APP_IMAGE_TAG)
-#   push to main    -> :edge and :sha-<short>
+# Publish the app and nginx images to GitHub Container Registry, so a server runs
+# `docker compose pull && docker compose up -d` instead of building from source.
+#   vX.Y.Z tag      -> :X.Y.Z and :latest   linux/amd64 + linux/arm64 (servers pin a version in APP_IMAGE_TAG)
+#   push to main    -> :edge and :sha-<short>   linux/amd64 only (arm64 is emulated and costs ~30 runner
+#                      minutes per image on a cold cache; releases are what ARM servers run)
 # Each image carries OCI labels (source, revision, version), an SBOM and a signed build-provenance attestation.
 name: Images
 on:
@@ -35,7 +36,11 @@ jobs:
       - name: Image name (registry names are lowercase)
         id: name
         run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+      - name: Platforms (arm64 only for releases)
+        id: plat
+        run: echo "list=${{ startsWith(github.ref, 'refs/tags/v') && 'linux/amd64,linux/arm64' || 'linux/amd64' }}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-qemu-action@v3
+        if: startsWith(github.ref, 'refs/tags/v')
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -60,7 +65,7 @@ jobs:
         with:
           context: .
           target: ${{ matrix.target }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ steps.plat.outputs.list }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
