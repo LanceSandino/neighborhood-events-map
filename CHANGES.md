@@ -771,4 +771,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/cloudflare-web-analytics"
   author: "Lance Sandino"
   timestamp: "2026-10-21T14:20:00Z"
+- id: CU-20261021-50
+  type: fix
+  title: "Privacy notice: a cookies section, Cloudflare's delivery and security cookies (CLOUDFLARE_PROXY), the email delivery service, a fixed date"
+  description: "Behind Cloudflare with Bot Fight Mode, Cloudflare sets its own strictly necessary security cookies (__cf_bm; cf_clearance after a challenge), while the privacy notice said browsing sets no cookies and named no delivery provider. The notice now has a \"Cookies and storage on your device\" section (the sign-in cookie, Cloudflare's security cookies when applicable, local-storage preferences, no advertising or analytics cookies, and why there is no cookie banner). CLOUDFLARE_PROXY=1 (env, default 0; implied by CLOUDFLARE_WEB_ANALYTICS) adds \"Delivered through Cloudflare\" with Cloudflare's privacy policy and cookie list and drops the \"no cookies\" claim. The email bullet says messages go out through the organizer's email delivery service. \"Last updated\" was the current month on every visit; it is now a fixed date."
+  impact: low
+  affected_modules: ["templates/legal/privacy.html.twig", "config/services.yaml", "config/packages/twig.yaml", "compose.yaml", ".env.example", ".env.dist", "docs/examples/cloudflare.md"]
+  related_tests: ["tests/Integration/PublicPrivacyTest.php: testThePrivacyNoticeListsEveryCookieAndWhyThereIsNoBanner", "tests/Integration/PublicPrivacyTest.php: testThePrivacyNoticeDisclosesCloudflareWhenTheSiteIsDeliveredThroughIt (both failed before the change)"]
+  commit_ref: "feature/privacy-cookie-notice"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T14:45:00Z"
 ```

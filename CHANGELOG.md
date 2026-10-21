@@ -6,6 +6,12 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.7.0-beta.5] - 2026-10-21
+
+### Changed
+- The privacy notice lists every cookie and storage the site uses and explains why there is no cookie banner. Sites behind Cloudflare set `CLOUDFLARE_PROXY=1` so the notice also says that Cloudflare carries requests and may set its security cookies (`__cf_bm`, `cf_clearance`).
+- The privacy notice says sign-in emails go out through the organizer's email delivery service, and its "Last updated" date no longer changes every month.
+
 ## [0.7.0-beta.4] - 2026-10-21
 
 ### Added

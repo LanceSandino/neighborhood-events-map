@@ -4,6 +4,7 @@ twig:
         app_version: '%app.version%'
         source_url: '%app.source_url%'
         cloudflare_web_analytics: '%app.cloudflare_web_analytics%'
+        cloudflare_proxy: '%app.cloudflare_proxy%'
 
 when@test:
     twig:

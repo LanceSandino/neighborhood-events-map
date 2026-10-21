@@ -1,6 +1,12 @@
 # Test and verification report
 
-## Latest run — 2026-10-21, release 0.7.0-beta.4
+## Latest run — 2026-10-21, release 0.7.0-beta.5
+
+0.7.0-beta.4 plus the privacy notice's cookie section and `CLOUDFLARE_PROXY` (CU-20261021-50): PHPUnit **271 tests, 5150 assertions**
+OK; PHPStan no errors. With `CLOUDFLARE_PROXY=1` and `CLOUDFLARE_WEB_ANALYTICS=1` on the demo stack: no horizontal overflow on the
+privacy page at 430 px, axe checks 20/20.
+
+## Run — 2026-10-21, release 0.7.0-beta.4
 
 0.7.0-beta.3 plus optional Cloudflare Web Analytics (CU-20261021-49): PHPUnit **269 tests, 5130 assertions** OK; PHPStan no errors.
 With `CLOUDFLARE_WEB_ANALYTICS=1` on the demo stack: the policy's `script-src` adds only `https://static.cloudflareinsights.com`, the

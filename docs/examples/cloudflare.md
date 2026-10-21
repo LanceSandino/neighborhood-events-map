@@ -19,6 +19,7 @@ ingress:
 - If `cloudflared` runs as a container on the stack's network instead, set `NGINX_TRUSTED_PROXIES` to its address.
 - Check that `docker compose logs nginx` shows real visitor addresses. If every line shows the same private address, all visitors share one rate-limit budget.
 - Route only the map's hostname to the stack: never PostgreSQL or Mailpit.
+- Set `CLOUDFLARE_PROXY=1` in `.env` and recreate the app container (`docker compose up -d --wait app`). The privacy page then tells visitors that Cloudflare carries their requests and may set its strictly necessary security cookies (`__cf_bm` with Bot Fight Mode, `cf_clearance` after a security check). Without it, the page would say that browsing sets no cookies, which is not true once Cloudflare sets them.
 
 If you proxy DNS to your own reverse proxy instead of using a tunnel, set **SSL/TLS → Full (strict)** and keep a valid certificate on that proxy.
 
@@ -45,7 +46,7 @@ To turn them on:
 With the setting on:
 - the Content-Security-Policy also allows scripts from `https://static.cloudflareinsights.com`;
 - the beacon sends its reports to the site's own `/cdn-cgi/rum`, which is already allowed;
-- the footer reads "Cookie-free visit statistics", and the privacy page describes Cloudflare Web Analytics.
+- the footer reads "Cookie-free visit statistics", and the privacy page describes Cloudflare Web Analytics (and Cloudflare's delivery, as with `CLOUDFLARE_PROXY=1`).
 
 The app never adds the beacon itself, so the setting does nothing on a site Cloudflare does not proxy. Check your local rules on analytics; the privacy page describes the software's behaviour and is not legal advice.
 

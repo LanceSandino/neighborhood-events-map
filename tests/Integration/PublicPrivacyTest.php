@@ -64,8 +64,7 @@ final class PublicPrivacyTest extends AppTestCase
         $html = (string) $this->client->request('GET', '/')->html();
         self::assertStringNotContainsString('cloudflareinsights', (string) $this->client->getResponse()->headers->get('Content-Security-Policy'));
         self::assertStringContainsString('No ads · No tracking', $html);
-        $this->client->request('GET', '/privacy');
-        $privacy = (string) $this->client->getResponse()->getContent();
+        $privacy = $this->client->request('GET', '/privacy')->filter('article.legal')->html(); // the notice, not the What's new notes
         self::assertStringContainsString('no advertising, no analytics and no tracking', $privacy);
         self::assertStringNotContainsString('Cloudflare Web Analytics', $privacy);
     }
@@ -97,6 +96,48 @@ final class PublicPrivacyTest extends AppTestCase
         } finally {
             unset($_ENV['CLOUDFLARE_WEB_ANALYTICS'], $_SERVER['CLOUDFLARE_WEB_ANALYTICS']);
             static::ensureKernelShutdown();
+        }
+    }
+
+    /**
+     * The privacy notice lists every cookie and storage the site uses and says why there is no consent banner
+     * (D-20261021-35). Without CLOUDFLARE_PROXY it names no third party besides the map tiles.
+     */
+    public function testThePrivacyNoticeListsEveryCookieAndWhyThereIsNoBanner(): void
+    {
+        $this->configureCommunity();
+        $privacy = $this->client->request('GET', '/privacy')->filter('article.legal')->html(); // the notice, not the What's new notes
+        self::assertStringContainsString('<h2>Cookies and storage on your device</h2>', $privacy);
+        self::assertStringContainsString('strictly necessary', $privacy);
+        self::assertStringContainsString('no cookie banner', $privacy);
+        self::assertStringContainsString('email delivery service', $privacy);
+        self::assertStringNotContainsString('Cloudflare', $privacy);
+        self::assertStringNotContainsString('__cf_bm', $privacy);
+        self::assertMatchesRegularExpression('~Last updated [A-Z][a-z]+ \d{4}~', $privacy);
+        self::assertStringContainsString('Last updated October 2026', $privacy, 'a fixed date, changed only when the notice changes');
+    }
+
+    /** CLOUDFLARE_PROXY=1: Cloudflare carries every request and may set its strictly necessary security cookies; the notice says so. */
+    public function testThePrivacyNoticeDisclosesCloudflareWhenTheSiteIsDeliveredThroughIt(): void
+    {
+        foreach (['CLOUDFLARE_PROXY', 'CLOUDFLARE_WEB_ANALYTICS'] as $setting) {
+            $_ENV[$setting] = $_SERVER[$setting] = '1'; // either one means the site is behind Cloudflare
+            try {
+                static::ensureKernelShutdown();
+                $this->client = static::createClient([], ['HTTP_ORIGIN' => 'http://localhost', 'REMOTE_ADDR' => '127.0.0.1']);
+                $this->clock = static::mockTime('2026-10-31 22:00:00 UTC');
+                $this->configureCommunity();
+                $privacy = $this->client->request('GET', '/privacy')->filter('article.legal')->html();
+                self::assertStringContainsString('Delivered through Cloudflare', $privacy, $setting);
+                self::assertStringContainsString('__cf_bm', $privacy, $setting);
+                self::assertStringContainsString('cf_clearance', $privacy, $setting);
+                self::assertStringContainsString('https://www.cloudflare.com/privacypolicy/', $privacy, $setting);
+                self::assertStringNotContainsString('set no cookies.', $privacy, $setting.': the site itself sets none, Cloudflare may');
+                self::assertSame('CLOUDFLARE_WEB_ANALYTICS' === $setting, str_contains($privacy, 'Visit statistics'), $setting);
+            } finally {
+                unset($_ENV[$setting], $_SERVER[$setting]);
+                static::ensureKernelShutdown();
+            }
         }
     }
 

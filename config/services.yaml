@@ -39,6 +39,9 @@ parameters:
     # Optional Cloudflare Web Analytics, only for a site proxied by Cloudflare (D-20261021-34). Off by default.
     env(CLOUDFLARE_WEB_ANALYTICS): '0'
     app.cloudflare_web_analytics: '%env(bool:CLOUDFLARE_WEB_ANALYTICS)%'
+    # The site is delivered through Cloudflare (tunnel or proxied DNS): the privacy notice says so (D-20261021-35).
+    env(CLOUDFLARE_PROXY): '0'
+    app.cloudflare_proxy: '%env(bool:CLOUDFLARE_PROXY)%'
     app.branding_dir: '%kernel.project_dir%/var/branding'
 
 services:

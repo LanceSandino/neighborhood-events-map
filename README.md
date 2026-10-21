@@ -2,7 +2,7 @@
 
 A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. A Christmas lights map and a garage sale map are next: see the [roadmap](ROADMAP.md).
 
-**Status:** `0.7.0-beta.4` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.7.0-beta.5` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|
@@ -103,7 +103,7 @@ Production readiness is blocked on real-world inputs, not code:
 
 ## Privacy and accessibility
 
-No ads and no tracking; no analytics unless the operator turns on cookie-free Cloudflare Web Analytics (`CLOUDFLARE_WEB_ANALYTICS`, off by default; the privacy page and footer then say so). Public pages set no cookies, and the only cookie is the sign-in session after a resident confirms a link. Favorites and filters stay in the visitor's browser. Every page links a privacy notice (`/privacy`), terms of use (`/terms`) and an accessibility statement (`/accessibility`); set `community.contact_url` (e.g. `mailto:`) so visitors can reach the organizer. The UI targets WCAG 2.1 AA and is checked automatically (axe-core) in light and dark; colour is never the only signal. These pages describe the software's behaviour — they are not legal advice.
+No ads and no tracking; no analytics unless the operator turns on cookie-free Cloudflare Web Analytics (`CLOUDFLARE_WEB_ANALYTICS`, off by default; the privacy page and footer then say so). The privacy page lists every cookie and storage the site uses, including Cloudflare's security cookies when Cloudflare delivers the site (`CLOUDFLARE_PROXY`); everything is strictly necessary or stays on the device, so there is no cookie banner. Public pages set no cookies of their own, and the only cookie is the sign-in session after a resident confirms a link. Favorites and filters stay in the visitor's browser. Every page links a privacy notice (`/privacy`), terms of use (`/terms`) and an accessibility statement (`/accessibility`); set `community.contact_url` (e.g. `mailto:`) so visitors can reach the organizer. The UI targets WCAG 2.1 AA and is checked automatically (axe-core) in light and dark; colour is never the only signal. These pages describe the software's behaviour — they are not legal advice.
 
 ## Important limitation
 

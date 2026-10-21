@@ -76,7 +76,7 @@ events.example.org {
 }
 ```
 
-Already using Cloudflare for your domain? [docs/examples/cloudflare.md](../examples/cloudflare.md) is an optional example with Cloudflare Tunnel, free-plan security settings and optional cookie-free Web Analytics (`CLOUDFLARE_WEB_ANALYTICS`).
+Already using Cloudflare for your domain? [docs/examples/cloudflare.md](../examples/cloudflare.md) is an optional example with Cloudflare Tunnel, free-plan security settings, the privacy-notice setting `CLOUDFLARE_PROXY` and optional cookie-free Web Analytics (`CLOUDFLARE_WEB_ANALYTICS`).
 
 ## 4. Verify
 

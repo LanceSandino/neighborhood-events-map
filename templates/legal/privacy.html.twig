@@ -2,6 +2,8 @@
 {% set nav = 'info' %}
 {% block title %}Privacy · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block body %}
+{# Cloudflare Web Analytics works only on a site Cloudflare delivers, so either setting means Cloudflare is in front. #}
+{% set cloudflare = cloudflare_proxy or cloudflare_web_analytics %}
 <article class="page-card legal">
   <div class="eyebrow">🔒 Privacy</div>
   <h1>Privacy notice</h1>
@@ -13,10 +15,17 @@
 
   <h2>If you are browsing the map</h2>
   <ul>
+    {% if cloudflare %}
+    <li><b>No account needed.</b> Browsing, filtering and planning stops need no account, and this site sets no cookies for them (Cloudflare may set a security cookie, see below).</li>
+    {% else %}
     <li><b>No account, no cookies.</b> Browsing, filtering and planning stops set no cookies.</li>
+    {% endif %}
     <li><b>Saved on this device only.</b> Your favorites, filters, start point, stop order, skipped stops, list layout and appearance and accessibility choices are kept in this browser’s local storage so they are still there next time. They are never sent to us. <button type="button" class="link-button" id="btnClearLocal">Clear saved data on this device</button> <span id="clearStatus" class="form-caption" role="status"></span></li>
     <li><b>Your location stays on your phone.</b> “Show my location” and “Start from my current location” work only after your browser asks you and you allow it; the position is used on this page only — never saved, put in shared links or sent to us.</li>
     <li><b>Map pictures.</b> The map background is loaded from OpenStreetMap’s tile servers, which receive your IP address and browser details like any website you visit (see the <a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener">OpenStreetMap Foundation privacy policy</a>). They set no cookies here. Everything else — pages, scripts, fonts — comes from this site{% if cloudflare_web_analytics %}, apart from the statistics script below{% endif %}.</li>
+    {% if cloudflare %}
+    <li><b>Delivered through Cloudflare.</b> Cloudflare carries every request to this site to keep it fast and to protect it from attacks and bots, so it processes your IP address, the pages you open and your browser details, and it may set a short-lived security cookie (see below). See <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare’s privacy policy</a>.</li>
+    {% endif %}
     {% if cloudflare_web_analytics %}
     <li><b>Visit statistics.</b> This site uses <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/" rel="noopener">Cloudflare Web Analytics</a> to count page views and measure how fast pages load. Its small script, loaded from Cloudflare, sets no cookies, stores nothing on your device and does not identify or follow you; Cloudflare, which already delivers this site, sees the page address, your browser type and your country.</li>
     {% endif %}
@@ -24,10 +33,20 @@
 
   <h2>If you list your home</h2>
   <ul>
-    <li><b>Email address</b> — used only to send one-time sign-in links and, if you ask for a review, so the organizer can reply. It is never shown publicly or to other residents.</li>
+    <li><b>Email address</b> — used only to send one-time sign-in links and, if you ask for a review, so the organizer can reply. The emails go out through the organizer’s email delivery service, which receives your address only to deliver them. It is never shown publicly or to other residents.</li>
     <li><b>Address and listing</b> — your street address, hours, offerings, sensory notes and short note are <b>public on the map</b> while you choose to show them. Please don’t include children’s names or private details.</li>
     <li><b>Sign-in cookie</b> — one strictly necessary session cookie, set only after you confirm a sign-in link. It ends when you sign out (“Sign out everywhere” on My house ends it on all your devices), after {{ c.registration.session_idle_minutes ?? 30 }} minutes without activity, or at the latest after 12 hours.</li>
     <li><b>Records</b> — the time you listed or changed a home, and organizer actions (such as hiding a listing), are kept in an audit log so mistakes can be fixed fairly.</li>
+  </ul>
+
+  <h2>Cookies and storage on your device</h2>
+  <ul>
+    <li><b>Sign-in cookie</b> (this site) — one session cookie, set only after you confirm a sign-in link and removed when you sign out or the session ends. It is strictly necessary for signing in.</li>
+    {% if cloudflare %}
+    <li><b>Security cookies</b> (Cloudflare) — <code>__cf_bm</code> helps tell people from bots and expires after 30 minutes without activity; <code>cf_clearance</code> is set only after you pass a security check and lasts about 30 minutes. They are strictly necessary to protect the site, are separate for each site and are not used for advertising (see <a href="https://developers.cloudflare.com/fundamentals/reference/policies-compliances/cloudflare-cookies/" rel="noopener">Cloudflare’s cookie list</a>).</li>
+    {% endif %}
+    <li><b>Saved preferences</b> (local storage) — favorites, filters and appearance choices stay in your browser and are never sent to us (see above).</li>
+    <li><b>No advertising or analytics cookies.</b> {% if cloudflare_web_analytics %}Visit statistics are cookie-free. {% endif %}Because everything above is strictly necessary or stays on your device, this site shows no cookie banner.</li>
   </ul>
 
   <h2>Security records</h2>
@@ -42,7 +61,7 @@
   <h2>Children</h2>
   <p>Anyone can browse without giving any personal information. Listing a home is for adults; we do not knowingly collect information from children under 13.</p>
 
-  <p class="form-caption">This notice describes how this software works; the organizer of {{ c.community.name }} runs this copy of it. Last updated {{ 'now'|date('F Y') }}.</p>
+  <p class="form-caption">This notice describes how this software works; the organizer of {{ c.community.name }} runs this copy of it. Last updated October 2026.</p>
   <div class="modal-actions"><a class="secondary" href="/terms">Terms of use</a><a class="primary" href="/">Back to map</a></div>
 </article>
 {% endblock %}
