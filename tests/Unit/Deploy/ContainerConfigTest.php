@@ -197,6 +197,20 @@ final class ContainerConfigTest extends TestCase
         self::assertStringContainsString('package-ecosystem: docker-compose', self::read('.github/dependabot.yml'), 'digests are kept current');
     }
 
+    /** PostgreSQL 18+ images keep data under /var/lib/postgresql/<major>; the app's serverVersion matches the image. */
+    public function testThePostgresImageVolumeAndServerVersionAgree(): void
+    {
+        $compose = Yaml::parse(self::read('compose.yaml'));
+        self::assertSame(1, preg_match('~^postgres:(\d+)-alpine@~', $compose['services']['postgres']['image'], $m));
+        self::assertGreaterThanOrEqual(18, (int) $m[1]);
+        self::assertSame($compose['services']['postgres']['image'], $compose['services']['backup']['image'], 'pg_dump matches the server');
+        self::assertContains('postgres-data:/var/lib/postgresql', $compose['services']['postgres']['volumes']);
+        self::assertStringContainsString('serverVersion='.$m[1].'&', $compose['x-app-env']['DATABASE_URL'] ?? $compose['services']['app']['environment']['DATABASE_URL']);
+        self::assertStringContainsString('serverVersion='.$m[1].'&', self::read('.env.dist'));
+        self::assertStringContainsString('postgres:'.$m[1].'-alpine@', self::read('.github/workflows/ci.yml'));
+        self::assertTrue(is_executable(\dirname(__DIR__, 3).'/bin/upgrade-postgres.sh'));
+    }
+
     public function testTheMaintenanceContainerGetsNoMailOrRoutingCredentials(): void
     {
         $services = Yaml::parse(self::read('compose.yaml'))['services'];

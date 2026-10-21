@@ -7,3 +7,5 @@
 **Consequences.** Simple operations (one `docker compose up`), explicit SQL for the critical claim transaction, no multi-tenancy complexity. Scaling beyond one host is out of scope.
 
 **Alternatives.** Serverless (D1/Workers): vendor lock-in and harder to self-host. ORM entities: more ceremony for little benefit at this size. Multi-tenant SaaS: explicitly excluded by the blueprint.
+
+**Update (2026-10-21).** The versions above were current when this was decided. The project now runs the latest stable PHP and PostgreSQL (PHP 8.5, PostgreSQL 18; D-20261021-36); the architecture is unchanged.

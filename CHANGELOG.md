@@ -6,6 +6,15 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.8.0-beta.1] - 2026-10-21
+
+### Upgrade notes
+- **PostgreSQL 18:** this release moves the database from PostgreSQL 17 to 18, which cannot open 17's data files. After updating the checkout and pulling the images, run `bin/upgrade-postgres.sh` **before** `docker compose up` (see `docs/runbooks/upgrade-rollback.md`). It backs up, restores into a new volume and checks every table; your old data stays in the old volume for a rollback.
+
+### Changed
+- PHP 8.5 (from 8.3) and PostgreSQL 18 (from 17): every part of the stack now runs its latest stable release.
+- Development and test tools: PHPUnit 12, Node 24 LTS, Python 3.14, Mailpit 1.31.6 and current GitHub Actions.
+
 ## [0.7.0-beta.6] - 2026-10-21
 
 ### Security

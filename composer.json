@@ -35,7 +35,7 @@
         "bump-after-update": true,
         "sort-packages": true,
         "platform": {
-            "php": "8.3.0"
+            "php": "8.5.0"
         }
     },
     "autoload": {
@@ -81,7 +81,7 @@
     },
     "require-dev": {
         "phpstan/phpstan": "^2",
-        "phpunit/phpunit": "^11",
+        "phpunit/phpunit": "^12",
         "symfony/browser-kit": "7.4.*",
         "symfony/css-selector": "7.4.*",
         "symfony/phpunit-bridge": "^8.1.9"

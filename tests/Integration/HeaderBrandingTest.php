@@ -17,11 +17,13 @@ final class HeaderBrandingTest extends AppTestCase
     public function testCityUnderTheNameIsAnOption(): void
     {
         $this->configureCommunity();
-        $html = (string) $this->client->request('GET', '/')->html();
+        $page = $this->client->request('GET', '/');
+        $html = (string) $page->html();
         self::assertStringNotContainsString('class="crumb-sub"', $html);
         self::assertStringContainsString('Community 2026', $html);
         self::assertStringContainsString('aria-label="Appearance and accessibility"', $html);
-        self::assertSame(1, substr_count($html, 'data-whats-new>'), 'the version link appears once');
+        // Counted in the DOM: PHP 8.4+'s HTML5 parser writes the boolean attribute back as data-whats-new="".
+        self::assertSame(1, $page->filter('[data-whats-new]')->count(), 'the version link appears once');
 
         $this->configureCommunity(['branding' => ['show_locality' => true]]);
         $html = (string) $this->client->request('GET', '/')->html();

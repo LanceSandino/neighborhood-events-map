@@ -1,6 +1,20 @@
 # Test and verification report
 
-## Latest run — 2026-10-21, release 0.7.0-beta.6
+## Latest run — 2026-10-21, release 0.8.0-beta.1
+
+Latest stable stack (CU-20261021-52 to -54) on the development stacks, both moved to PostgreSQL 18 with `bin/upgrade-postgres.sh`
+(17.11 → 18.6, 15 tables each, identical row counts):
+
+| Gate | Result |
+|---|---|
+| PHPUnit 12.5 on PHP 8.5.12 + PostgreSQL 18.6 | **OK — 273 tests, 5162 assertions** |
+| Coverage (pcov) | Lines **94.08 %** ✓ ≥ 85 · Branches n/a |
+| PHPStan level 6 · `composer audit --locked` · `composer validate` | No errors · no advisories · valid |
+| node:test on Node 24 | **29/29** |
+| Python 3.14 + shapely 2.2.0 (importers, operator scripts incl. the upgrade script's refusals) | **45/45** |
+| Playwright E2E (chromium + webkit-iphone, Mailpit 1.31.6) | **78 passed, 2 skipped** (a clean run with no edits during it) |
+
+## Run — 2026-10-21, release 0.7.0-beta.6
 
 PHP 8.3.36 security release (CU-20261021-51), dev stacks rebuilt on the new base image: PHPUnit **272 tests, 5153 assertions** OK;
 PHPStan no errors; `composer audit --locked` no advisories; session smoke **13/13**.

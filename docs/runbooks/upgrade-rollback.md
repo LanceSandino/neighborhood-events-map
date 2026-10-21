@@ -10,6 +10,22 @@
    - Check the new version is live: the footer shows it, or `curl -s https://<host>/healthz`.
 5. Check `/healthz`, the public map, organizer sign-in, one listing edit.
 
+## PostgreSQL major upgrade (for example 17 → 18)
+
+A new PostgreSQL major version cannot open the previous one's data files, so a release that moves to one (see its changelog) is installed through a backup. `bin/upgrade-postgres.sh` does every step and checks each one:
+
+1. Update the checkout and `.env` as in steps 2–3 above, but **do not** run `docker compose up` yet. The old containers keep running.
+2. Pull or build the new images: `docker compose pull` (or `docker compose build`).
+3. `bin/upgrade-postgres.sh` (add your compose arguments). It asks for confirmation, then:
+   - stops nginx, maintenance and the app;
+   - dumps the old database into the backup directory and records every table's row count;
+   - starts the new PostgreSQL on its own empty volume (`postgres-data`) and restores the dump;
+   - compares the row counts table by table, and starts nothing if they differ;
+   - starts the whole stack.
+4. Check `/healthz`, the public map and an organizer sign-in.
+
+The old data stays untouched in the `pgdata` volume. To roll back, check out the previous release and set its `APP_IMAGE_TAG` again: its compose file uses that volume, so `docker compose up -d` brings the old database back as it was before the upgrade. Once you are sure, remove it: `docker volume rm <project>_pgdata`.
+
 ## Rollback
 
 - Code-only change (no new migration): `git checkout <previous tag>`, set `APP_IMAGE_TAG` back to that version, then `docker compose pull && docker compose up -d --force-recreate --wait`. Older images stay in the registry, so a rollback never needs a build.

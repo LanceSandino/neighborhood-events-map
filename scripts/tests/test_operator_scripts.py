@@ -104,6 +104,41 @@ class BackupLoopTests(unittest.TestCase):
         self.assertIn("mv \\$t /backups/halloween-$stamp.dump", script)
 
 
+class UpgradePostgresTests(unittest.TestCase):
+    """bin/upgrade-postgres.sh decides from the running server's major version and compose.yaml's image; a stand-in
+    docker command answers those two questions, so the refusal paths run without Docker."""
+
+    def run_with(self, image: str, running: str | None) -> subprocess.CompletedProcess:
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp) / "docker"
+            version = f'echo "postgres (PostgreSQL) {running}"' if running else "exit 1"
+            fake.write_text("#!/bin/sh\n"
+                            'case "$*" in\n'
+                            f'  *"config --images postgres"*) echo "{image}";;\n'
+                            f'  *"exec -T postgres postgres --version"*) {version};;\n'
+                            '  *) echo "unexpected: $*" >&2; exit 9;;\n'
+                            "esac\n")
+            fake.chmod(0o755)
+            return run(["bash", "bin/upgrade-postgres.sh"], {"PATH": f"{tmp}:/usr/bin:/bin"})
+
+    def test_nothing_happens_when_the_running_server_is_already_the_target(self):
+        r = self.run_with("postgres:18-alpine@sha256:" + "0" * 64, "18.6")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("already PostgreSQL 18", r.stdout)
+        self.assertNotIn("unexpected", r.stderr, "nothing was stopped, dumped or started")
+
+    def test_it_refuses_without_a_running_server_to_dump(self):
+        r = self.run_with("postgres:18-alpine", None)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("not running", r.stderr)
+
+    def test_it_asks_before_touching_anything(self):
+        r = self.run_with("postgres:18-alpine", "17.11")  # stdin is empty: no UPGRADE answer
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Aborted", r.stdout)
+        self.assertNotIn("unexpected", r.stderr, "nothing was stopped before the answer")
+
+
 class GitIgnoreTests(unittest.TestCase):
     def test_the_whole_deployment_folder_is_ignored(self):
         # The README tells operators to keep their community files in deploy/community/: never committable.

@@ -12,11 +12,12 @@ This file is self-contained: anyone (or any agent such as Codex or Claude Code) 
 
 - One community per install; **no neighborhood-specific code**. Names, geometry, zones, branding, dates and limits come from config/DB.
 - The product is event-neutral: the community's event is configuration (`event.name`, default Halloween). Never hard-code a holiday in titles, branding or emails; Halloween-specific behaviour belongs to the Halloween event type (`ROADMAP.md`).
-- Stack: PHP 8.3 + Symfony 7.4 LTS, PostgreSQL 17 (DBAL, no ORM), Twig, vanilla JS/CSS (ES modules, no build step), Leaflet, Docker Compose. No React/Vue, Redis, PostGIS, paid hosted auth or mandatory frontend tooling.
+- Stack: PHP 8.5 + Symfony 7.4 LTS, PostgreSQL 18 (DBAL, no ORM), Twig, vanilla JS/CSS (ES modules, no build step), Leaflet, Docker Compose. No React/Vue, Redis, PostGIS, paid hosted auth or mandatory frontend tooling.
 - **Never fabricate data:** no invented boundaries, house pins, addresses, crossings or walking paths. Demo data is fictional, labelled, gated behind `APP_DEMO=1` and a `*-demo` community id.
 - Claims: first verified email wins, enforced by the `claims` primary key inside one transaction (`INSERT … ON CONFLICT DO NOTHING`). Never read-then-write. Never overwrite an owner.
 - Auth: passwordless one-time links (15 min, single use, consumed only by CSRF-protected POST), server-enforced 30-minute idle sessions (configurable 5–240), no remember-me, no background request may extend a session.
 - Every email-sending endpoint requires proof-of-work **and** persistent rate limits, a honeypot check and the response-time floor (`ResponseFloorSubscriber::mark()` right after proof-of-work). Budgets that protect the mail relay are spent only by mail that is actually sent. Public APIs never expose emails, owner ids, tokens or the unclaimed address inventory.
+- Run the latest stable release of every component (PHP, PostgreSQL, nginx mainline, Alpine, tools); apply security releases the same day. Base images stay pinned by digest (D-20261021-36).
 - Roles: residents are `ROLE_USER`, organizers `ROLE_ADMIN` (granted only by `app:admin:grant` or `ORGANIZER_EMAILS`). Declare the role on every controller class (`#[IsGranted]`) in addition to `access_control`. A resident's own homes are reached only through `App\Listing\ResidentHomes::of($user)`; never query claims/listings by id for a resident without it.
 - Geometry is validated on the server (`App\Geo`); browser checks are hints only. GeoJSON order is `[longitude, latitude]`.
 - Tokens and secrets never appear in logs, Git, CI output or analytics. `.env*` (except `.env.example`, `.env.dist`, `.env.test`) and `deploy/` (an operator's `deploy/community/` and `deploy/private/`) stay untracked.
@@ -55,8 +56,8 @@ Every source file starts with a header block (`@module`, `@description`, depende
 docker compose exec app sh bin/test.sh                              # PHPUnit (unit + integration, PostgreSQL)
 docker compose exec app vendor/bin/phpstan analyse                  # level 6, must be clean
 docker compose exec app composer audit --locked
-docker run --rm -v "$PWD":/w -w /w node:22-alpine node --test tests/js/*.test.mjs
-docker run --rm -v "$PWD":/w -w /w python:3.12-slim sh -c "pip install -q shapely==2.0.6 && python -I -m unittest discover -s scripts/tests"
+docker run --rm -v "$PWD":/w -w /w node:24-alpine node --test tests/js/*.test.mjs
+docker run --rm -v "$PWD":/w -w /w python:3.14-slim sh -c "pip install -q shapely==2.2.0 && python -I -m unittest discover -s scripts/tests"
 ./bin/e2e.sh                                                        # Playwright, needs both dev stacks running
 python3 scripts/smoke_session.py                                    # session lifecycle smoke test
 ```

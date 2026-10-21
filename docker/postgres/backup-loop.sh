@@ -1,5 +1,5 @@
 #!/bin/sh
-# Daily pg_dump (custom format) with retention. Runs inside the postgres:17-alpine image.
+# Daily pg_dump (custom format) with retention. Runs inside the same postgres image as the server.
 # Dumps are private (umask 077, directory 0700) and leave out session rows: the schema is kept,
 # live session ids are not, so a leaked dump cannot be replayed as a signed-in session.
 # Each dump is written to a hidden .partial file and renamed when complete, so a stopped container or a

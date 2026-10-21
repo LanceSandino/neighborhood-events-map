@@ -2,7 +2,7 @@
 
 A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. A Christmas lights map and a garage sale map are next: see the [roadmap](ROADMAP.md).
 
-**Status:** `0.7.0-beta.6` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.8.0-beta.1` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|
@@ -18,7 +18,7 @@ Screenshots use the **fictional** “Maple Hollow” demo community (invented ho
 - **Organizers:** setup checklist, community/branding/event/zones settings, Leaflet.draw boundary & zone editor with GeoJSON import/export and approval gate, address registry (CSV import, manual add/edit — coordinates are never guessed), claim transfer/unclaim, listing hide/unhide, review requests, audit log, private CSV export.
 - **Safety:** browser SHA-256 proof-of-work + persistent PostgreSQL rate limits on every email-sending endpoint, honeypot fields, a sign-in reply that is identical in content and timing for known and unknown emails, nginx request limits, CSRF + Origin checks, strict CSP (no inline script/style), atomic “first verified email wins” claims enforced by a database primary key, owner-scoped resident queries, a per-resident home limit, server-side point-in-polygon geofencing, no public address roster, tokens never logged, hardened least-privilege containers. Audit and hardening results: [docs/security/hardening-report.md](docs/security/hardening-report.md).
 
-Built with **PHP 8.3 / Symfony 7.4 LTS, PostgreSQL 17, Twig, vanilla JavaScript/CSS, Leaflet (OpenStreetMap tiles), Docker Compose**. No PostGIS, no Node build step, no paid services.
+Built with **PHP 8.5 / Symfony 7.4 LTS, PostgreSQL 18, Twig, vanilla JavaScript/CSS, Leaflet (OpenStreetMap tiles), Docker Compose**. No PostGIS, no Node build step, no paid services.
 
 ## Quick start (local, ~10 minutes)
 
@@ -84,8 +84,8 @@ nginx listens only on `127.0.0.1:${HTTP_PORT}` (default 8087); PostgreSQL has no
 ```bash
 docker compose exec app sh bin/test.sh                     # PHPUnit: unit + integration on PostgreSQL
 docker compose exec app vendor/bin/phpstan analyse         # static analysis (level 6)
-docker run --rm -v "$PWD":/w -w /w node:22-alpine node --test tests/js/*.test.mjs
-docker run --rm -v "$PWD":/w -w /w python:3.12-slim sh -c "pip install -q shapely==2.0.6 && python -I -m unittest discover -s scripts/tests"
+docker run --rm -v "$PWD":/w -w /w node:24-alpine node --test tests/js/*.test.mjs
+docker run --rm -v "$PWD":/w -w /w python:3.14-slim sh -c "pip install -q shapely==2.2.0 && python -I -m unittest discover -s scripts/tests"
 ./bin/e2e.sh                                               # Playwright E2E against the Ventura Reserve + demo stacks
 python3 scripts/smoke_session.py                           # session lifecycle smoke test on the running stack
 ```

@@ -791,4 +791,34 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/php-8.3.36"
   author: "Lance Sandino"
   timestamp: "2026-10-21T20:50:00Z"
+- id: CU-20261021-52
+  type: feature
+  title: "PHP 8.5 and PHPUnit 12"
+  description: "The images move from PHP 8.3 to 8.5.12, the latest stable line (it already contains the October 2026 security fixes). OPcache is part of PHP itself since 8.5, so it is no longer installed as an extension; pcov still builds. The deprecated session.sid_length and session.sid_bits_per_character settings are gone from php.ini (PHP 8.4+ uses fixed 128-bit session ids). Composer's platform is PHP 8.5.0 and CI runs 8.5. PHPUnit moves from 11.5 to 12.5. One test counted a boolean attribute in serialized HTML: PHP 8.4+'s HTML5 parser writes it back as data-whats-new=\"\", so it now counts the element in the DOM."
+  impact: medium
+  affected_modules: ["Dockerfile", "docker/php/php.ini", "composer.json", "composer.lock", ".github/workflows/ci.yml", "tests/Integration/HeaderBrandingTest.php"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testPhpHasTheOctober2026SecurityFixesAndNoUploadProgress", "PHPUnit 12: 272 tests on PHP 8.5.12", "tests/Integration/HeaderBrandingTest.php: testCityUnderTheNameIsAnOption"]
+  commit_ref: "chore/latest-stable"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T21:10:00Z"
+- id: CU-20261021-53
+  type: feature
+  title: "PostgreSQL 18, a new data volume, and bin/upgrade-postgres.sh"
+  description: "PostgreSQL moves from 17 to 18.6 (app database, backup service, CI) and DATABASE_URL names serverVersion=18. The official 18 image keeps data in /var/lib/postgresql/18/docker, so the stack mounts a new postgres-data volume at /var/lib/postgresql; the old pgdata volume is no longer used and stays untouched. bin/upgrade-postgres.sh moves an install over: it reads the target major from compose.yaml and the running server's major, refuses without a running server, asks before anything, stops nginx/maintenance/app, dumps through a one-off backup container (partial file, renamed when complete), starts the new server on the empty volume, refuses to restore over existing tables, restores in one transaction, compares every table's row count and only then starts the stack. Rehearsed on both development stacks (17.11 → 18.6, 15 tables each, identical counts); running it again is a no-op."
+  impact: high
+  affected_modules: ["compose.yaml", ".env.dist", ".github/workflows/ci.yml", "bin/upgrade-postgres.sh", "docs/runbooks/upgrade-rollback.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testThePostgresImageVolumeAndServerVersionAgree", "scripts/tests/test_operator_scripts.py: UpgradePostgresTests (3 tests)", "bin/upgrade-postgres.sh rehearsal on both development stacks"]
+  commit_ref: "chore/latest-stable"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T21:15:00Z"
+- id: CU-20261021-54
+  type: chore
+  title: "Latest stable tools: Node 24 LTS, Python 3.14, shapely 2.2.0, Mailpit 1.31.6, current GitHub Actions"
+  description: "Test tooling moves to Node 24 (the current LTS) and Python 3.14 with shapely 2.2.0 (2.0.6 has no 3.14 build); Mailpit (development and staging) to v1.31.6 by digest. GitHub Actions move to their latest releases, still pinned by commit: docker/build-push-action 7.4.0, setup-buildx-action 4.4.1, metadata-action 6.2.0, login-action 4.6.0, attest-build-provenance 4.2.2 and setup-php 2.40.0. The new majors switch to the Node 24 runtime and drop options this project never used. They could not run in CI yet: GitHub Actions is not starting jobs for this account (billing)."
+  impact: low
+  affected_modules: [".github/workflows/ci.yml", ".github/workflows/images.yml", "compose.dev.yaml", "compose.staging.yaml", "AGENTS.md", "README.md"]
+  related_tests: ["node:test 29/29 on Node 24", "scripts/tests on Python 3.14 (45 tests)", "tests/e2e full suite with Mailpit 1.31.6"]
+  commit_ref: "chore/latest-stable"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T21:20:00Z"
 ```

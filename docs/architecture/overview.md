@@ -16,7 +16,7 @@
    └─ Mailer → SMTP relay (Mailpit in development)
    │ DBAL (parameterized SQL)
    ▼
- PostgreSQL 17 (internal network only) ── daily pg_dump by the backup service
+ PostgreSQL 18 (internal network only) ── daily pg_dump by the backup service
 ```
 
 ## Request lifecycle highlights

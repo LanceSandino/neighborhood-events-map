@@ -18,19 +18,19 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+        image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env: { POSTGRES_USER: halloween, POSTGRES_PASSWORD: halloween, POSTGRES_DB: halloween }
         ports: ['5432:5432']
         options: --health-cmd "pg_isready -U halloween" --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      DATABASE_URL: postgresql://halloween:halloween@127.0.0.1:5432/halloween?serverVersion=17&charset=utf8
+      DATABASE_URL: postgresql://halloween:halloween@127.0.0.1:5432/halloween?serverVersion=18&charset=utf8
       APP_ENV: test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
-      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
         with:
-          php-version: '8.3'
+          php-version: '8.5'
           extensions: intl, pdo_pgsql, pcntl, posix, zip
           coverage: pcov
           tools: composer:v2
@@ -56,13 +56,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with: { node-version: '22' }
+        with: { node-version: '24' }
       - name: Browser library unit tests (node:test)
         run: node --test tests/js/*.test.mjs
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with: { python-version: '3.12' }
+        with: { python-version: '3.14' }
       - name: GIS importer unit tests
-        run: pip install shapely==2.0.6 && python -I -m unittest discover -s scripts/tests -v
+        run: pip install shapely==2.2.0 && python -I -m unittest discover -s scripts/tests -v
 
   images:
     # Pull requests only: pushes to main build and publish the same images in the Images workflow.
