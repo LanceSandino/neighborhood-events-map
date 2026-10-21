@@ -751,4 +751,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/hardening-notes"
   author: "Lance Sandino"
   timestamp: "2026-10-21T13:40:00Z"
+- id: CU-20261021-48
+  type: fix
+  title: "nginx serves versioned assets again: a named capture the limit maps cannot overwrite"
+  description: "0.7.0-beta.2 added the $client_net map (a regex on $remote_addr). nginx evaluates it when limit_conn is checked, after the location is chosen, and a map regex that matches overwrites the numbered captures: the versioned-assets location's alias /app/public/assets/$1 then pointed at the assets directory, and every CSS and JS request got a 301 to a directory URL (http, port 8080, trailing slash) that the CSP blocked. Live for about five minutes after the first deployment, then rolled back to 0.7.0-beta.1. The location now uses a named capture ($asset), which later regexes leave alone. The local and end-to-end stacks had run the nginx image built before the change, so the browser suite never saw the new config: the development overlay now mounts docker/nginx/default.conf and app-fastcgi.conf into nginx."
+  impact: high
+  affected_modules: ["docker/nginx/default.conf", "compose.dev.yaml"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testNginxUsesNoNumberedCapturesThatALaterMapRegexCouldOverwrite (fails on the 0.7.0-beta.2 config)", "tests/e2e (full suite, 78 passed / 2 skipped, against stacks running the checkout's nginx config)"]
+  commit_ref: "fix/nginx-asset-capture"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T13:50:00Z"
 ```

@@ -1,6 +1,15 @@
 # Test and verification report
 
-## Latest run — 2026-10-21, release 0.7.0-beta.2
+## Latest run — 2026-10-21, release 0.7.0-beta.3
+
+0.7.0-beta.2 plus the nginx asset fix (CU-20261021-48). The development overlay now mounts the checkout's nginx config, so these
+runs exercise it: Playwright **78 passed, 2 skipped** (chromium + webkit-iphone); `ContainerConfigTest` 8/8 (the new numbered-capture
+test fails on the 0.7.0-beta.2 config). The other gates are unchanged from 0.7.0-beta.2 below.
+
+## Run — 2026-10-21, release 0.7.0-beta.2
+
+**Note:** these browser runs used nginx images built before the release's nginx change, so they missed the asset regression fixed
+in 0.7.0-beta.3.
 
 Gates on `fix/hardening-notes` (0.7.0-beta.1 + the closed hardening notes), dev stacks of that tree:
 

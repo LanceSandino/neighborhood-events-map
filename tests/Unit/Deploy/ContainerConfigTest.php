@@ -126,6 +126,20 @@ final class ContainerConfigTest extends TestCase
         self::assertStringNotContainsString('$binary_remote_addr', (string) preg_replace('~#[^\n]*~', '', $conf));
     }
 
+    /**
+     * Regression (0.7.0-beta.2 outage): the $client_net map's regex runs when limit_conn is checked, after the location
+     * is chosen, and overwrote the $1 of the versioned-assets location, so every CSS and JS request was redirected to a
+     * directory URL. Directives may use only named captures, which later regexes leave alone.
+     */
+    public function testNginxUsesNoNumberedCapturesThatALaterMapRegexCouldOverwrite(): void
+    {
+        foreach (['docker/nginx/default.conf', 'docker/nginx/app-fastcgi.conf'] as $file) {
+            $conf = (string) preg_replace('~#[^\n]*~', '', self::read($file));
+            self::assertDoesNotMatchRegularExpression('~\$[0-9]~', $conf, "$file uses a numbered capture");
+        }
+        self::assertStringContainsString('alias /app/public/assets/$asset;', self::read('docker/nginx/default.conf'));
+    }
+
     /** One client network can never hold every PHP worker: its cap in PHP is below each pool's default size. */
     public function testNginxCapsOneClientsRequestsInPhpBelowThePoolSizes(): void
     {

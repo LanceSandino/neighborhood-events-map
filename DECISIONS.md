@@ -62,3 +62,4 @@ Settled choices and standing constraints. Do not re-open an active entry; supers
 - [D-20261021-30] Nothing of a boundary that is not approved is public — neither its outline nor its extent (`map.bbox` is null); until approval the public map opens on the configured center or the boundary's middle (status: active)
 - [D-20261021-31] No GET changes state or writes a record: the claims export (which writes an audit event) is a CSRF-checked POST from a form button (status: active)
 - [D-20261021-32] "Sign out everywhere" sets `users.sessions_ended_at`; IdleSessionSubscriber ends every session that began at or before it. Residents use the My house button, organizers `app:user:sign-out <email>` (status: active)
+- [D-20261021-33] nginx directives use only named regex captures (map regexes run after location matching and overwrite $1…$9), and the development overlay mounts the checkout's nginx config so every local and end-to-end test runs the current one (status: active)

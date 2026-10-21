@@ -22,6 +22,10 @@ services:
   nginx:
     volumes:
       - ./public:/app/public:ro
+      # The checkout's nginx config, so local and end-to-end tests always run the current one (a rebuilt image
+      # is not needed for nginx changes to be tested).
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/app-fastcgi.conf:/etc/nginx/snippets/app-fastcgi.conf:ro
 
   mailpit:
     image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68

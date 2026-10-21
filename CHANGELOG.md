@@ -6,6 +6,11 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.7.0-beta.3] - 2026-10-21
+
+### Fixed
+- 0.7.0-beta.2's nginx served no stylesheets or scripts (every versioned asset was redirected), so pages loaded unstyled and the map did not start. The first deployment was rolled back within minutes; this release fixes it.
+
 ## [0.7.0-beta.2] - 2026-10-21
 
 ### Added
