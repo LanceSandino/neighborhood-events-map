@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 {% set nav = 'me' %}
-{% block title %}Confirm · {{ c.community.name }} Halloween{% endblock %}
+{% block title %}Confirm · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block meta %}<meta name="robots" content="noindex">{% endblock %}
 {% block body %}
 <div class="page-card">
@@ -8,7 +8,7 @@
     <div class="eyebrow">✅ One more tap</div>
     {% if claim %}
       <h1>Confirm and publish your house</h1>
-      <p>Press confirm to sign in and publish <b>{{ claim.address }}</b> on the {{ c.community.name }} Halloween map. Your street address and these listing details will be public; your email stays private.</p>
+      <p>Press confirm to sign in and publish <b>{{ claim.address }}</b> on the {{ c.community.name }} {{ c.event.name }} map. Your street address and these listing details will be public; your email stays private.</p>
       {% set l = claim.listing %}
       <div class="confirm-listing" aria-label="Listing to be published">
         <div class="card-meta">{{ l.start|time12 }}–{{ l.end|time12 }}</div>

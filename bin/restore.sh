@@ -6,9 +6,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 file="${1:?usage: bin/restore.sh halloween-YYYYMMDDTHHMMSSZ.dump [compose args]}"
 shift
+# The name is used inside "sh -c" in the backup container: plain file names only.
+if ! [[ "$file" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.dump$ ]]; then
+  echo "Not a backup file name: $file (expected e.g. halloween-YYYYMMDDTHHMMSSZ.dump from the backup directory)" >&2
+  exit 2
+fi
 read -r -p "Restore $file over the CURRENT database? Type RESTORE to continue: " answer
 [ "$answer" = "RESTORE" ] || { echo "Aborted."; exit 1; }
 docker compose "$@" stop app nginx
-docker compose "$@" exec -T backup sh -c "test -f /backups/$file && pg_restore --clean --if-exists --no-owner --dbname=\"\$PGDATABASE\" /backups/$file"
+docker compose "$@" exec -T backup sh -c "test -f '/backups/$file' && pg_restore --clean --if-exists --no-owner --dbname=\"\$PGDATABASE\" '/backups/$file'"
 docker compose "$@" start app nginx
 echo "Restored $file. Check: curl -s http://127.0.0.1:\${HTTP_PORT:-8087}/healthz"

@@ -35,7 +35,7 @@ final class CommunityPresenter
         // Hidden zones are left out of the public payload entirely; "coming soon" zones are drawn but not listable.
         $zones = $c->zonesEnabled() ? array_values(array_map(static fn (array $z) => [
             'key' => $z['key'], 'label' => $z['label'], 'claimable' => $z['claimable'] && 'active' === $z['status'], 'residential' => $z['residential'],
-            'color' => $z['color'], 'description' => $z['description'], 'status' => $z['status'],
+            'color' => $z['color'], 'description' => $z['description'], 'status' => $z['status'], 'label_at' => $z['label_at'] ?? null,
             'geometry' => $approved && isset($c->zoneShapes[$z['key']]) ? $c->zoneShapes[$z['key']]->toGeometry() : null,
         ], array_filter($c->zones(), static fn (array $z) => 'hidden' !== $z['status']))) : [];
         $state = $c->registrationState();
@@ -67,7 +67,8 @@ final class CommunityPresenter
                 'street_allowlist' => 'registry' !== $s['registration']['address_mode'] ? $s['registration']['street_allowlist'] : [],
                 'review_new_addresses' => (bool) ($s['registration']['review_new_addresses'] ?? false),
             ],
-            'routing' => ['groups' => $s['routing']['groups'], 'group_labels' => $s['routing']['group_labels'] ?? [], 'crossings_verified' => $s['routing']['crossings_verified'],
+            // Walking groups keep their positions (labels follow them) but never name a hidden zone.
+            'routing' => ['groups' => array_map(static fn (array $g) => array_values(array_diff($g, $c->hiddenZoneKeys())), $s['routing']['groups']), 'group_labels' => $s['routing']['group_labels'] ?? [], 'crossings_verified' => $s['routing']['crossings_verified'],
                 'provider' => $s['routing']['provider_enabled'] && $s['routing']['crossings_verified'] && $this->routing->available()],
             'stats' => [
                 'homes' => \count($homes),

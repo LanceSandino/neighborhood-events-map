@@ -19,7 +19,9 @@ use App\Shared\TextInput;
  */
 final class CommunitySchema
 {
-    /** How visitors may reach the homes on Halloween night (shown on the map and the About page). */
+    /** The event a new community runs: Halloween trick-or-treat is the first supported event type. */
+    public const DEFAULT_EVENT_NAME = 'Halloween';
+    /** How visitors may reach the homes during the event (shown on the map and the About page). */
     public const ACCESS = ['unspecified', 'public', 'gated_open', 'gated_guests', 'private'];
     /** active: shown and listable; coming_soon: drawn as "coming soon", not listable; hidden: not shown at all. */
     public const ZONE_STATUS = ['active', 'coming_soon', 'hidden'];
@@ -73,6 +75,7 @@ final class CommunitySchema
             $e[] = sprintf('community.timezone "%s" is not a valid IANA time zone.', $tz);
         }
 
+        $eventName = self::text($ev['name'] ?? '', 40) ?: self::DEFAULT_EVENT_NAME;
         $date = (string) ($ev['date'] ?? '');
         $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         if (false === $d || $d->format('Y-m-d') !== $date) {
@@ -153,6 +156,8 @@ final class CommunitySchema
                 'color' => isset($z['color']) ? self::color($z['color'], "zones[$i].color", $e) : null,
                 'description' => self::text($z['description'] ?? '', 160),
                 'status' => (string) ($z['status'] ?? 'active'),
+                // Where the zone's name sits on the public map, [longitude, latitude]; null lets the map choose.
+                'label_at' => self::point($z['label_at'] ?? null, "zones[$i].label_at", $e),
             ];
             if (!\in_array($zones[$key]['status'], self::ZONE_STATUS, true)) {
                 $e[] = sprintf('zones[%d].status must be one of: %s.', $i, implode(', ', self::ZONE_STATUS));
@@ -233,7 +238,7 @@ final class CommunitySchema
                 'links' => $links,
                 'reminders' => $reminders,
             ],
-            'event' => ['date' => $date, 'starts_at' => $start, 'ends_at' => $end],
+            'event' => ['name' => $eventName, 'date' => $date, 'starts_at' => $start, 'ends_at' => $end],
             'branding' => [
                 'logo' => self::text($b['logo'] ?? '', 200) ?: null,
                 'brand_emoji' => self::text($b['brand_emoji'] ?? '🎃', 8) ?: '🎃',
@@ -340,6 +345,31 @@ final class CommunitySchema
         }
 
         return $s;
+    }
+
+    /**
+     * An optional map point as [longitude, latitude] (GeoJSON order), rounded to 6 decimals (about 10 cm).
+     *
+     * @param list<string> $e
+     *
+     * @return array{0: float, 1: float}|null
+     */
+    private static function point(mixed $v, string $field, array &$e): ?array
+    {
+        if (null === $v) {
+            return null;
+        }
+        $ok = \is_array($v) && array_is_list($v) && 2 === \count($v)
+            && (\is_int($v[0]) || \is_float($v[0])) && (\is_int($v[1]) || \is_float($v[1]))
+            && is_finite((float) $v[0]) && is_finite((float) $v[1])
+            && abs((float) $v[0]) <= 180 && abs((float) $v[1]) <= 90;
+        if (!$ok) {
+            $e[] = $field.' must be [longitude, latitude] or null.';
+
+            return null;
+        }
+
+        return [round((float) $v[0], 6), round((float) $v[1], 6)];
     }
 
     private static function url(mixed $v): ?string

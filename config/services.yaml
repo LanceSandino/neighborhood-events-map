@@ -3,7 +3,7 @@
 parameters:
     # Defaults for optional environment variables (real env / .env files override these).
     env(APP_BASE_URL): 'http://localhost:8087'
-    env(MAIL_FROM): 'Neighborhood Halloween <no-reply@example.org>'
+    env(MAIL_FROM): 'Neighborhood events <no-reply@example.org>'
     env(ADMIN_EMAIL): 'organizer@example.org'
     env(SESSION_COOKIE_NAME): 'nhm_session'
     env(POW_DIFFICULTY): '16'

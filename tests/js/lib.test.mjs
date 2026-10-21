@@ -7,8 +7,9 @@ import { statusOf, time12, nowInZone } from '../../public/assets/js/lib/time.js'
 import { planStops, orderGroup, haversine, applyOrder, moveStop, suggestNearby } from '../../public/assets/js/lib/route.js';
 import { createStore } from '../../public/assets/js/lib/store.js';
 import { maskRings, panLimit, WORLD } from '../../public/assets/js/lib/map-focus.js';
-import { zoneStyle } from '../../public/assets/js/lib/render.js';
+import { zoneStyle, symbolOf, pinHtml } from '../../public/assets/js/lib/render.js';
 import { houseNumberOf } from '../../public/assets/js/lib/address.js';
+import { labelPoint, resolveOverlaps } from '../../public/assets/js/lib/zone-labels.js';
 
 const home = (o) => ({ id: 1, address: '1 Pumpkin Ln', zone: 'oak', lat: 40.03, lon: -74.99, start: '17:00', end: '21:00', candy: true, nonfood: false,
   adult_drinks: false, low_noise: true, jump_scares: false, flashing_lights: false, loud_audio: false, scare_level: 'gentle', stroller_friendly: false, note: '', status: 'active', ...o });
@@ -291,4 +292,81 @@ test('shared or stored filters of the wrong type are dropped, so a crafted link 
   assert.deepEqual(normalizeFilters([true]), {});
   const f = { ...DEFAULT_FILTERS, ...normalizeFilters(bad) };
   assert.equal(matches(home(), f, ctx), true, 'filtering still works');
+});
+
+test('zone names sit inside their zone, at its widest point, not at the middle of its bounding box', () => {
+  // An L-shaped zone: the middle of its bounding box (0.5, 0.5) is outside it.
+  const L = [[0, 0], [1, 0], [1, 0.3], [0.3, 0.3], [0.3, 1], [0, 1], [0, 0]];
+  const [lat, lon] = labelPoint({ type: 'Polygon', coordinates: [L] });
+  const inside = (lon < 1 && lat < 0.3) || (lon < 0.3 && lat < 1);
+  assert.ok(inside, `label point (${lon}, ${lat}) lies inside the L`);
+  assert.ok(lon < 0.3 && lat < 0.3, 'it sits in the corner where the L is widest');
+  // A MultiPolygon is labelled in its largest part; a hole is avoided.
+  const big = [[10, 10], [12, 10], [12, 12], [10, 12], [10, 10]];
+  const small = [[0, 0], [0.1, 0], [0.1, 0.1], [0, 0.1], [0, 0]];
+  const [mlat, mlon] = labelPoint({ type: 'MultiPolygon', coordinates: [[small], [big]] });
+  assert.ok(mlon > 10 && mlon < 12 && mlat > 10 && mlat < 12);
+  const hole = [[10.6, 10.6], [11.4, 10.6], [11.4, 11.4], [10.6, 11.4], [10.6, 10.6]];
+  const [hlat, hlon] = labelPoint({ type: 'Polygon', coordinates: [big, hole] });
+  assert.ok(!(hlon > 10.6 && hlon < 11.4 && hlat > 10.6 && hlat < 11.4), 'not inside the hole');
+  assert.equal(labelPoint(null), null);
+});
+
+test('overlapping zone names are moved apart; the more important name keeps its place', () => {
+  const boxes = [
+    { x: 100, y: 100, w: 60, h: 22, priority: 1 }, // e.g. a common area
+    { x: 110, y: 90, w: 55, h: 22, priority: 3 },  // a phase that takes listings
+    { x: 400, y: 100, w: 60, h: 22, priority: 2 }, // far away
+  ];
+  const dy = resolveOverlaps(boxes, { gap: 2 });
+  assert.equal(dy[1], 0, 'the phase stays');
+  assert.equal(dy[2], 0, 'labels that do not touch stay');
+  assert.ok(boxes[0].y + dy[0] >= 90 + 22 + 2, 'the common-area name moves below the phase name');
+  // A chain: moving one label must not push it onto another.
+  const chain = [
+    { x: 0, y: 0, w: 50, h: 20, priority: 3 },
+    { x: 0, y: 22, w: 50, h: 20, priority: 2 },
+    { x: 0, y: 10, w: 50, h: 20, priority: 1 },
+  ];
+  const d = resolveOverlaps(chain, { gap: 2 });
+  const placed = chain.map((b, i) => ({ ...b, y: b.y + d[i] }));
+  for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) {
+    const a = placed[i]; const b = placed[j];
+    assert.ok(a.y + a.h <= b.y || b.y + b.h <= a.y || a.x + a.w <= b.x || b.x + b.w <= a.x, `labels ${i} and ${j} no longer overlap`);
+  }
+  // A name that only clips the bottom of a more important one moves up, the shorter way, staying near its zone.
+  const up = resolveOverlaps([{ x: 0, y: 100, w: 50, h: 20, priority: 3 }, { x: 10, y: 92, w: 50, h: 20, priority: 1 }], { gap: 2 });
+  assert.ok(up[1] < 0 && 92 + up[1] + 20 + 2 <= 100, 'moved above, not below');
+  assert.deepEqual(resolveOverlaps([]), []);
+});
+
+test('pins show the kind you filter by; without a filter: spooky, then sensory-friendly, then 21+, then treats', () => {
+  const both = home({ adult_drinks: true, low_noise: true, candy: true });
+  assert.equal(symbolOf(home({ adult_drinks: true, low_noise: false })), '🍺', 'a 21+ home is marked as such');
+  assert.equal(symbolOf(both), '🧩', 'sensory-friendly comes before 21+');
+  assert.equal(symbolOf(home({ jump_scares: true, adult_drinks: true })), '👻');
+  assert.equal(symbolOf(home({ low_noise: false })), '🍬');
+  // With a quick filter on, the homes that match show its symbol.
+  assert.equal(symbolOf(both, { adult: true }), '🍺');
+  assert.equal(symbolOf(both, { lowSensory: true }), '🧩');
+  assert.equal(symbolOf(both, { candy: true }), '🍬');
+  assert.equal(symbolOf(home({ low_noise: false, adult_drinks: false }), { adult: true }), '🍬', 'a home without 21+ keeps its own symbol');
+  assert.match(pinHtml(both, { focus: { adult: true } }), /class="pin adult"[^>]*><span>🍺<\/span>/);
+  const css = readFileSync(new URL('../../public/assets/css/app.css', import.meta.url), 'utf8');
+  assert.match(css, /\.pin\.adult \{ background: var\(--pin-adult\); \}/);
+  assert.match(css, /\.legend-bullet\.adult \{ background: var\(--pin-adult\); \}/);
+});
+
+test('map tiles overlap by half a pixel so no seam shows between them at in-between zoom levels', () => {
+  const css = readFileSync(new URL('../../public/assets/css/app.css', import.meta.url), 'utf8');
+  // Fractional zoom leaves tile edges on sub-pixel rows; Leaflet's additive blend then paints a bright line there.
+  assert.match(css, /\nhtml \.leaflet-container img\.leaflet-tile \{[^}]*mix-blend-mode: normal;[^}]*width: 256\.5px !important; height: 256\.5px !important;/);
+});
+
+test('shared filters keep only a real time choice and a zone key of sensible length', () => {
+  // Hardening on top of the type check: "visit at" must be any, now or HH:MM, and an oversized zone is dropped.
+  assert.deepEqual(normalizeFilters({ time: 'soon', zone: 'x'.repeat(200) }), {});
+  assert.deepEqual(normalizeFilters({ time: '24:00' }), {});
+  assert.deepEqual(normalizeFilters({ time: 'now', zone: 'area:0' }), { time: 'now', zone: 'area:0' });
+  assert.deepEqual(normalizeFilters({ time: '07:45' }), { time: '07:45' });
 });

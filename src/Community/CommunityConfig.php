@@ -36,8 +36,8 @@ final class CommunityConfig
     public static function unconfigured(): self
     {
         $settings = (new CommunitySchema())->normalize([
-            'community' => ['id' => 'unconfigured', 'name' => 'Neighborhood Halloween'],
-            'event' => ['date' => (new \DateTimeImmutable('now'))->format('Y').'-10-31'],
+            'community' => ['id' => 'unconfigured', 'name' => 'Neighborhood'],
+            'event' => ['name' => 'events map', 'date' => (new \DateTimeImmutable('now'))->format('Y').'-10-31'],
             'registration' => ['enabled' => false],
         ]);
 
@@ -47,6 +47,12 @@ final class CommunityConfig
     public function name(): string
     {
         return $this->settings['community']['name'];
+    }
+
+    /** The community's event as shown in titles and emails ("Halloween", "Holiday Lights"…). */
+    public function eventName(): string
+    {
+        return $this->settings['event']['name'] ?? CommunitySchema::DEFAULT_EVENT_NAME;
     }
 
     public function timezone(): \DateTimeZone

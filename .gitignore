@@ -23,7 +23,9 @@ secrets/
 /tests/e2e/playwright-report/
 __pycache__/
 /backups/
-/deploy/private/
+# Everything an operator keeps for their own deployment: community config and geometry (deploy/community/)
+# and private inventories, reports and screenshots (deploy/private/).
+/deploy/
 /config/community.yaml
 /config/boundary.geojson
 /config/zones.geojson

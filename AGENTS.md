@@ -11,6 +11,7 @@ This file is self-contained: anyone (or any agent such as Codex or Claude Code) 
 ## 2. Non-negotiables
 
 - One community per install; **no neighborhood-specific code**. Names, geometry, zones, branding, dates and limits come from config/DB.
+- The product is event-neutral: the community's event is configuration (`event.name`, default Halloween). Never hard-code a holiday in titles, branding or emails; Halloween-specific behaviour belongs to the Halloween event type (`ROADMAP.md`).
 - Stack: PHP 8.3 + Symfony 7.4 LTS, PostgreSQL 17 (DBAL, no ORM), Twig, vanilla JS/CSS (ES modules, no build step), Leaflet, Docker Compose. No React/Vue, Redis, PostGIS, paid hosted auth or mandatory frontend tooling.
 - **Never fabricate data:** no invented boundaries, house pins, addresses, crossings or walking paths. Demo data is fictional, labelled, gated behind `APP_DEMO=1` and a `*-demo` community id.
 - Claims: first verified email wins, enforced by the `claims` primary key inside one transaction (`INSERT … ON CONFLICT DO NOTHING`). Never read-then-write. Never overwrite an owner.
@@ -18,7 +19,7 @@ This file is self-contained: anyone (or any agent such as Codex or Claude Code) 
 - Every email-sending endpoint requires proof-of-work **and** persistent rate limits, a honeypot check and the response-time floor (`ResponseFloorSubscriber::mark()` right after proof-of-work). Budgets that protect the mail relay are spent only by mail that is actually sent. Public APIs never expose emails, owner ids, tokens or the unclaimed address inventory.
 - Roles: residents are `ROLE_USER`, organizers `ROLE_ADMIN` (granted only by `app:admin:grant` or `ORGANIZER_EMAILS`). Declare the role on every controller class (`#[IsGranted]`) in addition to `access_control`. A resident's own homes are reached only through `App\Listing\ResidentHomes::of($user)`; never query claims/listings by id for a resident without it.
 - Geometry is validated on the server (`App\Geo`); browser checks are hints only. GeoJSON order is `[longitude, latitude]`.
-- Tokens and secrets never appear in logs, Git, CI output or analytics. `.env*` (except `.env.example`, `.env.dist`, `.env.test`) and `deploy/private/` stay untracked.
+- Tokens and secrets never appear in logs, Git, CI output or analytics. `.env*` (except `.env.example`, `.env.dist`, `.env.test`) and `deploy/` (an operator's `deploy/community/` and `deploy/private/`) stay untracked.
 - No inline `<script>`/`style=""` (strict CSP). Escape all user content.
 - UI must stay faithful to the original mock (`docs/design/`): check 375, 430, 768 and 1440 px in **light and dark**, keyboard use, reduced motion, 44 px touch targets, no horizontal scroll. Use the semantic colour tokens in `app.css` (`--surface`, `--text`, `--muted`, `--border`, tag/notice tokens…); never hard-code a colour outside the token blocks. Follow Vercel's Web Interface Guidelines for forms, focus, touch and typography.
 

@@ -52,6 +52,15 @@ final class HiddenZonePrivacyTest extends AppTestCase
         self::assertStringContainsString('not listed', $r['error']['fields']['stops']);
     }
 
+    public function testWalkingGroupsInThePublicPayloadDoNotNameAHiddenZone(): void
+    {
+        $this->configureCommunity($this->zones(['west' => 'hidden'], ['routing' => ['groups' => [['west', 'east']], 'group_labels' => ['Main']]]));
+        $community = $this->json('GET', '/api/community');
+        self::assertSame([['east']], $community['routing']['groups'], 'positions kept, hidden key dropped');
+        self::assertSame(['Main'], $community['routing']['group_labels']);
+        self::assertStringNotContainsString('"west"', json_encode($community));
+    }
+
     public function testClaimRefusalsNeverNameOrConfirmAHiddenZone(): void
     {
         $this->configureCommunity($this->zones(['west' => 'hidden']));

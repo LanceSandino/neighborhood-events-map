@@ -1,8 +1,8 @@
-# Neighborhood Halloween Map
+# Neighborhood events map
 
-A small, self-hosted trick-or-treat map for **one neighborhood per install**. Families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, logo, colours, date, time zone, boundary, optional zones) without touching code.
+A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. A Christmas lights map and a garage sale map are next: see the [roadmap](ROADMAP.md).
 
-**Status:** `0.4.0-beta.4` — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.7.0-beta.1` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|
@@ -12,7 +12,7 @@ Screenshots use the **fictional** “Maple Hollow” demo community (invented ho
 
 ## Features
 
-- **Families (no account):** map + list kept in sync, address/notes search, zone filter, candy / low-sensory / no jump scares / no flashing / no loud audio / no intense scares / non-food / 21+ / stroller / open-now / visit-at filters (all conjunctive, saved per season in the browser), favorites, suggested stop order split into separate trips per walkable area right under the map, named saved routes (each with its own homes and filters, kept on the device), share link, a map that stays on the neighborhood, “Report this listing”, works as a plain list if the map fails. No tracking; location never leaves the device.
+- **Families (no account):** map + list kept in sync, address/notes search, zone and walking-area filter, candy / sensory-friendly / no big scares / no flashing / no loud audio / non-food / 21+ / stroller / open-now / visit-at filters (all conjunctive, saved per season in the browser), favorites, suggested stop order split into separate trips per walkable area right under the map, named saved routes (each with its own homes and filters, kept on the device), share link, a map that stays on the neighborhood, “Report this listing”, works as a plain list if the map fails. No tracking; location never leaves the device.
 - **Residents:** pick an address from the private registry (or allow-listed street + pin), describe the stop, confirm by email. Links last 15 minutes, work once and are consumed only by an explicit POST (email scanners cannot burn them). Dashboard to change hours, offerings, status (“Out of candy”, “Paused”, “Done”), hide/unhide, or give up the home. Signed-in sessions end after **30 minutes of inactivity**, enforced on the server.
 - **Already-claimed homes:** clear notice and a review request (proof-of-work + rate limits) emailed to the organizer; the current owner is never revealed.
 - **Organizers:** setup checklist, community/branding/event/zones settings, Leaflet.draw boundary & zone editor with GeoJSON import/export and approval gate, address registry (CSV import, manual add/edit — coordinates are never guessed), claim transfer/unclaim, listing hide/unhide, review requests, audit log, private CSV export.
@@ -53,7 +53,7 @@ Production-style run (no dev overlay, baked image, non-root PHP, unprivileged ng
 
 Nothing neighborhood-specific lives in code. Start from [`config/community.example.yaml`](config/community.example.yaml):
 
-1. Copy it to `deploy/community/community.yaml` and set name, locality, time zone, event date/hours, colours/emoji/logo, features and (optionally) zones.
+1. Copy it to `deploy/community/community.yaml` and set name, locality, time zone, event name/date/hours, colours/emoji/logo, features and (optionally) zones.
 2. Boundary: put a reviewed GeoJSON (`[longitude, latitude]`, Polygon/MultiPolygon/FeatureCollection) next to it and reference it as `map.boundary_file`, **or** leave it empty and draw it in **Organizer → Boundary & zones**. Never trace coordinates from a screenshot. Disconnected areas are fine.
 3. Set `COMMUNITY_BOOTSTRAP_FILE=/app/deploy/community/community.yaml` in `.env` and start the stack (imported once; later edits happen in the console and can be exported with `bin/console app:community:export <dir>`).
 4. In the console, check the outline against real streets and press **Approve boundary**. House listings stay closed until you do.
@@ -77,7 +77,7 @@ The boundary imports **pending review**, exactly like a new deployment. No resid
 
 ## Deploying (home server + Cloudflare Tunnel)
 
-nginx listens only on `127.0.0.1:${HTTP_PORT}` (default 8087); PostgreSQL has no published port. Point a Cloudflare Tunnel (or any HTTPS reverse proxy) at `http://127.0.0.1:8087`, set `APP_BASE_URL=https://your-hostname` and a real SMTP relay in `MAILER_DSN`. Step by step: [docs/runbooks/deployment.md](docs/runbooks/deployment.md). Backups run daily (`backup` service, 14-day retention); restore with `bin/restore.sh` — see [docs/runbooks/backup-restore.md](docs/runbooks/backup-restore.md). Upgrades/rollback: [docs/runbooks/upgrade-rollback.md](docs/runbooks/upgrade-rollback.md). Halloween night: [docs/runbooks/event-day.md](docs/runbooks/event-day.md).
+nginx listens only on `127.0.0.1:${HTTP_PORT}` (default 8087); PostgreSQL has no published port. Point a Cloudflare Tunnel (or any HTTPS reverse proxy) at `http://127.0.0.1:8087`, set `APP_BASE_URL=https://your-hostname` and a real SMTP relay in `MAILER_DSN`. Step by step: [docs/runbooks/deployment.md](docs/runbooks/deployment.md). Backups run daily (`backup` service, 14-day retention); restore with `bin/restore.sh` — see [docs/runbooks/backup-restore.md](docs/runbooks/backup-restore.md). Upgrades/rollback: [docs/runbooks/upgrade-rollback.md](docs/runbooks/upgrade-rollback.md). Event day (Halloween night): [docs/runbooks/event-day.md](docs/runbooks/event-day.md).
 
 ## Testing
 
@@ -85,6 +85,7 @@ nginx listens only on `127.0.0.1:${HTTP_PORT}` (default 8087); PostgreSQL has no
 docker compose exec app sh bin/test.sh                     # PHPUnit: unit + integration on PostgreSQL
 docker compose exec app vendor/bin/phpstan analyse         # static analysis (level 6)
 docker run --rm -v "$PWD":/w -w /w node:22-alpine node --test tests/js/*.test.mjs
+docker run --rm -v "$PWD":/w -w /w python:3.12-slim sh -c "pip install -q shapely==2.0.6 && python -I -m unittest discover -s scripts/tests"
 ./bin/e2e.sh                                               # Playwright E2E against the Ventura Reserve + demo stacks
 python3 scripts/smoke_session.py                           # session lifecycle smoke test on the running stack
 ```
@@ -98,7 +99,8 @@ Production readiness is blocked on real-world inputs, not code:
 - For each deployment: the organizer's approval of the boundary and zones, and a review of the address inventory (county address points; border cases).
 - Production hostname, Cloudflare Tunnel route and a deliverability-tested SMTP relay.
 - Verified safe pedestrian crossings before enabling any routing groups/provider.
-- License confirmation (MIT proposed) and confirmation of the county data's reuse terms before the repository is made public.
+- The owner's confirmation of the license (MIT proposed) and of the county data's reuse terms for the real-plat example.
+- The published container images must be public on GitHub Container Registry for `docker compose pull` to work without signing in.
 
 ## Privacy and accessibility
 
@@ -110,7 +112,7 @@ Claiming is **first verified email wins**. Controlling an email address is not p
 
 ## Documentation
 
-[Architecture](docs/architecture/overview.md) · [Decisions (ADRs)](docs/adr/) · [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Agent/developer protocol](AGENTS.md) · [Changelog](CHANGELOG.md) · [Release process](docs/runbooks/release.md)
+[Roadmap](ROADMAP.md) · [Architecture](docs/architecture/overview.md) · [Decisions (ADRs)](docs/adr/) · [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Agent/developer protocol](AGENTS.md) · [Changelog](CHANGELOG.md) · [Release process](docs/runbooks/release.md) · [Public-readiness audit](docs/quality/public-readiness-audit.md)
 
 ## License
 

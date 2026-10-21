@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 {% set nav = 'info' %}
-{% block title %}Privacy · {{ c.community.name }} Halloween{% endblock %}
+{% block title %}Privacy · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block body %}
 <article class="page-card legal">
   <div class="eyebrow">🔒 Privacy</div>
@@ -27,7 +27,7 @@
   <p>To stop spam and abuse the server keeps short-lived records: IP addresses in web server logs (rotated automatically, without page addresses’ query strings), and rate-limit entries stored only as keyed one-way hashes, deleted within two days. Sign-in links expire after minutes and are deleted daily.</p>
 
   <h2>How long data is kept</h2>
-  <p>Listings belong to one Halloween date and stop being public afterwards. Accounts, homes and listings stay until you give a home up, ask for deletion, or the organizer archives the season. Backups are private to the organizer and rotate after about two weeks.</p>
+  <p>Listings belong to one event date and stop being public afterwards. Accounts, homes and listings stay until you give a home up, ask for deletion, or the organizer archives the season. Backups are private to the organizer and rotate after about two weeks.</p>
 
   <h2>Your choices</h2>
   <p>You can hide your listing or give up your home at any time from “My house” (Manage my listing). To see, correct or delete everything about you, {% include 'legal/_contact.html.twig' %}; the organizer can delete your account and all your homes completely.</p>

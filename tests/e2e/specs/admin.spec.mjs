@@ -68,6 +68,25 @@ test('organizer reviews the real-plat example, draws, saves, re-imports and expo
   expect(restored).toBe(original);
   const pub = await (await request.get(VENTURA + '/api/community')).json();
   expect(pub.registration.open).toBe(false);
+
+  // A zone's name can be dragged to where it reads best; the public map gets that spot, and Reset gives it back.
+  const handle = page.locator('.zone-name-handle').first();
+  const zoneName = (await handle.textContent()).trim();
+  const nameBox = await handle.locator('span').boundingBox();
+  await page.mouse.move(nameBox.x + nameBox.width / 2, nameBox.y + nameBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(nameBox.x + nameBox.width / 2 + 60, nameBox.y + nameBox.height / 2 + 40, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('#flash')).toContainText(`Moved the name “${zoneName}”`);
+  const zoneOf = (list) => list.find((z) => z.label === zoneName);
+  const placed = zoneOf((await (await request.get(VENTURA + '/api/community')).json()).zones).label_at;
+  expect(placed).toHaveLength(2);
+  await page.goto(VENTURA + '/admin/community');
+  const row = page.locator('#zoneRows tr').filter({ has: page.locator(`[data-z="label"][value="${zoneName}"]`) });
+  await row.getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.locator('#flash')).toContainText('Settings saved.');
+  expect(zoneOf((await (await request.get(VENTURA + '/api/community')).json()).zones).label_at).toBeNull();
   guard.assertClean();
 });
 

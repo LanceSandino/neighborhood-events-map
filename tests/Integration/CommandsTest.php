@@ -177,4 +177,23 @@ final class CommandsTest extends AppTestCase
         self::assertStringContainsString('Refusing', $t->getDisplay());
         self::assertSame(0, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM claims'));
     }
+
+    public function testZoneNamesCanBeMovedFromTheCommandLineAndReachThePublicMap(): void
+    {
+        $this->configureCommunity();
+        $t = $this->cmd('app:zone:label', ['zone' => 'park', 'lat' => '40.0051', 'lon' => '-74.9952']);
+        self::assertSame(0, $t->getStatusCode(), $t->getDisplay());
+        $park = array_values(array_filter($this->json('GET', '/api/community')['zones'], fn ($z) => 'park' === $z['key']))[0];
+        self::assertSame([-74.9952, 40.0051], $park['label_at']);
+        self::assertSame(1, (int) $this->db()->fetchOne("SELECT count(*) FROM audit_events WHERE action = 'community.zone_label_moved'"));
+
+        $t = $this->cmd('app:zone:label', ['zone' => 'park', '--reset' => true]);
+        self::assertSame(0, $t->getStatusCode());
+        $park = array_values(array_filter($this->json('GET', '/api/community')['zones'], fn ($z) => 'park' === $z['key']))[0];
+        self::assertNull($park['label_at'], 'reset: the map picks the spot again');
+
+        self::assertSame(1, $this->cmd('app:zone:label', ['zone' => 'nowhere', 'lat' => '40', 'lon' => '-75'])->getStatusCode(), 'unknown zone');
+        self::assertSame(1, $this->cmd('app:zone:label', ['zone' => 'park', 'lat' => '400', 'lon' => '-75'])->getStatusCode(), 'invalid point');
+        self::assertSame(1, $this->cmd('app:zone:label', ['zone' => 'park'])->getStatusCode(), 'a point or --reset is required');
+    }
 }

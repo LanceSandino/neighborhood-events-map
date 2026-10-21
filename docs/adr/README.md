@@ -11,5 +11,6 @@
 | [0007](0007-route-safety.md) | Suggested stop order, never invented paths | Accepted |
 | [0008](0008-vanilla-js-no-build.md) | Vanilla JS modules and vendored assets, no build step | Accepted |
 | [0009](0009-least-privilege-and-abuse-resistance.md) | Least privilege in code, owner-scoped resident data, abuse budgets | Accepted |
+| [0010](0010-generic-event-types.md) | Generic, code-defined event types (Christmas lights, garage sale) | Proposed |
 
 Template: Context → Decision → Consequences → Alternatives considered.

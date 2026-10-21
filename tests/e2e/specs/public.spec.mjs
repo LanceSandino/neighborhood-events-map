@@ -53,6 +53,14 @@ test('selecting a card opens the map preview; keyboard works; My route lists sav
   await expect(page.locator('#savedCount')).toHaveText('3');
 });
 
+test('nginx refuses percent-escaped paths before the app; escaped query strings still work', async ({ request }) => {
+  expect((await request.get(DEMO + '/api/community')).status()).toBe(200);
+  for (const p of ['/%61pi/community', '/%6De', '/_internal_%6Cogout', '/api/homes/%31']) {
+    expect((await request.get(DEMO + p, { maxRedirects: 0 })).status(), p).toBe(400);
+  }
+  expect((await request.get(DEMO + '/api/addresses/lookup?q=Maple%20Hollow')).status()).not.toBe(400);
+});
+
 test('map failure still leaves a readable list', async ({ page, request }) => {
   const n = await total(request);
   await page.route('**/vendor/leaflet/leaflet.js', (r) => r.abort());

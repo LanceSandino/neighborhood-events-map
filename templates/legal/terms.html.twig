@@ -1,11 +1,11 @@
 {% extends 'base.html.twig' %}
 {% set nav = 'info' %}
-{% block title %}Terms of use · {{ c.community.name }} Halloween{% endblock %}
+{% block title %}Terms of use · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block body %}
 <article class="page-card legal">
   <div class="eyebrow">📜 Terms</div>
   <h1>Terms of use</h1>
-  <p class="legal-lead">{{ c.community.name }} Halloween is a free, volunteer-run community map. By using it you agree to these terms.</p>
+  <p class="legal-lead">{{ c.community.name }} {{ c.event.name }} is a free, volunteer-run community map. By using it you agree to these terms.</p>
 
   <h2>Listings are self-reported</h2>
   <p>Homes, hours, treats and sensory details are entered by residents and can be wrong or change at any time. Nothing on this map is checked or guaranteed by the organizer.</p>

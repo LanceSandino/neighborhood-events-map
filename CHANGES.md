@@ -481,4 +481,144 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/security-validation"
   author: "Lance Sandino"
   timestamp: "2026-10-21T07:30:00Z"
+- id: CU-20261021-21
+  type: fix
+  title: "Zone names sit inside their zones and never cover each other"
+  description: "Owner report: on the production map one phase's name sat behind a small common area's name, hard to read on phones and touching on desktop. Zone names were Leaflet tooltips bound to each zone's GeoJSON layer, which places them at the middle of the zone's bounding box; for an irregular zone that can be far from its body and on top of another zone. Each name is now its own permanent tooltip at the zone's pole of inaccessibility (lib/zone-labels.js labelPoint: the point deepest inside the largest part, avoiding holes), and after every zoom and resize a pass (resolveOverlaps) moves names that would overlap: phases that take listings keep their place, then other residential zones, and each lower name takes the nearest free spot directly above or below what it would cover, so it stays near its own zone. Checked on the production map with this branch's scripts served into the live page (WebKit iPhone 15 Pro and Chromium 1440 px, five zoom steps): no overlapping names."
+  impact: low
+  affected_modules: ["public/assets/js/lib/zone-labels.js", "public/assets/js/home.js", "tests/js/lib.test.mjs"]
+  related_tests: ["tests/js/lib.test.mjs: zone names sit inside their zone, at its widest point, not at the middle of its bounding box", "tests/js/lib.test.mjs: overlapping zone names are moved apart; the more important name keeps its place"]
+  commit_ref: "fix/zone-labels"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T08:00:00Z"
+- id: CU-20261021-22
+  type: feature
+  title: "Pins and cards show the kind you filter by; 21+ has its own symbol and legend entry"
+  description: "Owner request: with 21+ ticked the map should show it, and the legend should cover sensory-friendly, spooky and 21+. render.js now resolves one kind per home (KINDS: spooky, sensory, adult, treats): with a quick filter on (candy, sensory-friendly or 21+), the homes that match show that filter's symbol; otherwise the order is spooky, sensory-friendly, 21+, treats. Pins (pinHtml) and list cards (cardHtml; the no-JS Twig card mirrors the default order) use it. A 21+ pin uses the new --pin-adult token, the legend gains 🍺 21+ when the community offers 21+ refreshments, and the legend bullets now use the pin tokens instead of hard-coded colours."
+  impact: low
+  affected_modules: ["public/assets/js/lib/render.js", "public/assets/js/home.js", "templates/home/_card.html.twig", "templates/home/index.html.twig", "public/assets/css/app.css", "tests/js/lib.test.mjs"]
+  related_tests: ["tests/js/lib.test.mjs: pins show the kind you filter by; without a filter: spooky, then sensory-friendly, then 21+, then treats"]
+  commit_ref: "fix/zone-labels"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T09:30:00Z"
+- id: CU-20261021-23
+  type: fix
+  title: "No bright seam between map tiles at in-between zoom levels"
+  description: "With zoomSnap 0.25, tile rows can end on sub-pixel positions (measured: a tile edge at 242.6 px in Chromium at 1440 px) and Leaflet's mix-blend-mode: plus-lighter adds the map background there, leaving a one-pixel bright line across the map (WebKit at device scale 3 was not affected). Isolating the tile pane did not help; tiles now overlap by half a pixel (256.5 px) and draw with mix-blend-mode: normal. Verified on the production map with a screenshot row scan (bright single-pixel rows: before [242], after none) in Chromium and WebKit."
+  impact: low
+  affected_modules: ["public/assets/css/app.css", "tests/js/lib.test.mjs"]
+  related_tests: ["tests/js/lib.test.mjs: map tiles overlap by half a pixel so no seam shows between them at in-between zoom levels"]
+  commit_ref: "fix/zone-labels"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T09:30:00Z"
+- id: CU-20261021-24
+  type: feature
+  title: "Organizers can place a zone's name on the map (drag on the Boundary & zones page, or app:zone:label)"
+  description: "Generic per-zone setting zones[].label_at: [longitude, latitude] or null (CommunitySchema validates two finite numbers in range and rounds to 6 decimals; null lets the map choose). The public payload publishes it; the map puts the name there and the overlap pass never moves a placed name. On the admin Boundary & zones page every zone's name is a draggable handle at its current spot; dropping it saves label_at through the same validated settings endpoint. The Community page shows Moved on the map / Automatic per zone with a Reset, and now keeps zone fields it does not show (it used to drop description, and would have dropped label_at, on every save). app:zone:label <zone> <latitude> <longitude> | --reset sets it from the shell and writes a community.zone_label_moved audit event."
+  impact: low
+  affected_modules: ["src/Community/CommunitySchema.php", "src/Community/CommunityPresenter.php", "src/Command/ZoneLabelCommand.php", "public/assets/js/home.js", "public/assets/js/admin/map.js", "public/assets/js/admin/community.js", "public/assets/css/admin.css", "tests/Unit/Community/CommunitySchemaTest.php", "tests/Integration/CommandsTest.php", "tests/e2e/specs/admin.spec.mjs"]
+  related_tests: ["tests/Unit/Community/CommunitySchemaTest.php: testZoneNamesCanBePinnedToAPointOnTheMap", "tests/Integration/CommandsTest.php: testZoneNamesCanBeMovedFromTheCommandLineAndReachThePublicMap", "tests/e2e/specs/admin.spec.mjs: organizer drags a zone name, the public payload gets it, Reset gives it back"]
+  commit_ref: "fix/zone-labels"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T09:30:00Z"
+- id: CU-20261021-25
+  type: fix
+  title: "security: actions pinned to commit SHAs, no persisted checkout credentials, release tags must be annotated and on main"
+  description: "Security audit supply-chain notes: every `uses:` in ci.yml, images.yml and release.yml is pinned to the commit its current major tag points to (version in a comment, so Dependabot's github-actions updates keep working); every checkout sets persist-credentials: false except the images job that fetches release tags (a private repository needs the token for that fetch), re-applied after main's per-platform images.yml (download-artifact v8.0.2 pinned too); release.yml fetches full history and refuses a tag that is not annotated or whose commit is not on main before drafting a release; bin/e2e.sh installs the e2e dependencies with npm ci only (no npm install fallback that could resolve versions outside the lockfile)."
+  impact: low
+  affected_modules: [".github/workflows/ci.yml", ".github/workflows/images.yml", ".github/workflows/release.yml", "bin/e2e.sh"]
+  related_tests: ["git ls-remote of each action's major tag (SHAs recorded in the workflow comments)", "/bin/bash -n bin/e2e.sh", "full e2e run through the same npm ci path (docs/quality/public-readiness-audit.md)", "release.yml checks run on the next annotated tag (not exercised locally)"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T04:32:00Z"
+- id: CU-20261021-26
+  type: feature
+  title: "Event-neutral product naming: the community's event is a setting (event.name, default Halloween)"
+  description: "Titles, the sidebar brand line, footer, meta description, sign-in/claim/review email subjects and headers, the confirm page and the terms/privacy wording no longer hard-code Halloween: they read \"<community> <event name>\" from the new event.name setting (≤ 40 chars, cleaned by Shared/TextInput like all community text; empty or missing means Halloween, the first supported event type). Settings saved before the field existed get the default when loaded (CommunityRepository::load), so every existing install still says Halloween; organizers can change it under Organizer → Community → Event. CommunityConfig::eventName() serves the mailer; the unconfigured placeholder reads \"Neighborhood events map\". Trick-or-treat copy (reminders, access labels, the register title, branding defaults) stays: it belongs to the Halloween event type. Code-level names: compose/Dockerfile headers and the MAIL_FROM default say \"Neighborhood events\"; the dev image is tagged neighborhood-events-map-app:dev; GIS importer User-Agents and the e2e package name use neighborhood-events-map. Kept on purpose (persisted or deployed identifiers): the halloween Compose project/database/user defaults, halloween-*.dump backup names, nhm:* localStorage keys, the nhm_session cookie, the nhm CSRF token id, the X-NHM-Background header, migration descriptions and the GHCR image names (D-20261021-18)."
+  impact: low
+  affected_modules: ["src/Community/CommunitySchema.php", "src/Community/CommunityRepository.php", "src/Community/CommunityConfig.php", "src/Mail/Notifier.php", "templates/", "public/assets/js/admin/community.js", "public/assets/js/route-panel.js", "config/community.example.yaml", "examples/*/community.yaml", "compose.yaml", "compose.dev.yaml", "Dockerfile", "config/services.yaml", ".env.example", ".env.dist", ".env.test", "phpunit.dist.xml", "scripts/fetch_arcgis_*.py", "tests/e2e/package*.json"]
+  related_tests: ["tests/Unit/Community/CommunitySchemaTest.php: testTheEventNameDefaultsToHalloweenAndIsTheOrganizersToChange (also: cleaned by Shared/TextInput like all community text)", "tests/Integration/HeaderBrandingTest.php: testThePageNamesTheCommunitysEventNotAFixedHoliday", "tests/Integration/HeaderBrandingTest.php: testSettingsSavedBeforeTheEventNameExistedStillSayHalloween", "tests/e2e/specs/claim.spec.mjs (subject 'Confirm your Maple Hollow Halloween listing' unchanged)"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T04:45:00Z"
+- id: CU-20261021-27
+  type: fix
+  title: "bin/restore.sh accepts only a plain backup file name; operator-script regression tests"
+  description: "Security audit hardening note not covered by the 0.6.0-beta.2 security release (CU-20261021-11 to -19): the dump name went unquoted into `sh -c` inside the backup container. restore.sh now refuses anything but a plain *.dump name before prompting and quotes it. scripts/tests/test_operator_scripts.py also pins the production refusals added in that release (APP_DEBUG, placeholder secrets, the dev database password) and the private config exclusions in .dockerignore."
+  impact: low
+  affected_modules: ["bin/restore.sh", "scripts/tests/test_operator_scripts.py"]
+  related_tests: ["scripts/tests/test_operator_scripts.py (RestoreTests, EntrypointTests, BuildContextTests)"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T07:30:00Z"
+- id: CU-20261021-28
+  type: fix
+  title: "The whole deploy/ folder is git-ignored, so an operator's community config can never be committed"
+  description: "README and setup.md tell operators to keep their community.yaml and boundary GeoJSON in deploy/community/ and called the folder git-ignored, but only deploy/private/ was: `git add .` in a fork would have committed a neighborhood's own configuration and geometry. .gitignore now ignores /deploy/ (nothing under it is tracked)."
+  impact: low
+  affected_modules: [".gitignore"]
+  related_tests: ["scripts/tests/test_operator_scripts.py: GitIgnoreTests.test_the_whole_deployment_folder_is_ignored", "git check-ignore -v deploy/community/community.yaml → .gitignore:/deploy/"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:20:00Z"
+- id: CU-20261021-29
+  type: doc
+  title: "Docs match the code for a public release: event-neutral naming, drift fixes, code of conduct, ADR 0010"
+  description: "README (product name, 0.6.0-beta.1 status, current filters, Python gate, event name, image visibility and roadmap links), CONTRIBUTING (event-neutral, conduct and security links), new CODE_OF_CONDUCT.md, SECURITY.md (private vulnerability reporting, percent-path refusal, APP_DEBUG refusal, deploy/ ignored), AGENTS.md (event-neutral rule, deploy/ untracked), architecture overview (CanonicalPathSubscriber), design notes (sidebar tabs, no stat cards, icon filters, Appearance panel; the mock is not in the repository), runbooks (events.example.org, MAIL_FROM default, event-day title, restore names, pull-request refs before going public) and ADR 0010 (generic event types, proposed). Every relative link, documented path, env var, command and port was checked against the code."
+  impact: none
+  affected_modules: ["README.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "AGENTS.md", "ROADMAP.md", "docs/adr/", "docs/architecture/overview.md", "docs/design/README.md", "docs/runbooks/"]
+  related_tests: []
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:45:00Z"
+- id: CU-20261021-30
+  type: fix
+  title: "composer.json: MIT like LICENSE, and bounded constraints for the three unbounded bundles"
+  description: "composer.json still carried the Symfony skeleton's \"license\": \"proprietary\" while LICENSE is MIT, and required doctrine/doctrine-bundle, doctrine/doctrine-migrations-bundle and symfony/monolog-bundle as \"*\" (composer validate warned; a `composer update` could cross a major version). They are now MIT and ^2.19 / ^3.7 / ^4.1, the locked majors; composer.lock changed only its content-hash (no package moved)."
+  impact: low
+  affected_modules: ["composer.json", "composer.lock"]
+  related_tests: ["composer validate --no-check-publish (valid, no warnings)", "composer install --dry-run (nothing to install)", "composer audit --locked (no advisories)", "PHPUnit full suite"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T06:00:00Z"
+- id: CU-20261021-31
+  type: fix
+  title: "security: the public community payload's walking groups no longer name hidden zones"
+  description: "Security audit hardening note (same class as leads 3 and 16, not covered by CU-20261021-13): /api/community published routing.groups verbatim, so the key of an organizer-hidden zone stayed visible. CommunityPresenter drops hidden keys from each group and keeps the groups' positions, so group_labels still line up."
+  impact: low
+  affected_modules: ["src/Community/CommunityPresenter.php"]
+  related_tests: ["tests/Integration/HiddenZonePrivacyTest.php: testWalkingGroupsInThePublicPayloadDoNotNameAHiddenZone"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T06:05:00Z"
+- id: CU-20261021-32
+  type: fix
+  title: "The committed Ventura Reserve review map is regenerated with the escaping generator, and a test keeps it current"
+  description: "CU-20261021-18 changed the GIS importer to build review-map popups from text and to pin Leaflet with SRI, but the committed examples/ventura-reserve/boundaries/review-map.html still carried the old string-built popups and no integrity attributes. It is regenerated offline from the committed GeoJSON (no network) and its manifest checksum updated; a test now regenerates it and compares byte for byte."
+  impact: low
+  affected_modules: ["examples/ventura-reserve/boundaries/review-map.html", "examples/ventura-reserve/boundaries/manifest.json", "scripts/tests/test_fetch_arcgis_boundaries.py"]
+  related_tests: ["scripts/tests/test_fetch_arcgis_boundaries.py: ReviewMapTest.test_committed_example_review_map_is_the_current_generators_output (failed on the old file)"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T08:10:00Z"
+- id: CU-20261021-33
+  type: test
+  title: "More regression coverage for percent-encoded paths: nginx in the browser suite and five more app cases"
+  description: "Extra anchors for CU-20261021-11: the Playwright suite checks that the real nginx answers 400 for /%61pi/community, /%6De, /_internal_%6Cogout and /api/homes/%31 while an escaped query string still works (chromium and WebKit), and RequestPathHardeningTest covers five more encoded paths with the app's 404 (POST /auth/%63onfirm, which answered 500 before 0.6.0-beta.2, an encoded moderation verb, an encoded slash, an escaped id digit and /%6De)."
+  impact: none
+  affected_modules: ["tests/e2e/specs/public.spec.mjs", "tests/Integration/RequestPathHardeningTest.php"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs: nginx refuses percent-escaped paths before the app; escaped query strings still work", "tests/Integration/RequestPathHardeningTest.php: testOtherEncodedPathsAreRefusedBeforeAnyHandler"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T08:15:00Z"
+- id: CU-20261021-34
+  type: fix
+  title: "Shared and stored filters: \"visit at\" must be any, now or HH:MM; oversized zone keys are dropped"
+  description: "Hardening on top of CU-20261021-18's type check: normalizeFilters() kept any string up to 80 characters for time and zone, so a share link could store an unknown time word or an oversized zone key on the visitor's device. The time filter now keeps only any, now or a valid HH:MM, and a zone key longer than 60 characters is dropped; q is still cut at 80. The existing filter tests stay green."
+  impact: low
+  affected_modules: ["public/assets/js/lib/filters.js"]
+  related_tests: ["tests/js/lib.test.mjs: shared filters keep only a real time choice and a zone key of sensible length", "tests/js/lib.test.mjs: shared or stored filters of the wrong type are dropped, so a crafted link cannot break the map"]
+  commit_ref: "chore/public-ready"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T08:20:00Z"
 ```

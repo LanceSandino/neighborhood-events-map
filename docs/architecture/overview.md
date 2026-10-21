@@ -11,7 +11,7 @@
  PHP-FPM / Symfony 7.4 (www-data) ── pool "www" for everything; small pool "mail" for the two
    │                                  email-sending endpoints (they wait out the response floor)
    ├─ Controllers: pages, public API, auth, owner API, organizer API, routes
-   ├─ Security: firewall + MagicLinkAuthenticator, IdleSessionSubscriber, CsrfGuardSubscriber, PoW, Throttle
+   ├─ Security: CanonicalPathSubscriber, firewall + MagicLinkAuthenticator, IdleSessionSubscriber, CsrfGuardSubscriber, PoW, Throttle
    ├─ Domain: Community (config + versioned geometry), Geo, Address, Listing, Claim, Dispute, Admin, Audit, Routing
    └─ Mailer → SMTP relay (Mailpit in development)
    │ DBAL (parameterized SQL)
@@ -32,4 +32,4 @@
 
 ## Configuration precedence
 
-Environment (`.env` / Compose) for infrastructure and secrets → community settings in the database (bootstrapped once from `community.yaml`, edited in the console) → code defaults. Session idle and link lifetime: env > community settings > defaults (30/15 minutes).
+Environment (`.env` / Compose) for infrastructure and secrets → community settings in the database (bootstrapped once from `community.yaml`, edited in the console; they include the event name, date and hours) → code defaults. Session idle and link lifetime: env > community settings > defaults (30/15 minutes).

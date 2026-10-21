@@ -21,7 +21,7 @@
         <env name="MAILER_DSN" value="null://null" force="true" />
         <env name="POW_DIFFICULTY" value="8" force="true" />
         <env name="ADMIN_EMAIL" value="organizer@example.test" force="true" />
-        <env name="MAIL_FROM" value="Test Halloween &lt;no-reply@example.test&gt;" force="true" />
+        <env name="MAIL_FROM" value="Test events &lt;no-reply@example.test&gt;" force="true" />
         <env name="APP_BASE_URL" value="http://localhost" force="true" />
         <env name="APP_DEMO" value="0" force="true" />
         <env name="ROUTING_PROVIDER" value="none" force="true" />

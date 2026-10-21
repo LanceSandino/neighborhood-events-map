@@ -12,6 +12,7 @@ import { DEFAULT_FILTERS, matches, activeFilterCount, normalizeFilters, choiceCo
 import { nowInZone } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
 import { focusMap } from './lib/map-focus.js';
+import { labelPoint, resolveOverlaps } from './lib/zone-labels.js';
 import { initModals, openModal, closeModal, toast } from './lib/modal.js';
 import { initRegistration, openRegistration, openDispute } from './register.js';
 import { createRoutePanel } from './route-panel.js';
@@ -61,11 +62,17 @@ function initMap() {
     for (const z of C.zones) {
       if (!z.geometry) continue;
       const layer = L.geoJSON(z.geometry, { style: zoneStyle(z, null), interactive: false }).addTo(map);
-      layer.bindTooltip(esc(z.label) + (z.status === 'coming_soon' ? ' · coming soon' : ''), { permanent: true, direction: 'center', className: 'boundary-label' });
-      zoneLayers.set(z.key, { zone: z, layer });
+      // The name sits where the organizer put it, else deepest inside the zone (not mid bounding box), as its own label.
+      const tip = L.tooltip({ permanent: true, direction: 'center', className: 'boundary-label', interactive: false })
+        .setLatLng(z.label_at ? [z.label_at[1], z.label_at[0]] : labelPoint(z.geometry) || layer.getBounds().getCenter())
+        .setContent(esc(z.label) + (z.status === 'coming_soon' ? ' · coming soon' : ''));
+      map.openTooltip(tip);
+      zoneLayers.set(z.key, { zone: z, layer, tip });
     }
     fitAll();
     focusMap(L, map, { boundary: C.map.boundary, bbox: C.map.bbox }); // dim outside the neighborhood; stay near it
+    spaceLabels();
+    map.on('zoomend resize', spaceLabels);
     if (filters.zone && filters.zone !== 'all') highlightZone(filters.zone, { fit: false });
     if (activeFilterCount(filters)) fitToResults(); // remembered filters: start on the homes that match
     map.on('click', () => selectHome(null));
@@ -74,6 +81,21 @@ function initMap() {
     map = null;
     $('#mapFallback').textContent = 'The map could not load. Use the list of homes instead.';
   }
+}
+
+/**
+ * Zone names never cover each other: names placed by an organizer and phases that take listings keep their place, then other residential zones,
+ * and names of common areas move below whatever they would cover. Runs again after every zoom and resize.
+ */
+function spaceLabels() {
+  const items = [...zoneLayers.values()].filter((x) => x.tip && x.tip.getElement());
+  for (const { tip } of items) { tip.options.offset = L.point(0, 0); tip.update(); }
+  const boxes = items.map(({ zone, tip }) => {
+    const r = tip.getElement().getBoundingClientRect();
+    // Names an organizer placed never move; the others make room around them.
+    return { x: r.left, y: r.top, w: r.width, h: r.height, priority: zone.label_at ? 10 : (zone.claimable ? 2 : 0) + (zone.residential ? 1 : 0) };
+  });
+  resolveOverlaps(boxes).forEach((dy, i) => { if (dy) { items[i].tip.options.offset = L.point(0, dy); items[i].tip.update(); } });
 }
 
 /** Selecting a phase/zone or a walking area outlines it, shades the rest and zooms to it; "all" restores the overview. */
@@ -103,7 +125,7 @@ function renderPins(visibleIds) {
   if (!map) return;
   for (const [id, m] of markers) if (!homes.some((h) => h.id === id)) { m.remove(); markers.delete(id); }
   for (const h of homes) {
-    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id) }), iconSize: [37, 37], iconAnchor: [5, 36] });
+    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id), focus: filters }), iconSize: [37, 37], iconAnchor: [5, 36] });
     let m = markers.get(h.id);
     if (!m) {
       m = L.marker([h.lat, h.lon], { icon, keyboard: true, title: h.address, alt: h.address, riseOnHover: true });
@@ -126,7 +148,7 @@ function render() {
   const saved = store.get().saved;
   const open = vis.filter(isOpen);
   const closed = vis.filter((h) => !isOpen(h));
-  const card = (h) => cardHtml(h, c, { saved: saved.includes(h.id), active: activeId === h.id });
+  const card = (h) => cardHtml(h, c, { saved: saved.includes(h.id), active: activeId === h.id, focus: filters });
   const toggle = closed.length
     ? `<li class="closed-toggle"><button type="button" class="link-button" id="btnShowClosed" aria-expanded="${showClosed}">${showClosed ? 'Hide' : 'Show'} ${closed.length} ${closed.length === 1 ? 'home' : 'homes'} not handing out right now</button></li>`
     : '';

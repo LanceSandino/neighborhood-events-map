@@ -26,8 +26,9 @@ jobs:
       DATABASE_URL: postgresql://halloween:halloween@127.0.0.1:5432/halloween?serverVersion=17&charset=utf8
       APP_ENV: test
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
         with:
           php-version: '8.3'
           extensions: intl, pdo_pgsql, pcntl, posix, zip
@@ -52,12 +53,13 @@ jobs:
   js-and-python:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: { node-version: '22' }
       - name: Browser library unit tests (node:test)
         run: node --test tests/js/*.test.mjs
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with: { python-version: '3.12' }
       - name: GIS importer unit tests
         run: pip install shapely==2.0.6 && python -I -m unittest discover -s scripts/tests -v
@@ -67,7 +69,8 @@ jobs:
     if: github.event_name != 'push'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
       - name: Validate Compose files
         run: |
           APP_SECRET=x APP_BASE_URL=http://localhost POSTGRES_PASSWORD=x docker compose -f compose.yaml config -q
@@ -82,7 +85,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [php, js-and-python]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
       - name: Create throwaway CI env files (no real secrets)
         run: |
           gen() { openssl rand -hex 24; }
@@ -106,7 +110,7 @@ jobs:
       - name: Session lifecycle smoke test (restart durability, cookie flags, logout)
         run: python3 scripts/smoke_session.py
       - if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: e2e-results, path: tests/e2e/test-results, retention-days: 7 }
       - if: always()
         run: docker compose logs app --tail=200 || true

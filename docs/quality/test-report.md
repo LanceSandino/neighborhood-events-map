@@ -1,5 +1,29 @@
 # Test and verification report
 
+## Latest run — 2026-10-21, release 0.7.0-beta.1
+
+Final gates on the release branch (0.6.0-beta.2 + map fixes + public-readiness work), dev stacks of that tree:
+PHPUnit 254 tests / 1904 assertions OK; PHPStan level 6 no errors; node:test 29/29; Playwright 76 passed, 2 skipped
+(WebKit location tests need HTTPS) on Chromium and WebKit iPhone 15 Pro. The sections below are the public-readiness
+pass's detailed run on its branch just before the rebase.
+
+### Earlier run — 2026-10-21, `chore/public-ready` (0.6.0-beta.2 + the zone-label fix + Unreleased)
+
+On the development Mac (Docker Desktop), with two dev stacks: the Ventura Reserve example and the fictional demo. The commands are the ones in AGENTS.md §5; only the ports differ. Details and the public-readiness checks are in [public-readiness-audit.md](public-readiness-audit.md).
+
+| Gate | Result |
+|---|---|
+| PHPUnit (unit + integration, PostgreSQL 17) | **OK — 252 tests, 1887 assertions** |
+| Coverage (pcov) | Lines **94.28 %** (2472/2622) ✓ ≥ 85 · Methods 81.14 % (only fully covered methods count) · Branches **n/a** (pcov has no branch metric) |
+| PHPStan level 6 | **No errors** |
+| `composer audit --locked` · `npm audit --package-lock-only` (tests/e2e) | No advisories · 0 vulnerabilities |
+| node:test | **27/27 pass** |
+| Python (GIS importers, operator scripts) | **36/36 pass** |
+| Playwright E2E (chromium + webkit-iphone) | **76 passed, 2 skipped** (location tests need HTTPS in WebKit) |
+| Session smoke test | **12/12 checks** |
+
+## Earlier run — 0.4.0-beta.2
+
 Recorded 2026-10-19 for 0.4.0-beta.2 (after the security hardening) on the development Mac (Docker Desktop). Commands are the ones in AGENTS.md §5; results are the actual outputs. The E2E stacks were the Ventura Reserve real-plat example (port 8087) and the fictional Maple Hollow demo (port 8088).
 
 | Gate | Command | Result |

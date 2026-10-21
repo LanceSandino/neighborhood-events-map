@@ -53,3 +53,6 @@ pre.json { background: var(--surface-3); border: 1px solid var(--border); border
 .link-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; margin-bottom: 8px; align-items: center; }
 .link-row input { border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; height: 44px; background: var(--surface); color: var(--text); }
 @media (max-width: 660px) { .link-row { grid-template-columns: 1fr auto; } .link-row input[data-l=url] { grid-column: 1 / -1; grid-row: 2; } }
+/* Zone names on the boundary editor: drag them to where they read best on the public map. */
+.zone-name-handle { background: transparent; border: 0; }
+.zone-name-handle span { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; padding: 2px 8px; border-radius: 6px; background: var(--surface); color: var(--text); border: 1px dashed var(--muted); font-size: 12px; font-weight: 900; cursor: move; box-shadow: var(--shadow-sm); }

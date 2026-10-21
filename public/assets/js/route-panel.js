@@ -276,7 +276,7 @@ export function createRoutePanel(d) {
     $('#btnShareRoute').addEventListener('click', async () => {
       const url = shareLink();
       if (navigator.share) {
-        try { await navigator.share({ title: `${C.community.name} Halloween stops`, text: 'My trick-or-treat stops', url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+        try { await navigator.share({ title: `${C.community.name} ${C.event.name} stops`, text: 'My trick-or-treat stops', url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
       }
       toast(await copyText(url) ? 'Link copied — anyone with it sees these stops.' : `Copy this link to share these stops: ${url}`, 8000);
     });

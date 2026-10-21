@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Neighborhood Halloween Map — application images.
+# Neighborhood events map — application images.
 # Targets: dev (PHP-FPM + pcov, bind-mounted source), prod (PHP-FPM, baked code), nginx (static + proxy).
 ARG PHP_VERSION=8.3
 

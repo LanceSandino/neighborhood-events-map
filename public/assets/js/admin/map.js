@@ -3,9 +3,11 @@
  * @description Organizer boundary & zone editor (Leaflet + Leaflet.draw, MIT): draw/edit/delete
  *     polygons as "boundary" or a chosen zone, import/export GeoJSON, preview, save (server validates
  *     rings, order, self-intersection, zones) and approve. Multi-polygons are split into editable parts
- *     and saved back as one FeatureCollection; disconnected areas stay separate features.
+ *     and saved back as one FeatureCollection; disconnected areas stay separate features. Zone names can be
+ *     dragged to where they read best on the public map (saved as the zone's label_at setting).
  */
 import { $, call, esc, flash } from './common.js';
+import { labelPoint } from '../lib/zone-labels.js';
 
 const COLORS = ['#2b8a6e', '#6b4fa0', '#c2410c', '#0369a1', '#a16207', '#be185d', '#4d7c0f', '#7c3aed', '#0f766e', '#b91c1c'];
 let data = null;
@@ -30,7 +32,7 @@ function shell() {
       <div class="panel"><h2>Status</h2><p id="status"></p>
         <div class="field"><label for="drawAs">New shapes are</label><select id="drawAs"><option value="boundary">Neighborhood boundary</option>
           ${data.zones.map((z) => `<option value="zone:${esc(z.key)}">Zone: ${esc(z.label)}</option>`).join('')}</select></div>
-        <p class="form-caption">Use the polygon tool (top-left of the map), then Edit/Delete to adjust vertices.</p>
+        <p class="form-caption">Use the polygon tool (top-left of the map), then Edit/Delete to adjust vertices. Drag a zone's name to move it on the public map (Reset it on the Community page).</p>
         <ul class="layer-list" id="layers"></ul>
       </div>
       <div class="panel"><h2>Import / export</h2>
@@ -101,6 +103,34 @@ function renderLayers() {
   $('#status').innerHTML = `${data.version ? `Saved version v${data.version}` : 'Nothing saved yet'} · ${data.approved ? '<span class="ok">approved</span>' : '<span class="warn">not approved — house listings closed</span>'}${dirty ? ' · <span class="warn">unsaved changes</span>' : ''}`;
 }
 
+let names = [];
+/** Each zone's name as a draggable handle at its current spot on the public map (placed, or the automatic one). */
+function renderNames() {
+  names.forEach((m) => m.remove());
+  names = [];
+  for (const z of data.zones) {
+    const parts = [];
+    drawn.eachLayer((l) => { const p = l.feature?.properties || {}; if (p.kind === 'zone' && p.zone_key === z.key) parts.push(l.toGeoJSON(false).geometry.coordinates); });
+    if (!parts.length || z.status === 'hidden') continue;
+    const at = z.label_at ? [z.label_at[1], z.label_at[0]] : labelPoint({ type: 'MultiPolygon', coordinates: parts });
+    const m = L.marker(at, { draggable: true, title: `Drag to move the name “${z.label}”`, alt: `Name of ${z.label}`,
+      icon: L.divIcon({ className: 'zone-name-handle', html: `<span>${esc(z.label)}</span>`, iconSize: null }) }).addTo(map);
+    m.on('dragend', () => saveName(z, m.getLatLng()));
+    names.push(m);
+  }
+}
+
+/** Saves a moved name with the zone settings (the same validated settings the Community page edits). */
+async function saveName(zone, ll) {
+  const s = (await call('/api/admin/community')).settings;
+  const z = s.zones.find((x) => x.key === zone.key);
+  if (!z) return;
+  z.label_at = [Math.round(ll.lng * 1e6) / 1e6, Math.round(ll.lat * 1e6) / 1e6];
+  await call('/api/admin/community', { method: 'PUT', body: { settings: s } });
+  zone.label_at = z.label_at;
+  flash(`Moved the name “${zone.label}”. The public map shows it there.`);
+}
+
 function fit() {
   const b = drawn.getBounds();
   if (b.isValid()) map.fitBounds(b, { padding: [20, 20] });
@@ -130,6 +160,7 @@ function init() {
   map.on(L.Draw.Event.DELETED, () => { dirty = true; renderLayers(); });
   fit();
   renderLayers();
+  renderNames();
 
   $('#importFile').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -174,6 +205,7 @@ async function reload(rebuild = true) {
   data = await call('/api/admin/geometries');
   if (rebuild) { drawn.clearLayers(); featuresFromCollection(data.geojson).forEach(addFeature); }
   renderLayers();
+  renderNames();
 }
 
 (async () => { data = await call('/api/admin/geometries'); init(); })();

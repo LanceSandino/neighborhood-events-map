@@ -4,7 +4,7 @@
 {%- set zone_label = null -%}
 {%- for z in zones -%}{%- if z.key == home.zone -%}{%- set zone_label = z.label -%}{%- endif -%}{%- endfor -%}
 <li class="home-card" data-id="{{ home.id }}">
-  <div class="card-symbol" aria-hidden="true">{{ scary ? '👻' : (sensory ? '🧩' : '🍬') }}</div>
+  <div class="card-symbol" aria-hidden="true">{{ scary ? '👻' : (sensory ? '🧩' : (home.adult_drinks ? '🍺' : '🍬')) }}</div>
   <div class="card-main">
     <div class="card-line"><b>{{ home.address }}</b></div>
     <div class="card-meta">{% if zone_label %}{{ zone_label }} · {% endif %}{{ home.start|time12 }}–{{ home.end|time12 }}{% if home.status != 'active' %} · {{ {'paused': 'Paused', 'out_of_candy': 'Out of candy', 'done': 'Done for tonight'}[home.status] }}{% endif %}</div>

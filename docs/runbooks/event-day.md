@@ -1,4 +1,4 @@
-# Halloween night runbook
+# Event-day runbook (Halloween night)
 
 **Before (a week ahead):** approve boundary, open listings, announce the URL, run a restore drill, test email delivery, check that the event date/time zone are right, export claims privately (`/api/admin/export/claims.csv`).
 

@@ -79,7 +79,7 @@
         <button type="button" data-action="info" aria-label="Map information" title="Map information">ⓘ</button>
       </div>
       <div class="map-selected" id="mapSelected" role="dialog" aria-label="Selected home"></div>
-      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i>🍬 Treats</span><span><i class="legend-bullet gentle"></i>🧩 Sensory-friendly</span><span><i class="legend-bullet spooky"></i>👻 Spooky</span></div>
+      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i>🍬 Treats</span><span><i class="legend-bullet gentle"></i>🧩 Sensory-friendly</span><span><i class="legend-bullet spooky"></i>👻 Spooky</span>{% if c.features.adult_refreshments %}<span><i class="legend-bullet adult"></i>🍺 21+</span>{% endif %}</div>
       </div>
       <div class="map-footer"><span>⚠️ Listings are self-reported. Pins show only homes that chose to participate.</span><strong id="footerZones">{% if zs %}{{ zs.title }}{% endif %}</strong></div>
     </div>

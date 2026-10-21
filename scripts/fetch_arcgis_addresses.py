@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # sibling helpers, als
 from arcgis_common import make_fetch  # noqa: E402
 from arcgis_config import AddressSource, load_address_source  # noqa: E402
 
-USER_AGENT = "NeighborhoodHalloweenAddressImport/2.0 (noncommercial; ArcGIS feature query)"
+USER_AGENT = "NeighborhoodEventsMapAddressImport/2.0 (noncommercial; ArcGIS feature query)"
 CSV_COLUMNS = ["address", "latitude", "longitude", "zone_key", "county_address_id", "zip"]
 STREET_ROLES = ("house_number", "prefix_direction", "street_name", "street_type", "suffix_direction")
 UNIT_ROLES = ("unit_type", "unit_number")

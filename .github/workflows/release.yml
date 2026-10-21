@@ -1,4 +1,4 @@
-# On an annotated vX.Y.Z tag: verify VERSION/CHANGELOG match, then open a DRAFT GitHub Release
+# On an annotated vX.Y.Z tag on main: verify VERSION/CHANGELOG match, then open a DRAFT GitHub Release
 # with that CHANGELOG section. Publishing the draft stays a manual owner decision.
 name: Release
 on:
@@ -12,7 +12,12 @@ jobs:
   draft-release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - name: Check the tag is annotated and its commit is on main
+        run: |
+          test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag || { echo "$GITHUB_REF_NAME is not an annotated tag"; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$GITHUB_REF_NAME is not on main"; exit 1; }
       - name: Check VERSION and CHANGELOG match the tag
         run: |
           tag="${GITHUB_REF_NAME#v}"

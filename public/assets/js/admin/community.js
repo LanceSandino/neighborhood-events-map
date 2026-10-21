@@ -22,6 +22,7 @@ function zoneRow(z = { key: '', label: '', claimable: true, residential: true, c
     <td><input type="checkbox" data-z="residential" ${z.residential ? 'checked' : ''} aria-label="Residential"></td>
     <td><input data-z="color" value="${esc(z.color || '')}" placeholder="#RRGGBB" aria-label="Colour"></td>
     <td><select data-z="status" aria-label="Status">${ZONE_STATUS.map(([v, l]) => `<option value="${v}" ${v === status ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
+    <td>${z.label_at ? '<span class="form-caption">Moved on the map</span> <button type="button" class="link-button" data-reset-label>Reset</button>' : '<span class="form-caption">Automatic</span>'}</td>
     <td><button type="button" class="link-button" data-remove-zone>Remove</button></td></tr>`;
 }
 
@@ -49,7 +50,7 @@ function render() {
       ${field('cRegion', 'State / region', s.community.region)}
       ${field('cPostal', 'Postal code', s.community.postal_code)}
       ${field('cTz', 'Time zone (IANA) *', s.community.timezone, 'list="tzList"')}
-      <div class="field full"><label for="cAccess">Access on Halloween night</label><select id="cAccess">${ACCESS.map(([k, l]) => `<option value="${k}" ${s.community.access === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="field full"><label for="cAccess">Access during the event</label><select id="cAccess">${ACCESS.map(([k, l]) => `<option value="${k}" ${s.community.access === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
       ${area('cGate', 'Access notes (gates, entrances, parking)', s.community.gate_notice, 'Shown on the map and the About page. The site never grants gate access.')}
       ${field('cContact', 'Organizer contact (mailto: or https://) *', s.community.contact_url, 'placeholder="mailto:organizer@example.org"')}
     </div></div>
@@ -61,7 +62,7 @@ function render() {
     </div></div>
     <div class="panel"><h2>Event</h2><div class="form-grid">
       ${field('eDate', 'Date *', s.event.date, 'type="date"')}
-      <div></div>
+      ${field('eName', 'Event name', s.event.name, 'maxlength="40" placeholder="Halloween"')}
       ${field('eStart', 'Suggested start', s.event.starts_at, 'type="time"')}
       ${field('eEnd', 'Suggested end', s.event.ends_at, 'type="time"')}
     </div><p class="form-caption">Public listings show only homes that opted in for this date. Changing the date to next year hides last season's homes until owners save again.</p></div>
@@ -81,7 +82,7 @@ function render() {
       ${check('fZones', 'Show zone filter', s.features.optional_zones)}${check('fRoutes', 'Suggested stop order', s.features.walking_routes)}
     </div></div>
     <div class="panel"><h2>Zones (optional)</h2><p class="form-caption">Phases, sections or any named areas. Leave empty for a community without zones. Draw their polygons on the Boundary &amp; zones page. <b>Coming soon</b> draws the zone with that label but homes there cannot be listed yet (e.g. no houses built); <b>Hidden</b> leaves it off the public map entirely.</p>
-      <div class="table-wrap"><table class="data zones-table"><thead><tr><th>Key</th><th>Label</th><th>Listable</th><th>Residential</th><th>Colour</th><th>Status</th><th></th></tr></thead><tbody id="zoneRows">${s.zones.map(zoneRow).join('')}</tbody></table></div>
+      <div class="table-wrap"><table class="data zones-table"><thead><tr><th>Key</th><th>Label</th><th>Listable</th><th>Residential</th><th>Colour</th><th>Status</th><th>Name on map</th><th></th></tr></thead><tbody id="zoneRows">${s.zones.map(zoneRow).join('')}</tbody></table></div>
       <button type="button" class="secondary" id="addZone">+ Add zone</button>
     </div>
     <div class="panel"><h2>House listings</h2><div class="form-grid">
@@ -109,7 +110,13 @@ function render() {
   <datalist id="tzList">${(Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []).map((t) => `<option value="${t}">`).join('')}</datalist>`;
 
   $('#addZone').addEventListener('click', () => $('#zoneRows').insertAdjacentHTML('beforeend', zoneRow()));
-  $('#zoneRows').addEventListener('click', (e) => { if (e.target.matches('[data-remove-zone]')) e.target.closest('tr').remove(); });
+  $('#zoneRows').addEventListener('click', (e) => {
+    if (e.target.matches('[data-remove-zone]')) e.target.closest('tr').remove();
+    if (e.target.matches('[data-reset-label]')) { // the map chooses the spot again once settings are saved
+      e.target.closest('tr').dataset.resetLabel = '1';
+      e.target.closest('td').innerHTML = '<span class="form-caption">Automatic after saving</span>';
+    }
+  });
   $('#btnAddLink').addEventListener('click', () => $('#linkRows').insertAdjacentHTML('beforeend', linkRow()));
   $('#linkRows').addEventListener('click', (e) => { if (e.target.matches('[data-remove-link]')) e.target.closest('.link-row').remove(); });
   $('#settingsForm').addEventListener('submit', save);
@@ -130,16 +137,23 @@ async function save(e) {
     postal_code: $('#cPostal').value, timezone: $('#cTz').value, gate_notice: $('#cGate').value, contact_url: $('#cContact').value || null,
     access: $('#cAccess').value, about: $('#cAbout').value, reminders: lines('#cReminders'),
     links: $$('#linkRows .link-row').map((r) => ({ label: $('[data-l=label]', r).value.trim(), url: $('[data-l=url]', r).value.trim() })).filter((l) => l.label || l.url) });
-  Object.assign(s.event, { date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
+  Object.assign(s.event, { name: $('#eName').value, date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
   Object.assign(s.branding, { brand_emoji: $('#bEmoji').value, primary_color: $('#bPrimary').value, accent_color: $('#bAccent').value,
     headline: $('#bHeadline').value, headline_accent: $('#bHeadlineAccent').value, intro: $('#bIntro').value, show_locality: $('#bPlace').checked });
   Object.assign(s.features, { candy: $('#fCandy').checked, nonfood_treats: $('#fNonfood').checked, adult_refreshments: $('#fAdult').checked,
     sensory_filters: $('#fSensory').checked, optional_zones: $('#fZones').checked, walking_routes: $('#fRoutes').checked });
-  s.zones = $$('#zoneRows tr').map((tr) => ({
-    key: $('[data-z=key]', tr).value.trim(), label: $('[data-z=label]', tr).value.trim(), claimable: $('[data-z=claimable]', tr).checked,
-    residential: $('[data-z=residential]', tr).checked, color: $('[data-z=color]', tr).value.trim() || undefined,
-    status: $('[data-z=status]', tr).value,
-  })).filter((z) => z.key);
+  // Fields this table does not show (description, the name's spot on the map) are kept from the saved zone.
+  const before = Object.fromEntries((settings.zones || []).map((z) => [z.key, z]));
+  s.zones = $$('#zoneRows tr').map((tr) => {
+    const key = $('[data-z=key]', tr).value.trim();
+    return {
+      ...(before[key] || {}),
+      key, label: $('[data-z=label]', tr).value.trim(), claimable: $('[data-z=claimable]', tr).checked,
+      residential: $('[data-z=residential]', tr).checked, color: $('[data-z=color]', tr).value.trim() || undefined,
+      status: $('[data-z=status]', tr).value,
+      ...(tr.dataset.resetLabel ? { label_at: null } : {}),
+    };
+  }).filter((z) => z.key);
   Object.assign(s.registration, { address_mode: $('#rMode').value, enabled: $('#rEnabled').checked, street_allowlist: lines('#rStreets'),
     session_idle_minutes: Number($('#rIdle').value), email_magic_link_minutes: Number($('#rLink').value),
     max_homes_per_user: Number($('#rMaxHomes').value), review_new_addresses: $('#rReview').checked });

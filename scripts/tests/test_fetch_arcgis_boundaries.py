@@ -10,7 +10,9 @@
 import contextlib
 import copy
 import io
+import hashlib
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -347,6 +349,19 @@ class HttpJsonTests(unittest.TestCase):
 
 class ReviewMapTest(unittest.TestCase):
     """Audit run-1 lead 19: popups were HTML strings built from ArcGIS attributes (third-party data)."""
+
+    def test_committed_example_review_map_is_the_current_generators_output(self):
+        # The committed Ventura Reserve review page must not keep an older, unescaped popup builder.
+        example = ROOT / "examples" / "ventura-reserve"
+        cfg = json.loads((example / "gis-sources.json").read_text(encoding="utf-8"))["boundaries"]
+        page = (example / "boundaries" / "review-map.html").read_text(encoding="utf-8")
+        names = list(json.loads(re.search(r"const layers=(\{.*?\});const colors=", page, re.S).group(1)))
+        layers = {n: json.loads((example / "boundaries" / f"{n}.geojson").read_text(encoding="utf-8")) for n in names}
+        regenerated = gis.review_map_html(layers, cfg.get("review_title", "GIS boundary review map (NOT APPROVED)"),
+                                          cfg.get("source_description", "Official recorded subdivision polygons."))
+        self.assertEqual(regenerated, page, "regenerate the example's review-map.html from its GeoJSON")
+        manifest = json.loads((example / "boundaries" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["checksums_sha256"]["review-map.html"], hashlib.sha256(page.encode("utf-8")).hexdigest())
 
     def test_popups_are_text_only_and_cdn_assets_are_pinned(self):
         evil = "<img src=x onerror=alert(1)>"

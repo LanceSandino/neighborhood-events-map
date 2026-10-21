@@ -19,6 +19,7 @@ community:
   links: []                         # e.g. [{ label: "Neighborhood Facebook group", url: "https://www.facebook.com/groups/…" }]
   reminders: []                     # your own trick-or-treat reminders (one line each, up to 12); empty = built-in list
 event:
+  name: "Halloween"                 # shown in titles, the sidebar and emails ("<community> <event name>")
   date: "2026-10-31"
   starts_at: "17:00"
   ends_at: "21:00"

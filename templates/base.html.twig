@@ -2,6 +2,7 @@
 {%- set community = c.community -%}
 {%- set branding = c.branding -%}
 {%- set year = c.event.date|slice(0, 4) -%}
+{%- set event_name = c.event.name -%}
 {%- set place = community.locality ? community.locality ~ (community.region ? ', ' ~ community.region : '') : '' -%}
 {%- set show_place = (branding.show_locality ?? false) and place -%}
 <!doctype html>
@@ -13,9 +14,9 @@
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f7f4">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#15141d">
   <script src="{{ asset_path('js/theme-init.js') }}"></script>
-  <meta name="description" content="{{ community.name }} Halloween: a friendly trick-or-treat map of homes that chose to participate.">
+  <meta name="description" content="{{ community.name }} {{ event_name }}: a neighborhood map of the homes taking part, with their hours and what each offers.">
   {% block meta %}{% endblock %}
-  <title>{% block title %}{{ community.name }} Halloween{% endblock %}</title>
+  <title>{% block title %}{{ community.name }} {{ event_name }}{% endblock %}</title>
   <link rel="icon" href="{{ branding.logo_url ?? '/assets/img/favicon.svg' }}">
   <link rel="preload" href="/fonts/nunito-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -29,7 +30,7 @@
   <aside class="sidebar" aria-label="Site">
     <a class="brand" href="/">
       <div class="brand-icon{{ branding.logo_url ? ' has-logo' }}" aria-hidden="true">{% if branding.logo_url %}<img src="{{ branding.logo_url }}" alt="">{% else %}{{ branding.brand_emoji }}{% endif %}</div>
-      <div><div class="brand-name">{{ community.name }}<br>Halloween</div><div class="brand-sub">{{ show_place ? place ~ ' · ' ~ year : 'Community ' ~ year }}</div></div>
+      <div><div class="brand-name">{{ community.name }}<br>{{ event_name }}</div><div class="brand-sub">{{ show_place ? place ~ ' · ' ~ year : 'Community ' ~ year }}</div></div>
     </a>
     <div>
       <div class="nav-title" id="nav-title">EXPLORE</div>
@@ -64,7 +65,7 @@
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · No tracking</span><span class="footer-id">{{ community.name }} Halloween · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
+    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>No ads · No tracking</span><span class="footer-id">{{ community.name }} {{ event_name }} · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">

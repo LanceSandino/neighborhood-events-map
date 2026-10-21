@@ -9,9 +9,20 @@ import { isBigScare, isLowSensory } from './filters.js';
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export const isScary = isBigScare;
-/** One vocabulary everywhere (pins, legend, cards, filters): 👻 Spooky, 🧩 Sensory-friendly, 🍬 Treats. */
-export const symbolOf = (h) => (isScary(h) ? '👻' : isLowSensory(h) ? '🧩' : '🍬');
-export const pinClass = (h) => (isScary(h) ? 'scary' : isLowSensory(h) ? 'quiet' : '');
+/**
+ * One vocabulary everywhere (pins, legend, cards, filters): 👻 Spooky, 🧩 Sensory-friendly, 🍺 21+, 🍬 Treats, in that
+ * order. With a quick filter on (focus: the filters object), the homes that match show that filter's symbol, so the
+ * map shows what the visitor picked.
+ */
+const KINDS = { spooky: ['👻', 'scary'], sensory: ['🧩', 'quiet'], adult: ['🍺', 'adult'], treats: ['🍬', ''] };
+function kindOf(h, focus = {}) {
+  if (focus.adult && h.adult_drinks) return 'adult';
+  if (focus.lowSensory && isLowSensory(h)) return 'sensory';
+  if (focus.candy && h.candy) return 'treats';
+  return isScary(h) ? 'spooky' : isLowSensory(h) ? 'sensory' : h.adult_drinks ? 'adult' : 'treats';
+}
+export const symbolOf = (h, focus) => KINDS[kindOf(h, focus)][0];
+export const pinClass = (h, focus) => KINDS[kindOf(h, focus)][1];
 
 export function tagsHtml(h) {
   const t = [];
@@ -37,11 +48,11 @@ export function metaLine(h, ctx) {
   return `${zone ? esc(zone) + ' · ' : ''}${time12(h.start)}–${time12(h.end)}`;
 }
 
-export function cardHtml(h, ctx, { saved, active }) {
+export function cardHtml(h, ctx, { saved, active, focus }) {
   const st = statusOf(h, ctx);
   const statusChip = st.key === 'later' && !st.label.startsWith('Starts') ? '' : `<span class="card-status ${st.key}">${esc(st.label)}</span>`;
   return `<li class="home-card${active ? ' active' : ''}" data-id="${h.id}" tabindex="0" aria-label="${esc(h.address)}">
-    <div class="card-symbol" aria-hidden="true">${symbolOf(h)}</div>
+    <div class="card-symbol" aria-hidden="true">${symbolOf(h, focus)}</div>
     <div class="card-main">
       <div class="card-line"><b>${esc(h.address)}</b><button type="button" class="save" data-save="${h.id}" aria-pressed="${saved}" aria-label="${saved ? 'Remove from' : 'Save to'} my stops: ${esc(h.address)}">${saved ? '♥' : '♡'}</button></div>
       <div class="card-meta">${metaLine(h, ctx)} ${statusChip}</div>
@@ -62,8 +73,8 @@ export function selectedHtml(h, ctx, saved) {
     <p><button type="button" class="link-button" data-report="${h.id}">Report this listing</button></p>`;
 }
 
-export function pinHtml(h, { dim, number }) {
-  return `<div class="pin ${pinClass(h)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${symbolOf(h)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
+export function pinHtml(h, { dim, number, focus }) {
+  return `<div class="pin ${pinClass(h, focus)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${symbolOf(h, focus)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
 }
 
 /** Leaflet style for a zone outline; with a selected zone, it stands out and the others recede. */

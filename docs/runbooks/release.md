@@ -17,4 +17,5 @@ The repository and its history are kept free of private data (DECISIONS D-202610
 2. Confirm there are no workflow runs, artifacts, caches or draft releases from before the scrub (`gh run list`, `gh api repos/<owner>/<repo>/actions/artifacts`, `gh release list`).
 3. Confirm the license (MIT proposed) and the reuse terms of any committed county plat data (see the example's README).
 4. The two container packages are public (package settings → visibility) and linked to the repository; their images contain only the app (no `.env`, `deploy/` or tests — see `.dockerignore`).
-5. Check `deploy/private/` is still ignored (`git check-ignore -v deploy/private/x`) and nothing under it is tracked (`git ls-files deploy/private` prints nothing).
+5. Check `deploy/` is still ignored (`git check-ignore -v deploy/private/x deploy/community/community.yaml`) and nothing under it is tracked (`git ls-files deploy` prints nothing).
+6. Pull-request refs (`refs/pull/*/head`) become public too and cannot be deleted by the owner: check every one is based on the current history (`git ls-remote origin 'refs/pull/*'`). The last full check is in [docs/quality/public-readiness-audit.md](../quality/public-readiness-audit.md).

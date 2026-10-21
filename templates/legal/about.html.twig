@@ -1,11 +1,11 @@
 {% extends 'base.html.twig' %}
 {% set nav = 'about' %}
-{% block title %}About · {{ c.community.name }} Halloween{% endblock %}
+{% block title %}About · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block body %}
 {% set access = access_info(c.community.access ?? null) %}
 <article class="page-card legal about">
   <div class="eyebrow">{{ c.branding.brand_emoji }} About</div>
-  <h1>{{ c.community.name }} Halloween</h1>
+  <h1>{{ c.community.name }} {{ c.event.name }}</h1>
   {% if c.community.subtitle %}<p class="legal-lead">{{ c.community.subtitle }}</p>{% endif %}
 
   <div class="about-facts">

@@ -267,6 +267,9 @@ final class CommunityRepository
             }
         }
 
+        // Settings saved before event.name existed keep the event they were made for.
+        $settings['event'] = (array) ($settings['event'] ?? []) + ['name' => CommunitySchema::DEFAULT_EVENT_NAME];
+
         return new CommunityConfig($settings, $boundary, $approved, $version, $zones);
     }
 

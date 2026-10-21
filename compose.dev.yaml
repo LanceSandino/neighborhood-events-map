@@ -4,7 +4,7 @@
 services:
   app:
     build: { context: ., target: dev }
-    image: neighborhood-halloween-app:dev
+    image: neighborhood-events-map-app:dev
     environment:
       APP_ENV: dev
       APP_DEBUG: 1

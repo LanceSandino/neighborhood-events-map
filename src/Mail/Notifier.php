@@ -30,11 +30,12 @@ final class Notifier
             ->from(Address::create($this->config->mailFrom))
             ->to(new Address($email)) // never re-parsed as "name <address>"
             ->subject(null !== $claimAddress
-                ? sprintf('Confirm your %s Halloween listing', $community->name())
-                : sprintf('Your %s Halloween sign-in link', $community->name()))
+                ? sprintf('Confirm your %s %s listing', $community->name(), $community->eventName())
+                : sprintf('Your %s %s sign-in link', $community->name(), $community->eventName()))
             ->htmlTemplate('email/magic_link.html.twig')
             ->textTemplate('email/magic_link.txt.twig')
-            ->context(['url' => $url, 'minutes' => $minutes, 'community' => $community->name(), 'claim_address' => $claimAddress]);
+            ->context(['url' => $url, 'minutes' => $minutes, 'community' => $community->name(), 'event' => $community->eventName(),
+                'emoji' => $community->settings['branding']['brand_emoji'] ?? '', 'claim_address' => $claimAddress]);
         $message->getHeaders()->addTextHeader('X-Auto-Response-Suppress', 'All');
         $this->mailer->send($message);
     }
@@ -46,9 +47,9 @@ final class Notifier
             ->from(Address::create($this->config->mailFrom))
             ->to($this->config->adminEmail)
             ->replyTo(new Address((string) $dispute['reporter_email']))
-            ->subject(sprintf('[%s Halloween] Review request D-%06d for %s', $community->name(), $dispute['id'], $address))
+            ->subject(sprintf('[%s %s] Review request D-%06d for %s', $community->name(), $community->eventName(), $dispute['id'], $address))
             ->textTemplate('email/dispute_notice.txt.twig')
-            ->context(['dispute' => $dispute, 'address' => $address, 'community' => $community->name(),
+            ->context(['dispute' => $dispute, 'address' => $address, 'community' => $community->name(), 'event' => $community->eventName(),
                 'admin_url' => rtrim($this->config->baseUrl, '/').'/admin/disputes']);
         $this->mailer->send($message);
     }

@@ -23,16 +23,16 @@ Edit `.env` (production values; keep `COMPOSE_FILE` commented out):
 APP_IMAGE_TAG=X.Y.Z                                 # the release you deploy (never "latest" in production)
 APP_SECRET=<openssl rand -hex 32>
 POSTGRES_PASSWORD=<openssl rand -hex 32>
-APP_BASE_URL=https://halloween.example.org
+APP_BASE_URL=https://events.example.org
 MAILER_DSN=smtp://user:pass@smtp.relay.example:587
-MAIL_FROM="Neighborhood Halloween <no-reply@example.org>"
+MAIL_FROM="Neighborhood events <no-reply@example.org>"
 ADMIN_EMAIL=organizer@example.org
 ORGANIZER_EMAILS=organizer@example.org            # organizer accounts (comma-separated); remove to revoke
 COMMUNITY_BOOTSTRAP_FILE=/app/deploy/community/community.yaml
 SESSION_COOKIE_NAME=__Host-nhm_session             # requires HTTPS (Cloudflare Tunnel); keep nhm_session for plain-HTTP tests
 ```
 
-Put your community folder in place: `mkdir -p deploy/community && cp config/community.example.yaml deploy/community/community.yaml`, then add your reviewed boundary GeoJSON (see [setup](setup.md)). Keep real deployment data under the git-ignored `deploy/` paths, never in `examples/`.
+Put your community folder in place: `mkdir -p deploy/community && cp config/community.example.yaml deploy/community/community.yaml`, then add your reviewed boundary GeoJSON (see [setup](setup.md)). Keep real deployment data under the git-ignored `deploy/` folder, never in `examples/`.
 
 ## 2. Start
 
@@ -44,7 +44,7 @@ curl -s http://127.0.0.1:8087/healthz     # {"status":"ok",...}
 docker compose exec app php bin/console app:admin:grant organizer@example.org
 ```
 
-To build from the checked-out source instead of pulling, run `docker compose up -d --build --wait` (the images get the same names, tagged locally). Migrations run automatically on start (`MIGRATE_ON_START=1`). The container refuses to start with a placeholder or short `APP_SECRET`.
+To build from the checked-out source instead of pulling, run `docker compose up -d --build --wait` (the images get the same names, tagged locally). Migrations run automatically on start (`MIGRATE_ON_START=1`). The container refuses to start with a placeholder or short `APP_SECRET`, the development database password, or `APP_DEBUG` switched on.
 
 ### Staging behind a tunnel (production image, test email)
 
@@ -65,7 +65,7 @@ Reuse the host's existing `cloudflared` (recommended) and add an ingress rule:
 
 ```yaml
 ingress:
-  - hostname: halloween.example.org
+  - hostname: events.example.org
     service: http://127.0.0.1:8087
   - service: http_status:404
 ```

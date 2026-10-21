@@ -81,6 +81,26 @@ final class CommunitySchemaTest extends TestCase
         self::assertSame('registry', $s['registration']['address_mode']);
     }
 
+    public function testTheEventNameDefaultsToHalloweenAndIsTheOrganizersToChange(): void
+    {
+        $base = ['community' => ['id' => 'lakeside', 'name' => 'Lakeside'], 'event' => ['date' => '2027-12-18']];
+        $schema = new CommunitySchema();
+        self::assertSame('Halloween', $schema->normalize($base)['event']['name'], 'the first supported event type');
+        self::assertSame('Holiday Lights', $schema->normalize(array_replace_recursive($base, ['event' => ['name' => ' Holiday Lights ']]))['event']['name']);
+        self::assertSame('Halloween', $schema->normalize(array_replace_recursive($base, ['event' => ['name' => '']]))['event']['name'], 'empty means the default');
+        self::assertSame(40, mb_strlen($schema->normalize(array_replace_recursive($base, ['event' => ['name' => str_repeat('x', 90)]]))['event']['name']));
+        // The same cleaning as every other community text (Shared/TextInput): no controls, no hidden or
+        // reordering characters, valid UTF-8 only.
+        $named = fn (string $name) => $schema->normalize(array_replace_recursive($base, ['event' => ['name' => $name]]))['event']['name'];
+        self::assertSame('Spring Fair', $named("Spring\nFair"));
+        self::assertSame('SpringFair', $named("Spring\u{202E}Fair\u{200B}"));
+        self::assertSame('Halloween', $named("\u{200B}\u{FEFF}"), 'only invisible characters means the default');
+        self::assertSame('Halloween', $named("\xC3\x28"), 'invalid UTF-8 means the default');
+        foreach (['config/community.example.yaml', 'examples/demo/community.yaml', 'examples/ventura-reserve/community.yaml'] as $file) {
+            self::assertSame('Halloween', $schema->normalize(Yaml::parseFile(self::root().'/'.$file))['event']['name'], $file);
+        }
+    }
+
     public function testAboutAccessAndLinks(): void
     {
         $s = new CommunitySchema();
@@ -104,6 +124,28 @@ final class CommunitySchemaTest extends TestCase
             self::assertStringContainsString('community.access must be one of', $joined);
             self::assertStringContainsString('community.links[0] needs a label and an https:// or mailto: address', $joined);
             self::assertStringContainsString('community.links[1]', $joined);
+        }
+    }
+
+    public function testZoneNamesCanBePinnedToAPointOnTheMap(): void
+    {
+        $s = new CommunitySchema();
+        $base = Yaml::parseFile(self::root().'/examples/ventura-reserve/community.yaml');
+        $base['zones'][0]['label_at'] = [-81.4512345678, 28.5123456789];
+        $base['zones'][1]['label_at'] = null;
+        $n = $s->normalize($base);
+        self::assertSame([-81.451235, 28.512346], $n['zones'][0]['label_at'], 'stored as [longitude, latitude], about 10 cm precision');
+        self::assertNull($n['zones'][1]['label_at']);
+        self::assertNull($n['zones'][2]['label_at'], 'absent: the map picks the spot');
+
+        foreach ([[28.5, -181.0], 'here', [1.0], [\NAN, 2.0], ['-81.4', '28.5'], [-81.4, 91.0]] as $bad) {
+            $base['zones'][0]['label_at'] = $bad;
+            try {
+                $s->normalize($base);
+                self::fail('expected ConfigException for '.json_encode($bad, \JSON_PARTIAL_OUTPUT_ON_ERROR));
+            } catch (ConfigException $e) {
+                self::assertStringContainsString('zones[0].label_at must be [longitude, latitude]', implode("\n", $e->errors));
+            }
         }
     }
 }

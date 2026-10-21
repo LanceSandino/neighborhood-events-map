@@ -3,9 +3,9 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #eae5e0" cellpadding="0" cellspacing="0">
 <tr><td style="padding:28px">
-<p style="font-size:12px;letter-spacing:2px;color:#c56b38;font-weight:bold;margin:0 0 8px">🎃 {{ community|upper }} HALLOWEEN</p>
+<p style="font-size:12px;letter-spacing:2px;color:#c56b38;font-weight:bold;margin:0 0 8px">{% if emoji %}{{ emoji }} {% endif %}{{ community|upper }} {{ event|upper }}</p>
 {% if claim_address %}
-<h1 style="font-size:22px;margin:0 0 12px">Confirm your trick-or-treat listing</h1>
+<h1 style="font-size:22px;margin:0 0 12px">Confirm your listing</h1>
 <p style="font-size:14px;line-height:1.5;margin:0 0 16px">You asked to list <strong>{{ claim_address }}</strong>. Open the link below and press <strong>Confirm</strong> to publish it.</p>
 {% else %}
 <h1 style="font-size:22px;margin:0 0 12px">Your sign-in link</h1>

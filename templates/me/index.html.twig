@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 {% set nav = 'me' %}
-{% block title %}My house · {{ c.community.name }} Halloween{% endblock %}
+{% block title %}My house · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block meta %}<meta name="csrf-token" content="{{ csrf_token('nhm') }}">{% endblock %}
 {% block body %}
 <div class="dash" id="dashboard">

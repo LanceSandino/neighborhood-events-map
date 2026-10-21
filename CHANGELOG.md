@@ -6,6 +6,31 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.7.0-beta.1] - 2026-10-21
+
+### Added
+- Organizers can move a zone's name on the map: drag it on the Boundary & zones page (Reset on the Community page), or use `app:zone:label`.
+- A code of conduct, a roadmap for Christmas lights and garage sale maps, and ADR 0010 (generic event types, proposed).
+
+### Changed
+- Pins and list cards show the kind you filter by (tick 21+ and those homes show 🍺); the map legend now includes 🍺 21+.
+- The site and its emails name the community's own event instead of always saying Halloween: organizers set the **Event name** under Organizer → Community → Event (it stays "Halloween" unless changed). Page titles, the sidebar, footer, search description and email subjects read "<community> <event name>".
+- Documentation matches this release: event-neutral naming, current filters and tabs, private vulnerability reporting, and checks for pull-request refs before going public.
+
+### Fixed
+- No more thin bright line between map tiles at some zoom levels.
+- Saving the Community page no longer drops zone descriptions.
+- Zone names on the map sit inside their zones and no longer cover each other (a common area’s name moves just above or below a phase’s name).
+- The whole `deploy/` folder is ignored by Git, as the README says, so your own community settings and boundary in `deploy/community/` cannot be committed by accident.
+- Package metadata declares the MIT license like `LICENSE`, and three framework bundles are held to their current major versions.
+
+### Security
+- GitHub Actions are pinned to exact commits, checkouts keep no credentials they do not need, and a release is drafted only for an annotated tag on `main`.
+- `bin/restore.sh` only accepts a plain backup file name.
+- The public map data no longer names a hidden zone in its walking groups.
+- The example's GIS review page shipped in the repository now uses the text-only, integrity-checked version too.
+- Shared map links keep only a real "visit at" time and a zone of sensible length.
+
 ## [0.6.0-beta.2] - 2026-10-21
 
 ### Security

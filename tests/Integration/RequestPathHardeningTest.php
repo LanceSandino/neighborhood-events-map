@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Tests\Support\AppTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * Traceability: security audit run-1 leads 1, 2 and 15 (percent-encoded paths). Symfony routes and
@@ -66,5 +67,24 @@ final class RequestPathHardeningTest extends AppTestCase
         self::assertSame(200, $this->code());
         $this->json('GET', '/api/addresses/lookup?q=12%20Pum');
         self::assertSame(200, $this->code(), 'encoding in the query string is normal');
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function otherEncodedPaths(): iterable
+    {
+        yield 'sign-in confirm (answered 500 before)' => ['POST', '/auth/%63onfirm'];
+        yield 'organizer moderation verb' => ['POST', '/api/admin/listings/1/%68ide'];
+        yield 'encoded slash' => ['GET', '/api%2Fme'];
+        yield 'escaped digit in an id' => ['GET', '/api/homes/%31'];
+        yield 'resident page' => ['GET', '/%6De'];
+    }
+
+    #[DataProvider('otherEncodedPaths')]
+    public function testOtherEncodedPathsAreRefusedBeforeAnyHandler(string $method, string $path): void
+    {
+        $this->configureCommunity();
+        $r = $this->json($method, $path, 'GET' === $method ? null : []);
+        self::assertSame(404, $this->code(), $path);
+        self::assertSame('not_found', $r['error']['code'] ?? null, $path);
     }
 }

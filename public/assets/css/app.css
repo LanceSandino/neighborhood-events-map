@@ -18,7 +18,7 @@
   --night: #222236; --dark: #1c2030; --ink: var(--text); --cream: var(--bg); --line: var(--border);
   --orange: var(--brand, #f07936); --orange2: #ffb261; --plum: var(--brand-accent, #524077); --green: #40967b;
   --mint: #e7f4ec; --red: var(--danger-border-strong); --white: var(--surface);
-  --pin-candy: #ef8352; --pin-gentle: #388f7d; --pin-spooky: #79539b;
+  --pin-candy: #ef8352; --pin-gentle: #388f7d; --pin-spooky: #79539b; --pin-adult: #a8661c;
 
   /* Semantic theme tokens. Light is the default; dark (below) changes colours only, never layout. */
   color-scheme: light;
@@ -255,7 +255,8 @@ a.crumb:hover strong { color: var(--link); }
 .map-tools button { height: 40px; width: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; box-shadow: var(--shadow-sm); font-size: 18px; color: var(--text); }
 .map-legend { position: absolute; bottom: 14px; left: 14px; z-index: 500; background: var(--glass); border-radius: 11px; padding: 11px 13px; box-shadow: 0 4px 18px #514f4f25; display: flex; gap: 14px; align-items: center; color: var(--text-2); font-size: 12px; font-weight: 800; }
 .legend-bullet { height: 9px; width: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-.legend-bullet.candy { background: #f08250; } .legend-bullet.gentle { background: #38917c; } .legend-bullet.spooky { background: #7b569b; }
+.legend-bullet.candy { background: var(--pin-candy); } .legend-bullet.gentle { background: var(--pin-gentle); } .legend-bullet.spooky { background: var(--pin-spooky); }
+.legend-bullet.adult { background: var(--pin-adult); }
 .map-footer { position: relative; flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 11px 15px; display: flex; gap: 8px; justify-content: space-between; align-items: center; z-index: 2; font-size: 12px; color: var(--muted); }
 .map-footer strong { color: var(--text-2); white-space: nowrap; }
 .map-selected { max-height: calc(100% - 28px); overflow: auto; position: absolute; right: 16px; bottom: 14px; z-index: 600; background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 13px 14px; width: 280px; box-shadow: 0 12px 30px #3940343a; display: none; }
@@ -271,6 +272,9 @@ a.crumb:hover strong { color: var(--link); }
    draws Leaflet's positioned tiles as separate layers and ignores a filter set on their pane. */
 html .leaflet-container { font: inherit; background: var(--map-bg); }
 .leaflet-container img.leaflet-tile { filter: var(--tile-filter); }
+/* At in-between zoom levels tile edges fall on sub-pixel rows and Leaflet's additive blend paints a bright seam
+   there: tiles overlap by half a pixel instead, drawn normally. */
+html .leaflet-container img.leaflet-tile { mix-blend-mode: normal; width: 256.5px !important; height: 256.5px !important; }
 .leaflet-container .leaflet-control-attribution { background: var(--glass) !important; color: var(--muted); }
 .leaflet-container .leaflet-control-attribution a { color: var(--link); }
 
@@ -280,6 +284,7 @@ html .leaflet-container { font: inherit; background: var(--map-bg); }
 .pin span { transform: rotate(45deg); display: block; font-size: 16px; line-height: 1; }
 .pin.scary { background: var(--pin-spooky); }
 .pin.quiet { background: var(--pin-gentle); }
+.pin.adult { background: var(--pin-adult); }
 .pin.dim { opacity: .18; }
 .pin.inactive { filter: grayscale(.7); opacity: .65; }
 .pin-icon.active .pin, .pin-icon:hover .pin { transform: rotate(-45deg) scale(1.14); }

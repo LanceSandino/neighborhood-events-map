@@ -15,10 +15,14 @@ export const DEFAULT_FILTERS = {
 export const isBigScare = (h) => h.jump_scares || h.scare_level === 'intense';
 export const isLowSensory = (h) => h.low_noise && !h.flashing_lights && !h.loud_audio && !isBigScare(h);
 
+/** "Visit at" choices: any time, open now, or a clock time HH:MM. */
+const isTimeChoice = (v) => v === 'any' || v === 'now' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+
 /**
  * Filters saved or shared by older versions (separate jump/intense filters) become the combined one. A share
  * link is untrusted input: only known filters of the right type are kept (a {"q":5} would break filtering and
- * be remembered on this device), checked as own keys so names like "constructor" never count.
+ * be remembered on this device), checked as own keys so names like "constructor" never count. "Visit at" must
+ * be any, now or HH:MM, and a zone key longer than 60 characters is dropped.
  */
 export function normalizeFilters(f) {
   if (!f || typeof f !== 'object' || Array.isArray(f)) return {};
@@ -28,7 +32,8 @@ export function normalizeFilters(f) {
     if (typeof DEFAULT_FILTERS[k] === 'boolean') {
       if (typeof v === 'boolean') out[k] = v;
     } else if (typeof v === 'string') {
-      out[k] = v.slice(0, 80);
+      if (k === 'q') out[k] = v.slice(0, 80);
+      else if (k === 'time' ? isTimeChoice(v) : v.length <= 60) out[k] = v;
     }
   }
   if (f.noJumps === true || f.noIntense === true) out.noScares = true;

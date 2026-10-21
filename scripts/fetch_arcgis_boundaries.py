@@ -51,7 +51,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # sibling helpers, als
 from arcgis_common import make_fetch, write_json  # noqa: E402
 from arcgis_config import UNCLASSIFIED, BoundarySource, load_boundary_source  # noqa: E402
 
-USER_AGENT = "NeighborhoodHalloweenGISImport/2.0 (noncommercial; ArcGIS feature query)"
+USER_AGENT = "NeighborhoodEventsMapGISImport/2.0 (noncommercial; ArcGIS feature query)"
 
 
 def classify(name: str, src: BoundarySource) -> str:
