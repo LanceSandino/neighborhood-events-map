@@ -418,3 +418,43 @@ test('bottom tabs are Map, Rules and My house; Rules opens the guide; the map st
   const [area, map] = await Promise.all([page.locator('path[stroke="#f07936"]').first().boundingBox(), page.locator('#map').boundingBox()]);
   expect(area.width, 'the neighborhood still fills a good part of the map').toBeGreaterThan(map.width * 0.25);
 });
+
+test('filters are icons with counts on every screen (names for screen readers); Filters expands the rest', async ({ page }) => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto(DEMO + '/');
+    await expect(page.locator('.metrics')).toHaveCount(0);
+    const quick = page.locator('.quick-filters [data-filter]');
+    expect(await quick.count()).toBeGreaterThanOrEqual(3);
+    for (const name of ['Candy', 'Sensory-friendly', 'Saved only']) {
+      const b = page.getByRole('button', { name, exact: true });
+      await expect(b).toBeVisible();
+      expect(await b.locator('.sr-only').evaluate((e) => e.getBoundingClientRect().width), `${name}: the word is for screen readers only`).toBeLessThanOrEqual(1);
+      await expect(b.locator('.fcount')).toHaveText(/^\d+$/);
+      expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    }
+    await expect(page.getByRole('button', { name: 'No big scares' })).toBeHidden();
+    await page.locator('#btnFilters').click();
+    await expect(page.getByRole('button', { name: 'No big scares' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  }
+});
+
+test('changing filters zooms the map to the matching homes, and Reset shows the whole neighborhood again', async ({ page, request }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(DEMO + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  // The zoom level is in every tile address (/z/x/y); the map keeps only the current level's tiles once it settles.
+  const zoom = () => page.evaluate(() => Math.max(...[...document.querySelectorAll('img.leaflet-tile')].map((t) => Number((t.getAttribute('src') || '').match(/\/(\d+)\/\d+\/\d+(?:@2x)?\.png/)?.[1] || 0))));
+  await expect.poll(zoom).toBeGreaterThan(0);
+  await page.waitForTimeout(800);
+  const before = await zoom();
+  const one = (await (await request.get(DEMO + '/api/homes')).json()).homes.find((h) => h.status === 'active');
+  await page.locator('#search').fill(one.address);
+  await expect(page.locator('#listCount')).toHaveText('1 showing');
+  await expect.poll(zoom, { timeout: 8000 }).toBeGreaterThan(before);
+  await page.locator('#btnFilters').click(); // Reset sits in the expanded Filters panel
+  await page.locator('#btnReset').click();
+  await expect.poll(zoom, { timeout: 8000 }).toBeLessThanOrEqual(before + 0.5);
+});

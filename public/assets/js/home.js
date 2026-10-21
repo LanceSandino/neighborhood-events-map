@@ -8,7 +8,7 @@
  */
 import { api } from './lib/api.js';
 import { createStore } from './lib/store.js';
-import { DEFAULT_FILTERS, matches, activeFilterCount, normalizeFilters, choiceCounts, isLowSensory } from './lib/filters.js';
+import { DEFAULT_FILTERS, matches, activeFilterCount, normalizeFilters, choiceCounts } from './lib/filters.js';
 import { nowInZone } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
 import { focusMap } from './lib/map-focus.js';
@@ -66,7 +66,8 @@ function initMap() {
     }
     fitAll();
     focusMap(L, map, { boundary: C.map.boundary, bbox: C.map.bbox }); // dim outside the neighborhood; stay near it
-    if (filters.zone && filters.zone !== 'all') highlightZone(filters.zone);
+    if (filters.zone && filters.zone !== 'all') highlightZone(filters.zone, { fit: false });
+    if (activeFilterCount(filters)) fitToResults(); // remembered filters: start on the homes that match
     map.on('click', () => selectHome(null));
     $('#mapFallback').hidden = true;
   } catch (e) {
@@ -140,10 +141,6 @@ function render() {
   $('#filterCount').textContent = String(count);
   $('#filterCount').classList.toggle('hide', count === 0);
   $('#btnFilters').setAttribute('aria-label', count ? `Filters, ${count} active` : 'Filters');
-  $('#statHomes').textContent = homes.length;
-  if ($('#statCandy')) $('#statCandy').textContent = homes.filter((h) => h.candy).length;
-  if ($('#statAdult')) $('#statAdult').textContent = homes.filter((h) => h.adult_drinks).length;
-  $('#statGentle').textContent = homes.filter(isLowSensory).length;
   renderChoiceCounts(c);
   for (const btn of document.querySelectorAll('[data-filter]')) btn.setAttribute('aria-pressed', String(!!filters[btn.dataset.filter]));
   $('#btnReset').classList.toggle('hide', activeFilterCount(filters) === 0);
@@ -169,6 +166,23 @@ function setFilters(patch) {
   filters = { ...filters, ...patch };
   store.set({ filters });
   render();
+  fitToResults({ delay: 'q' in patch ? 500 : 0 }); // typing in search waits for a pause
+}
+
+/**
+ * After a filter change the map shows what matches: the homes handing out that match (closer than a whole
+ * phase), else the chosen phase or walking area, else the whole neighborhood.
+ */
+let fitTimer = null;
+function fitToResults({ delay = 0 } = {}) {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(() => {
+    if (!map) return;
+    if (activeFilterCount(filters) === 0) { fitAll(); return; }
+    const shown = visible().filter(isOpen);
+    if (shown.length) map.fitBounds(shown.map((h) => [h.lat, h.lon]), { padding: [50, 50], maxZoom: 18, animate: !reducedMotion() });
+    else highlightZone(filters.zone || 'all');
+  }, delay);
 }
 
 function selectHome(id, { pan = true } = {}) {
@@ -213,8 +227,9 @@ function readSharedLink() {
 function applyStoredFilters() {
   filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
   syncControls();
-  highlightZone(filters.zone || 'all');
+  highlightZone(filters.zone || 'all', { fit: false });
   render();
+  fitToResults();
 }
 
 /** Puts the current filters into the search box, zone and time pickers. */
@@ -299,7 +314,7 @@ function bind() {
   search.addEventListener('input', () => setFilters({ q: search.value }));
   const zone = $('#zone');
   if (zone) {
-    zone.addEventListener('change', () => { setFilters({ zone: zone.value }); highlightZone(zone.value); });
+    zone.addEventListener('change', () => { highlightZone(zone.value, { fit: false }); setFilters({ zone: zone.value }); });
   }
   const time = $('#time');
   time.addEventListener('change', () => setFilters({ time: time.value }));
@@ -307,14 +322,15 @@ function bind() {
     filters = { ...DEFAULT_FILTERS };
     store.set({ filters });
     search.value = ''; if (zone) zone.value = 'all'; time.value = 'any';
-    highlightZone('all');
+    highlightZone('all', { fit: false });
     render();
+    fitToResults(); // no filters: the whole neighborhood (also where there are no phases)
   });
   $('#btnFit').addEventListener('click', () => { selectHome(null); fitAll(); });
   $('#btnZoomIn').addEventListener('click', () => map && map.zoomIn());
   $('#btnZoomOut').addEventListener('click', () => map && map.zoomOut());
   $('#btnLocate').addEventListener('click', locate);
-  if (filters.noScares || filters.noFlashing || filters.noLoud || filters.nonfood || filters.adult || filters.stroller || filters.saved || filters.time !== 'any') {
+  if (filters.noScares || filters.noFlashing || filters.noLoud || filters.nonfood || filters.stroller || filters.time !== 'any') {
     $('#moreFilters').classList.add('open');
     more.setAttribute('aria-expanded', 'true');
   }

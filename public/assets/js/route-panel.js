@@ -59,7 +59,7 @@ export function createRoutePanel(d) {
     if (zone && zone.value !== 'all') chips.push(zone.selectedOptions[0]?.dataset.label || zone.value);
     for (const b of document.querySelectorAll('[data-filter][aria-pressed="true"]')) {
       const icon = b.querySelector('.fi')?.outerHTML || '';
-      const words = [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
+      const words = b.querySelector('.sr-only')?.textContent || [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
       chips.push({ icon, words });
     }
     const time = $('#time');

@@ -311,4 +311,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/one-page-route"
   author: "Lance Sandino"
   timestamp: "2026-10-21T00:30:00Z"
+- id: CU-20261021-01
+  type: feature
+  title: "Compact filters: icon quick filters with counts, no summary cards, map zooms to matching homes"
+  description: "Owner feedback: the four summary cards repeated the filter counts. They are gone on every screen size (template, CSS and the stat updates in home.js); the counts live on the filters. Candy, Sensory-friendly, 21+ refreshments and Saved are quick filters shown as icon + count on desktop and phones alike, named by visually hidden text (screen readers; an aria-label failed axe label-content-name-mismatch because the visible count was not in the name) and title (hover); 21+ and Saved moved out of the expandable panel, which keeps the worded filters (no big scares, flashing, loud audio, non-food, kid-friendly, visit time). Phones lay out search, then phase + Filters, then the four icons on one row. After any filter change the map fits the matching homes that are handing out (maxZoom 18; a typed search waits 500 ms), else the chosen phase or area, else the whole neighborhood (Reset — which previously zoomed out only through the phase highlighter, so neighborhoods without phases stayed zoomed in); remembered filters do the same on load; switching saved routes too. The route summary chips read the quick filters' names from that hidden text."
+  impact: low
+  affected_modules: ["templates/home/index.html.twig", "public/assets/css/app.css", "public/assets/js/home.js", "public/assets/js/route-panel.js", "tests/e2e/specs/public.spec.mjs", "DECISIONS.md"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs: filters are icons with counts on every screen (names for screen readers); Filters expands the rest", "tests/e2e/specs/public.spec.mjs: changing filters zooms the map to the matching homes, and Reset shows the whole neighborhood again"]
+  commit_ref: "feature/compact-filters"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T02:30:00Z"
 ```

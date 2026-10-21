@@ -96,7 +96,7 @@ select:not([multiple]):not([size]) { -webkit-appearance: none; appearance: none;
   background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
 ::placeholder { color: var(--muted-2); opacity: 1; }
 h1, h2 { text-wrap: balance; }
-.metric b, .card-meta, .route-index, .map-selected p, table.data, .stat b { font-variant-numeric: tabular-nums; }
+.card-meta, .route-index, .map-selected p, table.data, .stat b { font-variant-numeric: tabular-nums; }
 button { cursor: pointer; border: 0; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible, .home-card:focus-visible {
   outline: 3px solid var(--focus); outline-offset: 2px;
@@ -164,12 +164,6 @@ a.crumb:hover strong { color: var(--link); }
 .hero-star { position: absolute; font-size: 20px; color: #f4c889; }
 .hero-star.one { top: 20px; left: 18px; }
 .hero-star.two { bottom: 17px; right: 78px; }
-.metrics { display: flex; gap: 20px; margin: 21px 0 22px; flex-wrap: wrap; }
-.metric { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 12px 17px; display: flex; align-items: center; gap: 10px; flex: 1 1 0; min-width: 150px; }
-.metric > div { min-width: 0; }
-.metric-icon { font-size: 19px; }
-.metric b { display: block; font-weight: 900; line-height: 1.1; font-size: clamp(14px, 1.25vw, 16px); white-space: nowrap; }
-.metric span { display: block; font-size: 12px; color: var(--muted); letter-spacing: .2px; line-height: 1.3; }
 
 /* ---- Controls ------------------------------------------------------------- */
 .controls { background: var(--surface); padding: 16px 17px; border-radius: 15px 15px 0 0; border: 1px solid var(--line); border-bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -183,6 +177,10 @@ a.crumb:hover strong { color: var(--link); }
 .phase-wrap > .phase-select { width: 100%; max-width: none; padding-left: 34px; }
 .phase-select { padding: 0 16px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-weight: 800; color: var(--text-2); max-width: 170px; height: 44px; }
 .filter-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 0 15px; font-weight: 800; white-space: nowrap; height: 44px; color: var(--ink); }
+.quick-filters { display: flex; gap: 8px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.quick-filters .filter-button { min-width: 52px; padding: 0 12px; gap: 6px; }
+#explore { margin-top: 20px; }
 .fi { display: inline-flex; align-items: center; justify-content: center; width: 1.25em; font-size: 1.05em; line-height: 1; flex-shrink: 0; }
 .filter-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--orange); color: var(--brand-ink); font-size: 12px; font-weight: 900; }
 /* Teal Pumpkin Project sign for non-food treats: the pumpkin emoji tinted teal. */
@@ -506,11 +504,6 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   .eyebrow { font-size: 11px; margin-bottom: 6px; }
   .intro h1 { font-size: 28px; letter-spacing: -1px; }
   .intro p { font-size: 12px; margin-top: 8px; }
-  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 15px 0; }
-  .metric { padding: 9px 10px; border-radius: 10px; min-width: 0; gap: 8px; align-items: flex-start; }
-  .metric-icon { font-size: 15px; line-height: 1.2; }
-  .metric b { font-size: 13px; }
-  .metric span { font-size: 12px; }
   .controls { border-radius: 13px 13px 0 0; padding: 11px 10px; gap: 7px; }
   .search { flex: 1 1 100%; order: -1; }
   .search input { padding: 10px 10px 10px 34px; font-size: 12px; }
@@ -559,9 +552,6 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 @media (max-width: 480px) {
   .crumb-loc { display: none; }
 }
-@media (max-width: 420px) {
-  .metric-icon { display: none; }
-}
 @media (max-width: 380px) {
   .cards { grid-template-columns: 1fr; }
 }
@@ -570,7 +560,6 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   .topline { height: 52px; }
   .content { padding: 14px 16px 18px; }
   .intro h1 { font-size: 26px; }
-  .metrics { margin: 12px 0; gap: 10px; }
   .workarea { grid-template-rows: max(280px, calc(100dvh - 128px)) auto; grid-template-columns: minmax(260px, 38%) minmax(0, 1fr); }
   .mobile-bottom { height: 52px; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
   .mobile-bottom a, .mobile-bottom button { flex-direction: row; gap: 6px; font-size: 12px; }
@@ -612,4 +601,15 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   .pin, .legend-bullet, .steps li.done { forced-color-adjust: none; }
   .check-chip, .mini-filter, .filter-button, .secondary, .home-card { border: 1px solid CanvasText; }
   select:not([multiple]):not([size]) { -webkit-appearance: auto; appearance: auto; background-image: none; }
+}
+
+/* ---- Phones: search; then phase + Filters; then the icon filters sharing one row ---- */
+@media (max-width: 660px) {
+  #explore { margin-top: 14px; }
+  .controls { display: flex; flex-wrap: wrap; }
+  .controls > .phase-wrap { flex: 1 1 0; order: 0; width: auto; }
+  .controls > #btnFilters { flex: 0 0 auto; order: 1; width: auto; padding: 0 14px; }
+  .controls:not(:has(.phase-wrap)) > #btnFilters { flex: 1 1 100%; }
+  .quick-filters { order: 2; flex: 1 1 100%; }
+  .quick-filters .filter-button { flex: 1 1 0; min-width: 0; padding: 0 6px; }
 }

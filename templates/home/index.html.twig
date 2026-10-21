@@ -17,21 +17,6 @@
   <div class="hero-illustration" aria-hidden="true"><span class="hero-star one">✦</span><span class="hero-moon">🌕</span><span class="hero-ghost">👻</span><span class="hero-star two">✧</span></div>
 </section>
 
-<div class="metrics" aria-label="Neighborhood summary">
-  {% if zs %}
-  <div class="metric"><div class="metric-icon" aria-hidden="true">📍</div><div><b>{{ zs.title }}</b><span>{{ zs.sub }}</span></div></div>
-  {% else %}
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🕔</div><div><b>{{ c.event.starts_at|time12|replace({' PM': '', ' AM': ''}) }}–{{ c.event.ends_at|time12 }}</b><span>Suggested hours</span></div></div>
-  {% endif %}
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🏘️</div><div><b id="statHomes">{{ c.stats.homes }}</b><span>Participating homes</span></div></div>
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🧩</div><div><b id="statGentle">{{ c.stats.low_sensory }}</b><span>Sensory-friendly stops</span></div></div>
-  {% if c.features.adult_refreshments %}
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🍺</div><div><b id="statAdult">{{ c.stats.adult }}</b><span>21+ refreshments</span></div></div>
-  {% else %}
-  <div class="metric"><div class="metric-icon" aria-hidden="true">🍬</div><div><b id="statCandy">{{ c.stats.candy }}</b><span>With candy</span></div></div>
-  {% endif %}
-</div>
-
 <section id="explore" aria-label="Find treat stops">
   <div class="controls">
     <div class="search"><input id="search" type="search" placeholder="Search streets, treats, or notes…" aria-label="Search homes" autocomplete="off"></div>
@@ -47,8 +32,13 @@
     </select>
     </div>
     {% endif %}
-    {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false"><span class="fi" aria-hidden="true">🍬</span>Candy</button>{% endif %}
-    {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false"><span class="fi" aria-hidden="true">🧩</span>Sensory-friendly</button>{% endif %}
+    {# Quick filters: icon + count everywhere; the name is visually hidden text (screen readers) and the title (hover). #}
+    <div class="quick-filters">
+      {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false" title="Candy"><span class="fi" aria-hidden="true">🍬</span><span class="sr-only">Candy</span></button>{% endif %}
+      {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false" title="Sensory-friendly"><span class="fi" aria-hidden="true">🧩</span><span class="sr-only">Sensory-friendly</span></button>{% endif %}
+      {% if c.features.adult_refreshments %}<button type="button" class="filter-button" data-filter="adult" aria-pressed="false" title="21+ refreshments"><span class="fi" aria-hidden="true">🍺</span><span class="sr-only">21+ refreshments</span></button>{% endif %}
+      <button type="button" class="filter-button" data-filter="saved" aria-pressed="false" title="Saved only"><span class="fi" aria-hidden="true">🧡</span><span class="sr-only">Saved only</span></button>
+    </div>
     <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters"><span class="fi" aria-hidden="true">⚙️</span>Filters<span class="filter-count hide" id="filterCount"></span></button>
   </div>
   <div class="filter-more" id="moreFilters" role="group" aria-label="More filters">
@@ -58,9 +48,7 @@
     <button type="button" class="mini-filter" data-filter="noLoud" aria-pressed="false"><span class="fi" aria-hidden="true">🔊</span>No loud audio</button>
     {% endif %}
     {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false"><span class="fi teal-pumpkin" aria-hidden="true">🎃</span>Non-food treats</button>{% endif %}
-    {% if c.features.adult_refreshments %}<button type="button" class="mini-filter" data-filter="adult" aria-pressed="false"><span class="fi" aria-hidden="true">🍺</span>21+ refreshments</button>{% endif %}
     <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false"><span class="fi" aria-hidden="true">👶</span>Kid-friendly</button>
-    <button type="button" class="mini-filter" data-filter="saved" aria-pressed="false"><span class="fi" aria-hidden="true">🧡</span>Saved only</button>
     <label class="time-filter"><span class="fi" aria-hidden="true">🕐</span>Visit at
       <select id="time">
         <option value="any">Any time</option>
