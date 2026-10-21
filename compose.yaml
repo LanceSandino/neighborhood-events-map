@@ -101,8 +101,10 @@ services:
   # Hourly cleanup of expired links, proof-of-work challenges, claim intents, throttle events,
   # stale route-cache rows and idle sessions (app:maintenance:purge). Same image, no published ports.
   maintenance:
-    build: { context: ., target: prod }
+    # Same image as app, built (or pulled) once for both: two builds of one image name collide on Docker's
+    # containerd image store ("image already exists").
     image: ${APP_IMAGE:-ghcr.io/lancesandino/neighborhood-events-map}:${APP_IMAGE_TAG:-latest}
+    pull_policy: missing
     restart: unless-stopped
     environment:
       <<: *app-env

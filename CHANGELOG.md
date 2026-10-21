@@ -6,6 +6,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Fixed
+- Building from source on Docker hosts that use the containerd image store no longer fails with "image already exists" (the maintenance service reuses the app image).
+
 ## [0.6.0-beta.1] - 2026-10-21
 
 ### Added

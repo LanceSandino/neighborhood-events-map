@@ -341,4 +341,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/sidebar-tabs"
   author: "Lance Sandino"
   timestamp: "2026-10-21T04:00:00Z"
+- id: CU-20261021-03
+  type: fix
+  title: "compose: maintenance reuses the app image instead of building it a second time"
+  description: "With the image names on GHCR, `docker compose build` on a Docker host using the containerd image store (Ubuntu's Docker 28 / Compose 2.40 on the production host) built app and maintenance as two targets exporting one image name, and the second export failed with \"image already exists\" (the first 0.6.0-beta.1 deploy stopped there; it was finished by starting the already-built images). maintenance now has no build section and pull_policy: missing: `up --build` builds the image once for app and creates maintenance from it, and `pull` fetches it once."
+  impact: low
+  affected_modules: ["compose.yaml"]
+  related_tests: ["docker compose -p ctest2 up --build --no-start with a never-built APP_IMAGE_TAG: app built once, maintenance created from it without a pull (local, Compose 5.5.1)", "production deploy of the next release (containerd image store) must build without the error"]
+  commit_ref: "fix/compose-single-build"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T05:00:00Z"
 ```
