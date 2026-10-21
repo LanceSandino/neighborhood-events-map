@@ -6,6 +6,8 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.6.0-beta.2] - 2026-10-21
+
 ### Security
 - Web addresses with percent-encoded characters in the path are refused. They could skip the sign-in idle timeout and a page-freshness check, sign a visitor out from another site, and slip past the server's request limits.
 - PHP no longer listens on a network port: the web server reaches it through a private socket, so nothing else on the server can talk to it. Sign-in and review-request emails run in their own small worker pool, so a flood of them can't slow down the map.
