@@ -63,6 +63,8 @@ jobs:
         run: pip install shapely==2.0.6 && python -I -m unittest discover -s scripts/tests -v
 
   images:
+    # Pull requests only: pushes to main build and publish the same images in the Images workflow.
+    if: github.event_name != 'push'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

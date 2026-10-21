@@ -1,9 +1,12 @@
-# Publish the app and nginx images to GitHub Container Registry, so a server runs
+# Publish the app and nginx images to GitHub Container Registry (linux/amd64 + linux/arm64), so a server runs
 # `docker compose pull && docker compose up -d` instead of building from source.
-#   vX.Y.Z tag      -> :X.Y.Z and :latest   linux/amd64 + linux/arm64 (servers pin a version in APP_IMAGE_TAG)
-#   push to main    -> :edge and :sha-<short>   linux/amd64 only (arm64 is emulated and costs ~30 runner
-#                      minutes per image on a cold cache; releases are what ARM servers run)
-# Each image carries OCI labels (source, revision, version), an SBOM and a signed build-provenance attestation.
+#   push to main   -> each platform is built once on its own native runner (no arm64 emulation), then joined
+#                     into :edge and :sha-<short>; if a vX.Y.Z tag already points at the commit (main and the
+#                     tag pushed together) the same images also get :X.Y.Z and :latest.
+#   vX.Y.Z tag     -> nothing is rebuilt: the tag job copies :sha-<short> of the tagged commit to :X.Y.Z and
+#                     :latest. If that build is still running (pushed together), the main run applies them.
+# Each image carries OCI labels, an SBOM and buildx provenance; a signed GitHub attestation is added once the
+# repository is public (GitHub refuses attestations for user-owned private repositories).
 name: Images
 on:
   push:
@@ -22,25 +25,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
+  build:
+    if: github.ref_type == 'branch'
+    runs-on: ${{ matrix.platform.runner }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { target: prod, image: neighborhood-events-map }
-          - { target: nginx, image: neighborhood-events-map-nginx }
+        image:
+          - { target: prod, name: neighborhood-events-map }
+          - { target: nginx, name: neighborhood-events-map-nginx }
+        platform:
+          - { arch: amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
     steps:
       - uses: actions/checkout@v7
       - name: Image name (registry names are lowercase)
         id: name
-        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
-      - name: Platforms (arm64 only for releases)
-        id: plat
-        run: echo "list=${{ startsWith(github.ref, 'refs/tags/v') && 'linux/amd64,linux/arm64' || 'linux/amd64' }}" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@v3
-        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image.name }}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -51,33 +53,111 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.name.outputs.ref }}
-          flavor: latest=false
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=edge,branch=main
-            type=sha,format=short,enable=${{ github.ref == 'refs/heads/main' }}
           labels: |
-            org.opencontainers.image.title=${{ matrix.image }}
-            org.opencontainers.image.description=Self-hosted neighborhood events map (${{ matrix.target }} image)
+            org.opencontainers.image.title=${{ matrix.image.name }}
+            org.opencontainers.image.description=Self-hosted neighborhood events map (${{ matrix.image.target }} image)
       - id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: ${{ matrix.target }}
-          platforms: ${{ steps.plat.outputs.list }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          target: ${{ matrix.image.target }}
+          platforms: linux/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.target }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+          outputs: type=image,name=${{ steps.name.outputs.ref }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.image.target }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.target }}-${{ matrix.platform.arch }}
           provenance: mode=max
           sbom: true
-      # GitHub stores attestations only for public repositories (user-owned private repos are refused);
-      # the image still carries its buildx provenance and SBOM.
+      - name: Keep the digest for the merge job
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          echo "${{ steps.build.outputs.digest }}" > "$RUNNER_TEMP/digests/${{ matrix.platform.arch }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.image.target }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}/digests/*
+          retention-days: 1
+          if-no-files-found: error
+
+  merge:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { target: prod, name: neighborhood-events-map }
+          - { target: nginx, name: neighborhood-events-map-nginx }
+    steps:
+      - uses: actions/checkout@v7
+      - id: name
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image.name }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digest-${{ matrix.image.target }}-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Join the platforms into :edge and :sha-<short>
+        env:
+          REF: ${{ steps.name.outputs.ref }}
+          EDGE: ${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          sources=()
+          for f in "$RUNNER_TEMP"/digests/*; do sources+=("$REF@$(cat "$f")"); done
+          tags=(-t "$REF:sha-${GITHUB_SHA::7}")
+          if [ "$EDGE" = true ]; then tags+=(-t "$REF:edge"); fi
+          docker buildx imagetools create "${tags[@]}" "${sources[@]}"
+      - name: Version tags when a release tag already points here (main and tag pushed together)
+        env:
+          REF: ${{ steps.name.outputs.ref }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet --depth=1 origin '+refs/tags/v*:refs/tags/v*' || true
+          for t in $(git tag --points-at HEAD 'v*'); do
+            docker buildx imagetools create -t "$REF:${t#v}" -t "$REF:latest" "$REF:sha-${GITHUB_SHA::7}"
+            echo "published $REF:${t#v} and :latest"
+          done
+      - name: Digest for the attestation
+        id: digest
+        run: echo "value=$(docker buildx imagetools inspect "${{ steps.name.outputs.ref }}:sha-${GITHUB_SHA::7}" --format '{{json .Manifest}}' | jq -r .digest)" >> "$GITHUB_OUTPUT"
       - uses: actions/attest-build-provenance@v2
         if: ${{ !github.event.repository.private }}
         with:
           subject-name: ${{ steps.name.outputs.ref }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.digest.outputs.value }}
           push-to-registry: true
+
+  promote:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [neighborhood-events-map, neighborhood-events-map-nginx]
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Copy the commit's images to the version tags (no rebuild)
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.name }}"
+          version="${GITHUB_REF_NAME#v}"
+          if docker buildx imagetools inspect "$ref:sha-${GITHUB_SHA::7}" >/dev/null 2>&1; then
+            docker buildx imagetools create -t "$ref:$version" -t "$ref:latest" "$ref:sha-${GITHUB_SHA::7}"
+            echo "published $ref:$version and :latest"
+          else
+            echo "::notice::$ref:sha-${GITHUB_SHA::7} is not built yet; the main build of this commit applies :$version when it finishes. Tag only commits on main."
+          fi

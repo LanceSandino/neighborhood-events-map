@@ -371,4 +371,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "ci/edge-amd64-only"
   author: "Lance Sandino"
   timestamp: "2026-10-21T06:00:00Z"
+- id: CU-20261021-06
+  type: chore
+  title: "Images: native arm64 runner, one build per commit, release tags reuse it (supersedes CU-20261021-05)"
+  description: "Owner review of Actions minutes: one release cost about 125 runner minutes because pushing main and the tag together built the same images twice and the tag build emulated arm64 under QEMU (25-33 minutes per image), and CI's images job built them a third time. The Images workflow now builds each platform once per commit on its own native runner (ubuntu-24.04 for amd64, ubuntu-24.04-arm for arm64, standard runners in private repositories since early 2026), pushes by digest and joins them into :edge and :sha-<short>. A release tag never rebuilds: when main and the tag are pushed together the main run applies :X.Y.Z and :latest after joining; a tag pushed later copies :sha-<short> (imagetools, seconds). CI's image-build check runs only for pull requests. Edge images are multi-arch again (CU-20261021-05's amd64-only edge is no longer needed)."
+  impact: none
+  affected_modules: [".github/workflows/images.yml", ".github/workflows/ci.yml", "docs/runbooks/release.md"]
+  related_tests: ["actionlint 1.7.7 clean", "next push to main: four native build jobs, two merge jobs, :edge and :sha-<short> multi-arch", "next release tag: promote job only (no build)"]
+  commit_ref: "ci/native-arm-no-duplicates"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T06:30:00Z"
 ```
