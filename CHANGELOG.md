@@ -6,6 +6,13 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.7.0-beta.6] - 2026-10-21
+
+### Security
+- PHP 8.3.36: fixes the two critical remote code execution flaws in PHP core announced on 21 October 2026 (CVE-2026-109618, CVE-2026-109619). Update now.
+- The images carry the latest CA certificates (the compromised eMudhra intermediate CAs are no longer trusted) and OpenSSL 3.5.9.
+- PHP's session upload progress, which the app never used, is switched off: it was the documented way in for one of the flaws.
+
 ## [0.7.0-beta.5] - 2026-10-21
 
 ### Changed

@@ -4,12 +4,12 @@
 # Every base image is pinned by its multi-arch digest, so a rebuild cannot pick up a moved or replaced tag;
 # Dependabot (docker ecosystem) proposes the new digest when a tag moves.
 
-FROM php:8.3-fpm-alpine@sha256:454b11c8907e32878ce92e87b13c14e1bbe6e1b10f4f96d4a19c9b62ec675d41 AS php-base
+FROM php:8.3-fpm-alpine@sha256:b1304593d3dc94459cc0d6e187b4c202a5cac1cf7c1b386402f8bbd57d70033f AS php-base
 RUN apk add --no-cache icu-libs libpq libzip fcgi tzdata \
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev postgresql-dev libzip-dev linux-headers \
  && docker-php-ext-install -j"$(nproc)" intl pdo_pgsql opcache pcntl zip \
  && apk del .build-deps
-COPY --from=composer:2@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:d0c32820c62cc860fddd22adceed4eeda7698b093a7a88d503414172ce400626 /usr/bin/composer /usr/bin/composer
 COPY docker/php/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
 COPY docker/php/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
 COPY --chmod=0755 docker/php/entrypoint.sh /usr/local/bin/app-entrypoint

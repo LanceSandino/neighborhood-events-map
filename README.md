@@ -2,7 +2,7 @@
 
 A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. A Christmas lights map and a garage sale map are next: see the [roadmap](ROADMAP.md).
 
-**Status:** `0.7.0-beta.5` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.7.0-beta.6` (pre-release) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|

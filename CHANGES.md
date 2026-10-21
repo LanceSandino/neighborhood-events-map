@@ -781,4 +781,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/privacy-cookie-notice"
   author: "Lance Sandino"
   timestamp: "2026-10-21T14:45:00Z"
+- id: CU-20261021-51
+  type: fix
+  title: "security: PHP 8.3.36 (CVE-2026-109618, CVE-2026-109619) and current CA certificates; session upload progress off"
+  description: "PHP's out-of-band release of 21 October 2026 fixes two critical remote code execution flaws in PHP core, with exploitation attempts reported; production ran 8.3.35. The php:8.3-fpm-alpine base digest now pins 8.3.36, whose Alpine 3.24 layer carries ca-certificates 20261020 (the eMudhra intermediate CA compromise) and OpenSSL 3.5.9; the composer:2 digest is refreshed too. docker/php/php.ini sets session.upload_progress.enabled = 0: the app never reports upload progress, and PHP names it as the mitigation for CVE-2026-109619. A test fails on any supported PHP line older than its fixed release."
+  impact: high
+  affected_modules: ["Dockerfile", "docker/php/php.ini"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testPhpHasTheOctober2026SecurityFixesAndNoUploadProgress (fails on PHP 8.3.35)", "scripts/smoke_session.py (13/13 on 8.3.36)"]
+  commit_ref: "fix/php-8.3.36"
+  author: "Lance Sandino"
+  timestamp: "2026-10-21T20:50:00Z"
 ```

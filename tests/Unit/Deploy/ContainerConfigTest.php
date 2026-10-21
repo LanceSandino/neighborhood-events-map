@@ -163,6 +163,20 @@ final class ContainerConfigTest extends TestCase
         self::assertSame(4, $checked, "/, /api/admin/ and the two email endpoints");
     }
 
+    /**
+     * CVE-2026-109618 / CVE-2026-109619 (PHP core remote code execution, fixed 21 October 2026 in 8.3.36, 8.4.27 and
+     * 8.5.12): the tests never run, and the images never ship, an older PHP of a supported line. Session upload
+     * progress, which the app never uses, stays off (it is the mitigation PHP gives for the second flaw).
+     */
+    public function testPhpHasTheOctober2026SecurityFixesAndNoUploadProgress(): void
+    {
+        $fixed = ['8.3' => '8.3.36', '8.4' => '8.4.27', '8.5' => '8.5.12'];
+        $line = \PHP_MAJOR_VERSION.'.'.\PHP_MINOR_VERSION;
+        self::assertArrayHasKey($line, $fixed, 'a supported PHP line');
+        self::assertTrue(version_compare(\PHP_VERSION, $fixed[$line], '>='), \PHP_VERSION.' lacks the October 2026 security fixes');
+        self::assertMatchesRegularExpression('~^session\.upload_progress\.enabled = 0$~m', self::read('docker/php/php.ini'));
+    }
+
     public function testBaseImagesArePinnedByDigest(): void
     {
         preg_match_all('~^FROM\s+(\S+)~m', self::read('Dockerfile'), $from);

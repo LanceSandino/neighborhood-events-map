@@ -1,6 +1,11 @@
 # Test and verification report
 
-## Latest run — 2026-10-21, release 0.7.0-beta.5
+## Latest run — 2026-10-21, release 0.7.0-beta.6
+
+PHP 8.3.36 security release (CU-20261021-51), dev stacks rebuilt on the new base image: PHPUnit **272 tests, 5153 assertions** OK;
+PHPStan no errors; `composer audit --locked` no advisories; session smoke **13/13**.
+
+## Run — 2026-10-21, release 0.7.0-beta.5
 
 0.7.0-beta.4 plus the privacy notice's cookie section and `CLOUDFLARE_PROXY` (CU-20261021-50): PHPUnit **271 tests, 5150 assertions**
 OK; PHPStan no errors. With `CLOUDFLARE_PROXY=1` and `CLOUDFLARE_WEB_ANALYTICS=1` on the demo stack: no horizontal overflow on the
