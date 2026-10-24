@@ -19,6 +19,12 @@ if [ "${APP_ENV:-prod}" = "prod" ]; then
   esac
 fi
 
+# The development image runs as root with the source bind-mounted: a fresh branding volume is root's, but PHP-FPM's
+# workers (www-data) store uploaded logos there. Production runs as www-data on a volume the image already owns.
+if [ "$(id -u)" = "0" ] && [ -d /app/var/branding ]; then
+  chown www-data:www-data /app/var/branding
+fi
+
 if [ "$1" = "php-fpm" ] || [ "${WAIT_FOR_DB:-0}" = "1" ]; then
   tries=0
   until php bin/console app:db:ping >/dev/null 2>&1; do

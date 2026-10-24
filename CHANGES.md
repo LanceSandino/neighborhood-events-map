@@ -821,4 +821,44 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "chore/latest-stable"
   author: "Lance Sandino"
   timestamp: "2026-10-21T21:20:00Z"
+- id: CU-20261024-01
+  type: fix
+  title: "security: PHP hardening for CVE-2026-109619 and CVE-2026-115560; file uploads only in an upload pool behind an nginx multipart gate"
+  description: "CVE-2026-115560 (23 October 2026, no fixed PHP release) needs session upload progress on and a runtime switch of the session serializer; php.ini keeps session.upload_progress.enabled = 0, pins session.serialize_handler = php, and a test fails if any PHP source under src/, config/ or public/ calls ini_set() on a session setting. PHP's other partial mitigation for CVE-2026-109619 on 8.5 is applied (fatal_error_backtraces = Off), user_ini.filename is empty, max_file_uploads = 1, and php-prod.ini sets zend.assertions = -1 and zend.exception_ignore_args = On (production was running with assertions on and trace arguments kept). PHP-FPM gets a third, on-demand upload pool (FPM_UPLOAD_MAX_CHILDREN, default 2) that alone accepts files; the www and mail pools set file_uploads off; every pool disables exec, passthru, shell_exec, system, proc_open, popen and pcntl_exec and sets allow_url_fopen off (the routing provider uses CurlHttpClient; the CLI keeps its defaults). nginx routes POST /api/admin/community/logo, /geometries/import and /addresses/import by exact location to upload.sock (limit_conn 1) and answers 415 to a multipart body anywhere else, keyed on $content_type (the CONTENT_TYPE PHP receives) and the normalized $uri with no numbered captures. The healthcheck pings all three pools. The development entrypoint hands a fresh branding volume to www-data (it was root's, so logo uploads failed in the dev stack; production already owns it)."
+  impact: high
+  affected_modules: ["docker/php/php.ini", "docker/php/php-prod.ini", "docker/php/fpm-pool.conf", "docker/php/healthcheck.sh", "docker/php/entrypoint.sh", "docker/nginx/default.conf", "Dockerfile", "compose.yaml", "docs/runbooks/deployment.md", "SECURITY.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testPhpHasTheOctober2026SecurityFixesAndNoUploadProgress, testProductionPhpCompilesAssertionsOutAndHidesTraceArguments, testOnlyTheUploadPoolAcceptsFilesAndNoWebWorkerRunsPrograms, testNginxSendsMultipartBodiesOnlyToTheUploadPool, testPhpFpmListensOnlyOnUnixSocketsReachableByNginx, testNginxCapsOneClientsRequestsInPhpBelowThePoolSizes (6 fail on the 0.8.0-beta.1 config)", "tests/e2e/specs/admin.spec.mjs: organizer downloads the claims list as a CSV … and uploads a logo through the upload pool (upload and removal succeed; multipart to four other paths answers 415)"]
+  commit_ref: "feature/security-release-0.8.0-beta.2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-24T13:10:00Z"
+- id: CU-20261024-02
+  type: fix
+  title: "security: brotli 1.2.1 (CVE-2026-111497) via apk upgrade in both runtime images; Trivy and npm audit in CI; daily security checks"
+  description: "A Trivy scan of the 0.8.0-beta.1 images found brotli-libs 1.2.0-r1 (CVE-2026-111497, Brotli decoder out-of-bounds write) in the app and nginx images: Alpine ships 1.2.1-r0 but the pinned php:8.5-fpm-alpine and nginx-unprivileged:1.31-alpine images were not rebuilt with it yet. Both runtime stages now run apk upgrade --no-cache, so Alpine's security fixes never wait for a base-image rebuild; digests still pin the base. CI's PR image job saves the built images and scans them with Trivy 0.76.1 (pinned by digest, no socket or token), failing on any fixed HIGH/CRITICAL package, and the js job runs npm audit on the end-to-end tools' lock file. A new daily workflow (security.yml) checks the published :latest and :edge images (PHP is the newest release of its line per php.net's releases API; Trivy) and runs composer audit and npm audit on the lock files, so a new advisory fails a run without a push."
+  impact: high
+  affected_modules: ["Dockerfile", ".github/workflows/ci.yml", ".github/workflows/security.yml", "SECURITY.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testRuntimeImagesTakeAlpineSecurityFixesAndAreScanned, testBaseImagesArePinnedByDigest (workflow tool images)", "Trivy 0.76.1 on the built prod and nginx images: 1 HIGH each before (brotli-libs 1.2.0-r1), exit 0 after"]
+  commit_ref: "feature/security-release-0.8.0-beta.2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-24T13:15:00Z"
+- id: CU-20261024-03
+  type: fix
+  title: "security: escape home ids in the list and selected-home markup (CodeQL js/xss-through-dom)"
+  description: "CodeQL default setup (enabled 2026-10-23) reported js/xss-through-dom at public/assets/js/home.js:155 and :218: home ids from the page's boot JSON (DOM text) went into data-id, data-save and data-report attributes of innerHTML without escaping. Ids are server integers today, so nothing was exploitable, but cardHtml and selectedHtml now pass every page-data value, ids included, through esc()."
+  impact: low
+  affected_modules: ["public/assets/js/lib/render.js"]
+  related_tests: ["tests/js/lib.test.mjs: cards and the selected-home panel escape every value taken from the page data, ids included (fails before the change)"]
+  commit_ref: "feature/security-release-0.8.0-beta.2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-24T13:20:00Z"
+- id: CU-20261024-04
+  type: chore
+  title: "Latest stable dependencies: DoctrineBundle 3, DoctrineMigrationsBundle 4, PHPUnit 13, PHPStan 2.3.2; current base-image digests; Mailpit 1.32.0"
+  description: "Following D-20261021-36 (latest stable everywhere; Symfony stays on 7.4 LTS): doctrine/doctrine-bundle 2.19.1 → 3.3.2 and doctrine/doctrine-migrations-bundle 3.7.1 → 4.0.1 (DBAL-only; the removed use_savepoints option is dropped because DBAL 4 always uses savepoints, and the bundle's server_version now says 18 like DATABASE_URL), phpunit/phpunit 12.5.40 → 13.4.3 (EligibilityTest's private attempt() helper is renamed tryToList() because PHPUnit 13 adds a final TestCase::attempt()), phpstan 2.3.2. Base digests: php:8.5-fpm-alpine (PHP 8.5.12, rebuilt 21 October), composer:2 (2.10.3), postgres:18-alpine (18.6); Mailpit v1.32.0 for development and staging."
+  impact: medium
+  affected_modules: ["composer.json", "composer.lock", "config/packages/doctrine.yaml", "config/reference.php", "Dockerfile", "compose.yaml", "compose.dev.yaml", "compose.staging.yaml", ".github/workflows/ci.yml", "tests/Integration/EligibilityTest.php"]
+  related_tests: ["PHPUnit 13.4.3: 276 tests, 5398 assertions on PHP 8.5.12 (lines 94.03 %)", "migrations up/down/up on a blank database", "tests/e2e full suite (78 passed, 2 skipped)", "scripts/smoke_session.py 13/13"]
+  commit_ref: "feature/security-release-0.8.0-beta.2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-24T13:25:00Z"
 ```

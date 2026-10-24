@@ -7,7 +7,7 @@ import { statusOf, time12, nowInZone } from '../../public/assets/js/lib/time.js'
 import { planStops, orderGroup, haversine, applyOrder, moveStop, suggestNearby } from '../../public/assets/js/lib/route.js';
 import { createStore } from '../../public/assets/js/lib/store.js';
 import { maskRings, panLimit, WORLD } from '../../public/assets/js/lib/map-focus.js';
-import { zoneStyle, symbolOf, pinHtml } from '../../public/assets/js/lib/render.js';
+import { zoneStyle, symbolOf, pinHtml, cardHtml, selectedHtml } from '../../public/assets/js/lib/render.js';
 import { houseNumberOf } from '../../public/assets/js/lib/address.js';
 import { labelPoint, resolveOverlaps } from '../../public/assets/js/lib/zone-labels.js';
 
@@ -369,4 +369,15 @@ test('shared filters keep only a real time choice and a zone key of sensible len
   assert.deepEqual(normalizeFilters({ time: '24:00' }), {});
   assert.deepEqual(normalizeFilters({ time: 'now', zone: 'area:0' }), { time: 'now', zone: 'area:0' });
   assert.deepEqual(normalizeFilters({ time: '07:45' }), { time: '07:45' });
+});
+
+test('cards and the selected-home panel escape every value taken from the page data, ids included', () => {
+  // The homes come from JSON in the page (DOM text); a tampered or broken id must never become markup.
+  const hostile = '1" onmouseover="alert(1)"><img src=x onerror=alert(1)>';
+  for (const html of [cardHtml(home({ id: hostile, address: '<b>x</b>' }), ctx, { saved: false, active: false, focus: {} }),
+    selectedHtml(home({ id: hostile, note: '<script>x</script>' }), ctx, false)]) {
+    assert.doesNotMatch(html, /<img|<script|<b>x|" onmouseover=/);
+    assert.match(html, /&quot; onmouseover=&quot;alert\(1\)&quot;&gt;&lt;img/);
+  }
+  assert.match(cardHtml(home({ id: 7 }), ctx, { saved: true, active: false, focus: {} }), /data-id="7"[\s\S]*data-save="7"/);
 });

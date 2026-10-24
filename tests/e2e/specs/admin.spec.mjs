@@ -110,7 +110,11 @@ test('session-expired sign-in returns an organizer to the page they were on', as
   await expect(page.getByRole('heading', { name: 'Review requests' })).toBeVisible();
 });
 
-test('organizer downloads the claims list as a CSV (a CSRF-checked POST, never a plain link)', async ({ page }) => {
+// A 1×1 PNG: the smallest valid logo.
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
+
+// One sign-in covers both checks: the per-email sign-in link limit (3 per 15 minutes) allows three sign-ins per run.
+test('organizer downloads the claims list as a CSV (a CSRF-checked POST, never a plain link) and uploads a logo through the upload pool', async ({ page }) => {
   const guard = watchConsole(page);
   const since = Date.now() - 1000;
   await page.goto(VENTURA + '/login?next=%2Fadmin');
@@ -133,5 +137,21 @@ test('organizer downloads the claims list as a CSV (a CSRF-checked POST, never a
   expect(download.suggestedFilename()).toMatch(/^claims-[\d-]+\.csv$/);
   expect(fs.readFileSync(await download.path(), 'utf8')).toMatch(/^address_id,address,zone/);
   await expect(page.locator('.checklist')).toBeVisible(); // still on the console
+
+  // The one place a file goes up: nginx sends it to PHP-FPM's upload pool, the only pool that accepts files.
+  await page.goto(VENTURA + '/admin/community');
+  await page.locator('#bLogo').setInputFiles({ name: 'e2e-logo.png', mimeType: 'image/png', buffer: PNG });
+  await expect(page.getByText('Logo updated.')).toBeVisible();
+  await expect(page.getByText(/Current: .+/)).toBeVisible();
+  await page.locator('#bLogoRemove').click();
+  await expect(page.getByText('Logo removed.')).toBeVisible();
+  await expect(page.getByText(/Current: .+/)).toHaveCount(0);
+
+  // Even signed in, a multipart body to any other endpoint never reaches PHP.
+  for (const path of ['/api/admin/community', '/api/auth/request-link', '/api/me/homes', '/']) {
+    const res = await page.request.post(VENTURA + path, { multipart: { x: '1' } });
+    expect(res.status(), path).toBe(415);
+  }
   guard.assertClean();
 });
+

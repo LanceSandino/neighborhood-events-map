@@ -1,0 +1,68 @@
+# Daily security checks of what is published and locked, so a new advisory fails a run (and GitHub emails the
+# owner) even when nothing was pushed. Security releases are applied the same day (D-20261021-36).
+#   - PHP in the published app image is the newest release of its line (php.net), e.g. a PHP security release.
+#   - The published app and nginx images have no fixed HIGH/CRITICAL vulnerability in their OS packages (Trivy).
+#   - composer.lock and the end-to-end test tools' package-lock.json have no known advisory.
+# Every tool runs from an image pinned by digest (D-20261021-29) with no token or secret.
+name: Security checks
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-checks
+  cancel-in-progress: true
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+  COMPOSER_IMAGE: composer:2@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc
+
+jobs:
+  published-images:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: [latest, edge]
+    steps:
+      - name: Image names (registry names are lowercase)
+        id: name
+        run: |
+          echo "app=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/neighborhood-events-map:${{ matrix.tag }}" >> "$GITHUB_OUTPUT"
+          echo "nginx=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/neighborhood-events-map-nginx:${{ matrix.tag }}" >> "$GITHUB_OUTPUT"
+      - name: PHP is the newest release of its line
+        env: { APP_IMAGE: '${{ steps.name.outputs.app }}' }
+        run: |
+          have=$(docker run --rm --entrypoint php "$APP_IMAGE" -r 'echo PHP_VERSION;')
+          line=${have%.*}
+          latest=$(curl -fsS --retry 3 "https://www.php.net/releases/?json&version=$line" | jq -r .version)
+          echo "image: PHP $have, php.net: $line line at $latest"
+          test -n "$latest" && test "$latest" != null
+          if [ "$(printf '%s\n%s\n' "$latest" "$have" | sort -V | tail -n1)" != "$have" ]; then
+            echo "::error::$APP_IMAGE runs PHP $have; PHP $latest is out. Rebuild and release."
+            exit 1
+          fi
+      - name: No fixed HIGH or CRITICAL vulnerability in the images
+        env: { APP_IMAGE: '${{ steps.name.outputs.app }}', NGINX_IMAGE: '${{ steps.name.outputs.nginx }}' }
+        run: |
+          for image in "$APP_IMAGE" "$NGINX_IMAGE"; do
+            docker run --rm "$TRIVY_IMAGE" image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+              --exit-code 1 --no-progress "$image"
+          done
+
+  locked-dependencies:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - name: composer audit (composer.lock)
+        run: docker run --rm -v "$PWD":/app -w /app "$COMPOSER_IMAGE" audit --locked --no-interaction
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: '24' }
+      - name: npm audit (end-to-end test tools)
+        working-directory: tests/e2e
+        run: npm audit --package-lock-only --audit-level=moderate

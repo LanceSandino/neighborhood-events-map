@@ -6,6 +6,23 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.8.0-beta.2] - 2026-10-24
+
+Security release. Update now (pull `0.8.0-beta.2` and recreate the stack; no data changes).
+
+### Security
+- **CVE-2026-115560** (PHP, announced 23 October 2026, no fixed PHP release yet): session upload progress stays off and the app never changes the session serializer at runtime, which together close it. PHP 8.5.12 already fixes CVE-2026-109618 and CVE-2026-109619.
+- **CVE-2026-111497** (Brotli decoder out-of-bounds write): both images now carry brotli 1.2.1; the base images had not been rebuilt with it yet, so the images now take Alpine's security fixes at build time.
+- Only the three organizer upload endpoints (logo, GeoJSON and CSV imports) accept files, in their own small PHP pool; every other path refuses a multipart body before PHP reads it, so PHP's file-upload code is unreachable for visitors.
+- PHP hardening: no backtraces in fatal errors, no `.user.ini` files, one file per upload, assertions compiled out and no argument values in error traces in production; web workers cannot run programs or open URLs as files.
+- The home list and the selected-home panel escape home ids too (found by CodeQL), so a tampered page-data value can never become markup.
+
+### Changed
+- Doctrine bundles 3 and 4 (DBAL-only, no visible change), PHPUnit 13, PHPStan 2.3.2; current base-image digests (PHP 8.5.12, PostgreSQL 18.6, composer 2.10.3) and Mailpit 1.32.0 for development.
+
+### Added
+- Security checks: CI scans the built images with Trivy and audits the end-to-end tools' npm lock file; a daily workflow re-checks the published images (newest PHP of its line, no fixed HIGH/CRITICAL package) and the lock files.
+
 ## [0.8.0-beta.1] - 2026-10-21
 
 ### Upgrade notes

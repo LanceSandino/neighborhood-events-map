@@ -12,7 +12,7 @@ use App\Tests\Support\AppTestCase;
  */
 final class EligibilityTest extends AppTestCase
 {
-    private function attempt(array $address, string $email = 'self@example.test'): array
+    private function tryToList(array $address, string $email = 'self@example.test'): array
     {
         return $this->json('POST', '/api/auth/request-link', ['email' => $email, 'pow' => $this->solvePow('claim'),
             'claim' => ['address' => $address, 'listing' => self::listing()]]);
@@ -31,7 +31,7 @@ final class EligibilityTest extends AppTestCase
             'invalid_address' => ['house_number' => 'ten', 'street' => 'Pumpkin Ln', 'lat' => 40.005, 'lon' => -75.005],
         ];
         foreach ($cases as $reason => $input) {
-            $r = $this->attempt($input, "case-$reason@example.test");
+            $r = $this->tryToList($input, "case-$reason@example.test");
             self::assertSame($reason, $r['error']['code'] ?? null, $reason.': '.json_encode($r));
             self::assertSame(422, $this->code());
         }
@@ -43,9 +43,9 @@ final class EligibilityTest extends AppTestCase
     {
         $this->configureCommunity();
         $this->addAddress('100', 'Lantern Way', 40.006, -74.996, 'east');
-        $r = $this->attempt(['house_number' => '100', 'street' => 'Lantern Way', 'lat' => 40.006, 'lon' => -74.99601], 'dup@example.test');
+        $r = $this->tryToList(['house_number' => '100', 'street' => 'Lantern Way', 'lat' => 40.006, 'lon' => -74.99601], 'dup@example.test');
         self::assertSame(202, $this->code(), 'existing registry entry is used instead of the pin');
-        $r = $this->attempt(['house_number' => '102', 'street' => 'Lantern Way', 'lat' => 40.00601, 'lon' => -74.99601]);
+        $r = $this->tryToList(['house_number' => '102', 'street' => 'Lantern Way', 'lat' => 40.00601, 'lon' => -74.99601]);
         self::assertSame('pin_collision', $r['error']['code'], '~1.4 m from another home');
         $token = $this->requestLink('pin@example.test', ['address' => ['house_number' => '104', 'street' => 'lantern way', 'lat' => 40.0065, 'lon' => -74.9965], 'listing' => self::listing()]);
         self::assertSame(1, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM eligible_addresses'), 'no address row until verified');
@@ -68,7 +68,7 @@ final class EligibilityTest extends AppTestCase
         // Public-readiness hardening note: the extent of an unapproved outline was public too.
         self::assertNull($c['map']['bbox'], 'nor its extent');
         self::assertNotNull($c['map']['center'], 'the map still opens on the area');
-        $r = $this->attempt($this->byId($id));
+        $r = $this->tryToList($this->byId($id));
         self::assertSame(403, $this->code());
         self::assertSame('closed', $r['error']['code']);
         $this->client->request('GET', '/');
@@ -92,7 +92,7 @@ final class EligibilityTest extends AppTestCase
         $this->configureCommunity(['registration' => ['address_mode' => 'registry']]);
         $this->addAddress('12', 'Pumpkin Ln', 40.005, -75.007, 'west');
         $this->addAddress('120', 'Pumpkin Ln', 40.005, -75.008, 'west');
-        $r = $this->attempt(['house_number' => '14', 'street' => 'Pumpkin Ln', 'lat' => 40.005, 'lon' => -75.005]);
+        $r = $this->tryToList(['house_number' => '14', 'street' => 'Pumpkin Ln', 'lat' => 40.005, 'lon' => -75.005]);
         self::assertSame('self_entry_disabled', $r['error']['code']);
         self::assertSame([], $this->json('GET', '/api/addresses/lookup?q=Pumpkin')['results'], 'no enumeration without a house number');
         self::assertSame([], $this->json('GET', '/api/addresses/lookup?q=1')['results']);

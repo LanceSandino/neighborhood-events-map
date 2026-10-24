@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+        image: postgres:18-alpine@sha256:898c60cb390d1085bc97bdd6a1ae968757421df394b071848b52b1c09c89d6a5
         env: { POSTGRES_USER: halloween, POSTGRES_PASSWORD: halloween, POSTGRES_DB: halloween }
         ports: ['5432:5432']
         options: --health-cmd "pg_isready -U halloween" --health-interval 5s --health-timeout 5s --health-retries 20
@@ -63,6 +63,9 @@ jobs:
         with: { python-version: '3.14' }
       - name: GIS importer unit tests
         run: pip install shapely==2.2.0 && python -I -m unittest discover -s scripts/tests -v
+      - name: npm audit (end-to-end test tools)
+        working-directory: tests/e2e
+        run: npm audit --package-lock-only --audit-level=moderate
 
   images:
     # Pull requests only: pushes to main build and publish the same images in the Images workflow.
@@ -80,6 +83,15 @@ jobs:
           docker build --target prod -t nhm-app:ci .
           docker build --target nginx -t nhm-nginx:ci .
           docker run --rm --entrypoint id nhm-app:ci -un | grep -qx www-data
+      - name: No fixed HIGH or CRITICAL vulnerability in the images (Trivy, pinned by digest)
+        run: |
+          docker save nhm-app:ci -o "$RUNNER_TEMP/app.tar"
+          docker save nhm-nginx:ci -o "$RUNNER_TEMP/nginx.tar"
+          for tar in app nginx; do
+            docker run --rm -v "$RUNNER_TEMP":/scan:ro \
+              aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+              image --input "/scan/$tar.tar" --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+          done
 
   e2e:
     runs-on: ubuntu-24.04

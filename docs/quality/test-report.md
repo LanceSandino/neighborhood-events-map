@@ -1,6 +1,22 @@
 # Test and verification report
 
-## Latest run — 2026-10-21, release 0.8.0-beta.1
+## Latest run — 2026-10-24, release 0.8.0-beta.2
+
+Security release (CU-20261024-01 to -04) on both development stacks, rebuilt on the new base digests:
+
+| Gate | Result |
+|---|---|
+| PHPUnit 13.4 on PHP 8.5.12 + PostgreSQL 18.6 | **OK — 276 tests, 5398 assertions** (`ContainerConfigTest` 14/14; 6 of its tests fail on the 0.8.0-beta.1 config) |
+| Coverage (pcov) | Lines **94.03 %** ✓ ≥ 85 · Methods 79.95 % · Branches n/a |
+| PHPStan level 6 · `composer audit --locked` · migrations up/down/up | No errors · no advisories · OK |
+| node:test on Node 24.22.1 | **30/30** (the id-escaping test fails before the fix) |
+| Python 3.14 + shapely 2.2.0 | **45/45** |
+| Playwright E2E (chromium + webkit-iphone, Mailpit 1.32.0) | **78 passed, 2 skipped** (a clean run on the final tree; the logo upload goes through the upload pool) |
+| Session smoke test | **13/13** |
+| Trivy 0.76.1 on the built prod and nginx images (fixed HIGH/CRITICAL) | 1 HIGH each before (brotli-libs 1.2.0-r1, CVE-2026-111497) · **0 after** |
+| Live checks on the dev stack | multipart body to `/`, `/api/auth/request-link`, `/api/me/homes`, `/api/admin/community` → **415**; logo upload and removal through the upload pool → 200; `php-fpm -tt` shows file_uploads off on www and mail, allow_url_fopen off and the disabled functions on all three pools |
+
+## Run — 2026-10-21, release 0.8.0-beta.1
 
 Latest stable stack (CU-20261021-52 to -54) on the development stacks, both moved to PostgreSQL 18 with `bin/upgrade-postgres.sh`
 (17.11 → 18.6, 15 tables each, identical row counts):

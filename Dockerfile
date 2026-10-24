@@ -4,13 +4,16 @@
 # Every base image is pinned by its multi-arch digest, so a rebuild cannot pick up a moved or replaced tag;
 # Dependabot (docker ecosystem) proposes the new digest when a tag moves.
 
-FROM php:8.5-fpm-alpine@sha256:c38f2802b1f0642402d9809ee87f7e9b9c8b2550d5a2d775af899b82e1e68595 AS php-base
-# OPcache is part of PHP itself since 8.5 (no extension to install).
-RUN apk add --no-cache icu-libs libpq libzip fcgi tzdata \
+FROM php:8.5-fpm-alpine@sha256:75bbd8240bc8a991b0f8ddb2365f11937f93199972e3c9f7e32c63c7241f546b AS php-base
+# OPcache is part of PHP itself since 8.5 (no extension to install). `apk upgrade` takes Alpine's security fixes
+# that the pinned base image does not carry yet (e.g. brotli 1.2.1 for CVE-2026-111497); CI's image scan fails on
+# any fixed HIGH/CRITICAL package left behind.
+RUN apk upgrade --no-cache \
+ && apk add --no-cache icu-libs libpq libzip fcgi tzdata \
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev postgresql-dev libzip-dev linux-headers \
  && docker-php-ext-install -j"$(nproc)" intl pdo_pgsql pcntl zip \
  && apk del .build-deps
-COPY --from=composer:2@sha256:d0c32820c62cc860fddd22adceed4eeda7698b093a7a88d503414172ce400626 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc /usr/bin/composer /usr/bin/composer
 COPY docker/php/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
 COPY docker/php/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
 COPY --chmod=0755 docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
@@ -20,7 +23,7 @@ COPY --chmod=0755 docker/php/healthcheck.sh /usr/local/bin/app-healthcheck
 RUN addgroup -S -g 101 fcgi-nginx && addgroup www-data fcgi-nginx \
  && install -d -o www-data -g fcgi-nginx -m 0750 /run/php
 ENV COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_NO_INTERACTION=1 \
-    FPM_MAX_CHILDREN=12 FPM_START_SERVERS=3 FPM_MIN_SPARE=2 FPM_MAX_SPARE=6 FPM_MAIL_MAX_CHILDREN=4
+    FPM_MAX_CHILDREN=12 FPM_START_SERVERS=3 FPM_MIN_SPARE=2 FPM_MAX_SPARE=6 FPM_MAIL_MAX_CHILDREN=4 FPM_UPLOAD_MAX_CHILDREN=2
 WORKDIR /app
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD app-healthcheck
 ENTRYPOINT ["app-entrypoint"]
@@ -65,6 +68,8 @@ COPY --from=prod /app/public /app/public
 # Mount point of the PHP-FPM socket volume, same owner and mode as in the app image (whichever image
 # initializes the volume first, PHP can create its sockets and nginx can reach them).
 USER root
-RUN install -d -o 82 -g 101 -m 0750 /run/php
+# Alpine security fixes newer than the pinned base image (see the php-base stage).
+RUN apk upgrade --no-cache \
+ && install -d -o 82 -g 101 -m 0750 /run/php
 USER 101
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1

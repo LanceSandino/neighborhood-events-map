@@ -1,7 +1,7 @@
 /**
  * @module assets/js/lib/render
  * @description HTML fragments for house cards, tags, selected-home panel and pins. Every
- *     resident-supplied string goes through esc(). Mirrors templates/home/_card.html.twig.
+ *     value from the page or API data (resident text and ids alike) goes through esc(). Mirrors templates/home/_card.html.twig.
  */
 import { statusOf, time12 } from './time.js';
 import { isBigScare, isLowSensory } from './filters.js';
@@ -51,10 +51,10 @@ export function metaLine(h, ctx) {
 export function cardHtml(h, ctx, { saved, active, focus }) {
   const st = statusOf(h, ctx);
   const statusChip = st.key === 'later' && !st.label.startsWith('Starts') ? '' : `<span class="card-status ${st.key}">${esc(st.label)}</span>`;
-  return `<li class="home-card${active ? ' active' : ''}" data-id="${h.id}" tabindex="0" aria-label="${esc(h.address)}">
+  return `<li class="home-card${active ? ' active' : ''}" data-id="${esc(h.id)}" tabindex="0" aria-label="${esc(h.address)}">
     <div class="card-symbol" aria-hidden="true">${symbolOf(h, focus)}</div>
     <div class="card-main">
-      <div class="card-line"><b>${esc(h.address)}</b><button type="button" class="save" data-save="${h.id}" aria-pressed="${saved}" aria-label="${saved ? 'Remove from' : 'Save to'} my stops: ${esc(h.address)}">${saved ? '♥' : '♡'}</button></div>
+      <div class="card-line"><b>${esc(h.address)}</b><button type="button" class="save" data-save="${esc(h.id)}" aria-pressed="${saved}" aria-label="${saved ? 'Remove from' : 'Save to'} my stops: ${esc(h.address)}">${saved ? '♥' : '♡'}</button></div>
       <div class="card-meta">${metaLine(h, ctx)} ${statusChip}</div>
       <div class="tags">${tagsHtml(h)}${h.note ? '<span class="tag note-icon" title="Has a note — open the home to read it"><span aria-hidden="true">📝</span><span class="tag-text"> Note</span></span>' : ''}</div>
       ${h.note ? `<p class="card-note">${esc(h.note)}</p>` : ''}
@@ -69,8 +69,8 @@ export function selectedHtml(h, ctx, saved) {
     <p>${metaLine(h, ctx)}${st.key === 'later' && !st.label.startsWith('Starts') ? '' : ` · <span class="card-status ${st.key}">${esc(st.label)}</span>`}</p>
     ${h.note ? `<p>${esc(h.note)}</p>` : ''}
     <div class="tags">${tagsHtml(h)}</div>
-    <button type="button" class="primary" data-save="${h.id}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save this stop'}</button>
-    <p><button type="button" class="link-button" data-report="${h.id}">Report this listing</button></p>`;
+    <button type="button" class="primary" data-save="${esc(h.id)}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save this stop'}</button>
+    <p><button type="button" class="link-button" data-report="${esc(h.id)}">Report this listing</button></p>`;
 }
 
 export function pinHtml(h, { dim, number, focus }) {

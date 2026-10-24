@@ -1,10 +1,10 @@
-# DBAL only (no ORM): explicit parameterized SQL for atomic claims and auditing.
+# DBAL only (no ORM): explicit parameterized SQL for atomic claims and auditing. Nested transactions use
+# savepoints (always on in DBAL 4; DoctrineBundle 3 dropped the use_savepoints option).
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
-        server_version: '17'
+        server_version: '18'
         profiling_collect_backtrace: '%kernel.debug%'
-        use_savepoints: true
 
 when@test:
     doctrine:
