@@ -6,6 +6,16 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.8.0-beta.3] - 2026-10-24
+
+Fix release for 0.8.0-beta.2, which must not be run: with production settings every page answered 500. Update straight from 0.8.0-beta.1 or 0.8.0-beta.2 to this release (no data changes). It carries all of 0.8.0-beta.2's security fixes.
+
+### Fixed
+- Production images answered every request with an error (500) in 0.8.0-beta.2: the setting that stops PHP from running programs was applied per worker pool, after the code was preloaded, and the preloaded code then called the wrong functions. It is now set when PHP starts, in the production image only, so the protection stays.
+
+### Added
+- Release safeguard: the production images are started and checked (health, home page, every asset, upload rules, console commands) before any image is tagged or published, on both platforms, and before a deploy.
+
 ## [0.8.0-beta.2] - 2026-10-24
 
 Security release. Update now (pull `0.8.0-beta.2` and recreate the stack; no data changes).

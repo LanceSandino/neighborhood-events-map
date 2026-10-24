@@ -58,6 +58,8 @@ RUN composer dump-autoload --no-dev --classmap-authoritative \
  && rm -rf var && mkdir -p var/cache var/log var/branding \
  && APP_SECRET=build-only-placeholder-not-used-at-runtime php bin/console cache:warmup --env=prod \
  && chown -R www-data:www-data var
+# After every build step (they run programs): no program execution at runtime (docker/php/php-prod-final.ini).
+COPY docker/php/php-prod-final.ini "$PHP_INI_DIR/conf.d/zzzz-app-prod-final.ini"
 USER www-data
 
 FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS nginx

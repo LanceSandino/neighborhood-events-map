@@ -861,4 +861,24 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/security-release-0.8.0-beta.2"
   author: "Lance Sandino"
   timestamp: "2026-10-24T13:25:00Z"
+- id: CU-20261024-05
+  type: fix
+  title: "fix: 0.8.0-beta.3 — disable_functions at PHP startup in the prod image, not per FPM pool (0.8.0-beta.2 answered 500 with OPcache preloading)"
+  description: "Incident 2026-10-24 19:14–19:19 UTC: 0.8.0-beta.2 deployed to the live server answered every request with 500 (ArgumentCountError: posix_getpid() expects exactly 0 arguments, 1 given, raised from spl_object_id() in DBAL's TypeRegistry). php_admin_value[disable_functions] in the FPM pools is applied when a pool starts, after the master process has preloaded the code with OPcache (opcache.preload, production image only); removing functions then shifts the internal function table under the preloaded calls, so they reach the wrong functions. The development and CI images do not preload, so PHPUnit, Playwright and the session smoke test all passed. The live site was rolled back to 0.8.0-beta.1 in about five minutes (all six asset URLs 200). Fix: the pools no longer set disable_functions; docker/php/php-prod-final.ini sets it at PHP startup, before preloading, and the prod stage copies it after its last RUN (composer dump-autoload and cache:warmup run programs). It covers PHP-FPM and the production console; the console commands (migrations, app:db:ping, app:maintenance:purge) still run. allow_url_fopen and file_uploads stay per pool (plain ini flags, no function-table change)."
+  impact: high
+  affected_modules: ["docker/php/fpm-pool.conf", "docker/php/php-prod-final.ini", "Dockerfile", "DECISIONS.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testOnlyTheUploadPoolAcceptsFilesAndNoWebWorkerRunsPrograms (no pool sets disable_functions; php-prod-final.ini sets it and is copied after the prod stage's last RUN)", "bin/smoke-prod-image.sh: fails on the published 0.8.0-beta.2 images (nginx unhealthy, /healthz 500), passes on the fixed images (7/7 checks)"]
+  commit_ref: "fix/prod-disable-functions"
+  author: "Lance Sandino"
+  timestamp: "2026-10-24T19:45:00Z"
+- id: CU-20261024-06
+  type: feature
+  title: "Production-image smoke test gates publishing and deploys (bin/smoke-prod-image.sh)"
+  description: "bin/smoke-prod-image.sh starts the given prod app and nginx images with compose.yaml under a throwaway project with random secrets (production settings, OPcache preloading, read-only containers), then checks /healthz (status and database ok), the home page, every /assets/v… URL on it, 415 for a multipart body to /, /api/auth/request-link, /api/me/homes and /api/admin/community, that the logo upload endpoint reaches PHP (401/403 without a session), that all three FPM pools answer their ping, and that console commands run (app:db:ping, app:maintenance:purge); it prints the app log on failure and always removes the stack and its volumes. CI's pull-request image job runs it on the images it builds; the Images workflow gains a smoke job on amd64 and arm64 that pulls the just-built images by digest and must pass before the merge job applies :sha, :edge, a version or :latest. The release runbook and AGENTS.md list it, including a run against the published tag before a deploy."
+  impact: medium
+  affected_modules: ["bin/smoke-prod-image.sh", ".github/workflows/ci.yml", ".github/workflows/images.yml", "docs/runbooks/release.md", "AGENTS.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testProductionImagesAreSmokeTestedBeforeTheyArePublished", "bin/smoke-prod-image.sh red on 0.8.0-beta.2, green on the fix"]
+  commit_ref: "fix/prod-disable-functions"
+  author: "Lance Sandino"
+  timestamp: "2026-10-24T19:50:00Z"
 ```

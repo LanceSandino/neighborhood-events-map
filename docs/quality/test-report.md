@@ -1,6 +1,18 @@
 # Test and verification report
 
-## Latest run — 2026-10-24, release 0.8.0-beta.2
+## Latest run — 2026-10-24, release 0.8.0-beta.3
+
+Fix for the 0.8.0-beta.2 production outage (CU-20261024-05/-06):
+
+| Gate | Result |
+|---|---|
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (on the published 0.8.0-beta.2 images it fails: nginx unhealthy, /healthz 500) |
+| PHPUnit 13.4 on PHP 8.5.12 + PostgreSQL 18.6 | **OK — 278 tests, 5411 assertions** (the two new `ContainerConfigTest` tests fail on the 0.8.0-beta.2 config) |
+| PHPStan level 6 · `composer audit --locked` | No errors · no advisories |
+| Playwright E2E (chromium + webkit-iphone) | **78 passed, 2 skipped** |
+| Session smoke test | **13/13** |
+
+## Run — 2026-10-24, release 0.8.0-beta.2 (withdrawn: answered 500 in production, see CU-20261024-05)
 
 Security release (CU-20261024-01 to -04) on both development stacks, rebuilt on the new base digests:
 

@@ -60,6 +60,7 @@ docker run --rm -v "$PWD":/w -w /w node:24-alpine node --test tests/js/*.test.mj
 docker run --rm -v "$PWD":/w -w /w python:3.14-slim sh -c "pip install -q shapely==2.2.0 && python -I -m unittest discover -s scripts/tests"
 ./bin/e2e.sh                                                        # Playwright, needs both dev stacks running
 python3 scripts/smoke_session.py                                    # session lifecycle smoke test
+bin/smoke-prod-image.sh nhm-app nhm-nginx smoke                     # the production images (after docker build --target prod/nginx)
 ```
 
 Coverage targets: lines ≥ 85 % (enforced), methods/branches reported honestly (PHPUnit counts a method only when fully covered; pcov does not measure branches — report `n/a`, never a made-up number). Concurrency, auth, PoW, throttle, geofence and session behaviour must have tests.

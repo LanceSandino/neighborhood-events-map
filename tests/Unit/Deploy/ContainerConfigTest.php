@@ -206,7 +206,12 @@ final class ContainerConfigTest extends TestCase
     /**
      * Only the small "upload" pool accepts file uploads; the www and mail pools refuse them, so PHP's multipart
      * upload code (where session upload progress lives) runs for nobody but the three organizer upload endpoints.
-     * No web worker can run a program or open a URL as a file; the CLI (maintenance, console) is unaffected.
+     * No web worker opens a URL as a file.
+     *
+     * Regression (0.8.0-beta.2 outage): disable_functions set per FPM pool is applied after OPcache has preloaded
+     * the code, and the preloaded calls then reach the wrong functions (spl_object_id() ran posix_getpid(), every
+     * request answered 500). Program execution is therefore disabled at PHP startup in the production image only,
+     * by an ini file copied after the build steps (which run composer and the console), and never per pool.
      */
     public function testOnlyTheUploadPoolAcceptsFilesAndNoWebWorkerRunsPrograms(): void
     {
@@ -214,11 +219,7 @@ final class ContainerConfigTest extends TestCase
         self::assertSame(['www', 'mail', 'upload'], array_keys($pools));
         foreach ($pools as $name => $body) {
             self::assertMatchesRegularExpression('~^php_admin_flag\[allow_url_fopen\] = off$~m', $body, "$name: allow_url_fopen");
-            self::assertSame(1, preg_match('~^php_admin_value\[disable_functions\] = (\S+)$~m', $body, $m), "$name: disable_functions");
-            $disabled = explode(',', $m[1]);
-            foreach (['exec', 'passthru', 'shell_exec', 'system', 'proc_open', 'popen', 'pcntl_exec'] as $fn) {
-                self::assertContains($fn, $disabled, "$name may not run programs ($fn)");
-            }
+            self::assertDoesNotMatchRegularExpression('~^\s*php_(admin_)?value\[disable_functions\]~m', $body, "$name must not set disable_functions (breaks preloaded code)");
             if ('upload' === $name) {
                 self::assertDoesNotMatchRegularExpression('~file_uploads\] = off~', $body);
             } else {
@@ -227,6 +228,40 @@ final class ContainerConfigTest extends TestCase
         }
         self::assertMatchesRegularExpression('~\[upload\][^\[]*pm = ondemand~', self::read('docker/php/fpm-pool.conf'));
         self::assertStringContainsString('FPM_UPLOAD_MAX_CHILDREN=2', self::read('Dockerfile'));
+
+        self::assertSame(1, preg_match('~^disable_functions = (\S+)$~m', self::read('docker/php/php-prod-final.ini'), $m));
+        foreach (['exec', 'passthru', 'shell_exec', 'system', 'proc_open', 'popen', 'pcntl_exec'] as $fn) {
+            self::assertContains($fn, explode(',', $m[1]), "production PHP may not run programs ($fn)");
+        }
+        foreach (['docker/php/php.ini', 'docker/php/php-prod.ini', 'docker/php/php-dev.ini'] as $file) {
+            self::assertStringNotContainsString('disable_functions', (string) preg_replace('~^;[^\n]*~m', '', self::read($file)), "$file is loaded during the build");
+        }
+        // The prod stage copies it after its last RUN (composer dump-autoload and cache:warmup run programs).
+        self::assertSame(1, preg_match('~^FROM php-base AS prod\n(.*?)(?=^FROM |\z)~ms', self::read('Dockerfile'), $prod));
+        $copy = strpos($prod[1], 'COPY docker/php/php-prod-final.ini');
+        self::assertNotFalse($copy, 'the prod stage installs php-prod-final.ini');
+        self::assertFalse(strpos($prod[1], "\nRUN ", $copy), 'no RUN after php-prod-final.ini in the prod stage');
+    }
+
+    /**
+     * The production images are started and exercised before anything is published or deployed: dev and test
+     * images run without OPcache preloading and production settings, so only the real images show a fault like
+     * the 0.8.0-beta.2 outage. CI smoke-tests the images it builds for a pull request; the Images workflow
+     * smoke-tests both platforms before any tag (:sha, :edge, a version, :latest) points at them.
+     */
+    public function testProductionImagesAreSmokeTestedBeforeTheyArePublished(): void
+    {
+        $script = self::read('bin/smoke-prod-image.sh');
+        self::assertTrue(is_executable(\dirname(__DIR__, 3).'/bin/smoke-prod-image.sh'));
+        foreach (['/healthz', '"status":"ok"', '/assets/v', '415', 'app-healthcheck', 'app:maintenance:purge', 'down -v'] as $check) {
+            self::assertStringContainsString($check, $script);
+        }
+        self::assertStringContainsString('bin/smoke-prod-image.sh', self::read('.github/workflows/ci.yml'));
+        $images = Yaml::parse(self::read('.github/workflows/images.yml'));
+        self::assertArrayHasKey('smoke', $images['jobs']);
+        self::assertStringContainsString('bin/smoke-prod-image.sh', (string) json_encode($images['jobs']['smoke'], \JSON_UNESCAPED_SLASHES));
+        self::assertContains('smoke', (array) $images['jobs']['merge']['needs'], 'no tag points at an image before its smoke test passed');
+        self::assertStringContainsString('bin/smoke-prod-image.sh', self::read('docs/runbooks/release.md'));
     }
 
     /**

@@ -92,6 +92,8 @@ jobs:
               aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
               image --input "/scan/$tar.tar" --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
           done
+      - name: Production image smoke test (prod settings and OPcache preloading, through nginx)
+        run: bin/smoke-prod-image.sh nhm-app nhm-nginx ci
 
   e2e:
     runs-on: ubuntu-24.04

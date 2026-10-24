@@ -80,8 +80,46 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  merge:
+  # Each platform's images must start and answer with production settings (OPcache preloading included) before
+  # any tag points at them: merge needs this job. Dev and test images cannot show such faults (0.8.0-beta.2).
+  smoke:
     needs: build
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: digest-*-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Pull this platform's images by digest
+        env: { ARCH: '${{ matrix.arch }}' }
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          for pair in prod:neighborhood-events-map:nhm-smoke-app nginx:neighborhood-events-map-nginx:nhm-smoke-nginx; do
+            IFS=: read -r target name local <<< "$pair"
+            digest=$(cat "$RUNNER_TEMP/digests/digest-$target-$ARCH/$ARCH")
+            docker pull "ghcr.io/$owner/$name@$digest"
+            docker tag "ghcr.io/$owner/$name@$digest" "$local:ci"
+          done
+      - name: Production image smoke test
+        run: bin/smoke-prod-image.sh nhm-smoke-app nhm-smoke-nginx ci
+
+  merge:
+    needs: [build, smoke]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
