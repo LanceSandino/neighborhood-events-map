@@ -376,7 +376,7 @@ test('cards and the selected-home panel escape every value taken from the page d
   const hostile = '1" onmouseover="alert(1)"><img src=x onerror=alert(1)>';
   for (const html of [cardHtml(home({ id: hostile, address: '<b>x</b>' }), ctx, { saved: false, active: false, focus: {} }),
     selectedHtml(home({ id: hostile, note: '<script>x</script>' }), ctx, false)]) {
-    assert.doesNotMatch(html, /<img|<script|<b>x|" onmouseover=/);
+    assert.doesNotMatch(html, /<img|<script|<b>x|" onmouseover=/i); // any case: browsers parse <SCRIPT> too
     assert.match(html, /&quot; onmouseover=&quot;alert\(1\)&quot;&gt;&lt;img/);
   }
   assert.match(cardHtml(home({ id: 7 }), ctx, { saved: true, active: false, focus: {} }), /data-id="7"[\s\S]*data-save="7"/);
