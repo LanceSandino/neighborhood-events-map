@@ -328,6 +328,11 @@ final class ContainerConfigTest extends TestCase
         $daily = (string) preg_replace('~\s*\\\\\n\s*~', ' ', self::read('.github/workflows/security.yml')); // join continued lines
         self::assertMatchesRegularExpression('~--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1~', $daily);
         self::assertStringContainsString("cron: '17 7 * * *'", self::read('.github/workflows/security.yml'), 'the published images are re-checked daily');
+        // A finding in the app image must not hide one in the nginx image: each scan records its failure and the
+        // step fails only after both ran (the daily run skipped nginx while curl failed the app image, 2026-10-26–30).
+        foreach (['ci.yml' => $ci, 'security.yml' => $daily] as $file => $workflow) {
+            self::assertMatchesRegularExpression('~--exit-code 1 [^\n]*\|\| status=1\n\s*done\n\s*exit "\$status"~', $workflow, "$file scans every image");
+        }
     }
 
     /** @return array<string, string> pool name => its section of docker/php/fpm-pool.conf */

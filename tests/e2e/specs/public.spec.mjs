@@ -1,6 +1,6 @@
 // Public family experience on the fictional demo stack (14 seeded fictional homes, no zones).
 import { test, expect } from '@playwright/test';
-import { DEMO, VENTURA, SHOTS, watchConsole } from './helpers.mjs';
+import { DEMO, VENTURA, SHOTS, watchConsole, atEventTime } from './helpers.mjs';
 import { politeTiles } from './helpers.mjs';
 
 test.beforeEach(async ({ page }) => { await politeTiles(page); });
@@ -327,6 +327,10 @@ test('phone in landscape: no side rail, bottom bar shown, list and map side by s
 });
 
 test('compact list: one row per home with icons, remembered after reload; long notes are clamped on cards', async ({ page }) => {
+  // On the event day every card also carries its status chip ("Starts 6 PM", "Handing out", "Done for tonight"),
+  // the widest compact row, so the clock is pinned to that day: before, during and after the hours.
+  const { event } = await (await page.request.get(DEMO + '/api/event')).json();
+  await page.clock.setFixedTime(atEventTime(event, '12:00'));
   await page.goto(DEMO + '/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -337,10 +341,19 @@ test('compact list: one row per home with icons, remembered after reload; long n
   await expect(page.locator('#homeCards')).toHaveClass(/compact/);
   await expect(page.locator('#homeCards .card-note').first()).toBeHidden();
   await expect(page.locator('#homeCards .note-icon').first()).toBeVisible();
-  const tallest = await page.locator('#homeCards .home-card').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().height)));
-  expect(tallest).toBeLessThan(80);
-  await page.reload();
-  await expect(page.getByRole('button', { name: 'Compact list' })).toHaveAttribute('aria-pressed', 'true');
+  // One line of facts is about 58 px high; a second line makes it about 80.
+  const tallest = () => page.locator('#homeCards .home-card').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().height)));
+  await expect(page.locator('#homeCards .card-status').first()).toHaveText(/^Starts /);
+  expect(await tallest()).toBeLessThan(70);
+  for (const [time, status] of [['18:00', 'Handing out'], ['23:00', 'Done for tonight']]) {
+    await page.clock.setFixedTime(atEventTime(event, time));
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Compact list' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#homeCards .card-status', { hasText: status }).first()).toBeVisible();
+    expect(await tallest(), `at ${time}`).toBeLessThan(70);
+  }
+  // The hours a status chip replaces are still read out.
+  await expect(page.locator('#homeCards .home-card').first()).toContainText(/\d PM–\d/);
   await page.getByRole('button', { name: 'Cards' }).click();
   await expect(page.locator('#homeCards')).not.toHaveClass(/compact/);
 });

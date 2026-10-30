@@ -19,7 +19,7 @@ concurrency:
 
 env:
   TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
-  COMPOSER_IMAGE: composer:2@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc
+  COMPOSER_IMAGE: composer:2@sha256:c7f68260503e3c1f0ece10bdbe84519fd98d48ba091f2c02f16ea94a7faae337
 
 jobs:
   published-images:
@@ -49,10 +49,13 @@ jobs:
       - name: No fixed HIGH or CRITICAL vulnerability in the images
         env: { APP_IMAGE: '${{ steps.name.outputs.app }}', NGINX_IMAGE: '${{ steps.name.outputs.nginx }}' }
         run: |
+          # Scan both images even when the first one fails, so one run reports everything to fix.
+          status=0
           for image in "$APP_IMAGE" "$NGINX_IMAGE"; do
             docker run --rm "$TRIVY_IMAGE" image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
-              --exit-code 1 --no-progress "$image"
+              --exit-code 1 --no-progress "$image" || status=1
           done
+          exit "$status"
 
   locked-dependencies:
     runs-on: ubuntu-24.04

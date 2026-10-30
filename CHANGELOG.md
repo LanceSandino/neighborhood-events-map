@@ -6,6 +6,22 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.8.0-beta.4] - 2026-10-30
+
+Security release. Update now (pull `0.8.0-beta.4` and recreate the stack; no data changes).
+
+### Security
+- **CVE-2026-92392** (curl HTTP/2 upload use-after-free, HIGH): both images now carry curl 8.23.0.
+- **CVE-2026-45070** (Symfony Mime, email header injection through parameter names): Symfony 7.4.22.
+- PHPUnit 13.4.5 for development (shared temporary directory advisory GHSA-9vw2-f4vp-x7gf; not part of the images).
+
+### Changed
+- Current base-image digests (PHP 8.5.12, PostgreSQL 18.6, Composer 2.11.0), DoctrineBundle 3.3.4, PHPStan 2.3.4 and current GitHub Actions.
+- The image scans check the app and the nginx image every time, even when the first one has a finding.
+
+### Fixed
+- Compact list on the event day: a home's status ("Starts 6 PM", "Handing out", "Done for tonight") now takes the place of its hours, so each home stays on one line on phones (the hours are still read out by screen readers).
+
 ## [0.8.0-beta.3] - 2026-10-24
 
 Fix release for 0.8.0-beta.2, which must not be run: with production settings every page answered 500. Update straight from 0.8.0-beta.1 or 0.8.0-beta.2 to this release (no data changes). It carries all of 0.8.0-beta.2's security fixes.

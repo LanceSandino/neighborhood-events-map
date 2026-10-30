@@ -26,6 +26,14 @@ export async function mailTo(request, to) {
   return (await res.json()).messages || [];
 }
 
+/** The instant when the community's event day shows `hhmm` on its own clock (for page.clock). */
+export function atEventTime(event, hhmm) {
+  const noon = new Date(`${event.date}T12:00:00Z`);
+  const zone = new Intl.DateTimeFormat('en-US', { timeZone: event.timezone, timeZoneName: 'longOffset' })
+    .formatToParts(noon).find((p) => p.type === 'timeZoneName').value.replace('GMT', '');
+  return new Date(`${event.date}T${hhmm}:00${zone || '+00:00'}`);
+}
+
 export function watchConsole(page) {
   const problems = [];
   page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text()); });

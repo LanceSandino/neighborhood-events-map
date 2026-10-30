@@ -45,7 +45,7 @@ export function tagsHtml(h) {
 
 export function metaLine(h, ctx) {
   const zone = ctx.zoneLabels[h.zone];
-  return `${zone ? esc(zone) + ' · ' : ''}${time12(h.start)}–${time12(h.end)}`;
+  return `${zone ? esc(zone) + ' · ' : ''}<span class="card-hours">${time12(h.start)}–${time12(h.end)}</span>`;
 }
 
 export function cardHtml(h, ctx, { saved, active, focus }) {

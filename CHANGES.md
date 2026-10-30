@@ -881,4 +881,24 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/prod-disable-functions"
   author: "Lance Sandino"
   timestamp: "2026-10-24T19:50:00Z"
+- id: CU-20261030-01
+  type: chore
+  title: "security: 0.8.0-beta.4 — curl 8.23.0 in the images (CVE-2026-92392), Symfony 7.4.22 (CVE-2026-45070), PHPUnit 13.4.5; current digests and actions"
+  description: "The daily Security checks workflow failed from 2026-10-26 to 2026-10-30: Trivy found curl/libcurl 8.22.0-r0 (CVE-2026-92392, HIGH, fixed in 8.23.0-r0) in the published :latest and :edge app images, and from 2026-10-27 composer audit reported phpunit/phpunit 13.4.3 (GHSA-9vw2-f4vp-x7gf, fixed in 13.4.4) and from 2026-10-29 symfony/mime 7.4.19 (CVE-2026-45070, fixed in 7.4.22). Rebuilt images take curl 8.23.0-r0 through the existing `apk upgrade` (D-20261024-02). `composer update` within the existing constraints: Symfony 7.4.22 (all components), phpunit 13.4.5, phpunit-bridge 8.1.10, doctrine-bundle 3.3.4, phpstan 2.3.4, symfony/flex 2.12.0 (composer.json lower bounds bumped by bump-after-update). Base digests: php:8.5-fpm-alpine (PHP 8.5.12, rebuilt), postgres:18-alpine (18.6, rebuilt), composer:2 (2.11.0). GitHub Actions docker/login-action 4.7.0 and actions/setup-python 7.1.0 (the open Dependabot PRs). Both Trivy loops (CI and daily) now scan every image and fail at the end, because `bash -e` stopped the daily loop at the app image and never scanned nginx (the published nginx image carried curl 8.22.0-r0 too)."
+  impact: medium
+  affected_modules: ["composer.json", "composer.lock", "Dockerfile", "compose.yaml", ".github/workflows/ci.yml", ".github/workflows/security.yml", ".github/workflows/images.yml", "VERSION", "CHANGELOG.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testRuntimeImagesTakeAlpineSecurityFixesAndAreScanned (each scan records its failure and the step exits after both; fails on the 0.8.0-beta.3 workflows)", "composer audit --locked: no advisories", "Trivy 0.76.1 on the built prod and nginx images: 0 fixed HIGH/CRITICAL", "bin/smoke-prod-image.sh nhm-app nhm-nginx smoke: 7/7", "PHPUnit 13.4.5: 278 tests, 5411 assertions (lines 94.39 %)"]
+  commit_ref: "fix/security-0.8.0-beta.4"
+  author: "Lance Sandino"
+  timestamp: "2026-10-30T11:45:00Z"
+- id: CU-20261030-02
+  type: fix
+  title: "Compact list keeps one line per home on the event day: the status chip takes the hours' place"
+  description: "CI's Playwright run on 2026-10-30 failed in webkit-iphone (compact row 80.2 px, limit < 80): the demo community's event date is 2026-10-30, and only on the event day does each card carry a status chip (Starts …, Handing out, Done for tonight). Next to the hours and tag icons it wrapped every such compact row to a second line in both engines (WebKit 80.2 px, Chromium 79.2 px, versus 57.7 px on other days); Chromium passed by 0.8 px. metaLine now wraps the hours in span.card-hours, and in the compact list a meta line with a status chip hides the hours visually (same visually-hidden technique as .tag-text, so screen readers still read them). The test pinned nothing, so it only met the event-day layout by chance: it now fixes the browser clock to the community's event day (atEventTime helper, from /api/event) at 12:00, 18:00 and 23:00 and requires every row under 70 px (one line of facts)."
+  impact: low
+  affected_modules: ["public/assets/js/lib/render.js", "public/assets/css/app.css", "tests/e2e/specs/public.spec.mjs", "tests/e2e/specs/helpers.mjs"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs: compact list: one row per home with icons, remembered after reload; long notes are clamped on cards (fails before the change on chromium 79.2 px and webkit-iphone 80.2 px)", "tests/js: 30/30"]
+  commit_ref: "fix/security-0.8.0-beta.4"
+  author: "Lance Sandino"
+  timestamp: "2026-10-30T12:30:00Z"
 ```
