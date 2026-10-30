@@ -18,7 +18,7 @@ Screenshots use the **fictional** “Maple Hollow” demo community (invented ho
 - **Organizers:** setup checklist, community/branding/event/zones settings, Leaflet.draw boundary & zone editor with GeoJSON import/export and approval gate, address registry (CSV import, manual add/edit — coordinates are never guessed), claim transfer/unclaim, listing hide/unhide, review requests, audit log, private CSV export.
 - **Safety:** browser SHA-256 proof-of-work + persistent PostgreSQL rate limits on every email-sending endpoint, honeypot fields, a sign-in reply that is identical in content and timing for known and unknown emails, nginx request limits, CSRF + Origin checks, strict CSP (no inline script/style), atomic “first verified email wins” claims enforced by a database primary key, owner-scoped resident queries, a per-resident home limit, server-side point-in-polygon geofencing, no public address roster, tokens never logged, hardened least-privilege containers. Audit and hardening results: [docs/security/hardening-report.md](docs/security/hardening-report.md).
 
-Built with **PHP 8.5 / Symfony 7.4 LTS, PostgreSQL 18, Twig, vanilla JavaScript/CSS, Leaflet (OpenStreetMap tiles), Docker Compose**. No PostGIS, no Node build step, no paid services.
+Built with **PHP 8.5 / Symfony 8.1, PostgreSQL 18, Twig, vanilla JavaScript/CSS, Leaflet (OpenStreetMap tiles), Docker Compose**. No PostGIS, no Node build step, no paid services.
 
 ## Quick start (local, ~10 minutes)
 

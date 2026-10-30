@@ -6,6 +6,13 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.9.0-beta.1] - 2026-10-30
+
+Update by pulling `0.9.0-beta.1` and recreating the stack. No data changes; the database and its migrations are unchanged.
+
+### Changed
+- Symfony 8.1, the framework's latest stable release (from 7.4 LTS). The app now follows Symfony's newest minor release, moving to each new one while the previous one still gets fixes. Nothing visible changes.
+
 ## [0.8.0-beta.4] - 2026-10-30
 
 Security release. Update now (pull `0.8.0-beta.4` and recreate the stack; no data changes).

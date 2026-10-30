@@ -8,7 +8,7 @@
    │                                       refuses percent-encoded paths
    │ FastCGI over Unix sockets in a volume shared only by these two containers (no TCP port)
    ▼
- PHP-FPM / Symfony 7.4 (www-data) ── pool "www" for everything; small pool "mail" for the two
+ PHP-FPM / Symfony 8.1 (www-data) ── pool "www" for everything; small pool "mail" for the two
    │                                  email-sending endpoints (they wait out the response floor)
    ├─ Controllers: pages, public API, auth, owner API, organizer API, routes
    ├─ Security: CanonicalPathSubscriber, firewall + MagicLinkAuthenticator, IdleSessionSubscriber, CsrfGuardSubscriber, PoW, Throttle

@@ -1,6 +1,22 @@
 # Test and verification report
 
-## Latest run — 2026-10-30, release 0.8.0-beta.4
+## Latest run — 2026-10-30, release 0.9.0-beta.1
+
+Symfony 8.1 (CU-20261030-03), on PHP 8.5.12 + PostgreSQL 18.6:
+
+| Gate | Result |
+|---|---|
+| PHPUnit 13.4.5 on Symfony 8.1.10 | **OK — 280 tests** (the new `FrameworkPolicyTest` fails on the 7.4 composer.json) |
+| Coverage (pcov) | Lines **94.35 %** ✓ ≥ 85 · Methods 81.39 % · Branches n/a |
+| PHPStan level 6 · `composer audit --locked` · migrations up/down/up | No errors · no advisories · OK |
+| `lint:container` · `lint:yaml config` · `lint:twig` · dev/prod cache warmup · container deprecations | OK · OK · 28 files OK · OK · none |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **30/30** · **45/45** |
+| Playwright E2E on both dev stacks (chromium + webkit-iphone) | **78 passed, 2 skipped**; no deprecation or error in the app logs |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (Kernel 8.1.10) |
+| Trivy 0.76.1 on the built images (fixed HIGH/CRITICAL) | **0** |
+
+## Run — 2026-10-30, release 0.8.0-beta.4
 
 Security release (CU-20261030-01): curl 8.23.0, Symfony 7.4.22, PHPUnit 13.4.5, current digests.
 

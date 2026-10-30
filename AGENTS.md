@@ -12,7 +12,7 @@ This file is self-contained: anyone (or any agent such as Codex or Claude Code) 
 
 - One community per install; **no neighborhood-specific code**. Names, geometry, zones, branding, dates and limits come from config/DB.
 - The product is event-neutral: the community's event is configuration (`event.name`, default Halloween). Never hard-code a holiday in titles, branding or emails; Halloween-specific behaviour belongs to the Halloween event type (`ROADMAP.md`).
-- Stack: PHP 8.5 + Symfony 7.4 LTS, PostgreSQL 18 (DBAL, no ORM), Twig, vanilla JS/CSS (ES modules, no build step), Leaflet, Docker Compose. No React/Vue, Redis, PostGIS, paid hosted auth or mandatory frontend tooling.
+- Stack: PHP 8.5 + Symfony 8 (latest stable minor, D-20261030-01), PostgreSQL 18 (DBAL, no ORM), Twig, vanilla JS/CSS (ES modules, no build step), Leaflet, Docker Compose. No React/Vue, Redis, PostGIS, paid hosted auth or mandatory frontend tooling.
 - **Never fabricate data:** no invented boundaries, house pins, addresses, crossings or walking paths. Demo data is fictional, labelled, gated behind `APP_DEMO=1` and a `*-demo` community id.
 - Claims: first verified email wins, enforced by the `claims` primary key inside one transaction (`INSERT … ON CONFLICT DO NOTHING`). Never read-then-write. Never overwrite an owner.
 - Auth: passwordless one-time links (15 min, single use, consumed only by CSRF-protected POST), server-enforced 30-minute idle sessions (configurable 5–240), no remember-me, no background request may extend a session.
