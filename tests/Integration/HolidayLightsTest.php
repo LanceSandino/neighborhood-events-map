@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Command\DemoSeedCommand;
+use App\Community\CommunityBootstrapper;
+use App\Shared\RuntimeConfig;
 use App\Tests\Support\AppTestCase;
+use Symfony\Component\Console\Tester\CommandTester;
 
 /**
  * @module tests/Integration/HolidayLightsTest
@@ -88,7 +92,7 @@ final class HolidayLightsTest extends AppTestCase
         self::assertStringContainsString('<html lang="en" data-event-type="holiday_lights">', $html);
         self::assertStringContainsString('css/events/holiday_lights.css', $html);
         self::assertStringContainsString('Dec 1, 2026 – Jan 3, 2027', $html, 'the season row');
-        self::assertStringContainsString('Most homes: 6 PM–10 PM · Times vary by house', $html);
+        self::assertStringContainsString('Most homes: 6–10 PM · Times vary by house', $html);
         self::assertStringContainsString('>Tonight</span>', $html, 'the season pill on Dec 11');
         self::assertStringContainsString('DEC 1 – JAN 3', $html, 'the top bar badge');
         self::assertStringContainsString('🎵 Music 88.7 FM', $html);
@@ -174,6 +178,33 @@ final class HolidayLightsTest extends AppTestCase
         self::assertSame(200, $this->code(), json_encode($r));
         self::assertSame(['walkthrough'], $r['home']['listing']['details']['styles']);
         self::assertSame(['2026-12-11', '2026-12-12', '2026-12-31', '2027-01-01'], array_column($r['home']['listing']['windows'], 'date'), 'a partial save keeps the nights');
+    }
+
+    public function testTheFictionalLightsDemoSeedsItsNightsAndAFixedOffTonight(): void
+    {
+        $result = static::getContainer()->get(CommunityBootstrapper::class)->bootstrap(\dirname(__DIR__, 2).'/examples/demo-lights/community.yaml', false, true);
+        self::assertSame('imported', $result['status']);
+        $this->repo()->reset();
+        $demo = new RuntimeConfig('http://localhost', 'Demo <demo@example.test>', 'demo@example.test', str_repeat('s', 32), '', '', 8, 120, [], 'none', '', '', true);
+        $ctor = (new \ReflectionClass(DemoSeedCommand::class))->getConstructor();
+        \assert(null !== $ctor);
+        $args = array_map(static function (\ReflectionParameter $p) use ($demo): object {
+            $type = $p->getType();
+            \assert($type instanceof \ReflectionNamedType);
+
+            return RuntimeConfig::class === $type->getName() ? $demo : static::getContainer()->get($type->getName());
+        }, $ctor->getParameters());
+        $tester = new CommandTester((new \ReflectionClass(DemoSeedCommand::class))->newInstanceArgs($args));
+        self::assertSame(0, $tester->execute(['file' => 'examples/demo-lights/homes.json']), $tester->getDisplay());
+        self::assertStringContainsString('Seeded 10 FICTIONAL demo homes.', $tester->getDisplay());
+        $this->repo()->reset();
+        $homes = array_column($this->json('GET', '/api/homes')['homes'], null, 'address');
+        self::assertCount(10, $homes);
+        self::assertSame([34, 20, 12], [\count($homes['12 Evergreen Ct']['windows']), \count($homes['36 Starlight Way']['windows']), \count($homes['48 Holly Dr']['windows'])], 'every night, a range, a list of nights');
+        self::assertSame(['off_tonight', '2026-12-12'], [$homes['60 Evergreen Ct']['status'], $homes['60 Evergreen Ct']['status_date']], 'a fixed fictional night, later than the test clock\'s Dec 11');
+        self::assertSame('finished', $homes['84 Starlight Way']['status']);
+        $c = $this->json('GET', '/api/community');
+        self::assertSame(['Holiday nights.', 'maple-hollow-lights-demo', '#38597F'], [$c['branding']['headline'], $c['community']['id'], $c['branding']['primary_color']], 'no branding block: the lights defaults');
     }
 
     public function testAnOrganizerSwitchesHalloweenToChristmasLights(): void

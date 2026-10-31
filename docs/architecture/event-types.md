@@ -6,18 +6,20 @@ selected by `event.type` in the community settings ([ADR 0010](../adr/0010-gener
 D-20261021-19, D-20261031-01). Claims, sign-in, abuse controls, moderation, routes and privacy are shared and never
 ask which type is running.
 
-Since 0.10 Halloween is the first (and so far only enabled) event type. Since 0.11 each event is a row of its own
-(an *occurrence*) and listings belong to one occurrence: the next season, or another kind of event, starts with no
-listings, and a resident lists their claimed home for it again from an empty form.
+Since 0.10 Halloween is the first event type. Since 0.11 each event is a row of its own (an *occurrence*) and listings
+belong to one occurrence: the next season, or another kind of event, starts with no listings, and a resident lists
+their claimed home for it again from an empty form. Since 0.12 **Christmas lights** (`holiday_lights`) is the second
+enabled type ([below](#christmas-lights-012); organizer checklist: [christmas-lights.md](../runbooks/christmas-lights.md)).
 
 ## The contract
 
 | Side | Where | What it provides |
 |---|---|---|
-| PHP | `src/Event/EventType.php`, one final class per type in `src/Event/Type/` | key, default name and branding, copy (reminders, headings, access label, console labels), schedule kind and maximum days, hour choices, statuses (label, icon, day-scoped flag), display rules, feature switches, details defaults, `normalizeDetails()` (strict), `publicDetails()` (strict projection), `legacyFields()`, filters, legend, stats, route profiles, Twig fragments |
+| PHP | `src/Event/EventType.php`, one final class per type in `src/Event/Type/` | key, default name and branding (optionally its colours), copy (reminders, headings, access label, console labels), schedule kind and maximum days, hour choices, statuses (label, icon, day-scoped flag), display rules, feature switches, details defaults, `normalizeDetails()` (strict), `publicDetails()` (strict projection), `legacyFields()`, filters, legend, stats, route profiles, Twig fragments; optionally event settings of its own (`Event/EventSettingsType`: keys, checks against the event's dates, public part) |
 | Registry | `src/Event/EventTypeRegistry.php` | the types (tagged services) by immutable key; `KEYS` (reserved forever: `halloween`, `holiday_lights`, `garage_sale`), `ENABLED` (what organizers may pick), `problem()` for configuration errors |
-| Twig | `templates/event/<key>/_*.html.twig`, `Twig/EventTypeExtension` | `event_type(key)` gives copy, statuses, filters, legend and hours; `event_fragment(key, name)` returns a template path only from the type's whitelist |
-| Browser | `public/assets/js/events/<key>.js`, `events/index.js` | filter toggles and predicates, search words, tags, pin symbol and class, `statusOf`, `displayRules`, route note, copy, hour choices, the form helpers (`formDetails`, `fillForm`, `validateDetails`) |
+| Twig | `templates/event/<key>/_*.html.twig`, `Twig/EventTypeExtension` | `event_type(key)` gives copy, statuses, filters, legend and hours; `event_fragment(key, name)` returns a template path only from the type's whitelist. Every type provides every fragment the core includes; some may render nothing: `head` (the type's stylesheet), `hero_art`, `schedule_row`, `filter_controls` (Halloween's "Visit at"), card symbol and tags, confirmation tags, form fields, My house fields, listing checks, `route_rules` |
+| Browser | `public/assets/js/events/<key>.js`, `events/index.js` | filter toggles and predicates (with the moment, `matches(home, filters, ctx)`), optional filter `choices` (lights: a night and a style), search words, tags, pin symbol and class, `inactive` pins, `statusOf`, `statusChipShown`, `hoursLabel`, `displayRules`, `isOpen(home, ctx)`, route note, copy, hour choices, an optional `mapColor`, the form helpers (`initForm`, `formDetails`, `formExtras` — e.g. the nights as windows —, `fillForm`, `validateDetails`) |
+| Theme | `<html data-event-type>`, `public/assets/css/events/<key>.css` | token overrides in light and dark (identical dark blocks) and the type's own components, loaded by its `head` fragment; never the organizer's brand variables, so /theme.css still wins (D-20261031-20). Halloween has none |
 
 Core code (`ListingDraft`, `ListingRepository`, `CommunityPresenter`, `CommunitySchema`, the controllers, `lib/filters.js`,
 `lib/render.js`, `lib/time.js`, `home.js`, `register.js`, `me.js`, `route-panel.js`, the home, My house and confirmation
@@ -74,11 +76,31 @@ templates and the organizer's Community page) asks the type. There is no `if (ty
   listings in both directions (`Listing/LegacyListingBridge` and the `listings_bridge_to_events` trigger), so an older
   image still works on the same database: [event-types-migration.md](../runbooks/event-types-migration.md).
 
+## Christmas lights (0.12)
+
+| Part | Christmas lights (`HolidayLightsType`, `events/holiday_lights.js`, `templates/event/holiday_lights/`) |
+|---|---|
+| Schedule | `nightly_range`, up to 62 nights; a listing names its nights as windows (the forms: every night or the nights picked, with one start and end) |
+| Details (strict) | `styles` (≥ 1 of classic, animated, synchronized_music, inflatables, walkthrough), `flashing_warning`, `music_enabled`, `fm_frequency` (one decimal from 87.5 to 108.0, only with music, never free text), `viewing_mode` (`drive_by_only` default, `walk_up_welcome`), `treats`, `cocoa`; the note is the shared listing note (D-20261031-18) |
+| Statuses | `active`, `off_tonight` (day-scoped: only on the local date it was set), `finished`; display keys `lights_on`, `later_tonight`, `not_tonight`, `off_tonight`, `finished` |
+| Public home | the shared keys (no legacy flat fields), the event keys and `status_date` (a day-scoped status's date while it is today or later; D-20261031-17) |
+| Public event | its `best_night` and `quiet_hours`, and `route_modes` (driving only with the type, the event's `route_modes` and a provider; D-20261031-22) |
+| Filters | quick: Drive-by, No flashing reported, Music (+ Saved); more: Walk-up welcome, Open tonight, one night (date), a display style |
+| Words | hero "Holiday nights. / Bright lights.", "Putting up lights?", "Your lights tour", viewing etiquette; "No flashing reported", never "safe" |
+| Look | midnight blue `#38597F`, warm gold `#CE9D3D`, calm cream; navy dark mode; non-flashing icons (✨ 🌟 🎵 ⛄ 🎄 🚗 🚶 🕯️ ⚡), nothing animates |
+| Event settings | `best_night` (inside the event), `quiet_hours` (≤ 120 characters), plus the shared `rules`, `route_modes`, `max_days` |
+
+Branding that still holds a type's built-in default follows the type of the event on the map, and the draft preview
+uses the draft's type (Community/TypeDefaults, D-20261031-16). The fictional demo is `examples/demo-lights/` (ten homes,
+Dec 1, 2026 – Jan 3, 2027; the dev stack `.env.lights` on port 8089).
+
 ## Adding a type (later stages)
 
-1. Implement `EventType` in `src/Event/Type/<Name>Type.php` (its key is already reserved in `EventTypeRegistry::KEYS`).
-2. Add its fragments under `templates/event/<key>/` and its module `public/assets/js/events/<key>.js`, registered in
-   `events/index.js`.
+1. Implement `EventType` in `src/Event/Type/<Name>Type.php` (its key is already reserved in `EventTypeRegistry::KEYS`),
+   and `EventSettingsType` if its events have settings of their own.
+2. Add its fragments under `templates/event/<key>/` (all of them; a fragment may render nothing), its module
+   `public/assets/js/events/<key>.js`, registered in `events/index.js`, and optionally its stylesheet
+   `public/assets/css/events/<key>.css`.
 3. Add the key to `EventTypeRegistry::ENABLED` with tests: strict details, the public projection, fragments that
    exist, the module's filters and tags.
 4. A fictional demo under `examples/` and a stack for the end-to-end tests.

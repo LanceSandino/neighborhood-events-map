@@ -35,6 +35,7 @@ final class AppExtensionTest extends TestCase
         self::assertSame('not-a-date', $x->dateRange('not-a-date'));
         self::assertSame('2026-12-31', (new AppExtension(new MockClock('2027-01-01 04:30:00 UTC')))->localToday('America/Chicago'), 'the app clock, in the community\'s zone');
         self::assertSame('5 PM', $x->time12('17:00'));
+        self::assertSame(['6–10 PM', '6:30–9 PM', '11 AM–1 PM'], [$x->timeSpan('18:00', '22:00'), $x->timeSpan('18:30', '21:00'), $x->timeSpan('11:00', '13:00')]);
         self::assertSame('12:30 PM', $x->time12('12:30'));
         self::assertSame('12 AM', $x->time12('00:00'));
         $json = $x->bootJson(['a' => '</script>']);

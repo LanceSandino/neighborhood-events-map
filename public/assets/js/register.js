@@ -259,7 +259,7 @@ function initPinMap() {
   if (pinMap || !window.L || !$('#pinMap')) return;
   pinMap = L.map('pinMap', { scrollWheelZoom: false, zoomSnap: 0.25 });
   L.tileLayer(C.map.tiles.url, { maxZoom: C.map.tiles.max_zoom, attribution: esc(C.map.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(pinMap);
-  if (C.map.boundary) L.geoJSON(C.map.boundary, { style: { color: '#f07936', weight: 2, fillOpacity: 0.04 }, interactive: false }).addTo(pinMap);
+  if (C.map.boundary) L.geoJSON(C.map.boundary, { style: { color: T.mapColor || '#f07936', weight: 2, fillOpacity: 0.04 }, interactive: false }).addTo(pinMap);
   const b = C.map.bbox;
   const fit = () => {
     pinMap.invalidateSize();

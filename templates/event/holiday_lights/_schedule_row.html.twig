@@ -6,7 +6,7 @@
   <span class="schedule-icon" aria-hidden="true">{{ et.copy.event_icon }}</span>
   <div class="schedule-text">
     <b>{{ date_range(c.event.starts_on, c.event.ends_on) }}</b>
-    <span>{{ et.copy.most_homes }}: {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · {{ et.copy.times_vary }}{% if c.event.best_night %} · {{ et.copy.best_night }}: {{ date_range(c.event.best_night) }}{% endif %}</span>
+    <span>{{ et.copy.most_homes }}: {{ c.event.starts_at|time_span(c.event.ends_at) }} · {{ et.copy.times_vary }}{% if c.event.best_night %} · {{ et.copy.best_night }}: {{ date_range(c.event.best_night) }}{% endif %}</span>
   </div>
   <span class="season-pill {{ season }}" id="seasonPill" data-before="{{ et.copy.season_before }}" data-during="{{ et.copy.season_during }}" data-after="{{ et.copy.season_after }}">{{ et.copy['season_' ~ season] }}</span>
 </section>

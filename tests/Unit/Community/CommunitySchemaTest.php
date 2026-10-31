@@ -178,5 +178,7 @@ final class CommunitySchemaTest extends TestCase
             [$lights['event']['name'], $lights['branding']['headline'], $lights['branding']['headline_accent'], $lights['branding']['primary_color'], $lights['branding']['accent_color'],
                 $lights['event']['starts_on'], $lights['event']['ends_on']]);
         self::assertSame(['optional_zones', 'walking_routes'], array_keys($lights['features']));
+        $demo = $schema->normalize(Yaml::parseFile(self::root().'/examples/demo-lights/community.yaml'));
+        self::assertSame(['holiday_lights', '2026-12-01', '2027-01-03', 'maple-hollow-lights-demo'], [$demo['event']['type'], $demo['event']['starts_on'], $demo['event']['ends_on'], $demo['community']['id']]);
     }
 }

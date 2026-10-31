@@ -6,6 +6,24 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.12.0-beta.1] - 2026-10-31
+
+Update by pulling `0.12.0-beta.1` and recreating the stack. No database migration: Halloween maps look and work exactly as before. Going back to 0.11.0-beta.1 needs only the older image while a Halloween event is on the map; a Christmas lights season is not shown by older versions (they show "No event on the map right now").
+
+### Added
+- **Christmas lights.** Organizers can run a Christmas lights season under Organizer → Events: the first and last night (up to 62 nights, for example Dec 1 – Jan 3), the hours most homes keep, rules, the best night for a neighborhood walk, quiet hours and, with a routing provider, a drive-by tour. The preview shows the lights look before it goes on the map.
+- Residents list their light display with the nights they take part in (every night or only some), their hours, display styles (classic, animated, light show to music, inflatables, walk-through), drive-by only (please do not approach) or walk-up welcome, music and its FM station, a flashing warning, treats or hot cocoa. In My house they mark a single night "Off tonight" or the whole season "Done for the season".
+- Visitors get a midnight blue and gold map with the season's dates and hours, quick filters for drive-by homes, no flashing reported and music, more filters for walk-up homes, homes open tonight, one night of the season and a display style, and each home's status on their own clock ("Lights on" only during that home's hours). Saved stops become "Your lights tour", with the viewing etiquette next to it.
+- A fictional Christmas lights demo (`examples/demo-lights/`) for trying it out.
+
+### Changed
+- Branding you never changed follows the event on the map: the Christmas lights words and colours during the lights season and Halloween's in October. Words and colours you set yourself stay as they are.
+- The preview of a draft event shows that event's own look, words and filters.
+
+### Known limitations
+- "No flashing reported" is what residents report; nobody checks it.
+- Garage sales come next. Inviting residents by email to list for a new event is not built yet.
+
 ## [0.11.0-beta.1] - 2026-10-31
 
 Update by pulling `0.11.0-beta.1` and recreating the stack. The database gets one additive migration, applied at start: every event becomes a row of its own and each listing belongs to one event; your current Halloween and its homes carry over unchanged. Take a backup first. Going back to 0.10.0-beta.1 or 0.9.0-beta.1 needs only the older image (the database keeps working with it), or the pre-upgrade backup; both ways and their limits are in `docs/runbooks/event-types-migration.md`.

@@ -14,6 +14,9 @@ import { effectiveStatus, phase, seasonOf, eventDates } from '../lib/schedule.js
 
 export const key = 'holiday_lights';
 
+/** The neighborhood outline on the map: midnight blue (Halloween's is orange). */
+export const mapColor = '#38597f';
+
 /** Only Halloween takes over a 0.10 year store. */
 export const migratesYearStore = false;
 

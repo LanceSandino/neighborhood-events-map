@@ -22,7 +22,7 @@
   --pin-lights: #b98522; --pin-music: #38597f; --pin-inflatable: #3c7a86; --pin-walkthrough: #3b7a50;
   --season-before-bg: #e6f3ec; --season-before-fg: #2a6a4a; --season-during-bg: #f8efd9; --season-during-fg: #74560f;
   --season-after-bg: #eeedf0; --season-after-fg: #5d6170;
-  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #ce9d3d33;
+  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #ce9d3d33; --side-hover: #2d3552; --side-line: #3a4362;
 }
 /* Dark: deep navy instead of app.css's plum-grey; must stay identical to the [data-theme="dark"] block below. */
 @media (prefers-color-scheme: dark) {
@@ -38,7 +38,7 @@
     --pin-lights: #b98522; --pin-music: #4f74a0; --pin-inflatable: #3c7a86; --pin-walkthrough: #3b7a50;
     --season-before-bg: #1c3528; --season-before-fg: #95d8b3; --season-during-bg: #383021; --season-during-fg: #f0cf86;
     --season-after-bg: #2a3146; --season-after-fg: #c3c9d8;
-    --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29;
+    --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29; --side-hover: #232b45; --side-line: #2f3855;
   }
 }
 :root[data-event-type="holiday_lights"][data-theme="dark"] {
@@ -53,7 +53,7 @@
   --pin-lights: #b98522; --pin-music: #4f74a0; --pin-inflatable: #3c7a86; --pin-walkthrough: #3b7a50;
   --season-before-bg: #1c3528; --season-before-fg: #95d8b3; --season-during-bg: #383021; --season-during-fg: #f0cf86;
   --season-after-bg: #2a3146; --season-after-fg: #c3c9d8;
-  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29;
+  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29; --side-hover: #232b45; --side-line: #2f3855;
 }
 /* "More contrast" (system or Appearance) keeps winning over this type's tokens. */
 @media (prefers-contrast: more) {
@@ -62,6 +62,8 @@
 :root[data-event-type="holiday_lights"][data-contrast="more"] { --muted: var(--text-2); --border: var(--muted-2); --border-soft: var(--muted-2); }
 
 /* ---- Shell and hero ---- */
+[data-event-type="holiday_lights"] .nav a.active, [data-event-type="holiday_lights"] .nav a:hover { background: var(--side-hover); }
+[data-event-type="holiday_lights"] .side-panel { border-color: var(--side-line); }
 [data-event-type="holiday_lights"] .side-action { background: var(--side-action-bg); color: var(--side-action-fg); min-height: 44px; }
 [data-event-type="holiday_lights"] .hero-illustration { background: transparent; color: inherit; overflow: visible; }
 [data-event-type="holiday_lights"] .hero-glow { position: absolute; inset: 12px 40px; border-radius: 50%; background: radial-gradient(circle, var(--hero-glow), transparent 70%); }
@@ -89,6 +91,7 @@
 [data-event-type="holiday_lights"] .time-filter input { min-width: 150px; }
 
 /* ---- Cards, tags, status chips and pins ---- */
+[data-event-type="holiday_lights"] .tag { white-space: normal; max-width: 100%; }
 .tag.lights { background: var(--tag-lights-bg); color: var(--tag-lights-fg); }
 .tag.music { background: var(--tag-music-bg); color: var(--tag-music-fg); }
 .tag.drive { background: var(--tag-drive-bg); color: var(--tag-drive-fg); }
@@ -101,6 +104,8 @@
 [data-event-type="holiday_lights"] .map-selected .x { min-width: 44px; min-height: 44px; }
 [data-event-type="holiday_lights"] .map-selected .primary { min-height: 44px; width: 100%; }
 [data-event-type="holiday_lights"] .view-toggle button { width: 44px; height: 40px; }
+[data-event-type="holiday_lights"] .map-tools button { width: 44px; height: 44px; }
+[data-event-type="holiday_lights"] .filter-more .link-button { min-height: 44px; }
 .pin.lights { background: var(--pin-lights); }
 .pin.music { background: var(--pin-music); }
 .pin.inflatable { background: var(--pin-inflatable); }
@@ -133,9 +138,15 @@ fieldset.field > legend.label { padding: 0; }
   [data-event-type="holiday_lights"] .hero-spark.two { font-size: 16px; right: 40px; top: 0; }
   [data-event-type="holiday_lights"] .hero-spark.three { display: none; }
 }
+/* Phones: one card per row (as in the mockup); lights cards carry more and longer tags than Halloween's. */
+@media (max-width: 560px) {
+  [data-event-type="holiday_lights"] .cards { grid-template-columns: 1fr; }
+}
 @media (max-width: 660px) {
   .schedule-row { margin-top: 14px; padding: 12px 13px; gap: 10px; align-items: flex-start; }
   .schedule-icon { font-size: 22px; }
   .season-pill { white-space: normal; text-align: center; max-width: 92px; }
   [data-event-type="holiday_lights"] .intro { gap: 8px; }
 }
+/* My house: "Visible on the map" takes the row the lights form has no half-width neighbour for. */
+[data-event-type="holiday_lights"] .dash-home .form-grid > .field:has(select[name="published"]) { grid-column: 1 / -1; max-width: 360px; }

@@ -74,7 +74,8 @@ function initMap() {
     map = L.map('map', { zoomControl: false, scrollWheelZoom: false, tap: true, zoomSnap: 0.25 });
     L.tileLayer(C.map.tiles.url, { maxZoom: C.map.tiles.max_zoom, attribution: esc(C.map.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(map);
     if (C.map.boundary) {
-      L.geoJSON(C.map.boundary, { style: { color: '#f07936', weight: 2, fillColor: '#f07936', fillOpacity: 0.05 }, interactive: false }).addTo(map);
+      const line = T.mapColor || '#f07936'; // the event type's outline colour (Halloween: orange)
+      L.geoJSON(C.map.boundary, { style: { color: line, weight: 2, fillColor: line, fillOpacity: 0.05 }, interactive: false }).addTo(map);
     }
     for (const z of C.zones) {
       if (!z.geometry) continue;

@@ -115,11 +115,15 @@ jobs:
               -e "s|^APP_BASE_URL=.*|APP_BASE_URL=http://localhost:8088|" \
               -e "s|^COMMUNITY_BOOTSTRAP_FILE=.*|COMMUNITY_BOOTSTRAP_FILE=/app/examples/demo/community.yaml|" .env > .env.demo
           printf 'MAILPIT_UI_PORT=8026\nAPP_DEMO=1\nCOMMUNITY_BOOTSTRAP_APPROVE=1\nADMIN_EMAIL=organizer@maple-hollow.invalid\nRL_DISPUTE_PER_ADDRESS=500/86400\n' >> .env.demo
-      - name: Start the Ventura Reserve and demo stacks
+          sed -e "s|^COMPOSE_PROJECT_NAME=.*|COMPOSE_PROJECT_NAME=halloween-lights|" -e "s|^HTTP_PORT=.*|HTTP_PORT=8089|" \
+              -e "s|^APP_BASE_URL=.*|APP_BASE_URL=http://localhost:8089|" -e "s|^MAILPIT_UI_PORT=.*|MAILPIT_UI_PORT=8027|" \
+              -e "s|^COMMUNITY_BOOTSTRAP_FILE=.*|COMMUNITY_BOOTSTRAP_FILE=/app/examples/demo-lights/community.yaml|" .env.demo > .env.lights
+      - name: Start the Ventura Reserve, demo and Christmas lights demo stacks
         run: |
           docker compose run --rm --no-deps --entrypoint composer app install --no-interaction --no-progress
           docker compose up -d --build --wait
           docker compose --env-file .env.demo up -d --build --wait
+          docker compose --env-file .env.lights up -d --build --wait
       - name: Playwright E2E (tiles blocked to respect the OSM tile policy)
         env: { E2E_BLOCK_TILES: '1' }
         run: ./bin/e2e.sh

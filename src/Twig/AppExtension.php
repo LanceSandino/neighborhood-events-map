@@ -93,6 +93,7 @@ final class AppExtension extends AbstractExtension
         return [
             new TwigFilter('boot_json', [$this, 'bootJson'], ['is_safe' => ['html']]),
             new TwigFilter('time12', [$this, 'time12']),
+            new TwigFilter('time_span', [$this, 'timeSpan']),
         ];
     }
 
@@ -199,6 +200,15 @@ final class AppExtension extends AbstractExtension
         $h12 = 0 === $h % 12 ? 12 : $h % 12;
 
         return '00' === $m[2] ? $h12.' '.$suffix : $h12.':'.$m[2].' '.$suffix;
+    }
+
+    /** "6–10 PM" when both times share AM or PM, else "11 AM–1 PM" (events/holiday_lights.js span() says the same). */
+    public function timeSpan(string $start, string $end): string
+    {
+        $a = $this->time12($start);
+        $b = $this->time12($end);
+
+        return (str_ends_with($a, 'AM') === str_ends_with($b, 'AM') ? substr($a, 0, -3) : $a).'–'.$b;
     }
 
     public function bootJson(mixed $data): string
