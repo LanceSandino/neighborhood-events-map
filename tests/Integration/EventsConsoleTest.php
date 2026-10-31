@@ -115,6 +115,7 @@ final class EventsConsoleTest extends AppTestCase
         self::assertCount(0, $crawler->filter('script[src*="home.js"]'));
         self::assertCount(0, $crawler->filter('[data-action="register"]'), 'no listing action between events');
         self::assertSame('Testville', $crawler->filter('title')->text());
+        self::assertStringContainsString('No event on the map right now', $this->client->request('GET', '/about')->filter('.about-facts')->text(), 'About names no ended event as coming');
         self::assertSame([], $this->json('GET', '/api/homes')['homes']);
         $e = $this->json('GET', '/api/event');
         self::assertSame([false, null, null], [$e['event']['active'], $e['event']['id'], $e['event']['type']]);
@@ -231,6 +232,26 @@ final class EventsConsoleTest extends AppTestCase
         $this->organizer();
         $this->json('POST', "/api/admin/events/$draft/activate", ['confirm' => true, 'replaces' => 1]);
         self::assertSame(403, $this->code(), 'organizer writes need the CSRF token');
+    }
+
+    /** A claim request (15-minute link) made for an event that ended before it was confirmed lists nothing. */
+    public function testAClaimRequestMadeForAnEventThatEndedMeanwhileIsRefused(): void
+    {
+        $this->configureCommunity();
+        $id = $this->addAddress('61', 'Pumpkin Ln', 40.0046, -75.005, 'west');
+        $token = $this->requestLink('late@example.test', ['address' => $this->byId($id), 'listing' => self::listing(['note' => 'For the old event'])]);
+        $this->organizer();
+        $current = (int) $this->json('GET', '/api/admin/events')['active_id'];
+        $next = $this->json('POST', '/api/admin/events', ['type' => 'halloween', 'starts_on' => '2027-10-31'], $this->h())['event']['id'];
+        $this->json('POST', "/api/admin/events/$next/activate", ['confirm' => true, 'replaces' => $current], $this->h());
+        self::assertSame(200, $this->code());
+        $this->client->getCookieJar()->clear();
+        $this->confirm($token);
+        $me = $this->json('GET', '/api/me');
+        self::assertSame('rejected', $me['claim_outcome']['status']);
+        self::assertStringContainsString('not on the map any more', $me['claim_outcome']['message']);
+        self::assertSame(0, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM event_listings'), 'nothing was listed for either event');
+        self::assertFalse($this->db()->fetchOne('SELECT 1 FROM claims WHERE address_id = ?', [$id]), 'and nothing was claimed');
     }
 
     /** @return array<string,string> */

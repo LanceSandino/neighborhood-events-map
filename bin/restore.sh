@@ -1,6 +1,7 @@
 #!/bin/bash
 # Restore a backup made by bin/backup-now.sh or the daily backup loop.
-# DESTRUCTIVE: replaces the current database contents. Stops the app first, restores, restarts.
+# DESTRUCTIVE: replaces the current database (its whole schema, in one transaction) with the backup's. Stops the app
+# first, restores, restarts. A backup taken before an upgrade restores cleanly after it (newer tables go too).
 # Accounts deleted and organizer roles changed after the backup stay deleted and changed: the current account
 # ledger (ids and times only) is saved first and re-applied to the restored database (app:ledger:replay).
 # Usage: bin/restore.sh <backup-file-name> [extra docker compose args]
@@ -26,7 +27,13 @@ if ! docker compose "$@" exec -T app php bin/console app:ledger:export > "$ledge
 fi
 
 docker compose "$@" stop nginx maintenance app
-docker compose "$@" exec -T backup sh -c "pg_restore --clean --if-exists --no-owner --dbname=\"\$PGDATABASE\" '/backups/$file'"
+# The backup replaces the whole schema in ONE transaction: tables, functions and triggers that a newer release added
+# (and that reference the backup's tables) go with it, so a backup from before an upgrade restores cleanly, and a
+# restore that fails half-way changes nothing (the database stays as it was; the app stays stopped).
+docker compose "$@" exec -T backup sh -c "set -e; umask 077; work=\$(mktemp -d); trap 'rm -rf \"\$work\"' EXIT; \
+  pg_restore --no-owner --file=\"\$work/restore.sql\" '/backups/$file'; \
+  { echo 'DROP SCHEMA public CASCADE;'; grep -qx 'CREATE SCHEMA public;' \"\$work/restore.sql\" || echo 'CREATE SCHEMA public;'; cat \"\$work/restore.sql\"; } > \"\$work/all.sql\"; \
+  psql -X -q -v ON_ERROR_STOP=1 --single-transaction --dbname=\"\$PGDATABASE\" -f \"\$work/all.sql\" >/dev/null"
 # The app runs pending migrations when it starts; re-apply the ledger before nginx lets anyone in.
 docker compose "$@" start app
 for _ in $(seq 1 60); do

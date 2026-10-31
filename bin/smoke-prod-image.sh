@@ -2,7 +2,7 @@
 # @module bin/smoke-prod-image
 # @description Production-image smoke test: starts the real prod app and nginx images (OPcache preloading,
 #   prod PHP settings, read-only containers) with compose.yaml, a throwaway project and random secrets, then
-#   checks what the development stack cannot: /healthz and the home page answer 200 through nginx, every
+#   checks what the development stack cannot: /healthz and the home page (the fictional demo's map) answer 200 through nginx, every
 #   versioned asset on the page answers 200, a multipart body is refused (415) except on an upload endpoint
 #   (which reaches PHP), all three PHP-FPM pools answer, and the console works in the prod image. Always tears
 #   the stack and its volumes down. Run before publishing or deploying any image (CI and the Images workflow
@@ -44,6 +44,10 @@ trap cleanup EXIT
   echo "APP_SECRET=$(openssl rand -hex 24)"
   echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
   echo "MAILER_DSN=null://null"
+  # The fictional demo community (no homes are seeded), so the home page is the real map page with all its assets;
+  # an install without an active event would show the neutral "no event right now" page instead.
+  echo "COMMUNITY_BOOTSTRAP_FILE=/app/examples/demo/community.yaml"
+  echo "COMMUNITY_BOOTSTRAP_APPROVE=1"
 } > "$env_file"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -58,7 +62,8 @@ case "$health" in *'"status":"ok"'*'"database":"ok"'*) ;; *) fail "/healthz: $he
 pass "/healthz: $health"
 
 page=$(curl -fsS -H "Host: localhost:$port" "$base/") || fail "the home page did not answer 200"
-pass "home page 200"
+case "$page" in *'/js/home.js'*) ;; *) fail "the home page is not the map page (no home.js)" ;; esac
+pass "home page 200 (the map page)"
 
 assets=$(printf '%s' "$page" | grep -oE '/assets/v[^"'"'"' )]+' | sort -u)
 [ -n "$assets" ] || fail "the home page links no versioned assets"

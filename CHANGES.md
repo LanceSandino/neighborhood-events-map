@@ -1061,4 +1061,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p2"
   author: "Lance Sandino"
   timestamp: "2026-10-31T11:00:00Z"
+- id: CU-20261031-16
+  type: chore
+  title: "Rollback drill for event-scoped listings (bin/drill-event-upgrade.sh), bin/restore.sh replaces the whole schema in one transaction, the event-types migration runbook"
+  description: "bin/drill-event-upgrade.sh runs on a disposable Compose project (port 8198, Mailpit 8197, always down -v): the published 0.9.0-beta.1 images with the fictional demo, a backup (bin/backup-now.sh), the upgrade to the given images with the startup migrations, the same /api/homes, a resident edit and a new self-entered home on the new release (scripts/drill_listing.py: real proof-of-work, link from Mailpit, a pin inside the boundary away from every home), path (a) image rollback to 0.9.0-beta.1 with the database kept (starts, reports the newer migrations, shows the bridged homes; a resident edits on 0.9), forward again (the 0.9 edit reached the event tables), path (b) the pre-upgrade backup restored with bin/restore.sh on 0.9.0-beta.1 (exactly the pre-upgrade homes, no event tables) and a second upgrade of the restored database. bin/restore.sh used pg_restore --clean, which drops only the objects in the backup: it cannot drop claims while event_listings references it, and tables, functions and triggers added later would stay; it now replaces the schema in one transaction (D-20261031-15). docs/runbooks/event-types-migration.md explains what the migration changes, how to check it, both rollback paths with their exact commands and limits, and the drill; the release, upgrade and backup runbooks link it. bin/smoke-prod-image.sh now bootstraps the fictional demo community (no homes) and requires the home page to be the map page (home.js), because an install without an active event shows the neutral page and would have left the map page's assets unchecked. The end-to-end suite gains a `season` project that runs after all others (tests/e2e/specs/season.spec.mjs: the Events console, the draft preview, the switch, last season's homes gone, a shared link for the ended event, My house \"List for\" from an empty form); bin/e2e.sh lists the fictional demo homes again for the active event before and after each run."
+  impact: medium
+  affected_modules: ["bin/drill-event-upgrade.sh", "scripts/drill_listing.py", "bin/restore.sh", "bin/e2e.sh", "bin/smoke-prod-image.sh", "tests/e2e/", "docs/runbooks/"]
+  related_tests: ["bin/drill-event-upgrade.sh nhm-app nhm-nginx smoke: all 8 steps passed (docs/quality/test-report.md)", "tests/Unit/Deploy/RollbackDrillTest.php", "scripts/tests/test_drill_listing.py", "scripts/tests/test_operator_scripts.py (restore refusal paths unchanged)", "bin/smoke-prod-image.sh: 7/7 with the map page", "tests/e2e/specs/season.spec.mjs"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T13:00:00Z"
 ```

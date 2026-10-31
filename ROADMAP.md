@@ -82,6 +82,7 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - A listing's own subset of days and hours.
    - “Open now” and “open on <day>” in the community time zone.
    - The season archive and the “last season's homes disappear” rule generalized to ranges.
+   - Status: the core shipped in 0.11.0-beta.1 — events are rows of their own with a date range and default hours, listings belong to one event and have their own days and hours (windows), the schedule core checks windows for one-day, nightly and sale-day kinds, and the display status (“open now”, “later”, a status that holds for one day) is derived in the community time zone by the same rules in the server and the browser. Halloween stays a one-day event; the date picker and “open on <day>” filters come with the types that need them ([D-20261031-05](DECISIONS.md) to [-11](DECISIONS.md), [event types](docs/architecture/event-types.md)).
 4. **Stage 3 — Christmas lights.**
    - The `holiday_lights` type: fields, filters, icons, statuses, copy and reminders.
    - The drive-by tour through a provider's driving profile, only when the organizer enables a provider.
@@ -93,6 +94,7 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - An organizer flow to archive the current event and start the next one, possibly of another type.
    - Claims are kept; residents are invited, not re-registered.
    - A per-event export and retention clean-up of old listings.
+   - Status: shipped in 0.11.0-beta.1 except inviting residents — Organizer → Events prepares a draft, previews it, puts it on the map in one step (the current event is archived; nothing carries over), ends an event, exports one event's listings and deletes an archived event's listings; residents keep their claims and list each home for the new event from an empty form ([D-20261031-12](DECISIONS.md), [-13](DECISIONS.md)). Emailing residents about a new event is not built yet.
 
 ## Not planned
 

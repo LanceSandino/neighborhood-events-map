@@ -30,7 +30,10 @@ test('filters affect list and pins together and persist after reload; favorites 
   await expect(page.locator('#listCount')).toHaveText(`${shown} showing`);
   await expect(page.locator('#savedCount')).toHaveText('1');
   const stored = await page.evaluate(() => Object.keys(localStorage));
-  expect(stored).toContain('nhm:maple-hollow-demo:2026');
+  // Kept per community and event (D-20261031-14); 0.10 kept it per season year.
+  const eventId = (await (await request.get(DEMO + '/api/event')).json()).event.id;
+  expect(stored).toContain(`nhm:maple-hollow-demo:${eventId}`);
+  expect(stored).not.toContain('nhm:maple-hollow-demo:2026');
   await page.locator('#btnReset').click({ force: true }).catch(() => {});
   guard.assertClean();
 });
@@ -194,6 +197,7 @@ test('a shared link opens the same stops and filters', async ({ page, browser })
   const link = await page.locator('#btnShareRoute').getAttribute('data-url');
   expect(link).toContain('stops=');
   expect(link).toContain('f=');
+  expect(link).toMatch(/[?&]e=\d+/); // the event the stops belong to
   // Someone else (fresh browser, nothing saved) opens the link.
   const ctx = await browser.newContext();
   const other = await ctx.newPage();
@@ -299,7 +303,8 @@ test('route: skip stops, bring them back, add nearby suggestions, switch between
   const first = (await items.first().locator('b').textContent()).trim();
   await page.getByRole('button', { name: `Skip ${first}` }).click();
   await expect(items).toHaveCount(openHomes.length - 1);
-  await expect(page.locator('#btnShareRoute')).not.toHaveAttribute('data-url', new RegExp(`\\b${openHomes.find((h) => h.address === first).id}\\b`));
+  // The skipped home is not among the shared stops (links also name the event since 0.11: e=<id>).
+  await expect(page.locator('#btnShareRoute')).not.toHaveAttribute('data-url', new RegExp(`[?&]stops=(?:[\\d.]*\\.)?${openHomes.find((h) => h.address === first).id}(?:\\.|&|$)`));
   await page.getByRole('button', { name: 'Bring back' }).click();
   await expect(items).toHaveCount(openHomes.length);
   // One favourite: suggestions nearby can be added; "All matching" shows everything again.

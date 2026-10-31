@@ -25,9 +25,8 @@ use Symfony\Component\Console\Output\OutputInterface;
  * @description Loads the FICTIONAL demo homes (examples/demo/homes.json). Refuses unless APP_DEMO=1
  *     and the configured community is the demo, so production can never show invented homes. Each home's
  *     listing fields (everything but its address and position) go through ListingDraft and are listed for the
- *     active event. When the demo homes exist but the active event (a new one an organizer started on the demo
- *     stack) has no listings yet, the fictional homes are listed for it again, from the file, never from an earlier
- *     event.
+ *     active event. When the demo homes exist, those not listed for the active event (a new one an organizer started
+ *     on the demo stack) are listed for it again, from the file, never from an earlier event.
  *
  * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Security/UserRepository
  */
@@ -74,19 +73,15 @@ final class DemoSeedCommand extends Command
             return Command::FAILURE;
         }
         $relist = (int) $this->db->fetchOne('SELECT COUNT(*) FROM claims') > 0;
-        if ($relist && (int) $this->db->fetchOne('SELECT COUNT(*) FROM event_listings WHERE event_id = ?', [$event->id]) > 0) {
-            $output->writeln('Demo homes already present; nothing to do.');
-
-            return Command::SUCCESS;
-        }
         $type = $this->types->for($c);
         $n = 0;
         foreach ($doc['homes'] as $i => $h) {
             $parts = $this->normalizer->fromParts($h['house_number'], $h['street']);
             if ($relist) {
                 $id = (int) ($this->addresses->findByNormalized($parts['normalized'])['id'] ?? 0);
-                if (0 === $id || false === $this->db->fetchOne('SELECT 1 FROM claims WHERE address_id = ?', [$id])) {
-                    continue; // a demo home given up since: not listed again
+                if (0 === $id || false === $this->db->fetchOne('SELECT 1 FROM claims WHERE address_id = ?', [$id])
+                    || false !== $this->db->fetchOne('SELECT 1 FROM event_listings WHERE event_id = ? AND address_id = ?', [$event->id, $id])) {
+                    continue; // given up since, or already listed for this event: left as it is
                 }
             } else {
                 $id = $this->addresses->insert($parts, null, (float) $h['lat'], (float) $h['lon'], 'admin', $c->insideBoundary((float) $h['lat'], (float) $h['lon']), true);
@@ -98,7 +93,8 @@ final class DemoSeedCommand extends Command
             $this->listings->insert($this->db, $event, $id, $draft, ListingDraft::windowsFor($draft, $event, $type), ListingDraft::statusDate($draft, $type, $c, $this->clock->now()));
             ++$n;
         }
-        $output->writeln(sprintf($relist ? 'Listed %d FICTIONAL demo homes for the current event.' : 'Seeded %d FICTIONAL demo homes.', $n));
+        $output->writeln($relist && 0 === $n ? 'Demo homes already present; nothing to do.'
+            : sprintf($relist ? 'Listed %d FICTIONAL demo homes for the current event.' : 'Seeded %d FICTIONAL demo homes.', $n));
 
         return Command::SUCCESS;
     }

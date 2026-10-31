@@ -22,6 +22,16 @@ if [ "$(uname -s)" = "Linux" ]; then
   URLS=(-e E2E_DEMO_URL=http://localhost:8088 -e E2E_VENTURA_URL=http://localhost:8087
         -e E2E_MAILPIT_URL=http://localhost:8026 -e E2E_VENTURA_MAILPIT_URL=http://localhost:8025)
 fi
+# The season test (tests/e2e/specs/season.spec.mjs) puts a new event on the demo's map, which ends the season of the
+# fictional homes; they are listed again for whatever event is active before and after every run (app:demo:seed lists
+# only the fictional homes that have no listing for it, from examples/demo/homes.json).
+relist() { docker compose --env-file .env.demo exec -T app php bin/console app:demo:seed >/dev/null; }
+relist
+set +e
 docker run --rm --ipc=host "${NET[@]}" ${URLS[@]+"${URLS[@]}"} -e E2E_ORGANIZER="$E2E_ORGANIZER" -e E2E_BLOCK_TILES="${E2E_BLOCK_TILES:-}" \
   -v "$PWD":/work -w /work/tests/e2e "$PW_IMAGE" \
   /bin/bash -c "npm ci --no-audit --no-fund >/dev/null && npx playwright test $*"
+status=$?
+set -e
+relist
+exit "$status"
