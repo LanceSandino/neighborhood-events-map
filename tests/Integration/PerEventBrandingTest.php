@@ -50,7 +50,11 @@ final class PerEventBrandingTest extends AppTestCase
             }
         }
         $this->client->getCookieJar()->clear();
+        foreach (['lights' => '/assets/img/favicon-lights.svg', 'sale' => '/assets/img/favicon-sale.svg'] as $name => $icon) {
+            self::assertSame($icon, $this->client->request('GET', '/?e='.$ids[$name])->filter('link[rel="icon"]')->attr('href'), "$name: its own tab icon, not Halloween's pumpkin");
+        }
         $home = $this->client->request('GET', '/');
+        self::assertSame('/assets/img/favicon.svg', $home->filter('link[rel="icon"]')->attr('href'), 'Halloween keeps its icon');
         self::assertSame('👻 Tiny ghosts. Big adventures.', $home->filter('section.intro h1')->text(), 'Halloween keeps its own headline');
         self::assertStringContainsString('find the candy stops of Fernbrook Glen', $home->filter('section.intro p')->text());
         self::assertSame('🎃', $home->filter('.brand-icon')->text());

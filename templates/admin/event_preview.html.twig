@@ -1,8 +1,11 @@
 {% extends 'home/index.html.twig' %}
 {# Organizer-only preview of a draft event (Organizer → Events → Preview): the public map's page with the draft's type,
    words and dates and no listings. No map scripts run (nothing loads the active event's homes), robots are told to
-   stay away and the response is not cached. The public event switcher is not shown (the draft is not one of them). #}
+   stay away and the response is not cached. The public event switcher is not shown (the draft is not one of them). Its
+   colours are the draft's own (ADR 0012). #}
 {% set switch_path = '' %}
+{# The draft's own colours (its branding over its type's), from an organizer-only stylesheet. #}
+{% block theme %}<link rel="stylesheet" href="/admin/events/{{ c.event.id }}/theme.css?v={{ app_version }}">{% endblock %}
 {% block meta %}<meta name="robots" content="noindex">{% endblock %}
 {% block title %}Preview · {{ c.event.name }} · {{ c.community.name }}{% endblock %}
 {% block body %}

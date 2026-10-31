@@ -129,6 +129,41 @@ test('each event has its own branding: the Halloween look stays on Halloween\'s 
   await page.screenshot({ path: `${SHOTS}/events-sale-390.png` });
 });
 
+// The organizer console is the community's (D-20261031-52): outside an event's own section (data-event-section: its
+// row, summary or form in Events, its listing column, its audit rows) no page shows an event's words, emoji or colours —
+// not the default event's (here the lights: ✨, midnight blue) and not the Halloween's own branding (🎃, 👻, orange).
+const CONSOLE_FORBIDDEN = /ghost|trick[- ]?or[- ]?treat|\btreats?\b|candy|candies|scare|pumpkin|halloween|holiday nights|hollow haunts|🎃|👻|✨/giu;
+test('the organizer console names the community and uses its own colours; event branding stays in each event\'s own section', async ({ page, request }) => {
+  const guard = watchConsole(page);
+  await signIn(page, request, ORGANIZER, '/admin');
+  await expect(page).toHaveURL(/\/admin$/);
+  for (const scheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: scheme });
+    for (const [path, ready] of [['/admin', '.checklist'], ['/admin/community', '#settingsForm'], ['/admin/community/map', '#status'], ['/admin/addresses', '#rows tr'],
+      ['/admin/disputes', '#list'], ['/admin/audit', 'table.data'], ['/admin/events', '.events-table']]) {
+      await page.goto(LIGHTS + path);
+      await expect(page.locator(ready).first()).toBeAttached();
+      await expect(page.locator('.admin-top .brand-icon')).toHaveText('M');
+      expect(await page.locator('link[href*="theme.css"]').count(), `${path}: no event's stylesheet`).toBe(0);
+      const look = await page.evaluate(() => [getComputedStyle(document.body).getPropertyValue('--orange').trim().toUpperCase(), getComputedStyle(document.querySelector('.admin-top .brand-icon')).backgroundColor]);
+      expect(look[0], `${path} (${scheme}): the console's own colour`).toBe(scheme === 'light' ? '#3B5674' : '#93B2D6');
+      const words = await page.evaluate((src) => {
+        const doc = document.documentElement.cloneNode(true);
+        doc.querySelectorAll('script, style, [data-event-section]').forEach((n) => n.remove());
+        const attrs = [...doc.querySelectorAll('[title], [aria-label], [placeholder], [alt]')].map((n) => ['title', 'aria-label', 'placeholder', 'alt'].map((a) => n.getAttribute(a) || '').join(' '));
+        return [...new Set(`${doc.textContent} ${attrs.join(' ')}`.match(new RegExp(src, 'giu')) || [])];
+      }, CONSOLE_FORBIDDEN.source);
+      expect(words, `${path} (${scheme}) outside an event's own section`).toEqual([]);
+    }
+  }
+  // Where an event is in focus it shows: its row in Events with its type's mark, its listing column in Addresses.
+  await page.goto(LIGHTS + '/admin/events');
+  await expect(page.locator('.events-table [data-event-section="halloween"]').first()).toContainText('🎃');
+  await page.goto(LIGHTS + '/admin/addresses');
+  await expect(page.locator('#listingHead')).toHaveText('✨ Christmas Lights listing');
+  guard.assertClean();
+});
+
 test('each event keeps its own saved stops; a shared link keeps its event', async ({ page, request }) => {
   const guard = watchConsole(page);
   const e = await events(request);

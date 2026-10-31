@@ -1511,4 +1511,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-branding"
   author: "Lance Sandino"
   timestamp: "2026-10-31T20:00:00Z"
+- id: CU-20261031-61
+  type: feat
+  title: "The organizer console is the community's; event branding only where an event is in focus"
+  description: "templates/admin/_layout.html.twig: the header mark is the community's logo, else its initial (never the default event's emoji), the browser icon the logo, else public/assets/img/favicon-community.svg, and no /theme.css; admin.css gives the console its own neutral slate-blue tokens (light and two identical dark blocks), so no event's colours and none of Halloween's orange and peach. Event-in-focus sections are marked data-event-section: each event's row, summary and form in Events (with its type's mark, type_icon from GET /api/admin/events), the Overview's new list of public events (default first, with type mark, state, dates and homes; the stat cards are the community's), the Addresses listing column (GET /api/admin/addresses names the event and gives the type's status_label), audit rows about an event and the default event's registration reason. Community & branding: neutral reminders and access labels; switches only one kind of event has are grouped under that kind's name. The draft preview takes its own colours from /admin/events/{id}/theme.css (organizers only, no-store) through a theme block in base.html.twig. Public pages without a logo show the type's tab icon (page_favicon: favicon-lights.svg, favicon-sale.svg; Halloween keeps favicon.svg) (D-20261031-52)."
+  impact: medium
+  affected_modules: ["templates/admin/_layout.html.twig", "templates/admin/event_preview.html.twig", "templates/base.html.twig", "public/assets/css/admin.css", "public/assets/js/admin/overview.js", "public/assets/js/admin/community.js", "public/assets/js/admin/addresses.js", "public/assets/js/admin/audit.js", "public/assets/js/admin/events.js", "public/assets/img/", "src/Controller/AdminPageController.php", "src/Controller/Api/AdminApiController.php", "src/Controller/Api/EventsAdminApiController.php", "src/Event/Type/*Copy.php"]
+  related_tests: ["tests/Integration/OrganizerConsoleNeutralTest.php: testTheConsoleChromeIsTheCommunitysOnEveryPage", "tests/Integration/OrganizerConsoleNeutralTest.php: testTheDataOfAnEventNamesItsEventAndType", "tests/e2e/specs/events.spec.mjs: the organizer console names the community and uses its own colours; event branding stays in each event's own section"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T20:20:00Z"
 ```

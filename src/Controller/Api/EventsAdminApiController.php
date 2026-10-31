@@ -29,7 +29,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 /**
  * @module Controller/Api/EventsAdminApiController
  * @description Organizer API for events (ROLE_ADMIN, CSRF and idle timeout enforced first; ADR 0011): list events with
- *     their opted-in and public counts (an open event also with what closing it will do: the thank-you text and next
+ *     their type's name and mark and their opted-in and public counts (an open event also with what closing it will do: the thank-you text and next
  *     year's dates), the types with the dates a new event gets and their default branding (the placeholders of an
  *     event's own branding, ADR 0012), prepare a draft of an offered type, edit an event (its branding too),
  *     announce a draft (upcoming), open, close (confirmed; creates next year's event), make an event the default,
@@ -57,7 +57,7 @@ final class EventsAdminApiController
     {
         $today = $this->community->current()->localDate($this->clock->now());
         $events = array_map(function (array $e): array {
-            $view = $e + ['type_name' => $this->typeName($e['type']), 'type_offered' => $this->types->isEnabled($e['type'])];
+            $view = $e + ['type_name' => $this->typeName($e['type']), 'type_offered' => $this->types->isEnabled($e['type']), 'type_icon' => $this->typeIcon($e['type'])];
             if (EventOccurrence::OPEN === $e['state'] && $view['type_offered']) {
                 $view['close_preview'] = $this->lifecycle->closePreview($this->lifecycle->get((int) $e['id']));
             }
@@ -168,6 +168,12 @@ final class EventsAdminApiController
             return new Response($export->csv($event), 200, ['Content-Type' => 'text/csv; charset=utf-8',
                 'Content-Disposition' => sprintf('attachment; filename="event-%d-%s.csv"', $event->id, $event->startsOn ?? 'tbd'), 'Cache-Control' => 'no-store']);
         });
+    }
+
+    /** The type's mark shown next to an event in the console ('' for a type this version does not know). */
+    private function typeIcon(string $key): string
+    {
+        return $this->types->isEnabled($key) ? (string) ($this->types->get($key)->copy()['event_icon'] ?? '') : '';
     }
 
     private function typeName(string $key): string

@@ -8,7 +8,9 @@
  *     preview a draft (a public event: its page), announce
  *     it (upcoming), open, close (the confirmation shows the thank-you text and next year's dates it creates), make an
  *     event the default (what "/" shows), archive, export one event's listings (CSRF-checked form POST) and delete an
- *     archived event's listings. Several events may be on at once, one of each kind. The server checks everything.
+ *     archived event's listings. Several events may be on at once, one of each kind. Each event's row, summary and form
+ *     is its own section (data-event-section) with its type's mark: the one place in the console an event's words and
+ *     branding show (D-20261031-52). The server checks everything.
  * @dependencies admin/common.js, lib/api.js
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
@@ -30,7 +32,7 @@ function form(e) {
   const rules = ((e && e.settings && e.settings.rules) || []).join('\n');
   const [first, last] = e ? [e.starts_on, e.ends_on] : ((typeOf(type) || {}).new_dates || [null, null]);
   const tbd = !first;
-  return `<form id="eventForm" class="form-grid" novalidate>
+  return `<form id="eventForm" class="form-grid" data-event-section="${esc(type || '')}" novalidate>
     <div class="field"><label for="evType">Event type</label><select id="evType" ${e ? 'disabled' : ''}>${(e ? [{ key: e.type, name: e.type_name }] : data.types).map((t) => `<option value="${esc(t.key)}" ${t.key === type ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
       <span class="form-caption">${e ? 'The type of an event never changes.' : 'This version offers ' + esc(data.types.map((t) => t.name).join(', ')) + '.'}</span></div>
     <div class="field"><label for="evName">Public name</label><input id="evName" maxlength="60" value="${esc(e ? e.name : '')}" placeholder="${esc((typeOf(type) || {}).name || '')}"></div>
@@ -119,7 +121,7 @@ function row(e) {
   if (e.state !== 'archived') a.push(`<button type="button" class="secondary" data-archive="${e.id}">Archive</button>`);
   a.push(`<form class="inline-form" method="post" action="/api/admin/events/${e.id}/export"><input type="hidden" name="_csrf" value="${esc(csrfToken())}"><button type="submit" class="secondary">Export CSV</button></form>`);
   if (e.state === 'archived' && e.opted_in > 0) a.push(`<button type="button" class="danger" data-purge="${e.id}">Delete listings</button>`);
-  return `<tr data-event="${e.id}"><td><b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''}<br><span class="form-caption">${esc(e.type_name)}${offered ? '' : ' · not offered by this version'}</span></td>
+  return `<tr data-event="${e.id}" data-event-section="${esc(e.type)}"><td><span aria-hidden="true">${esc(e.type_icon || '')}</span> <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''}<br><span class="form-caption">${esc(e.type_name)}${offered ? '' : ' · not offered by this version'}</span></td>
     <td class="nowrap">${esc(dates(e))}<br><span class="form-caption">${esc(e.default_start)}–${esc(e.default_end)}</span></td>
     <td>${esc(STATE[e.state] || e.state)}${e.state === 'open' && e.activated_at ? `<br><span class="form-caption">since ${esc(fmtDate(e.activated_at))}</span>` : ''}${e.state === 'closed' && e.closed_at ? `<br><span class="form-caption">since ${esc(fmtDate(e.closed_at))}</span>` : ''}</td>
     <td>${e.opted_in}</td><td>${e.state === 'open' ? e.public : '—'}</td><td><div class="row-actions">${a.join('')}</div></td></tr>`;
@@ -129,7 +131,7 @@ function render() {
   const shown = data.events.filter((e) => ['upcoming', 'open', 'closed'].includes(e.state));
   $('#admin-events').innerHTML = `
     <div class="panel"><h2>On the public site</h2>${shown.length
-      ? `<ul class="event-summary">${shown.map((e) => `<li><b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''} · ${esc(STATE[e.state])} · ${esc(dates(e))}${e.state === 'open' ? ` · ${e.public} of ${e.opted_in} listed homes on the map` : (e.opted_in ? ` · ${e.opted_in} homes listed` : '')}</li>`).join('')}</ul>`
+      ? `<ul class="event-summary">${shown.map((e) => `<li data-event-section="${esc(e.type)}"><span aria-hidden="true">${esc(e.type_icon || '')}</span> <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''} · ${esc(STATE[e.state])} · ${esc(dates(e))}${e.state === 'open' ? ` · ${e.public} of ${e.opted_in} listed homes on the map` : (e.opted_in ? ` · ${e.opted_in} homes listed` : '')}</li>`).join('')}</ul>`
       : '<p class="notice">No event is public. Visitors see “No event on the map right now” and nobody can list a home until you announce or open an event.</p>'}
       <p class="form-caption">Several events can be on at once, one of each kind; visitors switch between them and “/” shows the default. Closing an event shows its thank-you message and creates next year's event of the same kind (upcoming, tentative dates). Claims stay with their residents; listings belong to one event, and nothing is copied from an earlier event unless a resident chooses “Use last year's details”.</p></div>
     <div class="panel"><h2>${editing ? 'Edit event' : 'Prepare an event'}</h2><div id="eventFormHost">${editing !== undefined && editing !== false ? form(editing) : '<button type="button" class="primary" id="evNew">+ Prepare an event</button>'}</div></div>

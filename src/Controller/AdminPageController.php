@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Community\BrandPalette;
 use App\Community\CommunityPresenter;
 use App\Community\CommunityRepository;
 use App\Event\EventOccurrence;
@@ -18,7 +19,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @module Controller/AdminPageController
  * @description Organizer console page shells (ROLE_ADMIN). Data loads from /api/admin/* via vanilla JS. The draft
  *     preview renders the public page for a draft event without any homes, with the draft type's theme, words,
- *     filters and feature switches and the draft's own branding (Community/CommunityRepository::forEvent).
+ *     filters and feature switches and the draft's own branding (Community/CommunityRepository::forEvent), its colours
+ *     from an organizer-only stylesheet. The console pages themselves are the community's (D-20261031-52).
  */
 #[IsGranted('ROLE_ADMIN')] // also enforced by access_control; declared here so a route rule is never the only lock
 final class AdminPageController extends AbstractController
@@ -60,5 +62,18 @@ final class AdminPageController extends AbstractController
         $response->headers->set('X-Robots-Tag', 'noindex');
 
         return $response;
+    }
+
+    /** A draft's own colours for its preview (BrandPalette over its branding and type); organizers only, never cached. */
+    #[Route('/admin/events/{id}/theme.css', name: 'admin_event_theme', requirements: ['id' => '\d{1,12}'], methods: ['GET'])]
+    public function previewTheme(int $id, CommunityRepository $community, EventOccurrenceRepository $occurrences, EventTypeRegistry $types): Response
+    {
+        $draft = $occurrences->find($id);
+        if (null === $draft || EventOccurrence::DRAFT !== $draft->state || !$types->isEnabled($draft->type)) {
+            throw $this->createNotFoundException();
+        }
+        $b = $community->forEvent($draft)->settings['branding'];
+
+        return new Response(BrandPalette::css($b['primary_color'], $b['accent_color']), 200, ['Content-Type' => 'text/css; charset=utf-8', 'Cache-Control' => 'no-store, private']);
     }
 }

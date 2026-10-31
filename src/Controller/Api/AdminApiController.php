@@ -210,13 +210,20 @@ final class AdminApiController
     #[Route('/addresses', methods: ['GET'])]
     public function addresses(Request $request, AddressRegistry $registry): JsonResponse
     {
-        $rows = $registry->search((string) $request->query->get('q', ''), 200, max(0, (int) $request->query->get('offset', 0)), $this->community->current()->event?->id);
+        $c = $this->community->current();
+        $rows = $registry->search((string) $request->query->get('q', ''), 200, max(0, (int) $request->query->get('offset', 0)), $c->event?->id);
+        // The listings shown are the default event's; the list names that event and its type (the console itself names none).
+        $type = null === $c->event ? null : $this->types->for($c);
+        $statuses = null === $type ? [] : $type->statuses();
 
-        return new JsonResponse(['total' => $registry->count(), 'addresses' => array_map(static fn (array $r) => [
+        return new JsonResponse(['total' => $registry->count(), 'event' => null === $c->event || null === $type ? null
+            : ['id' => $c->event->id, 'name' => $c->event->name, 'type' => $c->event->type, 'icon' => (string) ($type->copy()['event_icon'] ?? '')],
+            'addresses' => array_map(static fn (array $r) => [
             'id' => (int) $r['id'], 'address' => $r['display_address'], 'zone' => $r['zone_key'], 'lat' => (float) $r['latitude'], 'lon' => (float) $r['longitude'],
             'enabled' => (bool) $r['enabled'], 'inside_boundary' => (bool) $r['inside_boundary'], 'source' => $r['source'],
             'owner_user_id' => null !== $r['user_id'] ? (int) $r['user_id'] : null, 'owner_email' => $r['owner_email'], 'claimed_at' => $r['claimed_at'],
-            'listing' => null === $r['status'] ? null : ['status' => $r['status'], 'published' => (bool) $r['published'], 'hidden' => (bool) $r['moderation_hidden'],
+            'listing' => null === $r['status'] ? null : ['status' => $r['status'], 'status_label' => (string) ($statuses[$r['status']]['label'] ?? $r['status']),
+                'published' => (bool) $r['published'], 'hidden' => (bool) $r['moderation_hidden'],
                 'pending_review' => (bool) $r['moderation_hidden'] && ListingRepository::PENDING_REVIEW === $r['moderation_reason'], 'event_date' => $r['event_date']],
         ], $rows)]);
     }

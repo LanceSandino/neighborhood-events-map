@@ -105,6 +105,8 @@ final class GarageSaleCopy
         'access_gated_open' => 'Gated — open for the sale',
         // Server-rendered pages only (page_* keys are not in the public event): the address example in "List your
         // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
+        // The browser-tab icon of the type's pages when the community has no logo (server-rendered only).
+        'page_favicon' => '/assets/img/favicon-sale.svg',
         'page_address_example' => '123 Main St',
         // The thank-you text of a closed sale (D-20261031-39): {event} is its name with the year, {next} the next sale's dates.
         'page_closing_message' => '{event} was a success — thank you! The next sale: {next}. Residents: sign in to get your sale ready for the next one.',

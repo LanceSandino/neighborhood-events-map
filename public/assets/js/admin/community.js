@@ -4,8 +4,9 @@
  *     city under the name) and an optional general About text —, features, zones, registration and routing
  *     (PUT /api/admin/community; the server validates everything) plus logo upload. Each event's name, dates, hours
  *     and branding (emoji, headline, intro, colours, its About text) are edited under Organizer → Events (ADR 0012), so
- *     this page only names the default event and sends no event block. The default event's type comes with the
- *     settings for its feature switches and console labels.
+ *     this page only names the default event (in a section of its own) and sends no event block. Its words are the
+ *     community's for every event; the switches only some kinds of event have are grouped under that kind's name
+ *     (D-20261031-52).
  * @dependencies admin/common.js
  */
 import { $, $$, call, esc, flash } from './common.js';
@@ -33,15 +34,15 @@ function zoneRow(z = { key: '', label: '', claimable: true, residential: true, c
     <td><button type="button" class="link-button" data-remove-zone>Remove</button></td></tr>`;
 }
 
-/** How visitors may reach the homes; the event type names the "gates open during the event" choice. */
+/** How visitors may reach the homes, for every event (each event's pages word the "gates open" choice its own way). */
 const access = () => [
   ['unspecified', 'Not stated'],
   ['public', 'Open to the public (public streets)'],
-  ['gated_open', type.copy.access_gated_open],
+  ['gated_open', 'Gated — gates open to visitors during each event'],
   ['gated_guests', 'Gated — residents and their invited guests only'],
   ['private', 'Private — residents only'],
 ];
-/** Feature switches every event type has, after the type's own. */
+/** Feature switches every kind of event has (the switches of one kind are grouped under its name). */
 const SHARED_FEATURES = [['optional_zones', 'Show zone filter', 'fZones'], ['walking_routes', 'Suggested stop order', 'fRoutes']];
 
 function linkRow(l = { label: '', url: '' }) {
@@ -60,13 +61,13 @@ function render() {
       ${field('cRegion', 'State / region', s.community.region)}
       ${field('cPostal', 'Postal code', s.community.postal_code)}
       ${field('cTz', 'Time zone (IANA) *', s.community.timezone, 'list="tzList"')}
-      <div class="field full"><label for="cAccess">Access during the event</label><select id="cAccess">${access().map(([k, l]) => `<option value="${k}" ${s.community.access === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="field full"><label for="cAccess">Access during events</label><select id="cAccess">${access().map(([k, l]) => `<option value="${k}" ${s.community.access === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
       ${area('cGate', 'Access notes (gates, entrances, parking)', s.community.gate_notice, 'Shown on the map and the About page. The site never grants gate access.')}
       ${field('cContact', 'Organizer contact (mailto: or https://) *', s.community.contact_url, 'placeholder="mailto:organizer@example.org"')}
     </div></div>
     <div class="panel"><h2>About the neighborhood (all events)</h2><div class="form-grid">
       ${area('cAbout', 'About the neighborhood (optional)', s.community.general_about, 'Shown on the About page of every event that has no About text of its own (set an event’s own under <a href="/admin/events">Organizer → Events</a>). Blank lines start a new paragraph. Plain text only.')}
-      ${area('cReminders', esc(type.copy.reminders_label), (s.community.reminders || []).join('\n'), `${esc(type.copy.reminders_help)} A list of your own shows for every event; leave it empty and each kind of event shows its own.`)}
+      ${area('cReminders', 'Your own reminders for visitors (one per line, up to 12)', (s.community.reminders || []).join('\n'), 'Shown on the About page and in the map guide of every event. Leave empty and each kind of event shows its own built-in list.')}
       <div class="field full"><span class="label">Links (e.g. Facebook group, HOA website, event flyer)</span><div id="linkRows">${(s.community.links || []).map(linkRow).join('')}</div>
         <button type="button" class="secondary" id="btnAddLink">+ Add link</button></div>
     </div></div>
@@ -74,13 +75,14 @@ function render() {
       <div class="field"><span class="label">Name</span><label class="check-chip"><input type="checkbox" id="bPlace" ${s.branding.show_locality ? 'checked' : ''}> Show city under the name</label></div>
       <div class="field"><span class="label">Logo</span><input type="file" id="bLogo" accept=".svg,.png,.jpg,.jpeg,.webp"> ${s.branding.logo ? `<span class="form-caption">Current: ${esc(s.branding.logo)} <button type="button" class="link-button" id="bLogoRemove">Remove</button></span>` : ''}</div>
     </div><p class="form-caption">The name, subtitle, city, logo, contact and links above show for every event. Each event’s emoji, headline, intro, colours and About text are its own: set them in its Branding section under <a href="/admin/events">Organizer → Events</a>.</p></div>
-    <div class="panel"><h2>Events</h2><div class="form-grid">
+    <div class="panel" data-event-section="default"><h2>Events</h2><div class="form-grid">
       <div class="field"><label for="eType">Event type</label><select id="eType" aria-describedby="eDefault" disabled>${types.map((t) => `<option value="${esc(t.key)}" ${t.key === type.key ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>
     </div><p class="form-caption" id="eDefault">The front page shows <b>${esc(s.event.name)}</b>${s.event.name === type.name ? '' : ` (${esc(type.name)})`}: ${s.event.starts_on === null ? 'dates to be announced' : `${esc(s.event.starts_on || s.event.date)}${s.event.ends_on && s.event.ends_on !== (s.event.starts_on || s.event.date) ? ` – ${esc(s.event.ends_on)}` : ''}`}, ${esc(s.event.starts_at)}–${esc(s.event.ends_at)}. Change its name, dates, hours and branding, and prepare, open, close or choose the default event, under <a href="/admin/events">Organizer → Events</a>; this version offers ${esc(types.map((t) => t.name).join(', '))}.</p></div>
     <div class="panel"><h2>Features</h2><div class="checks">
-      ${type.features.map((f) => check(`feature-${esc(f.key)}`, esc(f.label), s.features[f.key] ?? true)).join('')}
       ${SHARED_FEATURES.map(([k, label, id]) => check(id, label, s.features[k])).join('')}
-    </div></div>
+    </div>${types.filter((t) => t.features.length).map((t) => `<fieldset class="type-features" data-event-section="${esc(t.key)}"><legend class="label">${esc(t.name)} maps</legend><div class="checks">
+      ${t.features.map((f) => check(`feature-${esc(f.key)}`, esc(f.label), s.features[f.key] ?? true)).join('')}</div></fieldset>`).join('')}
+      <p class="form-caption">Filters only some kinds of event have apply to every event of that kind.</p></div>
     <div class="panel"><h2>Zones (optional)</h2><p class="form-caption">Phases, sections or any named areas. Leave empty for a community without zones. Draw their polygons on the Boundary &amp; zones page. <b>Coming soon</b> draws the zone with that label but homes there cannot be listed yet (e.g. no houses built); <b>Hidden</b> leaves it off the public map entirely.</p>
       <div class="table-wrap"><table class="data zones-table"><thead><tr><th>Key</th><th>Label</th><th>Listable</th><th>Residential</th><th>Colour</th><th>Status</th><th>Name on map</th><th></th></tr></thead><tbody id="zoneRows">${s.zones.map(zoneRow).join('')}</tbody></table></div>
       <button type="button" class="secondary" id="addZone">+ Add zone</button>
@@ -140,7 +142,7 @@ async function save(e) {
   // No event block: the default event keeps its own values (Organizer → Events edits them).
   delete s.event;
   Object.assign(s.branding, { show_locality: $('#bPlace').checked });
-  for (const f of type.features) s.features[f.key] = $(`#feature-${f.key}`).checked;
+  for (const t of types) for (const f of t.features) s.features[f.key] = $(`#feature-${f.key}`).checked;
   for (const [k, , id] of SHARED_FEATURES) s.features[k] = $(`#${id}`).checked;
   // Fields this table does not show (description, the name's spot on the map) are kept from the saved zone.
   const before = Object.fromEntries((settings.zones || []).map((z) => [z.key, z]));
