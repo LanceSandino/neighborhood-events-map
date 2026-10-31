@@ -1311,4 +1311,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T00:40:00Z"
+- id: CU-20261031-41
+  type: docs
+  title: "Organizer runbook for events through the year, commented reference configs for the lights and the sale, the acceptance audit, stale \"after the event\" steps replaced, the release runbook names the drill for every upgrade from 0.9 or 0.10"
+  description: "docs/runbooks/organizer-events.md: the life of an event (draft, active, archived), preparing, previewing, switching, ending, export and retention, what release, unclaim, erasure and transfer do to listings, residents invited by hand (no app email yet), seasonal archiving of legacy rows, backups and upgrades, and every console command. examples/reference/holiday-lights.community.yaml and garage-sale.community.yaml are commented reference configurations (event settings included, no geometry, no contact address); config/community.example.yaml stays the Halloween one and no longer says Halloween is the only type. tests/Integration/EventBootstrapTest::testTheCommentedReferenceConfigsOfEachTypeImport imports all three. setup.md and event-day.md said to change the event date for next year (pre-0.11); they now point to Organizer → Events. release.md runs bin/drill-event-upgrade.sh for every release a live install reaches from 0.9 or 0.10 and links the organizer runbook. docs/quality/event-types-acceptance.md maps the ten release-blocking items and nine risks to tests (all cited methods checked to exist). season.spec.mjs captures Organizer → Events (admin-events-1440.png)."
+  impact: none
+  affected_modules: ["docs/runbooks/organizer-events.md", "docs/runbooks/setup.md", "docs/runbooks/event-day.md", "docs/runbooks/release.md", "docs/quality/event-types-acceptance.md", "examples/reference/", "config/community.example.yaml", "tests/e2e/specs/season.spec.mjs"]
+  related_tests: ["tests/Integration/EventBootstrapTest.php: testTheCommentedReferenceConfigsOfEachTypeImport"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:50:00Z"
 ```

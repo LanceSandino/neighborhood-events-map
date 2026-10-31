@@ -14,7 +14,8 @@ use App\Tests\Support\AppTestCase;
  *   starts_on/ends_on, become the first, active occurrence; a forced re-import updates that event instead of adding
  *   another; a one-day type keeps one day. event.settings (a sale's days, categories and early-bird time, the shared
  *   rules and route modes) are checked like Organizer → Events checks them and applied to the first event only; a
- *   refused setting imports nothing; a sale without settings takes its days.
+ *   refused setting imports nothing; a sale without settings takes its days. The commented reference configuration of
+ *   each type (config/community.example.yaml, examples/reference/*.community.yaml) imports as it says.
  * @dependencies tests/Support/AppTestCase, Community/CommunityBootstrapper
  */
 final class EventBootstrapTest extends AppTestCase
@@ -36,6 +37,25 @@ final class EventBootstrapTest extends AppTestCase
         self::assertSame([['name' => 'Halloween Night', 'starts_on' => '2027-10-31', 'state' => 'active']], $this->db()->fetchAllAssociative('SELECT name, starts_on, state FROM event_occurrences'), 'the same event, updated (nobody is listed yet)');
         unlink($file);
         unlink($again);
+    }
+
+    public function testTheCommentedReferenceConfigsOfEachTypeImport(): void
+    {
+        $bootstrapper = static::getContainer()->get(CommunityBootstrapper::class);
+        $expect = [
+            'config/community.example.yaml' => ['halloween', 'Halloween', '2026-10-31', '2026-10-31', []],
+            'examples/reference/holiday-lights.community.yaml' => ['holiday_lights', 'Christmas Lights', '2026-12-01', '2027-01-03', ['best_night', 'quiet_hours', 'route_modes', 'rules']],
+            'examples/reference/garage-sale.community.yaml' => ['garage_sale', 'Community Rummage Sale', '2027-04-10', '2027-04-11', ['categories', 'days', 'early_bird_time', 'route_modes', 'rules']],
+        ];
+        foreach ($expect as $file => [$type, $name, $from, $to, $settings]) {
+            $this->db()->executeStatement('TRUNCATE community_settings, event_occurrences RESTART IDENTITY CASCADE');
+            $this->repo()->reset();
+            self::assertSame('imported', $bootstrapper->bootstrap(\dirname(__DIR__, 2).'/'.$file)['status'], $file);
+            $row = $this->db()->fetchAssociative('SELECT type, name, starts_on, ends_on, settings, state FROM event_occurrences');
+            $stored = array_keys(json_decode((string) $row['settings'], true));
+            sort($stored);
+            self::assertSame([$type, $name, $from, $to, $settings, 'active'], [$row['type'], $row['name'], $row['starts_on'], $row['ends_on'], $stored, $row['state']], $file);
+        }
     }
 
     public function testTheYamlSetsTheFirstEventsSettingsAndRefusesBadOnesBeforeImporting(): void

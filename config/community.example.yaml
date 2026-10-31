@@ -19,7 +19,7 @@ community:
   links: []                         # e.g. [{ label: "Neighborhood Facebook group", url: "https://www.facebook.com/groups/…" }]
   reminders: []                     # your own trick-or-treat reminders (one line each, up to 12); empty = built-in list
 event:
-  type: halloween                   # the event type (docs/architecture/event-types.md); halloween is the default and the only one so far
+  type: halloween                   # halloween (default), holiday_lights or garage_sale; commented references for the other two: examples/reference/
   name: "Halloween"                 # shown in titles, the sidebar and emails ("<community> <event name>")
   date: "2026-10-31"
   starts_at: "17:00"

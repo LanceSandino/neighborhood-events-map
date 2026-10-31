@@ -5,7 +5,7 @@
 // Halloween and a rummage sale follows the lights: the same resident lists the same home for each, three independent
 // listings, and an ended season's listing is never public again. The demo then gets a Halloween event back.
 import { test, expect } from '@playwright/test';
-import { DEMO, watchConsole, politeTiles } from './helpers.mjs';
+import { DEMO, SHOTS, watchConsole, politeTiles } from './helpers.mjs';
 
 test.beforeEach(async ({ page }) => { await politeTiles(page); });
 
@@ -68,6 +68,9 @@ test('an organizer switches the map to the next event; last season disappears an
   expect(draft).toBeTruthy();
   const row = page.locator(`tr[data-event="${draft.id}"]`);
   await expect(row).toContainText('Draft');
+  // Organizer → Events with the event on the map and the prepared draft (docs/design/screenshots, README).
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({ path: `${SHOTS}/admin-events-1440.png` });
   expect((await (await request.get(DEMO + '/api/event')).json()).event.id).toBe(before.id); // a draft is not public
 
   // The preview shows the draft's page without any home.
