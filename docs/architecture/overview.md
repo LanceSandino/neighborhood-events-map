@@ -12,7 +12,7 @@
    │                                  email-sending endpoints (they wait out the response floor)
    ├─ Controllers: pages, public API, auth, owner API, organizer API, routes
    ├─ Security: CanonicalPathSubscriber, firewall + MagicLinkAuthenticator, IdleSessionSubscriber, CsrfGuardSubscriber, PoW, Throttle
-   ├─ Domain: Community (config + versioned geometry), Geo, Address, Listing, Claim, Dispute, Admin, Audit, Routing
+   ├─ Domain: Community (config + versioned geometry), Event (event types), Geo, Address, Listing, Claim, Dispute, Admin, Audit, Routing
    └─ Mailer → SMTP relay (Mailpit in development)
    │ DBAL (parameterized SQL)
    ▼
@@ -28,7 +28,13 @@
 
 ## Data model
 
-`community_settings` (single row JSONB), `community_geometries` (versioned boundary/zone FeatureCollections, approval), `eligible_addresses` (private registry, `inside_boundary` flag), `users`, `claims` (PK = address), `claim_intents`, `listings` (per event date; `published`, `moderation_hidden`), `auth_link_tokens` (hashes), `pow_challenges`, `throttle_events`, `disputes`, `audit_events`, `sessions`, `route_cache`. See `migrations/Version20261018000001.php`.
+`community_settings` (single row JSONB), `community_geometries` (versioned boundary/zone FeatureCollections, approval), `eligible_addresses` (private registry, `inside_boundary` flag), `users`, `claims` (PK = address), `claim_intents`, `listings` (per event date; type fields in `details` JSONB, with the legacy Halloween columns kept in step; `published`, `moderation_hidden`), `auth_link_tokens` (hashes), `pow_challenges`, `throttle_events`, `disputes`, `audit_events`, `sessions`, `route_cache`. See `migrations/Version20261018000001.php` and later migrations.
+
+## Event types
+
+The community's event has a type (`event.type`, default `halloween`). Each type is a code module on the PHP side
+(`src/Event`), in the browser (`public/assets/js/events`) and in Twig (`templates/event/<key>/`); core code asks the
+type for listing fields, statuses, filters, icons and words. See [event types](event-types.md).
 
 ## Configuration precedence
 

@@ -1,0 +1,132 @@
+{
+ "configured": true,
+ "community": {
+  "id": "ventura-reserve-example",
+  "name": "Ventura Reserve",
+  "about": "Example configuration built from Orange County public plat records (three recorded phases). It is not run by or for this community and is not a real event.",
+  "links": [
+   {
+    "url": "https://ocgis4.ocfl.net/arcgis/rest/services/AGOL_Open_Data/MapServer/54",
+    "label": "Plat source: Orange County open data"
+   }
+  ],
+  "access": "unspecified",
+  "region": "FL",
+  "country": "US",
+  "locality": "Orlando",
+  "subtitle": "Real-data example built from Orange County plat records",
+  "contact_url": "mailto:organizer@example.org",
+  "gate_notice": "Example configuration from public county records. Not run by or for this community; this is not a real event.",
+  "postal_code": "",
+  "reminders": [
+   "💡 Visit homes with a porch light on or someone outside; skip dark houses.",
+   "🍬 Take one piece of candy unless a sign or the resident says otherwise.",
+   "🎃 Look, don’t touch: decorations, props and yards belong to your neighbors.",
+   "🚗 Watch for cars. Cross at corners or marked crossings, never between parked cars.",
+   "🚶 Stay on sidewalks and driveways; don’t cut across lawns or gardens.",
+   "🔦 Carry a flashlight or glow stick and wear something reflective after dark.",
+   "👀 Little ones stay with a grown-up; older kids stay in a group and check in.",
+   "🥜 Check treats before eating, especially for allergies. A teal pumpkin (the Teal Pumpkin Project) means the home offers non-food treats.",
+   "🐶 Some homes have pets: wait at the door and never open gates.",
+   "🙏 Say thank you, be patient with little ones, and be kind to anyone with sensory needs or who isn’t taking part."
+  ]
+ },
+ "event": {
+  "date": "2026-10-31",
+  "name": "Halloween",
+  "ends_at": "21:00",
+  "starts_at": "17:00",
+  "timezone": "America/New_York"
+ },
+ "branding": {
+  "logo_url": null,
+  "intro": "Example map built from official plat records: find the treats, skip the scares, and plan stops that feel right for you and your crew.",
+  "headline": "Little ghosts.",
+  "brand_emoji": "🎃",
+  "accent_color": "#524077",
+  "primary_color": "#F07936",
+  "show_locality": false,
+  "headline_accent": "Big adventures."
+ },
+ "map": {
+  "center": {
+   "lat": 28.50808782783671,
+   "lon": -81.29488723376491
+  },
+  "zoom": 17,
+  "tiles": {
+   "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+   "max_zoom": 19,
+   "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": null,
+  "boundary": null,
+  "boundary_status": "pending_review",
+  "crossing_notes": []
+ },
+ "zones": [
+  {
+   "key": "phase-1",
+   "label": "Phase 1",
+   "claimable": true,
+   "residential": true,
+   "color": null,
+   "description": "",
+   "status": "active",
+   "label_at": null,
+   "geometry": null
+  },
+  {
+   "key": "phase-2",
+   "label": "Phase 2",
+   "claimable": true,
+   "residential": true,
+   "color": null,
+   "description": "",
+   "status": "active",
+   "label_at": null,
+   "geometry": null
+  },
+  {
+   "key": "phase-3",
+   "label": "Phase 3",
+   "claimable": true,
+   "residential": true,
+   "color": null,
+   "description": "",
+   "status": "active",
+   "label_at": null,
+   "geometry": null
+  }
+ ],
+ "features": {
+  "candy": true,
+  "nonfood_treats": true,
+  "optional_zones": true,
+  "walking_routes": true,
+  "sensory_filters": true,
+  "adult_refreshments": true
+ },
+ "registration": {
+  "open": false,
+  "reason": "House listings open after the organizer reviews and approves the neighborhood boundary.",
+  "address_mode": "registry",
+  "street_allowlist": [],
+  "review_new_addresses": false
+ },
+ "routing": {
+  "groups": [],
+  "group_labels": [],
+  "crossings_verified": false,
+  "provider": false
+ },
+ "stats": {
+  "homes": 0,
+  "candy": 0,
+  "low_sensory": 0,
+  "adult": 0,
+  "zones": 3
+ },
+ "demo": false,
+ "version": "0.9.0-beta.1"
+}

@@ -9,6 +9,7 @@ use App\Community\BrandingStore;
 use App\Community\BrandPalette;
 use App\Community\CommunityPresenter;
 use App\Community\CommunityRepository;
+use App\Event\EventTypeRegistry;
 use App\Listing\ListingRepository;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,6 +23,8 @@ use Symfony\Component\Routing\Attribute\Route;
  * @module Controller/PageController
  * @description Server-rendered pages: public map shell (with a no-JS readable list of homes),
  *     sign-in page, owner dashboard shell, theme CSS from config, uploaded logo, health check.
+ *
+ * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, About/ChangelogReader
  */
 final class PageController extends AbstractController
 {
@@ -29,6 +32,7 @@ final class PageController extends AbstractController
         private readonly CommunityRepository $community,
         private readonly CommunityPresenter $presenter,
         private readonly ListingRepository $listings,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -36,7 +40,7 @@ final class PageController extends AbstractController
     public function home(): Response
     {
         $c = $this->community->current();
-        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys());
+        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c));
         $payload = $this->presenter->publicPayload($c, $homes);
 
         return $this->render('home/index.html.twig', ['c' => $payload, 'homes' => $homes, 'boot' => ['community' => $payload, 'homes' => $homes]]);

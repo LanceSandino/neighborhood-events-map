@@ -20,6 +20,7 @@ community:
   links:
     - { label: "Project on GitHub", url: "https://github.com/" }
 event:
+  type: halloween
   name: "Halloween"
   date: "2026-10-30"
   starts_at: "16:30"

@@ -30,6 +30,7 @@ This file is self-contained: anyone (or any agent such as Codex or Claude Code) 
 |---|---|
 | `src/Geo` | GeoJSON parsing/validation, point-in-polygon, zones, distances |
 | `src/Community` | config schema, repository (settings + versioned geometry), bootstrap, presenter, branding |
+| `src/Event`, `public/assets/js/events`, `templates/event` | event types (registry by immutable key, one module per type: fields, statuses, filters, copy, fragments) — `docs/architecture/event-types.md` |
 | `src/Address`, `src/Listing`, `src/Claim`, `src/Dispute`, `src/Admin`, `src/Audit` | domain services |
 | `src/Security` | users, magic links, PoW, throttles, sessions, CSRF/origin guard |
 | `src/Routing` | optional pedestrian provider adapter + planner |

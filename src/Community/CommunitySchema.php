@@ -5,45 +5,39 @@ declare(strict_types=1);
 namespace App\Community;
 
 use App\Address\AddressNormalizer;
+use App\Event\EventType;
+use App\Event\EventTypeRegistry;
 use App\Shared\TextInput;
 
 /**
  * @module Community/CommunitySchema
  * @description Validates and normalizes a community configuration array (from community.yaml or the
  *     admin settings form) into the canonical settings document stored in community_settings.
- *     Unknown keys are dropped; every value is type-checked; nothing neighborhood-specific is assumed.
+ *     Unknown keys are dropped; every value is type-checked; nothing neighborhood-specific is assumed. The
+ *     event's type (event.type, default halloween) must be one this version enables; it supplies the defaults
+ *     for the event name, subtitle and branding and the feature switches offered.
  *
  * @input array<string,mixed> raw configuration
  * @output array<string,mixed> normalized settings
- * @dependencies Address/AddressNormalizer, Community/ConfigException
+ * @dependencies Address/AddressNormalizer, Event/EventTypeRegistry, Community/ConfigException
  */
 final class CommunitySchema
 {
-    /** The event a new community runs: Halloween trick-or-treat is the first supported event type. */
+    /** The name of an event saved before event.name existed: those events were all Halloween. */
     public const DEFAULT_EVENT_NAME = 'Halloween';
     /** How visitors may reach the homes during the event (shown on the map and the About page). */
     public const ACCESS = ['unspecified', 'public', 'gated_open', 'gated_guests', 'private'];
     /** active: shown and listable; coming_soon: drawn as "coming soon", not listable; hidden: not shown at all. */
     public const ZONE_STATUS = ['active', 'coming_soon', 'hidden'];
-    /** Shown on the About page and in the map's guide when an organizer sets no reminders of their own. */
-    public const DEFAULT_REMINDERS = [
-        '💡 Visit homes with a porch light on or someone outside; skip dark houses.',
-        '🍬 Take one piece of candy unless a sign or the resident says otherwise.',
-        '🎃 Look, don’t touch: decorations, props and yards belong to your neighbors.',
-        '🚗 Watch for cars. Cross at corners or marked crossings, never between parked cars.',
-        '🚶 Stay on sidewalks and driveways; don’t cut across lawns or gardens.',
-        '🔦 Carry a flashlight or glow stick and wear something reflective after dark.',
-        '👀 Little ones stay with a grown-up; older kids stay in a group and check in.',
-        '🥜 Check treats before eating, especially for allergies. A teal pumpkin (the Teal Pumpkin Project) means the home offers non-food treats.',
-        '🐶 Some homes have pets: wait at the door and never open gates.',
-        '🙏 Say thank you, be patient with little ones, and be kind to anyone with sensory needs or who isn’t taking part.',
-    ];
 
     public const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     public const DEFAULT_TILE_ATTRIBUTION = '© OpenStreetMap contributors';
 
-    public function __construct(private readonly AddressNormalizer $normalizer = new AddressNormalizer())
+    private readonly EventTypeRegistry $types;
+
+    public function __construct(private readonly AddressNormalizer $normalizer = new AddressNormalizer(), ?EventTypeRegistry $types = null)
     {
+        $this->types = $types ?? EventTypeRegistry::builtIn();
     }
 
     /**
@@ -75,7 +69,17 @@ final class CommunitySchema
             $e[] = sprintf('community.timezone "%s" is not a valid IANA time zone.', $tz);
         }
 
-        $eventName = self::text($ev['name'] ?? '', 40) ?: self::DEFAULT_EVENT_NAME;
+        // Absent or empty means the default type; anything else must be a key this version enables.
+        $typeKey = $ev['type'] ?? '';
+        $typeKey = \is_string($typeKey) ? ('' === trim($typeKey) ? EventTypeRegistry::DEFAULT : $typeKey) : get_debug_type($typeKey);
+        $problem = $this->types->problem($typeKey);
+        if (null !== $problem) {
+            $e[] = $problem;
+        }
+        $type = $this->types->get(null === $problem ? $typeKey : EventTypeRegistry::DEFAULT);
+        $brand = $type->defaultBranding();
+
+        $eventName = self::text($ev['name'] ?? '', 40) ?: $type->defaultName();
         $date = (string) ($ev['date'] ?? '');
         $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         if (false === $d || $d->format('Y-m-d') !== $date) {
@@ -225,7 +229,7 @@ final class CommunitySchema
             'community' => [
                 'id' => $id,
                 'name' => $name,
-                'subtitle' => self::text($c['subtitle'] ?? 'Your neighborhood. Your Halloween.', 80),
+                'subtitle' => self::text($c['subtitle'] ?? $brand['subtitle'], 80),
                 'locality' => self::text($c['locality'] ?? '', 60),
                 'region' => self::text($c['region'] ?? '', 40),
                 'postal_code' => self::text($c['postal_code'] ?? '', 12),
@@ -238,15 +242,15 @@ final class CommunitySchema
                 'links' => $links,
                 'reminders' => $reminders,
             ],
-            'event' => ['name' => $eventName, 'date' => $date, 'starts_at' => $start, 'ends_at' => $end],
+            'event' => ['name' => $eventName, 'date' => $date, 'starts_at' => $start, 'ends_at' => $end, 'type' => $type->key()],
             'branding' => [
                 'logo' => self::text($b['logo'] ?? '', 200) ?: null,
-                'brand_emoji' => self::text($b['brand_emoji'] ?? '🎃', 8) ?: '🎃',
+                'brand_emoji' => self::text($b['brand_emoji'] ?? $brand['brand_emoji'], 8) ?: $brand['brand_emoji'],
                 'primary_color' => $primary,
                 'accent_color' => $accent,
-                'headline' => self::text($b['headline'] ?? 'Little ghosts.', 40),
-                'headline_accent' => self::text($b['headline_accent'] ?? 'Big adventures.', 40),
-                'intro' => self::text($b['intro'] ?? 'Find the treats, skip the scares, and plan a route that feels right for you and your crew—one sweet stop at a time.', 280),
+                'headline' => self::text($b['headline'] ?? $brand['headline'], 40),
+                'headline_accent' => self::text($b['headline_accent'] ?? $brand['headline_accent'], 40),
+                'intro' => self::text($b['intro'] ?? $brand['intro'], 280),
                 // Show "City, ST" (community.locality/region) under the community name.
                 'show_locality' => (bool) ($b['show_locality'] ?? false),
             ],
@@ -257,11 +261,7 @@ final class CommunitySchema
                 'crossing_notes' => array_values(array_filter(array_map(fn ($n) => self::text($n, 200), self::arr($m['crossing_notes'] ?? [])))),
             ],
             'zones' => array_values($zones),
-            'features' => [
-                'candy' => (bool) ($f['candy'] ?? true),
-                'nonfood_treats' => (bool) ($f['nonfood_treats'] ?? true),
-                'adult_refreshments' => (bool) ($f['adult_refreshments'] ?? true),
-                'sensory_filters' => (bool) ($f['sensory_filters'] ?? true),
+            'features' => self::features($type, $f) + [
                 'optional_zones' => (bool) ($f['optional_zones'] ?? ([] !== $zones)),
                 'walking_routes' => (bool) ($f['walking_routes'] ?? true),
             ],
@@ -284,6 +284,23 @@ final class CommunitySchema
         ];
     }
 
+    /**
+     * The event type's feature switches (its order, its defaults).
+     *
+     * @param array<mixed> $f
+     *
+     * @return array<string,bool>
+     */
+    private static function features(EventType $type, array $f): array
+    {
+        $out = [];
+        foreach ($type->features() as $key => $feature) {
+            $out[$key] = (bool) ($f[$key] ?? $feature['default']);
+        }
+
+        return $out;
+    }
+
     /** @return array<mixed> */
     private static function arr(mixed $v): array
     {
@@ -292,7 +309,7 @@ final class CommunitySchema
 
     /** Free text that keeps paragraph breaks (other control characters become spaces). */
     /**
-     * Organizer's own trick-or-treat reminders (one short line each, at most 12); empty means the defaults.
+     * The organizer's own reminders (one short line each, at most 12); empty means the event type's built-in list.
      *
      * @param list<string> $e
      *

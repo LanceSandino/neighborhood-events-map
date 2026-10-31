@@ -1,11 +1,15 @@
 /**
  * @module assets/js/admin/community
  * @description Community, event, branding, features, zones, registration and routing settings
- *     (PUT /api/admin/community; the server validates everything) plus logo upload.
+ *     (PUT /api/admin/community; the server validates everything) plus logo upload. The event type comes with the
+ *     settings: the types this version offers, and the current type's feature switches and console labels.
+ * @dependencies admin/common.js
  */
 import { $, $$, call, esc, flash } from './common.js';
 
 let settings = null;
+let types = []; // event types an organizer may choose: [{ key, name }]
+let type = null; // the current event type: { key, name, features: [{ key, label }], copy }
 
 const field = (id, label, value, attrs = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" value="${esc(value ?? '')}" ${attrs}></div>`;
 const area = (id, label, value, help = '') => `<div class="field full"><label for="${id}">${label}</label><textarea id="${id}">${esc(value ?? '')}</textarea>${help ? `<span class="form-caption">${help}</span>` : ''}</div>`;
@@ -26,13 +30,16 @@ function zoneRow(z = { key: '', label: '', claimable: true, residential: true, c
     <td><button type="button" class="link-button" data-remove-zone>Remove</button></td></tr>`;
 }
 
-const ACCESS = [
+/** How visitors may reach the homes; the event type names the "gates open during the event" choice. */
+const access = () => [
   ['unspecified', 'Not stated'],
   ['public', 'Open to the public (public streets)'],
-  ['gated_open', 'Gated — gates open to trick-or-treaters during event hours'],
+  ['gated_open', type.copy.access_gated_open],
   ['gated_guests', 'Gated — residents and their invited guests only'],
   ['private', 'Private — residents only'],
 ];
+/** Feature switches every event type has, after the type's own. */
+const SHARED_FEATURES = [['optional_zones', 'Show zone filter', 'fZones'], ['walking_routes', 'Suggested stop order', 'fRoutes']];
 
 function linkRow(l = { label: '', url: '' }) {
   return `<div class="link-row"><input data-l="label" value="${esc(l.label)}" maxlength="40" placeholder="e.g. Facebook group…" aria-label="Link label">
@@ -50,19 +57,21 @@ function render() {
       ${field('cRegion', 'State / region', s.community.region)}
       ${field('cPostal', 'Postal code', s.community.postal_code)}
       ${field('cTz', 'Time zone (IANA) *', s.community.timezone, 'list="tzList"')}
-      <div class="field full"><label for="cAccess">Access during the event</label><select id="cAccess">${ACCESS.map(([k, l]) => `<option value="${k}" ${s.community.access === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="field full"><label for="cAccess">Access during the event</label><select id="cAccess">${access().map(([k, l]) => `<option value="${k}" ${s.community.access === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
       ${area('cGate', 'Access notes (gates, entrances, parking)', s.community.gate_notice, 'Shown on the map and the About page. The site never grants gate access.')}
       ${field('cContact', 'Organizer contact (mailto: or https://) *', s.community.contact_url, 'placeholder="mailto:organizer@example.org"')}
     </div></div>
     <div class="panel"><h2>About page</h2><div class="form-grid">
       ${area('cAbout', 'About the neighborhood and the event', s.community.about, 'Shown on the public About page. Blank lines start a new paragraph. Plain text only.')}
-      ${area('cReminders', 'Trick-or-treat reminders (one per line, up to 12)', (s.community.reminders || []).join('\n'), 'Shown on the About page and in the map guide. Leave empty for the built-in list (porch lights, one candy, don’t touch decorations, watch for cars…).')}
+      ${area('cReminders', esc(type.copy.reminders_label), (s.community.reminders || []).join('\n'), esc(type.copy.reminders_help))}
       <div class="field full"><span class="label">Links (e.g. Facebook group, HOA website, event flyer)</span><div id="linkRows">${(s.community.links || []).map(linkRow).join('')}</div>
         <button type="button" class="secondary" id="btnAddLink">+ Add link</button></div>
     </div></div>
     <div class="panel"><h2>Event</h2><div class="form-grid">
+      <div class="field"><label for="eType">Event type</label><select id="eType" aria-describedby="eTypeHelp">${types.map((t) => `<option value="${esc(t.key)}" ${t.key === type.key ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+        <span class="form-caption" id="eTypeHelp">${types.length > 1 ? 'Changing the type changes the listing fields, filters and words; save, then review this page again.' : `This version supports ${esc(types.map((t) => t.name).join(', '))}. More event types come with later versions.`}</span></div>
       ${field('eDate', 'Date *', s.event.date, 'type="date"')}
-      ${field('eName', 'Event name', s.event.name, 'maxlength="40" placeholder="Halloween"')}
+      ${field('eName', 'Event name', s.event.name, `maxlength="40" placeholder="${esc(type.name)}"`)}
       ${field('eStart', 'Suggested start', s.event.starts_at, 'type="time"')}
       ${field('eEnd', 'Suggested end', s.event.ends_at, 'type="time"')}
     </div><p class="form-caption">Public listings show only homes that opted in for this date. Changing the date to next year hides last season's homes until owners save again.</p></div>
@@ -77,9 +86,8 @@ function render() {
       ${area('bIntro', 'Intro text', s.branding.intro)}
     </div></div>
     <div class="panel"><h2>Features</h2><div class="checks">
-      ${check('fCandy', 'Candy', s.features.candy)}${check('fNonfood', 'Non-food treats', s.features.nonfood_treats)}
-      ${check('fAdult', 'Adult refreshments (21+)', s.features.adult_refreshments)}${check('fSensory', 'Sensory filters', s.features.sensory_filters)}
-      ${check('fZones', 'Show zone filter', s.features.optional_zones)}${check('fRoutes', 'Suggested stop order', s.features.walking_routes)}
+      ${type.features.map((f) => check(`feature-${esc(f.key)}`, esc(f.label), s.features[f.key] ?? true)).join('')}
+      ${SHARED_FEATURES.map(([k, label, id]) => check(id, label, s.features[k])).join('')}
     </div></div>
     <div class="panel"><h2>Zones (optional)</h2><p class="form-caption">Phases, sections or any named areas. Leave empty for a community without zones. Draw their polygons on the Boundary &amp; zones page. <b>Coming soon</b> draws the zone with that label but homes there cannot be listed yet (e.g. no houses built); <b>Hidden</b> leaves it off the public map entirely.</p>
       <div class="table-wrap"><table class="data zones-table"><thead><tr><th>Key</th><th>Label</th><th>Listable</th><th>Residential</th><th>Colour</th><th>Status</th><th>Name on map</th><th></th></tr></thead><tbody id="zoneRows">${s.zones.map(zoneRow).join('')}</tbody></table></div>
@@ -137,11 +145,11 @@ async function save(e) {
     postal_code: $('#cPostal').value, timezone: $('#cTz').value, gate_notice: $('#cGate').value, contact_url: $('#cContact').value || null,
     access: $('#cAccess').value, about: $('#cAbout').value, reminders: lines('#cReminders'),
     links: $$('#linkRows .link-row').map((r) => ({ label: $('[data-l=label]', r).value.trim(), url: $('[data-l=url]', r).value.trim() })).filter((l) => l.label || l.url) });
-  Object.assign(s.event, { name: $('#eName').value, date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
+  Object.assign(s.event, { type: $('#eType').value, name: $('#eName').value, date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
   Object.assign(s.branding, { brand_emoji: $('#bEmoji').value, primary_color: $('#bPrimary').value, accent_color: $('#bAccent').value,
     headline: $('#bHeadline').value, headline_accent: $('#bHeadlineAccent').value, intro: $('#bIntro').value, show_locality: $('#bPlace').checked });
-  Object.assign(s.features, { candy: $('#fCandy').checked, nonfood_treats: $('#fNonfood').checked, adult_refreshments: $('#fAdult').checked,
-    sensory_filters: $('#fSensory').checked, optional_zones: $('#fZones').checked, walking_routes: $('#fRoutes').checked });
+  for (const f of type.features) s.features[f.key] = $(`#feature-${f.key}`).checked;
+  for (const [k, , id] of SHARED_FEATURES) s.features[k] = $(`#${id}`).checked;
   // Fields this table does not show (description, the name's spot on the map) are kept from the saved zone.
   const before = Object.fromEntries((settings.zones || []).map((z) => [z.key, z]));
   s.zones = $$('#zoneRows tr').map((tr) => {
@@ -167,6 +175,7 @@ async function save(e) {
   const res = await call('/api/admin/community', { method: 'PUT', body: { settings: s } });
   settings = res.settings;
   flash('Settings saved.');
+  if (settings.event.type !== type.key) load(); // another type: its features and labels
 }
 
 async function uploadLogo(e) {
@@ -180,7 +189,7 @@ async function uploadLogo(e) {
 }
 
 async function load() {
-  settings = (await call('/api/admin/community')).settings;
+  ({ settings, event_types: types, event_type: type } = await call('/api/admin/community'));
   render();
 }
 load();

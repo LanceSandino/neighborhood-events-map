@@ -2,14 +2,15 @@
 {% set nav = 'about' %}
 {% block title %}About · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block body %}
-{% set access = access_info(c.community.access ?? null) %}
+{% set et = event_type(c.event.type) %}
+{% set access = access_info(c.community.access ?? null, et.copy) %}
 <article class="page-card legal about">
   <div class="eyebrow">{{ c.branding.brand_emoji }} About</div>
   <h1>{{ c.community.name }} {{ c.event.name }}</h1>
   {% if c.community.subtitle %}<p class="legal-lead">{{ c.community.subtitle }}</p>{% endif %}
 
   <div class="about-facts">
-    <div class="about-fact"><span aria-hidden="true">🎃</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; each home sets its own.</p></div></div>
+    <div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; each home sets its own.</p></div></div>
     {% if c.community.locality %}<div class="about-fact"><span aria-hidden="true">📍</span><div><b>{{ c.community.locality }}{% if c.community.region %}, {{ c.community.region }}{% endif %}</b><p>{{ c.map.boundary_status == 'approved' ? 'Homes inside the neighborhood outline can take part.' : 'The neighborhood outline is still being reviewed.' }}</p></div></div>{% endif %}
     {% if access %}<div class="about-fact"><span aria-hidden="true">{{ access.icon }}</span><div><b>{{ access.title }}</b><p>{{ access.text }}</p></div></div>{% endif %}
   </div>
@@ -33,12 +34,12 @@
     {% if c.community.about %}
       {% for para in c.community.about|split("\n\n") %}<p>{{ para|nl2br }}</p>{% endfor %}
     {% else %}
-      <p>A neighborhood map of homes handing out treats on Halloween, with sensory notes and a suggested stop order for trick-or-treaters of all ages — families, friends or solo.</p>
+      <p>{{ et.copy.about }}</p>
     {% endif %}
   </section>
 
   <section class="about-section" aria-labelledby="reminders">
-    <h2 id="reminders">Trick-or-treat reminders</h2>
+    <h2 id="reminders">{{ et.copy.reminders_heading }}</h2>
     <ul class="reminders two-col">{% for r in c.community.reminders %}<li>{{ r }}</li>{% endfor %}</ul>
   </section>
 

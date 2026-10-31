@@ -13,6 +13,8 @@ use App\Audit\AuditLog;
 use App\Community\BrandingStore;
 use App\Community\CommunityRepository;
 use App\Dispute\DisputeService;
+use App\Event\EventType;
+use App\Event\EventTypeRegistry;
 use App\Geo\ZoneResolver;
 use App\Listing\ListingRepository;
 use App\Security\User;
@@ -31,7 +33,10 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * @module Controller/Api/AdminApiController
  * @description Organizer API (ROLE_ADMIN via access_control; CSRF + idle timeout enforced first):
  *     community settings/branding, GeoJSON boundary & zones (import/export/approve), registration
- *     switch, address inventory, claim transfer/unclaim, listing moderation, disputes, audit, export.
+ *     switch, address inventory, claim transfer/unclaim, listing moderation, disputes, audit, export. The
+ *     settings come with the event types an organizer may choose and the current type's console labels.
+ *
+ * @dependencies Community/*, Admin/ClaimAdministration, Address/*, Dispute/DisputeService, Event/EventTypeRegistry, Audit/AuditLog, DBAL
  */
 #[Route('/api/admin')]
 #[IsGranted('ROLE_ADMIN')] // also enforced by access_control; declared here so a route rule is never the only lock
@@ -41,6 +46,7 @@ final class AdminApiController
         private readonly CommunityRepository $community,
         private readonly AuditLog $audit,
         private readonly Connection $db,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -80,7 +86,10 @@ final class AdminApiController
     #[Route('/community', methods: ['GET'])]
     public function getCommunity(): JsonResponse
     {
-        return new JsonResponse(['settings' => $this->community->current()->settings]);
+        $c = $this->community->current();
+
+        return new JsonResponse(['settings' => $c->settings, 'event_types' => array_map(fn (EventType $t) => $this->typeView($t), $this->types->enabled()),
+            'event_type' => $this->typeView($this->types->for($c))]);
     }
 
     #[Route('/community', methods: ['PUT'])]
@@ -336,6 +345,23 @@ final class AdminApiController
 
         return new Response($claims->exportCsv(), 200, ['Content-Type' => 'text/csv; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="claims-'.$this->community->current()->eventDate().'.csv"']);
+    }
+
+    /**
+     * What the console needs to know about an event type: its name, feature switches and console labels.
+     *
+     * @return array{key:string, name:string, features:list<array{key:string,label:string}>, copy:array<string,string>}
+     */
+    private function typeView(EventType $t): array
+    {
+        $copy = $t->copy();
+
+        return [
+            'key' => $t->key(),
+            'name' => $t->defaultName(),
+            'features' => array_map(static fn (string $k, array $f) => ['key' => $k, 'label' => $f['label']], array_keys($t->features()), array_values($t->features())),
+            'copy' => ['access_gated_open' => $copy['admin_access_gated_open'], 'reminders_label' => $copy['admin_reminders_label'], 'reminders_help' => $copy['admin_reminders_help']],
+        ];
     }
 
     /**

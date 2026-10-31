@@ -1,0 +1,4 @@
+{# Halloween card symbol, in the pins' order: 👻 big scares, 🧩 sensory-friendly, 🍺 21+, else 🍬. Expects `home`. #}
+{%- set scary = home.jump_scares or home.scare_level == 'intense' -%}
+{%- set sensory = home.low_noise and not home.flashing_lights and not home.loud_audio and not scary -%}
+{{- scary ? '👻' : (sensory ? '🧩' : (home.adult_drinks ? '🍺' : '🍬')) -}}

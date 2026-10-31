@@ -11,7 +11,9 @@ use Twig\TwigFunction;
 /**
  * @module Twig/AppExtension
  * @description Presentation helpers: zone summary chip ("6 phases · 1–3, 5A, 5B, 8"), event badge
- *     text, 12-hour time labels, and XSS-safe JSON for non-executable <script type="application/json">.
+ *     text, 12-hour time labels, access facts, and XSS-safe JSON for non-executable <script type="application/json">.
+ *
+ * @dependencies Twig
  */
 final class AppExtension extends AbstractExtension
 {
@@ -60,12 +62,18 @@ final class AppExtension extends AbstractExtension
         return $areas;
     }
 
-    /** @return array{icon:string, title:string, text:string}|null how visitors may reach the homes */
-    public function accessInfo(?string $access): ?array
+    /**
+     * How visitors may reach the homes; the event type's copy names the "gated, open during the event" choice.
+     *
+     * @param array<string,mixed> $copy the event type's copy (EventType::copy())
+     *
+     * @return array{icon:string, title:string, text:string}|null
+     */
+    public function accessInfo(?string $access, array $copy = []): ?array
     {
         return match ($access) {
             'public' => ['icon' => '🚶', 'title' => 'Open to the public', 'text' => 'Public streets: visitors from anywhere are welcome to walk the neighborhood.'],
-            'gated_open' => ['icon' => '🚪', 'title' => 'Gated — open for trick-or-treating', 'text' => 'The gates are opened for visitors during the suggested hours. Follow posted rules and any gate staff.'],
+            'gated_open' => ['icon' => '🚪', 'title' => (string) ($copy['access_gated_open'] ?? 'Gated — open during the event'), 'text' => 'The gates are opened for visitors during the suggested hours. Follow posted rules and any gate staff.'],
             'gated_guests' => ['icon' => '🔐', 'title' => 'Gated — residents and guests', 'text' => 'Only residents and their invited guests can enter. This map does not grant gate access.'],
             'private' => ['icon' => '🏡', 'title' => 'Residents only', 'text' => 'A private event for residents of the neighborhood.'],
             default => null,

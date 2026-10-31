@@ -6,6 +6,18 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.10.0-beta.1] - 2026-10-31
+
+Update by pulling `0.10.0-beta.1` and recreating the stack. The database gets one additive migration, applied at start; nothing visible changes for visitors or residents. Going back to 0.9.0-beta.1 needs only the older image: the database keeps working with it.
+
+### Added
+- Organizers can see the event type of their map under Organizer → Community → Event. Halloween is the type this version offers; Christmas lights and garage sales come in later versions.
+- The public event information (`/api/event`) names the event type.
+
+### Changed
+- Behind the scenes, everything that is particular to Halloween (the listing fields, filters, statuses, icons and words) now lives in one Halloween event type, so the next event types can be added without touching the shared parts. The map, the listing forms, My house and every public answer stay exactly as they were.
+- A listing's details are stored in a new form next to the old one, which is kept and updated too, so an earlier version still reads them.
+
 ## [0.9.0-beta.1] - 2026-10-30
 
 Update by pulling `0.9.0-beta.1` and recreating the stack. No data changes; the database and its migrations are unchanged.

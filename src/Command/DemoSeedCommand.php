@@ -7,6 +7,7 @@ namespace App\Command;
 use App\Address\AddressNormalizer;
 use App\Address\AddressRegistry;
 use App\Community\CommunityRepository;
+use App\Event\EventTypeRegistry;
 use App\Listing\ListingDraft;
 use App\Listing\ListingRepository;
 use App\Shared\RuntimeConfig;
@@ -22,7 +23,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * @module Command/DemoSeedCommand
  * @description Loads the FICTIONAL demo homes (examples/demo/homes.json). Refuses unless APP_DEMO=1
- *     and the configured community is the demo, so production can never show invented homes.
+ *     and the configured community is the demo, so production can never show invented homes. Each home's
+ *     listing fields (everything but its address and position) go through ListingDraft.
+ *
+ * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Security/UserRepository
  */
 #[AsCommand('app:demo:seed', 'Load fictional demo homes (APP_DEMO=1 only)')]
 final class DemoSeedCommand extends Command
@@ -36,6 +40,7 @@ final class DemoSeedCommand extends Command
         private readonly ListingRepository $listings,
         private readonly Connection $db,
         private readonly ClockInterface $clock,
+        private readonly EventTypeRegistry $types,
     ) {
         parent::__construct();
     }
@@ -71,7 +76,8 @@ final class DemoSeedCommand extends Command
             $user = $this->users->upsertVerified(sprintf('demo-resident-%02d@example.invalid', $i + 1));
             $this->db->executeStatement('INSERT INTO claims (address_id, user_id, claimed_at, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING',
                 [$id, $user->id, $this->clock->now()->format('Y-m-d H:i:s.uP'), $this->clock->now()->format('Y-m-d H:i:s.uP')]);
-            $this->listings->insert($this->db, $id, $c->eventDate(), ListingDraft::fromInput($h, $c));
+            $listing = array_diff_key($h, array_flip(['house_number', 'street', 'unit', 'lat', 'lon']));
+            $this->listings->insert($this->db, $id, $c->eventDate(), ListingDraft::fromInput($listing, $c, false, null, $this->types));
             ++$n;
         }
         $output->writeln(sprintf('Seeded %d FICTIONAL demo homes.', $n));

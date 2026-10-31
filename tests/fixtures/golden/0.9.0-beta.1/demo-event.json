@@ -1,0 +1,138 @@
+{
+ "configured": true,
+ "community": {
+  "id": "maple-hollow-demo",
+  "name": "Maple Hollow",
+  "about": "Maple Hollow is a FICTIONAL neighborhood used to demonstrate the app. Every home, street and note here is invented.\n\nAnyone can browse the map, filter for gentle or spooky stops and plan a route; residents list their own homes with a one-time email link.",
+  "links": [
+   {
+    "url": "https://github.com/",
+    "label": "Project on GitHub"
+   }
+  ],
+  "access": "public",
+  "region": "FL",
+  "country": "US",
+  "locality": "Demo Town",
+  "subtitle": "A fictional demo neighborhood",
+  "contact_url": "mailto:organizer@example.org",
+  "gate_notice": "Fictional demo data — these homes do not exist.",
+  "postal_code": "",
+  "reminders": [
+   "💡 Visit homes with a porch light on or someone outside; skip dark houses.",
+   "🍬 Take one piece of candy unless a sign or the resident says otherwise.",
+   "🎃 Look, don’t touch: decorations, props and yards belong to your neighbors.",
+   "🚗 Watch for cars. Cross at corners or marked crossings, never between parked cars.",
+   "🚶 Stay on sidewalks and driveways; don’t cut across lawns or gardens.",
+   "🔦 Carry a flashlight or glow stick and wear something reflective after dark.",
+   "👀 Little ones stay with a grown-up; older kids stay in a group and check in.",
+   "🥜 Check treats before eating, especially for allergies. A teal pumpkin (the Teal Pumpkin Project) means the home offers non-food treats.",
+   "🐶 Some homes have pets: wait at the door and never open gates.",
+   "🙏 Say thank you, be patient with little ones, and be kind to anyone with sensory needs or who isn’t taking part."
+  ]
+ },
+ "event": {
+  "date": "2026-10-30",
+  "name": "Halloween",
+  "ends_at": "20:30",
+  "starts_at": "16:30",
+  "timezone": "America/Chicago"
+ },
+ "branding": {
+  "logo_url": null,
+  "intro": "Fictional demo: explore how trick-or-treaters find treats and plan stops.",
+  "headline": "Spooky streets.",
+  "brand_emoji": "🦇",
+  "accent_color": "#6B4FA0",
+  "primary_color": "#2E7D6B",
+  "show_locality": false,
+  "headline_accent": "Sweet treats."
+ },
+ "map": {
+  "center": {
+   "lat": 29.2014,
+   "lon": -81.68424999999999
+  },
+  "zoom": 16,
+  "tiles": {
+   "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+   "max_zoom": 19,
+   "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+   "minLon": -81.688,
+   "minLat": 29.199,
+   "maxLon": -81.6805,
+   "maxLat": 29.2038
+  },
+  "boundary": {
+   "type": "Polygon",
+   "coordinates": [
+    [
+     [
+      -81.688,
+      29.199
+     ],
+     [
+      -81.6805,
+      29.199
+     ],
+     [
+      -81.6805,
+      29.2026
+     ],
+     [
+      -81.68249999999999,
+      29.2038
+     ],
+     [
+      -81.688,
+      29.2038
+     ],
+     [
+      -81.688,
+      29.199
+     ]
+    ]
+   ]
+  },
+  "boundary_status": "approved",
+  "crossing_notes": []
+ },
+ "zones": [],
+ "features": {
+  "candy": true,
+  "nonfood_treats": true,
+  "optional_zones": false,
+  "walking_routes": true,
+  "sensory_filters": true,
+  "adult_refreshments": true
+ },
+ "registration": {
+  "open": true,
+  "reason": null,
+  "address_mode": "both",
+  "street_allowlist": [
+   "PUMPKIN PATCH LN",
+   "LANTERN WAY",
+   "COBWEB CT",
+   "MOONBEAM DR"
+  ],
+  "review_new_addresses": false
+ },
+ "routing": {
+  "groups": [],
+  "group_labels": [],
+  "crossings_verified": false,
+  "provider": false
+ },
+ "stats": {
+  "homes": 14,
+  "candy": 12,
+  "low_sensory": 6,
+  "adult": 4,
+  "zones": 0
+ },
+ "demo": true,
+ "version": "0.9.0-beta.1"
+}

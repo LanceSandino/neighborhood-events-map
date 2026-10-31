@@ -2,15 +2,17 @@
  * @module assets/js/me
  * @description Resident dashboard: lists only the signed-in user's homes; status buttons and the
  *     edit form PATCH /api/me/homes/{id} (CSRF header). Session expiry is enforced by the server; the
- *     countdown here is only a hint and never polls protected endpoints.
+ *     countdown here is only a hint and never polls protected endpoints. The event type (events/index.js) fills and
+ *     reads its own listing fields, sent as `details`, and supplies its hours and words.
+ * @dependencies lib/api.js, lib/render.js, lib/time.js, lib/modal.js, events/index.js
  */
 import { api, ApiError, friendlyError } from './lib/api.js';
 import { esc } from './lib/render.js';
 import { time12 } from './lib/time.js';
 import { toast } from './lib/modal.js';
+import { eventType } from './events/index.js';
 
-/** Listing yes/no fields; the form shows only those the community offers (partials/_listing_checks). */
-const LISTING_FLAGS = ['candy', 'nonfood', 'adult_drinks', 'low_noise', 'jump_scares', 'flashing_lights', 'loud_audio', 'stroller_friendly'];
+let T = eventType(); // the community's event type, from /api/me
 const $ = (s, root = document) => root.querySelector(s);
 let expiresAt = 0;
 let idleMinutes = 30;
@@ -58,13 +60,12 @@ function homeCard(home, eventDate) {
   warn.textContent = warnings.join(' ');
   warn.classList.toggle('hide', warnings.length === 0);
   const form = $('[data-f="form"]', node);
-  timeOptions(form.start, 15, 22, l?.start);
-  timeOptions(form.end, 15, 23, l?.end);
+  timeOptions(form.start, ...T.hours.start, l?.start);
+  timeOptions(form.end, ...T.hours.end, l?.end);
   if (l) {
-    form.scare_level.value = l.scare_level;
+    T.fillForm(form, l.details);
     form.published.value = String(l.published);
     form.note.value = l.note;
-    for (const k of LISTING_FLAGS) if (form[k]) form[k].checked = !!l[k];
   }
   node.querySelectorAll('[data-status]').forEach((b) => b.setAttribute('aria-pressed', String(l?.status === b.dataset.status)));
   const showError = (e) => { const el = $('[data-f="error"]', node); el.textContent = friendlyError(e); el.classList.remove('hide'); };
@@ -80,8 +81,8 @@ function homeCard(home, eventDate) {
   node.querySelectorAll('[data-status]').forEach((b) => b.addEventListener('click', () => patch({ status: b.dataset.status }, `Status updated: ${b.textContent.trim()}`)));
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const body = { start: form.start.value, end: form.end.value, scare_level: form.scare_level.value, published: form.published.value === 'true', note: form.note.value };
-    for (const k of LISTING_FLAGS) body[k] = form[k] ? form[k].checked : false; // options the organizer turned off are not offered
+    // Options the organizer turned off are not offered; they read as off.
+    const body = { start: form.start.value, end: form.end.value, published: form.published.value === 'true', note: form.note.value, details: T.formDetails(form) };
     patch(body, 'Saved. The public map updates right away.');
   });
   $('[data-f="release"]', node).addEventListener('click', async () => {
@@ -106,6 +107,7 @@ async function load() {
   try {
     const me = await api('/api/me');
     if (!me.claim_outcome && resumeDestination(me)) return;
+    T = eventType(me.event_type);
     touch(me.session);
     if (me.user.is_admin) $('#adminLink').classList.remove('hide');
     const out = $('#claimOutcome');
@@ -113,7 +115,7 @@ async function load() {
       const o = me.claim_outcome;
       out.className = o.status === 'published' || o.status === 'pending_review' ? 'success' : 'notice';
       out.innerHTML = o.status === 'published'
-        ? `🎉 <b>${esc(o.address)}</b> is on the map now. Thanks for handing out treats!`
+        ? `🎉 <b>${esc(o.address)}</b> is on the map now. ${esc(T.copy.published)}`
         : o.status === 'pending_review'
           ? `📝 <b>${esc(o.address)}</b> is saved. Because it is a new address, an organizer approves it before it appears on the map.`
           : o.status === 'already_claimed'

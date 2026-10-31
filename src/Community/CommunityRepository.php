@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventTypeRegistry;
 use App\Geo\GeoJsonParser;
 use App\Geo\GeometryException;
 use App\Geo\PolygonSet;
@@ -20,7 +21,7 @@ use Psr\Clock\ClockInterface;
  *
  * @input DBAL connection, clock, parser, schema
  * @output CommunityConfig snapshots, export documents, change summaries
- * @dependencies Community/CommunitySchema, Community/CommunityConfig, Geo/*
+ * @dependencies Community/CommunitySchema, Community/CommunityConfig, Geo/*, Event/EventTypeRegistry (default type key)
  */
 final class CommunityRepository
 {
@@ -267,8 +268,8 @@ final class CommunityRepository
             }
         }
 
-        // Settings saved before event.name existed keep the event they were made for.
-        $settings['event'] = (array) ($settings['event'] ?? []) + ['name' => CommunitySchema::DEFAULT_EVENT_NAME];
+        // Settings saved before event.name or event.type existed keep the event they were made for (Halloween).
+        $settings['event'] = (array) ($settings['event'] ?? []) + ['name' => CommunitySchema::DEFAULT_EVENT_NAME, 'type' => EventTypeRegistry::DEFAULT];
 
         return new CommunityConfig($settings, $boundary, $approved, $version, $zones);
     }

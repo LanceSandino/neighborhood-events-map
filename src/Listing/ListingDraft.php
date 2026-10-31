@@ -5,40 +5,44 @@ declare(strict_types=1);
 namespace App\Listing;
 
 use App\Community\CommunityConfig;
+use App\Event\EventType;
+use App\Event\EventTypeRegistry;
+use App\Event\OccurrenceSettings;
 use App\Shared\TextInput;
 use App\Shared\ValidationException;
 
 /**
  * @module Listing/ListingDraft
- * @description Validates and normalizes resident-submitted listing fields (hours, offerings,
- *     sensory details, status, note). Disabled community features are forced off.
+ * @description Validates and normalizes resident-submitted listing input: the core fields every event type
+ *     shares (hours, status, note, visibility) here, the type-specific details through the community's event
+ *     type (strict: unknown keys are refused). Input sends details as a `details` object; during the
+ *     compatibility window (D-20261031-02) the Halloween type's flat fields are accepted too, and a draft also
+ *     carries them flat next to `details` (the shape 0.9 code and the legacy columns know).
  *
  * @input array<string,mixed> raw form/JSON input, CommunityConfig
  * @output array<string,mixed> normalized listing draft
- * @dependencies Community/CommunityConfig, Shared/ValidationException
+ * @dependencies Community/CommunityConfig, Event/EventTypeRegistry, Shared/TextInput, Shared/ValidationException
  */
 final class ListingDraft
 {
-    public const STATUSES = ['active', 'paused', 'out_of_candy', 'done'];
-    public const SCARE_LEVELS = ['gentle', 'mild', 'intense'];
+    /** Fields every event type shares; everything else is a detail of the event type. */
+    public const CORE_FIELDS = ['start', 'end', 'status', 'note', 'published'];
     public const NOTE_MAX = 400;
-    private const BOOLEANS = ['candy', 'nonfood', 'adult_drinks', 'low_noise', 'jump_scares', 'flashing_lights', 'loud_audio', 'stroller_friendly'];
 
     /**
-     * @param array<string,mixed> $in
+     * @param array<string,mixed>      $in
+     * @param array<string,mixed>|null $current the listing as stored (toDraft), for partial updates
      *
      * @return array<string,mixed>
      */
-    public static function fromInput(array $in, CommunityConfig $community, bool $partial = false, ?array $current = null): array
+    public static function fromInput(array $in, CommunityConfig $community, bool $partial = false, ?array $current = null, ?EventTypeRegistry $types = null): array
     {
-        $base = $current ?? [
-            'start' => $community->settings['event']['starts_at'], 'end' => $community->settings['event']['ends_at'],
-            'candy' => false, 'nonfood' => false, 'adult_drinks' => false, 'low_noise' => false, 'jump_scares' => false,
-            'flashing_lights' => false, 'loud_audio' => false, 'stroller_friendly' => false,
-            'scare_level' => 'gentle', 'note' => '', 'status' => 'active', 'published' => true,
-        ];
+        $type = ($types ?? EventTypeRegistry::builtIn())->for($community);
         $errors = [];
-        $out = $base;
+        $out = [
+            'start' => $current['start'] ?? $community->settings['event']['starts_at'],
+            'end' => $current['end'] ?? $community->settings['event']['ends_at'],
+        ];
 
         foreach (['start', 'end'] as $f) {
             if (\array_key_exists($f, $in)) {
@@ -48,63 +52,111 @@ final class ListingDraft
                 } else {
                     $out[$f] = $v;
                 }
-            } elseif (!$partial && null === $current) {
-                $out[$f] = $base[$f];
             }
         }
         if (!isset($errors['start'], $errors['end']) && $out['end'] <= $out['start']) {
             $errors['end'] = 'End time must be later than the start time.';
         }
 
-        foreach (self::BOOLEANS as $f) {
-            if (\array_key_exists($f, $in)) {
-                $out[$f] = filter_var($in[$f], \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE) ?? false;
-            }
-        }
-        if (\array_key_exists('published', $in)) {
-            $out['published'] = filter_var($in['published'], \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE) ?? true;
-        }
-        $features = $community->features();
-        if (!$features['candy']) {
-            $out['candy'] = false;
-        }
-        if (!$features['nonfood_treats']) {
-            $out['nonfood'] = false;
-        }
-        if (!$features['adult_refreshments']) {
-            $out['adult_drinks'] = false;
-        }
-        if (!$out['candy'] && !$out['nonfood'] && !$out['adult_drinks']) {
-            $errors['offerings'] = 'Choose at least one: candy, non-food treats or adult refreshments.';
+        [$detailInput, $unknown] = self::detailInput($in, $type);
+        $details = null;
+        try {
+            $details = $type->normalizeDetails(array_replace(self::detailsOf($current ?? [], $type), $detailInput), OccurrenceSettings::fromCommunity($community));
+        } catch (ValidationException $e) {
+            $errors += $e->fields;
         }
 
-        if (\array_key_exists('scare_level', $in)) {
-            if (!\in_array($in['scare_level'], self::SCARE_LEVELS, true)) {
-                $errors['scare_level'] = 'Choose gentle, mild or intense.';
-            } else {
-                $out['scare_level'] = $in['scare_level'];
-            }
-        }
+        $status = $current['status'] ?? 'active';
         if (\array_key_exists('status', $in)) {
-            if (!\in_array($in['status'], self::STATUSES, true)) {
+            if (!\is_string($in['status']) || !\array_key_exists($in['status'], $type->statuses())) {
                 $errors['status'] = 'Unknown status.';
             } else {
-                $out['status'] = $in['status'];
+                $status = $in['status'];
             }
         }
+        $note = $current['note'] ?? '';
         if (\array_key_exists('note', $in)) {
-            $note = TextInput::paragraphs(\is_string($in['note']) ? $in['note'] : '', 4 * self::NOTE_MAX);
-            if (mb_strlen($note) > self::NOTE_MAX) {
+            $text = TextInput::paragraphs(\is_string($in['note']) ? $in['note'] : '', 4 * self::NOTE_MAX);
+            if (mb_strlen($text) > self::NOTE_MAX) {
                 $errors['note'] = 'Keep the note to 400 characters.';
             } else {
-                $out['note'] = $note;
+                $note = $text;
             }
         }
+        $published = $current['published'] ?? true;
+        if (\array_key_exists('published', $in)) {
+            $published = filter_var($in['published'], \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE) ?? true;
+        }
 
-        if ([] !== $errors) {
+        $errors += $unknown;
+        if ([] !== $errors || null === $details) {
             throw new ValidationException($errors);
         }
 
-        return $out;
+        return $out + $type->legacyFields($details) + ['note' => $note, 'status' => $status, 'published' => $published, 'details' => $details];
+    }
+
+    /**
+     * The details of a draft or stored listing. A draft saved by 0.9 (a pending claim intent) has only the flat
+     * Halloween fields; they are its details.
+     *
+     * @param array<string,mixed> $draft
+     *
+     * @return array<string,mixed>
+     */
+    public static function detailsOf(array $draft, EventType $type): array
+    {
+        if (\is_array($draft['details'] ?? null)) {
+            return $draft['details'];
+        }
+
+        return array_intersect_key($draft, $type->defaultDetails());
+    }
+
+    /**
+     * A draft with its `details`, for a draft stored before details existed.
+     *
+     * @param array<string,mixed> $draft
+     *
+     * @return array<string,mixed>
+     */
+    public static function withDetails(array $draft, EventType $type): array
+    {
+        return \is_array($draft['details'] ?? null) ? $draft : $draft + ['details' => $type->publicDetails(self::detailsOf($draft, $type))];
+    }
+
+    /**
+     * Splits the input into the type's detail input (the `details` object wins over flat legacy fields) and
+     * refusals for keys nobody knows.
+     *
+     * @param array<string,mixed> $in
+     *
+     * @return array{0: array<string,mixed>, 1: array<string,string>}
+     */
+    private static function detailInput(array $in, EventType $type): array
+    {
+        $legacy = $type->legacyFields($type->defaultDetails());
+        $details = [];
+        $unknown = [];
+        foreach ($in as $k => $v) {
+            $k = (string) $k;
+            if (\in_array($k, self::CORE_FIELDS, true) || 'details' === $k) {
+                continue;
+            }
+            if (\array_key_exists($k, $legacy)) {
+                $details[$k] = $v;
+            } else {
+                $unknown[$k] = 'Unknown field.';
+            }
+        }
+        if (\array_key_exists('details', $in)) {
+            if (!\is_array($in['details']) || ([] !== $in['details'] && array_is_list($in['details']))) {
+                $unknown['details'] = 'Send the listing details as an object.';
+            } else {
+                $details = $in['details'] + $details;
+            }
+        }
+
+        return [$details, $unknown];
     }
 }

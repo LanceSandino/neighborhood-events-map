@@ -9,6 +9,7 @@ use App\Address\AddressRegistry;
 use App\Address\InvalidAddressException;
 use App\Community\CommunityPresenter;
 use App\Community\CommunityRepository;
+use App\Event\EventTypeRegistry;
 use App\Listing\ListingRepository;
 use App\Security\ClientIdentity;
 use App\Security\ProofOfWork;
@@ -22,7 +23,10 @@ use Symfony\Component\Routing\Attribute\Route;
  * @module Controller/Api/PublicApiController
  * @description Anonymous, read-mostly family endpoints: community metadata, published homes,
  *     narrow address lookup / claim status for the listing form, and PoW challenges.
- *     Never returns emails, owner ids or the unclaimed address inventory.
+ *     Never returns emails, owner ids or the unclaimed address inventory. Homes are projected by the
+ *     community's event type.
+ *
+ * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, Address/*, Security/*
  */
 final class PublicApiController
 {
@@ -35,6 +39,7 @@ final class PublicApiController
         private readonly ProofOfWork $pow,
         private readonly Throttle $throttle,
         private readonly ClientIdentity $client,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -43,7 +48,7 @@ final class PublicApiController
     public function community(): JsonResponse
     {
         $c = $this->community->current();
-        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys());
+        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c));
 
         return self::fresh(new JsonResponse($this->presenter->publicPayload($c, $homes)));
     }
@@ -56,7 +61,7 @@ final class PublicApiController
         return self::fresh(new JsonResponse([
             'event_date' => $c->eventDate(),
             'timezone' => $c->settings['community']['timezone'],
-            'homes' => $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys()),
+            'homes' => $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c)),
         ]));
     }
 
@@ -64,7 +69,7 @@ final class PublicApiController
     public function home(int $id): JsonResponse
     {
         $c = $this->community->current();
-        $home = $this->listings->publicHome($id, $c->eventDate(), $c->hiddenZoneKeys());
+        $home = $this->listings->publicHome($id, $c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c));
 
         return null === $home ? ApiError::response(404, 'not_found', 'That home is not listed.') : self::fresh(new JsonResponse(['home' => $home]));
     }

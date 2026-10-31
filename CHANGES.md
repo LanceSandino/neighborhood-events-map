@@ -911,4 +911,74 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/symfony-8.1"
   author: "Lance Sandino"
   timestamp: "2026-10-30T21:00:00Z"
+- id: CU-20261031-01
+  type: docs
+  title: "README status names the released version again (0.9.0-beta.1, PHP 8.5, Symfony 8.1, PostgreSQL 18); a test keeps it in step with VERSION"
+  description: "Baseline step of the event-types roadmap. The README status line still said 0.8.0-beta.1 after 0.9.0-beta.1 shipped. It now names the version and stack, and ReleaseConsistencyTest compares the status line with VERSION so it cannot drift again (red on the old README, green after). Baseline before any event-type change, on fresh dev stacks at 0.9.0-beta.1: PHPUnit 280 passing (the new README test was the 281st, red), lines 93.96 %; PHPStan clean; composer audit clean; node:test 30/30; Python 45/45; Playwright 78 passed, 2 skipped; session smoke 13/13. The public API JSON of both stacks and the tiles-blocked e2e screenshots were kept as the parity baseline for the event-type extraction."
+  impact: none
+  affected_modules: ["README.md", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  related_tests: ["tests/Unit/About/ReleaseConsistencyTest.php: testTheReadmeStatusNamesTheCurrentVersion (fails on the 0.8.0-beta.1 status line)"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T05:45:00Z"
+- id: CU-20261031-02
+  type: feature
+  title: "Event-type registry and the Halloween event type: listing details, statuses, filters, copy and Twig fragments move out of the shared code (ROADMAP Stage 1)"
+  description: "App\\Event\\EventType is the contract of a code-defined event type (key, default name/branding/copy, schedule kind and maximum days, hour choices, statuses with a day-scoped flag, feature switches, strict normalizeDetails(), strict publicDetails(), legacyFields(), filters, legend, stats, route profiles, whitelisted Twig fragments). EventTypeRegistry collects the tagged implementations by immutable key (KEYS halloween, holiday_lights, garage_sale; ENABLED halloween only; problem() for configuration errors; builtIn() for code without a container). HalloweenType (+ HalloweenCopy) carries everything Halloween: the nine details, the 0.9 coercion and offerings rule, statuses, the eight filters, legend, stats, reminders and words. ListingDraft keeps only the shared fields (hours, status, note, visibility) and asks the community's type for the details; input may send them as a `details` object (canonical) or, during the compatibility window, as the flat Halloween fields; unknown keys are refused at either level (D-20261031-02). A draft carries `details` next to the flat fields; a 0.9 claim intent without details gets them from its flat fields (ListingDraft::withDetails). ListingRepository reads `details` and projects it through the type; public homes keep exactly the 0.9 keys (D-20261031-04). CommunityPresenter takes reminders and stats from the type. Templates ask the type through Twig/EventTypeExtension: event_type(key) for words, statuses, filters, legend and hours, event_fragment(key, name) for the whitelisted templates/event/halloween/ fragments (hero art, card symbol and tags, confirmation tags, the listing form fields, the check chips moved from partials/). The server-rendered pages of both dev stacks are byte-identical to 0.9 apart from whitespace between flex items and the new event.type in the page data."
+  impact: high
+  affected_modules: ["src/Event/", "src/Listing/ListingDraft.php", "src/Listing/ListingRepository.php", "src/Listing/ResidentHomes.php", "src/Listing/LegacyListingColumns.php", "src/Community/CommunityPresenter.php", "src/Claim/ClaimService.php", "src/Command/DemoSeedCommand.php", "src/Controller/", "src/Routing/RoutePlanner.php", "src/Twig/", "templates/"]
+  related_tests: ["tests/Unit/Event/EventTypeRegistryTest.php", "tests/Unit/Event/HalloweenTypeTest.php", "tests/Unit/Listing/ListingDraftParityTest.php (600 seeded inputs against the frozen 0.9 ListingDraft in tests/Support/Legacy)", "tests/Unit/Listing/ListingDraftTest.php (the five 0.9 tests unchanged + details object, unknown fields, 0.9 drafts)", "tests/Integration/GoldenApiParityTest.php (0.9.0-beta.1 answers of both dev stacks)", "tests/Integration/PublicPrivacyTest.php (unchanged: exact public home keys)"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:00:00Z"
+- id: CU-20261031-03
+  type: feature
+  title: "listings.details JSONB, backfilled from the Halloween columns; writes keep both; a trigger keeps details right after an image-only rollback"
+  description: "Migration Version20261031000001 adds `listings.details` (JSONB, NOT NULL, DEFAULT '{}', CHECK object), fills it from the nine Halloween columns, and creates listings_details_from_columns() with the BEFORE INSERT OR UPDATE trigger listings_details_sync that merges the columns into details on every write. The app writes details and the columns (LegacyListingColumns) with the same values; reads use details. Without the trigger, a rollback to the 0.9 image (which writes only the columns) followed by an upgrade would leave details stale, because the migration has already run. Down drops the trigger, the function and the column only (D-20261031-03)."
+  impact: medium
+  affected_modules: ["migrations/Version20261031000001.php", "src/Listing/ListingRepository.php", "src/Listing/ResidentHomes.php", "src/Listing/LegacyListingColumns.php"]
+  related_tests: ["tests/Integration/ListingDetailsMigrationTest.php: testEveryAppWriteKeepsTheLegacyColumnsAndDetailsEqual, testRowsWrittenThe09WayGetTheirDetailsFromTheColumns, testThePublicMapReadsDetails, testTheMigrationGoesDownAndUpAgainAndBackfillsEveryRow", "migrations up/down/up on the test database"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:00:00Z"
+- id: CU-20261031-04
+  type: feature
+  title: "event.type in the community settings (default halloween) and in GET /api/event and /api/community"
+  description: "CommunitySchema validates event.type through the registry: absent or empty means halloween; an unknown key or one this version does not enable is a configuration error naming the choices; the type supplies the defaults for the event name, subtitle, branding and its feature switches (same values and order as before for Halloween). Settings saved without event.type load as Halloween (CommunityRepository). The public payload's event gains `type`; every other key keeps its value and order. The shipped configs name `type: halloween`."
+  impact: low
+  affected_modules: ["src/Community/CommunitySchema.php", "src/Community/CommunityConfig.php", "src/Community/CommunityRepository.php", "src/Community/CommunityPresenter.php", "config/community.example.yaml", "examples/"]
+  related_tests: ["tests/Unit/Community/CommunitySchemaTest.php: testTheEventTypeDefaultsToHalloweenAndAnUnknownOrDisabledTypeIsRefused", "tests/Unit/Event/EventTypeRegistryTest.php", "tests/Integration/GoldenApiParityTest.php: testTheEventNamesItsTypeWhileHomesKeepExactlyTheirKeys"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:00:00Z"
+- id: CU-20261031-05
+  type: refactor
+  title: "Browser event modules: filters, render, time, home, register, My house and the route panel ask the Halloween module"
+  description: "public/assets/js/events/index.js is the browser registry (eventType(key), unknown keys throw); events/halloween.js holds the filter toggles and predicates, search words, tags, pin symbol and class, statusOf, route notes, copy, hour choices and the form helpers (formDetails, fillForm, validateDetails). lib/filters.js keeps search, zone, time and saved and builds the filter object from the type (defaultFilters; DEFAULT_FILTERS is Halloween's, unchanged); lib/render.js draws the type's tags and symbols; lib/time.js asks the type for a status (clock helpers moved to lib/clock.js, re-exported). home.js, route-panel.js, register.js and me.js take the type from the page data or /api/me; the listing forms send the details as a `details` object. Escaping is unchanged (esc() on every value, now also on the type's tag words)."
+  impact: medium
+  affected_modules: ["public/assets/js/events/", "public/assets/js/lib/filters.js", "public/assets/js/lib/render.js", "public/assets/js/lib/time.js", "public/assets/js/lib/clock.js", "public/assets/js/home.js", "public/assets/js/register.js", "public/assets/js/me.js", "public/assets/js/route-panel.js"]
+  related_tests: ["tests/js/events.test.mjs (400 seeded homes, filters and moments against the frozen 0.9 libraries in tests/js/legacy)", "tests/js/lib.test.mjs (unchanged)", "tests/e2e full suite on both stacks"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:10:00Z"
+- id: CU-20261031-06
+  type: feature
+  title: "Organizers see the event type: Community → Event lists the types this version offers; features and labels come from the type"
+  description: "GET /api/admin/community also returns event_types (the enabled types: key, name) and event_type (the current type's feature switches and console labels). The Community page shows an Event type select (Halloween only in this version), saves event.type, builds the Features panel from the type's switches plus the shared ones (zone filter, suggested stop order) and takes the reminders label and the gated-open access label from the type. A type this version does not enable is refused with the configuration error. The overview page is unchanged."
+  impact: low
+  affected_modules: ["src/Controller/Api/AdminApiController.php", "public/assets/js/admin/community.js"]
+  related_tests: ["tests/Integration/AdminConsoleTest.php: testTheConsoleShowsTheEventTypeAndOnlyOffersEnabledTypes", "tests/e2e/specs/admin.spec.mjs"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:15:00Z"
+- id: CU-20261031-07
+  type: chore
+  title: "0.10.0-beta.1: release notes, decisions D-20261031-01 to -04, ROADMAP Stage 1 done, event-type architecture note, rollback note, test report"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.10.0-beta.1. docs/architecture/event-types.md explains the module contract (PHP type, registry, Twig fragments, browser module), the listing data (details object, strict keys, compatibility window, trigger) and how a later type is added; the overview, AGENTS.md structure table, setup runbook and upgrade/rollback runbook (image-only rollback to 0.9 is enough) follow. Gates on the final tree are in docs/quality/test-report.md."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "ROADMAP.md", "AGENTS.md", "docs/architecture/", "docs/runbooks/setup.md", "docs/runbooks/upgrade-rollback.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/About/ReleaseConsistencyTest.php", "PHPUnit 308 tests (lines 94.79 %)", "tests/e2e: 78 passed, 2 skipped", "scripts/smoke_session.py 13/13", "bin/smoke-prod-image.sh 7/7"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:40:00Z"
 ```

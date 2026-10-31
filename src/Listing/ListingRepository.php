@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Listing;
 
+use App\Event\EventType;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
 
@@ -11,15 +12,16 @@ use Psr\Clock\ClockInterface;
  * @module Listing/ListingRepository
  * @description Listing persistence plus the PUBLIC projection used by the family map. The public
  *     queries return only opted-in, unmoderated, in-boundary listings for the current event date and
- *     never select owner/user columns. Resident-scoped reads and writes live in ResidentHomes.
+ *     never select owner/user columns. Type-specific fields are read from `details` and projected by the
+ *     event type; writes store `details` and keep the legacy Halloween columns in step (LegacyListingColumns).
+ *     Resident-scoped reads and writes live in ResidentHomes.
  *
- * @dependencies DBAL, clock
+ * @dependencies DBAL, clock, Event/EventType, Listing/LegacyListingColumns
  */
 final class ListingRepository
 {
     private const PUBLIC_COLUMNS = 'a.id, a.display_address, a.zone_key, a.latitude, a.longitude,
-        l.start_local, l.end_local, l.candy, l.nonfood, l.adult_drinks, l.low_noise, l.jump_scares, l.flashing_lights,
-        l.loud_audio, l.scare_level, l.stroller_friendly, l.note, l.status, l.updated_at';
+        l.start_local, l.end_local, l.details, l.note, l.status, l.updated_at';
     /** moderation_reason of a listing whose new (self-entered) address waits for an organizer's approval */
     public const PENDING_REVIEW = 'pending_review';
 
@@ -29,19 +31,16 @@ final class ListingRepository
     {
     }
 
-    /** @param array<string,mixed> $draft */
+    /** @param array<string,mixed> $draft a normalized ListingDraft */
     public function insert(Connection $db, int $addressId, string $eventDate, array $draft): void
     {
         $now = $this->now();
         $db->executeStatement(
-            'INSERT INTO listings (address_id, event_date, start_local, end_local, candy, nonfood, adult_drinks, low_noise, jump_scares,
-                flashing_lights, loud_audio, scare_level, stroller_friendly, note, status, published, published_at, updated_at, moderation_hidden)
-             VALUES (:id, :date, :start, :end, :candy, :nonfood, :adult, :low, :jump, :flash, :loud, :scare, :stroller, :note, :status, :pub, :now, :now,
+            'INSERT INTO listings (address_id, event_date, start_local, end_local, details, '.LegacyListingColumns::COLUMN_LIST.', note, status, published, published_at, updated_at, moderation_hidden)
+             VALUES (:id, :date, :start, :end, CAST(:details AS JSONB), '.LegacyListingColumns::PARAMETER_LIST.', :note, :status, :pub, :now, :now,
                 (SELECT moderation_hold FROM eligible_addresses WHERE id = :id))
              ON CONFLICT (address_id) DO UPDATE SET event_date = EXCLUDED.event_date, start_local = EXCLUDED.start_local, end_local = EXCLUDED.end_local,
-                candy = EXCLUDED.candy, nonfood = EXCLUDED.nonfood, adult_drinks = EXCLUDED.adult_drinks, low_noise = EXCLUDED.low_noise,
-                jump_scares = EXCLUDED.jump_scares, flashing_lights = EXCLUDED.flashing_lights, loud_audio = EXCLUDED.loud_audio,
-                scare_level = EXCLUDED.scare_level, stroller_friendly = EXCLUDED.stroller_friendly, note = EXCLUDED.note,
+                details = EXCLUDED.details, '.LegacyListingColumns::upsertAssignments().', note = EXCLUDED.note,
                 status = EXCLUDED.status, published = EXCLUDED.published, moderation_hidden = listings.moderation_hidden OR EXCLUDED.moderation_hidden,
                 published_at = EXCLUDED.published_at,
                 updated_at = EXCLUDED.updated_at',
@@ -55,9 +54,9 @@ final class ListingRepository
      *
      * @return list<array<string,mixed>>
      */
-    public function publicHomes(string $eventDate, array $hiddenZones = []): array
+    public function publicHomes(string $eventDate, array $hiddenZones, EventType $type): array
     {
-        $homes = array_map([self::class, 'publicShape'], $this->db->fetchAllAssociative(
+        $homes = array_map(static fn (array $r) => self::publicShape($r, $type), $this->db->fetchAllAssociative(
             'SELECT '.self::PUBLIC_COLUMNS.' FROM listings l JOIN eligible_addresses a ON a.id = l.address_id
              WHERE '.self::PUBLIC_WHERE.' ORDER BY a.street, a.house_number',
             ['date' => $eventDate],
@@ -73,7 +72,7 @@ final class ListingRepository
      *
      * @return array<string,mixed>|null
      */
-    public function publicHome(int $addressId, string $eventDate, array $hiddenZones): ?array
+    public function publicHome(int $addressId, string $eventDate, array $hiddenZones, EventType $type): ?array
     {
         $row = $this->db->fetchAssociative(
             'SELECT '.self::PUBLIC_COLUMNS.' FROM listings l JOIN eligible_addresses a ON a.id = l.address_id
@@ -84,7 +83,7 @@ final class ListingRepository
             return null;
         }
 
-        return self::publicShape($row);
+        return self::publicShape($row, $type);
     }
 
     /**
@@ -115,9 +114,19 @@ final class ListingRepository
         return $this->db->executeStatement('UPDATE listings SET published = FALSE, updated_at = :now WHERE event_date < :d AND published', ['now' => $this->now(), 'd' => $eventDate]);
     }
 
-    /** @param array<string,mixed> $r */
-    public static function publicShape(array $r): array
+    /**
+     * A public home: the core fields and the type's public details as its flat fields, read from `details`.
+     * The keys are exactly those of 0.9 (D-20261031-04); event_type and a `details` object join them with
+     * event-scoped listings.
+     *
+     * @param array<string,mixed> $r
+     *
+     * @return array<string,mixed>
+     */
+    public static function publicShape(array $r, EventType $type): array
     {
+        $details = $type->publicDetails(self::storedDetails($r['details'] ?? null));
+
         return [
             'id' => (int) $r['id'],
             'address' => (string) $r['display_address'],
@@ -126,47 +135,60 @@ final class ListingRepository
             'lon' => round((float) $r['longitude'], 7),
             'start' => substr((string) $r['start_local'], 0, 5),
             'end' => substr((string) $r['end_local'], 0, 5),
-            'candy' => (bool) $r['candy'],
-            'nonfood' => (bool) $r['nonfood'],
-            'adult_drinks' => (bool) $r['adult_drinks'],
-            'low_noise' => (bool) $r['low_noise'],
-            'jump_scares' => (bool) $r['jump_scares'],
-            'flashing_lights' => (bool) $r['flashing_lights'],
-            'loud_audio' => (bool) $r['loud_audio'],
-            'scare_level' => (string) $r['scare_level'],
-            'stroller_friendly' => (bool) $r['stroller_friendly'],
+        ] + $type->legacyFields($details) + [
             'note' => (string) $r['note'],
             'status' => (string) $r['status'],
             'updated_at' => (new \DateTimeImmutable((string) $r['updated_at']))->format(\DATE_ATOM),
         ];
     }
 
-    /** @param array<string,mixed> $row listing row → draft array */
-    public static function toDraft(array $row): array
+    /**
+     * A stored listing row as a draft (the owner's view): core fields, the details (defaults filled in, only
+     * the type's keys) and the type's legacy fields.
+     *
+     * @param array<string,mixed> $row
+     *
+     * @return array<string,mixed>
+     */
+    public static function toDraft(array $row, EventType $type): array
     {
-        return [
-            'start' => substr((string) $row['start_local'], 0, 5), 'end' => substr((string) $row['end_local'], 0, 5),
-            'candy' => (bool) $row['candy'], 'nonfood' => (bool) $row['nonfood'], 'adult_drinks' => (bool) $row['adult_drinks'],
-            'low_noise' => (bool) $row['low_noise'], 'jump_scares' => (bool) $row['jump_scares'], 'flashing_lights' => (bool) $row['flashing_lights'],
-            'loud_audio' => (bool) $row['loud_audio'], 'stroller_friendly' => (bool) $row['stroller_friendly'],
-            'scare_level' => (string) $row['scare_level'], 'note' => (string) $row['note'], 'status' => (string) $row['status'],
-            'published' => (bool) $row['published'],
-        ];
+        $defaults = $type->defaultDetails();
+        $details = array_replace($defaults, array_intersect_key(self::storedDetails($row['details'] ?? null), $defaults));
+
+        return ['start' => substr((string) $row['start_local'], 0, 5), 'end' => substr((string) $row['end_local'], 0, 5)]
+            + $type->legacyFields($details)
+            + ['note' => (string) $row['note'], 'status' => (string) $row['status'], 'published' => (bool) $row['published'], 'details' => $details];
     }
 
-    /** @param array<string,mixed> $d normalized draft → named SQL parameters shared by every listing write */
+    /**
+     * Named SQL parameters shared by every listing write.
+     *
+     * @param array<string,mixed> $d normalized draft
+     *
+     * @return array<string,mixed>
+     */
     public static function bindings(int $addressId, string $eventDate, array $d): array
     {
-        return ['id' => $addressId, 'date' => $eventDate, 'start' => $d['start'], 'end' => $d['end'], 'candy' => $d['candy'],
-            'nonfood' => $d['nonfood'], 'adult' => $d['adult_drinks'], 'low' => $d['low_noise'], 'jump' => $d['jump_scares'],
-            'flash' => $d['flashing_lights'], 'loud' => $d['loud_audio'], 'scare' => $d['scare_level'], 'stroller' => $d['stroller_friendly'],
-            'note' => $d['note'], 'status' => $d['status'], 'pub' => $d['published']];
+        $details = \is_array($d['details'] ?? null) ? $d['details'] : throw new \LogicException('A listing draft carries its details (see ListingDraft).');
+
+        return ['id' => $addressId, 'date' => $eventDate, 'start' => $d['start'], 'end' => $d['end'],
+            'details' => json_encode($details, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE)]
+            + LegacyListingColumns::bindings($details)
+            + ['note' => $d['note'], 'status' => $d['status'], 'pub' => $d['published']];
     }
 
     /** @return array<string,string> */
     public static function bindingTypes(): array
     {
-        return array_fill_keys(['candy', 'nonfood', 'adult', 'low', 'jump', 'flash', 'loud', 'stroller', 'pub'], 'boolean');
+        return LegacyListingColumns::bindingTypes() + ['pub' => 'boolean'];
+    }
+
+    /** @return array<string,mixed> the decoded details column (DBAL returns JSONB as text) */
+    private static function storedDetails(mixed $value): array
+    {
+        $decoded = \is_string($value) ? json_decode($value, true, 16, \JSON_THROW_ON_ERROR) : $value;
+
+        return \is_array($decoded) ? $decoded : [];
     }
 
     private function now(): string

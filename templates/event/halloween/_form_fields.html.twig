@@ -1,0 +1,12 @@
+{# Halloween fields of "List my house" step 2, between the hours and the note: scare level, status tonight and the
+   treats & environment chips (assets/js/events/halloween.js reads them). Expects `c`. #}
+<div class="field"><label for="regScare">Scare level</label><select id="regScare"><option value="gentle">None · gentle</option><option value="mild">Mild spooky decor</option><option value="intense">Intense scares</option></select></div>
+          <div class="field"><label for="regStatus">Status tonight</label><select id="regStatus">{% for key, s in event_type(c.event.type).statuses %}{% if s.register_label is defined %}<option value="{{ key }}">{{ s.register_label }}</option>{% endif %}{% endfor %}</select></div>
+          <div class="field full">
+            <span class="label" id="treatsLabel">Treats &amp; environment</span>
+            <div class="checks" role="group" aria-labelledby="treatsLabel" aria-describedby="treatsHelp">
+              {% include event_fragment(c.event.type, 'listing_checks') with {c: c, defaults: true} only %}
+            </div>
+            <span class="form-caption" id="treatsHelp">The same choices visitors filter by. Your home shows as 🧩 Sensory-friendly when it is quiet and has no flashing lights, loud audio or big scares (jump scares or an intense setup).</span>
+            <span class="error" data-error="offerings"></span>
+          </div>
