@@ -58,7 +58,7 @@ final class ContactDetails
     {
         $user = '[\p{L}\p{N}._%+\-]+';
         $label = '[\p{L}\p{N}\-]+';
-        // name@domain.tld; with spaces around the signs only for a known top-level domain ("us @thrifty.jane" is a handle)
+        // a plain address (local part, at sign, domain, top-level domain); with spaces around the signs only for a known top-level domain ("us @thrifty.jane" is a handle)
         if (preg_match('~'.$user.'@'.$label.'(?:\.'.$label.')*\.\p{L}{2,24}~u', $t)
             || preg_match('~'.$user.'\s*@\s*'.$label.'(?:\s*\.\s*'.$label.')*\s*\.\s*(?:'.self::TLDS.')\b~iu', $t)) {
             return true;
