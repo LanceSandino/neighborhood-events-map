@@ -40,14 +40,12 @@
     {% endif %}
   </section>
 
-  {% if (c.event.rules ?? []) or (c.event.quiet_hours ?? '') %}
-  <section class="about-section" aria-labelledby="eventRules">
+  {% if (c.event.rules ?? []) or (c.event.quiet_hours ?? '') %}<section class="about-section" aria-labelledby="eventRules">
     <h2 id="eventRules">Event rules</h2>
     <ul class="reminders two-col">{% for r in c.event.rules ?? [] %}<li>{{ r }}</li>{% endfor %}{% if c.event.quiet_hours ?? '' %}<li>🌙 Quiet hours: {{ c.event.quiet_hours }}</li>{% endif %}</ul>
   </section>
-  {% endif %}
 
-  <section class="about-section" aria-labelledby="reminders">
+  {% endif %}<section class="about-section" aria-labelledby="reminders">
     <h2 id="reminders">{{ et.copy.reminders_heading }}</h2>
     <ul class="reminders two-col">{% for r in c.community.reminders %}<li>{{ r }}</li>{% endfor %}</ul>
   </section>

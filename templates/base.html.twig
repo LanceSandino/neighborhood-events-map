@@ -27,6 +27,7 @@
   {% block styles %}{% endblock %}
   <link rel="stylesheet" href="{{ asset_path('css/app.css') }}">
   {%- include event_fragment(et.key, 'head') %}
+
   <link rel="stylesheet" href="/theme.css?v={{ app_version }}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
