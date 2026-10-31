@@ -1291,4 +1291,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T00:20:00Z"
+- id: CU-20261031-39
+  type: fix
+  title: "Larger text on phones of 381–440 px: the cards take one column (Halloween's two columns pushed the page 43 px sideways)"
+  description: "Larger text draws the page 15 % larger (body zoom), but media queries still see the real width, so a 390 or 430 px phone kept Halloween's two card columns in a 339–374 px page and a card's hours and status chip widened the page by 43 px. app.css gives the cards one column under data-text=\"large\" up to 440 px (the 380 px breakpoint × 1.15). Normal text is unchanged. types.spec.mjs now waits until home.js has drawn the page (the filter counts) before measuring, which made the failure reproducible."
+  impact: low
+  affected_modules: ["public/assets/css/app.css"]
+  related_tests: ["tests/e2e/specs/types.spec.mjs: halloween: larger text and more contrast at 390px / 430px: no overflow (failed before the change: 43 px)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:30:00Z"
 ```

@@ -618,6 +618,9 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
    its pins, taps and drags stay exact. Layout stays fluid, so nothing scrolls sideways. */
 :root[data-text="large"] body { zoom: 1.15; }
 :root[data-text="large"] .leaflet-container { zoom: calc(1 / 1.15); }
+/* Phones draw cards in one column below 380 px; with larger text the page is that narrow up to 437 px (380 × 1.15),
+   so the cards take one column there too and a card's hours and status never push the page sideways. */
+@media (max-width: 440px) { :root[data-text="large"] .cards { grid-template-columns: 1fr; } }
 @media (forced-colors: active) {
   .pin, .legend-bullet, .steps li.done { forced-color-adjust: none; }
   .check-chip, .mini-filter, .filter-button, .secondary, .home-card { border: 1px solid CanvasText; }

@@ -25,7 +25,11 @@ async function openAt(page, t, path = '/', prefs = null) {
   await page.goto(t.base + path);
   await page.evaluate((p) => { localStorage.clear(); if (p) localStorage.setItem('nhm:appearance', JSON.stringify(p)); }, prefs);
   await page.reload();
-  if (path === '/') await expect(page.locator('#listCount')).not.toHaveText('');
+  if (path === '/') {
+    await expect(page.locator('#listCount')).not.toHaveText('');
+    // The browser has drawn the page (home.js adds each filter's count): cards carry their status chips from here on.
+    await expect(page.locator('.quick-filters .fcount').first()).toBeAttached();
+  }
 }
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 const smallTargets = (page) => page.evaluate(() => [...document.querySelectorAll('.controls button, .controls select, .filter-more button, .filter-more select, .filter-more input, .mobile-bottom a, .map-tools button, .home-card .save, .side-action')]
