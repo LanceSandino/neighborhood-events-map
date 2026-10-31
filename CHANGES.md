@@ -911,4 +911,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/symfony-8.1"
   author: "Lance Sandino"
   timestamp: "2026-10-30T21:00:00Z"
+- id: CU-20261031-01
+  type: docs
+  title: "README status names the released version again (0.9.0-beta.1, PHP 8.5, Symfony 8.1, PostgreSQL 18); a test keeps it in step with VERSION"
+  description: "Phase 0 of the event-types roadmap. The README status line still said 0.8.0-beta.1 after 0.9.0-beta.1 shipped. It now names the version and stack, and ReleaseConsistencyTest compares the status line with VERSION so it cannot drift again (red on the old README, green after). Baseline before any event-type change, on fresh dev stacks at 0.9.0-beta.1: PHPUnit 280 passing (the new README test was the 281st, red), lines 93.96 %; PHPStan clean; composer audit clean; node:test 30/30; Python 45/45; Playwright 78 passed, 2 skipped; session smoke 13/13. The public API JSON of both stacks and the tiles-blocked e2e screenshots were kept as the parity baseline for the event-type extraction."
+  impact: none
+  affected_modules: ["README.md", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  related_tests: ["tests/Unit/About/ReleaseConsistencyTest.php: testTheReadmeStatusNamesTheCurrentVersion (fails on the 0.8.0-beta.1 status line)"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T05:45:00Z"
 ```
