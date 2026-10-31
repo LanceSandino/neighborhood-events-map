@@ -143,7 +143,7 @@ test('cards, the selected home and pins: the status chip once the season is on, 
   assert.match(selectedHtml(evil, during, false), /♡ Save this stop/);
   assert.match(pinHtml(evil, { focus: {}, type: lights, ctx: during }), /class="pin lights inactive"/);
   assert.match(pinHtml(evil, { focus: {}, type: lights, ctx: ctxAt('2026-12-05', '19:00') }), /class="pin lights"/);
-  assert.doesNotMatch(tagsHtml(home(1, { fm_frequency: '<script>' , music_enabled: true }), lights), /<script>/);
+  assert.doesNotMatch(tagsHtml(home(1, { fm_frequency: '<script>' , music_enabled: true }), lights), /<script>/i);
 });
 
 test('the season and its nights across the year end (62 nights at most)', () => {
