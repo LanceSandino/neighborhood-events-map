@@ -20,10 +20,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
     serviceWorkers: 'block',
   },
-  projects: [{ name: 'chromium', testIgnore: /season\.spec\.mjs/, use: chromium },
+  projects: [{ name: 'chromium', testIgnore: /(season|events)\.spec\.mjs/, use: chromium },
   // Safari's engine (WebKit) on an iPhone-sized screen for the main visitor flows.
   { name: 'webkit-iphone', testMatch: /public\.spec\.mjs/, use: { ...devices['iPhone 15 Pro'] } },
-  // Switching the demo's event ends its season, so it runs after every other test; bin/e2e.sh lists the fictional
-  // homes again for the new event afterwards.
-  { name: 'season', testMatch: /season\.spec\.mjs/, dependencies: ['chromium', 'webkit-iphone'], use: chromium }],
+  // Closing the demo's event ends its season, and the several-events spec closes and archives events on the lights
+  // demo, so they run after every other test; bin/e2e.sh lists the fictional homes again for the default events and
+  // brings the lights demo's next Halloween back afterwards.
+  { name: 'season', testMatch: /(season|events)\.spec\.mjs/, dependencies: ['chromium', 'webkit-iphone'], use: chromium }],
 });

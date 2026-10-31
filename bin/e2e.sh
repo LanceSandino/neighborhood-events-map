@@ -26,11 +26,13 @@ if [ "$(uname -s)" = "Linux" ]; then
         -e E2E_MAILPIT_URL=http://localhost:8026 -e E2E_DEMO_MAILPIT_URL=http://localhost:8026 -e E2E_VENTURA_MAILPIT_URL=http://localhost:8025
         -e E2E_LIGHTS_MAILPIT_URL=http://localhost:8027 -e E2E_SALE_MAILPIT_URL=http://localhost:8028)
 fi
-# The season test (tests/e2e/specs/season.spec.mjs) puts a new event on the demo's map, which ends the season of the
-# fictional homes; they are listed again for whatever event is active before and after every run (app:demo:seed lists
-# only the fictional homes that have no listing for it, from examples/demo/homes.json).
+# The season test (tests/e2e/specs/season.spec.mjs) closes the demo's event and opens a new one, which ends the season
+# of the fictional homes; they are listed again for whatever event is the default before and after every run
+# (app:demo:seed lists only the fictional homes that have no listing for it, from examples/demo/homes.json).
 # The lights and sale demos' homes come from examples/demo-lights/homes.json and examples/demo-sale/homes.json
-# (app:demo:seed reads the file next to the stack's community.yaml); their tests give back every home they add.
+# (app:demo:seed reads the file next to the stack's community.yaml); their tests give back every home they add. The
+# several-events test (tests/e2e/specs/events.spec.mjs) archives next year's Halloween on the lights demo when it is
+# done; app:demo:seed creates it again from the demo's events.
 relist() {
   docker compose --env-file .env.demo exec -T app php bin/console app:demo:seed >/dev/null
   docker compose --env-file .env.lights exec -T app php bin/console app:demo:seed >/dev/null
