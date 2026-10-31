@@ -17,7 +17,7 @@ use Symfony\Component\Console\Tester\CommandTester;
  *   before any change): the fictional Maple Hollow demo with its seeded homes and the Ventura Reserve example
  *   (no residents, boundary not approved). This test rebuilds the same communities the same way (bootstrap
  *   command, demo seed) and requires every key of the baseline, with the same value and in the same relative
- *   order; keys may only be added. Environment values are
+ *   order; keys may only be added (event.type). Environment values are
  *   compared by kind only: the app version, the APP_DEMO switch and each home's updated_at (seed time).
  * @dependencies tests/Support/AppTestCase, Community/CommunityBootstrapper, Command/DemoSeedCommand
  */
@@ -46,6 +46,19 @@ final class GoldenApiParityTest extends AppTestCase
         }
         self::assertParity(self::golden('ventura-home-1'), $this->json('GET', '/api/homes/1'), '/api/homes/1');
         self::assertSame(404, $this->code());
+    }
+
+    public function testTheEventNamesItsTypeWhileHomesKeepExactlyTheirKeys(): void
+    {
+        $this->bootstrap('examples/demo/community.yaml', true);
+        $this->seedDemoHomes();
+        $event = $this->json('GET', '/api/event')['event'];
+        self::assertSame('halloween', $event['type']);
+        self::assertSame(array_keys(self::golden('demo-event')['event']), array_values(array_diff(array_keys($event), ['type'])), 'event.type is the only new event key');
+        $baseline = array_keys(self::golden('demo-homes')['homes'][0]);
+        foreach ($this->json('GET', '/api/homes')['homes'] as $h) {
+            self::assertSame($baseline, array_keys($h), "home {$h['id']}: exactly the 0.9 keys, in their order (D-20261031-04)");
+        }
     }
 
     private function bootstrap(string $file, bool $approve): void

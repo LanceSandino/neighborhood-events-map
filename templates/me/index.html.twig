@@ -1,5 +1,8 @@
 {% extends 'base.html.twig' %}
+{# "My house": the resident's own homes (assets/js/me.js fills the template). The event type supplies the statuses
+   and its listing fields. #}
 {% set nav = 'me' %}
+{% set et = event_type(c.event.type) %}
 {% block title %}My house · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block meta %}<meta name="csrf-token" content="{{ csrf_token('nhm') }}">{% endblock %}
 {% block body %}
@@ -21,20 +24,17 @@
     <h2 data-f="address"></h2>
     <p class="introtext" data-f="meta"></p>
     <div class="notice hide" data-f="warning"></div>
-    <div class="status-row" role="group" aria-label="Status tonight">
-      <button type="button" class="secondary" data-status="active">🎃 Handing out</button>
-      <button type="button" class="secondary" data-status="paused">⏸️ Paused</button>
-      <button type="button" class="secondary" data-status="out_of_candy">🍬 Out of candy</button>
-      <button type="button" class="secondary" data-status="done">✅ Done for tonight</button>
+    <div class="status-row" role="group" aria-label="{{ et.copy.status_group }}">
+      {%- for key, s in et.statuses %}
+      <button type="button" class="secondary" data-status="{{ key }}">{{ s.icon }} {{ s.label }}</button>
+      {%- endfor %}
     </div>
     <form class="form-grid" data-f="form" novalidate>
       <div class="field"><label>Start time<select name="start"></select></label></div>
       <div class="field"><label>End time<select name="end"></select></label></div>
-      <div class="field"><label>Scare level<select name="scare_level"><option value="gentle">None · gentle</option><option value="mild">Mild spooky decor</option><option value="intense">Intense scares</option></select></label></div>
+      {% include event_fragment(c.event.type, 'manage_half') %}
       <div class="field"><label>Visible on the map<select name="published"><option value="true">Yes, show my home</option><option value="false">No, hide it for now</option></select></label></div>
-      <div class="field full"><span class="label">Treats &amp; environment</span><div class="checks">
-        {% include 'partials/_listing_checks.html.twig' with {c: c, defaults: false} only %}
-      </div><span class="form-caption">The same choices visitors filter by. Your home shows as 🧩 Sensory-friendly when it is quiet and has no flashing lights, loud audio or big scares.</span></div>
+      {% include event_fragment(c.event.type, 'manage_full') %}
       <div class="field full"><label>Short public note<textarea name="note" maxlength="400"></textarea></label></div>
       <div class="field full"><div class="notice danger hide" data-f="error" role="alert"></div>
         <div class="modal-actions"><button type="button" class="danger" data-f="release">Give up this home</button><button type="submit" class="primary">Save changes</button></div></div>

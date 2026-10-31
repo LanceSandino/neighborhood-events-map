@@ -1,10 +1,12 @@
-{# Dialogs / mobile bottom sheets for the public page. All behaviour in assets/js/home.js + register.js. #}
+{# Dialogs / mobile bottom sheets for the public page. All behaviour in assets/js/home.js + register.js. The event
+   type supplies the words and the listing fields of step 2. #}
 {% set reg = c.registration %}
+{% set et = event_type(c.event.type) %}
 <div class="modal-wrap" id="registerModal" role="dialog" aria-modal="true" aria-labelledby="registerTitle" hidden>
   <div class="modal">
     <button type="button" class="close-modal" data-close aria-label="Close">×</button>
     <div class="eyebrow">🏡 For {{ c.community.name }} residents</div>
-    <h2 id="registerTitle">List your trick-or-treat stop</h2>
+    <h2 id="registerTitle">{{ et.copy.register_title }}</h2>
     <p class="introtext" id="registerIntro">No password needed. Pick your address, describe your stop, and confirm with a one-time link sent to your email. First verified neighbor for an address publishes it right away.</p>
     {% if reg.open %}<ol class="steps" aria-hidden="true"><li data-step-dot="1"></li><li data-step-dot="2"></li><li data-step-dot="3"></li></ol>{% endif %}
 
@@ -54,19 +56,10 @@
       <fieldset data-step="2" hidden>
         <legend class="visually-hidden">Step 2 of 3: your stop</legend>
         <div class="form-grid">
-          <div class="field"><label for="regStart">Start time</label><select id="regStart">{% for h in 15..22 %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.starts_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
-          <div class="field"><label for="regEnd">End time</label><select id="regEnd">{% for h in 15..23 %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.ends_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
-          <div class="field"><label for="regScare">Scare level</label><select id="regScare"><option value="gentle">None · gentle</option><option value="mild">Mild spooky decor</option><option value="intense">Intense scares</option></select></div>
-          <div class="field"><label for="regStatus">Status tonight</label><select id="regStatus"><option value="active">Handing out</option><option value="paused">Paused for now</option></select></div>
-          <div class="field full">
-            <span class="label" id="treatsLabel">Treats &amp; environment</span>
-            <div class="checks" role="group" aria-labelledby="treatsLabel" aria-describedby="treatsHelp">
-              {% include 'partials/_listing_checks.html.twig' with {c: c, defaults: true} only %}
-            </div>
-            <span class="form-caption" id="treatsHelp">The same choices visitors filter by. Your home shows as 🧩 Sensory-friendly when it is quiet and has no flashing lights, loud audio or big scares (jump scares or an intense setup).</span>
-            <span class="error" data-error="offerings"></span>
-          </div>
-          <div class="field full"><label for="regNote">Short public note (optional)</label><textarea id="regNote" maxlength="400" placeholder="e.g. Allergy-friendly bin on the porch (no children’s names)…"></textarea><span class="form-caption"><span id="noteCount">0</span>/400</span><span class="error" data-error="note"></span></div>
+          <div class="field"><label for="regStart">Start time</label><select id="regStart">{% for h in range(et.hours.start[0], et.hours.start[1]) %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.starts_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
+          <div class="field"><label for="regEnd">End time</label><select id="regEnd">{% for h in range(et.hours.end[0], et.hours.end[1]) %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.ends_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
+          {% include event_fragment(c.event.type, 'form_fields') %}
+          <div class="field full"><label for="regNote">Short public note (optional)</label><textarea id="regNote" maxlength="400" placeholder="{{ et.copy.note_placeholder }}"></textarea><span class="form-caption"><span id="noteCount">0</span>/400</span><span class="error" data-error="note"></span></div>
         </div>
         <div class="notice info">📍 Your street address, hours and these details will be <b>shown publicly</b> on the map. Your email is never shown.</div>
         <span class="error" data-error="end"></span>
@@ -110,16 +103,16 @@
     <button type="button" class="close-modal" data-close aria-label="Close">×</button>
     <div class="eyebrow">📋 Rules &amp; tips</div>
     <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
-    {% set access = access_info(c.community.access ?? null) %}
+    {% set access = access_info(c.community.access ?? null, et.copy) %}
     <div class="guide-facts">
-      <div class="about-fact"><span aria-hidden="true">🎃</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>
+      <div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>
       <div class="about-fact"><span aria-hidden="true">{{ access ? access.icon : '🚪' }}</span><div><b>{{ access ? access.title : 'Gates and private areas' }}</b><p>{{ c.community.gate_notice ?: (access ? access.text : 'This site does not grant access to gated areas.') }}</p></div></div>
       {% if c.map.crossing_notes %}<div class="about-fact"><span aria-hidden="true">🚸</span><div><b>Getting around</b>{% for note in c.map.crossing_notes %}<p>{{ note }}</p>{% endfor %}</div></div>{% endif %}
     </div>
     <h3 class="pref-heading">Reminders</h3>
     <ul class="reminders compact">{% for r in c.community.reminders|slice(0, 3) %}<li>{{ r }}</li>{% endfor %}</ul>
     <div class="modal-actions"><a class="secondary" href="/about">Full guide &amp; links</a><button type="button" class="primary" data-close>Got it!</button></div>
-    <p class="form-caption guide-foot">Something wrong with a listing? Open it on the map and choose “Report this listing”. Sensory labels are self-reported.</p>
+    <p class="form-caption guide-foot">{{ et.copy.guide_foot }}</p>
   </div>
 </div>
 
@@ -128,7 +121,7 @@
     <button type="button" class="close-modal" data-close aria-label="Close">×</button>
     <div class="eyebrow">🏠 My house</div>
     <h2 id="houseTitle">Your listing</h2>
-    <p class="introtext">List a new home, or sign in with a one-time email link to edit hours, mark “out of candy”, or pause your listing.</p>
+    <p class="introtext">{{ et.copy.house_intro }}</p>
     <div class="modal-actions"><a class="secondary" href="/me">🔑 Manage my listing</a><button type="button" class="primary" data-action="register">+ List my house</button></div>
   </div>
 </div>

@@ -921,4 +921,34 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p1"
   author: "Lance Sandino"
   timestamp: "2026-10-31T05:45:00Z"
+- id: CU-20261031-02
+  type: feature
+  title: "Event-type registry and the Halloween event type: listing details, statuses, filters, copy and Twig fragments move out of the shared code (ROADMAP Stage 1)"
+  description: "App\\Event\\EventType is the contract of a code-defined event type (key, default name/branding/copy, schedule kind and maximum days, hour choices, statuses with a day-scoped flag, feature switches, strict normalizeDetails(), strict publicDetails(), legacyFields(), filters, legend, stats, route profiles, whitelisted Twig fragments). EventTypeRegistry collects the tagged implementations by immutable key (KEYS halloween, holiday_lights, garage_sale; ENABLED halloween only; problem() for configuration errors; builtIn() for code without a container). HalloweenType (+ HalloweenCopy) carries everything Halloween: the nine details, the 0.9 coercion and offerings rule, statuses, the eight filters, legend, stats, reminders and words. ListingDraft keeps only the shared fields (hours, status, note, visibility) and asks the community's type for the details; input may send them as a `details` object (canonical) or, during the compatibility window, as the flat Halloween fields; unknown keys are refused at either level (D-20261031-02). A draft carries `details` next to the flat fields; a 0.9 claim intent without details gets them from its flat fields (ListingDraft::withDetails). ListingRepository reads `details` and projects it through the type; public homes keep exactly the 0.9 keys (D-20261031-04). CommunityPresenter takes reminders and stats from the type. Templates ask the type through Twig/EventTypeExtension: event_type(key) for words, statuses, filters, legend and hours, event_fragment(key, name) for the whitelisted templates/event/halloween/ fragments (hero art, card symbol and tags, confirmation tags, the listing form fields, the check chips moved from partials/). The server-rendered pages of both dev stacks are byte-identical to 0.9 apart from whitespace between flex items and the new event.type in the page data."
+  impact: high
+  affected_modules: ["src/Event/", "src/Listing/ListingDraft.php", "src/Listing/ListingRepository.php", "src/Listing/ResidentHomes.php", "src/Listing/LegacyListingColumns.php", "src/Community/CommunityPresenter.php", "src/Claim/ClaimService.php", "src/Command/DemoSeedCommand.php", "src/Controller/", "src/Routing/RoutePlanner.php", "src/Twig/", "templates/"]
+  related_tests: ["tests/Unit/Event/EventTypeRegistryTest.php", "tests/Unit/Event/HalloweenTypeTest.php", "tests/Unit/Listing/ListingDraftParityTest.php (600 seeded inputs against the frozen 0.9 ListingDraft in tests/Support/Legacy)", "tests/Unit/Listing/ListingDraftTest.php (the five 0.9 tests unchanged + details object, unknown fields, 0.9 drafts)", "tests/Integration/GoldenApiParityTest.php (0.9.0-beta.1 answers of both dev stacks)", "tests/Integration/PublicPrivacyTest.php (unchanged: exact public home keys)"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:00:00Z"
+- id: CU-20261031-03
+  type: feature
+  title: "listings.details JSONB, backfilled from the Halloween columns; writes keep both; a trigger keeps details right after an image-only rollback"
+  description: "Migration Version20261031000001 adds `listings.details` (JSONB, NOT NULL, DEFAULT '{}', CHECK object), fills it from the nine Halloween columns, and creates listings_details_from_columns() with the BEFORE INSERT OR UPDATE trigger listings_details_sync that merges the columns into details on every write. The app writes details and the columns (LegacyListingColumns) with the same values; reads use details. Without the trigger, a rollback to the 0.9 image (which writes only the columns) followed by an upgrade would leave details stale, because the migration has already run. Down drops the trigger, the function and the column only (D-20261031-03)."
+  impact: medium
+  affected_modules: ["migrations/Version20261031000001.php", "src/Listing/ListingRepository.php", "src/Listing/ResidentHomes.php", "src/Listing/LegacyListingColumns.php"]
+  related_tests: ["tests/Integration/ListingDetailsMigrationTest.php: testEveryAppWriteKeepsTheLegacyColumnsAndDetailsEqual, testRowsWrittenThe09WayGetTheirDetailsFromTheColumns, testThePublicMapReadsDetails, testTheMigrationGoesDownAndUpAgainAndBackfillsEveryRow", "migrations up/down/up on the test database"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:00:00Z"
+- id: CU-20261031-04
+  type: feature
+  title: "event.type in the community settings (default halloween) and in GET /api/event and /api/community"
+  description: "CommunitySchema validates event.type through the registry: absent or empty means halloween; an unknown key or one this version does not enable is a configuration error naming the choices; the type supplies the defaults for the event name, subtitle, branding and its feature switches (same values and order as before for Halloween). Settings saved without event.type load as Halloween (CommunityRepository). The public payload's event gains `type`; every other key keeps its value and order. The shipped configs name `type: halloween`."
+  impact: low
+  affected_modules: ["src/Community/CommunitySchema.php", "src/Community/CommunityConfig.php", "src/Community/CommunityRepository.php", "src/Community/CommunityPresenter.php", "config/community.example.yaml", "examples/"]
+  related_tests: ["tests/Unit/Community/CommunitySchemaTest.php: testTheEventTypeDefaultsToHalloweenAndAnUnknownOrDisabledTypeIsRefused", "tests/Unit/Event/EventTypeRegistryTest.php", "tests/Integration/GoldenApiParityTest.php: testTheEventNamesItsTypeWhileHomesKeepExactlyTheirKeys"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:00:00Z"
 ```

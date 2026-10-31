@@ -16,9 +16,10 @@ use Psr\Clock\ClockInterface;
  *     scoped() (or scopedClaimsDelete()), which binds the claim owner to the bound user before any
  *     other condition, so a home outside the resident's own claims can never be read, changed or
  *     released, whatever id a caller passes. Resident-facing controllers reach their homes only
- *     through of($user); organizer remediation lives in Admin/ClaimAdministration.
+ *     through of($user); organizer remediation lives in Admin/ClaimAdministration. Listing writes store the
+ *     details and keep the legacy Halloween columns in step (Listing/LegacyListingColumns).
  *
- * @dependencies DBAL QueryBuilder, AuditLog, clock
+ * @dependencies DBAL QueryBuilder, AuditLog, clock, Listing/ListingRepository (bindings), Listing/LegacyListingColumns
  */
 final class ResidentHomes
 {
@@ -69,9 +70,8 @@ final class ResidentHomes
         $owned = $this->scoped()->select('c.address_id');
 
         return 1 === $this->db->executeStatement(
-            'UPDATE listings l SET event_date = :date, start_local = :start, end_local = :end, candy = :candy, nonfood = :nonfood,
-                adult_drinks = :adult, low_noise = :low, jump_scares = :jump, flashing_lights = :flash, loud_audio = :loud,
-                scare_level = :scare, stroller_friendly = :stroller, note = :note, status = :status, published = :pub,
+            'UPDATE listings l SET event_date = :date, start_local = :start, end_local = :end, details = CAST(:details AS JSONB),
+                '.LegacyListingColumns::updateAssignments().', note = :note, status = :status, published = :pub,
                 published_at = CASE WHEN :pub AND NOT l.published THEN :now ELSE l.published_at END, updated_at = :now
              WHERE l.address_id = :id AND l.address_id IN ('.$owned->getSQL().')',
             ListingRepository::bindings($addressId, $eventDate, $draft) + ['now' => $this->clock->now()->format('Y-m-d H:i:s.uP')] + $owned->getParameters(),

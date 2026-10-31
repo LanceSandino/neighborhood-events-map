@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Listing;
 
 use App\Community\CommunityConfig;
 use App\Community\CommunitySchema;
+use App\Event\EventTypeRegistry;
 use App\Listing\ListingDraft;
 use App\Shared\ValidationException;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -68,5 +69,43 @@ final class ListingDraftTest extends TestCase
         self::assertSame('done', $d['status']);
         self::assertSame('hi', $d['note']);
         self::assertSame('20:00', $d['end']);
+    }
+
+    public function testDetailsMayComeAsAnObjectThatWinsOverFlatFields(): void
+    {
+        $d = ListingDraft::fromInput(['start' => '18:00', 'end' => '20:00', 'details' => ['nonfood' => true, 'scare_level' => 'intense'], 'candy' => true, 'scare_level' => 'mild'], self::community());
+        self::assertSame(['candy' => true, 'nonfood' => true, 'adult_drinks' => false, 'low_noise' => false, 'jump_scares' => false,
+            'flashing_lights' => false, 'loud_audio' => false, 'scare_level' => 'intense', 'stroller_friendly' => false], $d['details']);
+        foreach ($d['details'] as $k => $v) {
+            self::assertSame($v, $d[$k], "the flat $k (compatibility window) equals details.$k");
+        }
+        self::assertSame($d, ListingDraft::fromInput($d, self::community()), 'a draft is valid input and normalizes to itself');
+    }
+
+    public function testUnknownFieldsAreRefusedAtEitherLevel(): void
+    {
+        try {
+            ListingDraft::fromInput(['candy' => true, 'phone' => '555-0100', 'details' => ['glitter' => true]], self::community());
+            self::fail('expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertSame(['details.glitter' => 'Unknown field.', 'phone' => 'Unknown field.'], $e->fields);
+        }
+        try {
+            ListingDraft::fromInput(['candy' => true, 'details' => ['candy', 'nonfood']], self::community());
+            self::fail('expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertSame(['details' => 'Send the listing details as an object.'], $e->fields);
+        }
+    }
+
+    public function testADraftSavedBy09GetsItsDetailsFromTheFlatFields(): void
+    {
+        $old = ['start' => '17:30', 'end' => '20:30', 'candy' => true, 'nonfood' => false, 'adult_drinks' => false, 'low_noise' => true, 'jump_scares' => false,
+            'flashing_lights' => false, 'loud_audio' => false, 'stroller_friendly' => true, 'scare_level' => 'mild', 'note' => 'Hi', 'status' => 'active', 'published' => true];
+        $type = EventTypeRegistry::builtIn()->get('halloween');
+        $with = ListingDraft::withDetails($old, $type);
+        self::assertSame(['candy' => true, 'nonfood' => false, 'adult_drinks' => false, 'low_noise' => true, 'jump_scares' => false,
+            'flashing_lights' => false, 'loud_audio' => false, 'scare_level' => 'mild', 'stroller_friendly' => true], $with['details']);
+        self::assertSame($with, ListingDraft::withDetails($with, $type), 'a draft with details stays as it is');
     }
 }

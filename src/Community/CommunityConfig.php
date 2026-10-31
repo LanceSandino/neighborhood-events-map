@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventTypeRegistry;
 use App\Geo\PolygonSet;
 use App\Geo\ZoneResolver;
 
@@ -15,7 +16,7 @@ use App\Geo\ZoneResolver;
  *
  * @input normalized settings (CommunitySchema) and geometry rows
  * @output typed getters
- * @dependencies Geo/PolygonSet, Geo/ZoneResolver
+ * @dependencies Geo/PolygonSet, Geo/ZoneResolver, Event/EventTypeRegistry (default type key)
  */
 final class CommunityConfig
 {
@@ -47,6 +48,12 @@ final class CommunityConfig
     public function name(): string
     {
         return $this->settings['community']['name'];
+    }
+
+    /** The key of the community's event type (Event/EventTypeRegistry); settings saved before event.type existed are Halloween. */
+    public function eventTypeKey(): string
+    {
+        return (string) ($this->settings['event']['type'] ?? EventTypeRegistry::DEFAULT);
     }
 
     /** The community's event as shown in titles and emails ("Halloween", "Holiday Lights"…). */

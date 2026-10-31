@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Routing;
 
 use App\Community\CommunityConfig;
+use App\Event\EventTypeRegistry;
 use App\Listing\ListingRepository;
 use App\Security\Throttle;
 use App\Shared\ValidationException;
@@ -17,6 +18,8 @@ use Psr\Clock\ClockInterface;
  *     provider, verified crossings, 2-20 public stops, all inside a single configured walkable group.
  *     Responses are cached (24 h); provider calls share one global budget. Never connects separate
  *     groups; never fabricates geometry.
+ *
+ * @dependencies Routing/RoutingProviderInterface, Listing/ListingRepository, Event/EventTypeRegistry, Security/Throttle, DBAL, clock
  */
 final class RoutePlanner
 {
@@ -28,6 +31,7 @@ final class RoutePlanner
         private readonly Connection $db,
         private readonly ClockInterface $clock,
         private readonly Throttle $throttle,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -52,7 +56,7 @@ final class RoutePlanner
         }
         $stops = [];
         foreach ($ids as $id) {
-            $home = $this->listings->publicHome($id, $c->eventDate(), $c->hiddenZoneKeys()) ?? throw new ValidationException(['stops' => 'One of those homes is not listed.']);
+            $home = $this->listings->publicHome($id, $c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c)) ?? throw new ValidationException(['stops' => 'One of those homes is not listed.']);
             $stops[] = $home;
         }
         if ($c->zonesEnabled()) {

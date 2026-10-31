@@ -1,4 +1,4 @@
-{# Listing options for "List my house" and "Manage my house". They mirror the map's filters and tags
+{# Halloween listing options for "List my house" and "Manage my house". They mirror the map's filters and tags
    (same icons and words). defaults: pre-tick candy and low noise for a new listing. Expects `c`. #}
 {% if c.features.candy %}<label class="check-chip"><input type="checkbox" name="candy"{{ defaults ? ' checked' }}> 🍬 Candy</label>{% endif %}
 {% if c.features.nonfood_treats %}<label class="check-chip"><input type="checkbox" name="nonfood"> <span class="teal-pumpkin" aria-hidden="true">🎃</span> Non-food treats</label>{% endif %}

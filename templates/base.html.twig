@@ -3,6 +3,7 @@
 {%- set branding = c.branding -%}
 {%- set year = c.event.date|slice(0, 4) -%}
 {%- set event_name = c.event.name -%}
+{%- set et = event_type(c.event.type ?? null) -%}
 {%- set place = community.locality ? community.locality ~ (community.region ? ', ' ~ community.region : '') : '' -%}
 {%- set show_place = (branding.show_locality ?? false) and place -%}
 <!doctype html>
@@ -44,9 +45,9 @@
     </div>
     <div class="side-bottom">
       <div class="side-panel">
-        <div class="ghost" aria-hidden="true">👻</div>
-        <b>Handing out treats?</b>
-        <p>Put your home on the map so the neighborhood can find you!</p>
+        <div class="ghost" aria-hidden="true">{{ et.copy.cta_icon }}</div>
+        <b>{{ et.copy.cta_title }}</b>
+        <p>{{ et.copy.cta_text }}</p>
         <a class="side-action secondary" href="/#list-my-house" data-action="register">+ Add your house</a>
       </div>
       <p class="side-fine">Made for {{ community.name }} neighbors&nbsp;♥{% if c.demo %}<br>Fictional demo data{% endif %}</p>
@@ -57,7 +58,7 @@
       <a class="crumb" href="/">{% if branding.logo_url %}<img class="crumb-logo" src="{{ branding.logo_url }}" alt="">{% else %}📍{% endif %} {% if place and not show_place %}<span class="crumb-loc">{{ place }} <span class="sep">/</span> </span>{% endif %}<span class="crumb-name"><strong>{{ community.name }} Community</strong>{% if show_place %}<small class="crumb-sub">{{ place }}</small>{% endif %}</span></a>
       <div class="topright">
         {% if c.demo %}<span class="demo-pill">FICTIONAL DEMO</span>{% elseif c.map.boundary_status == 'pending_review' %}<span class="demo-pill warn" title="House listings open after the organizer approves the boundary">SETUP IN REVIEW</span>{% endif %}
-        <a class="event-pill" href="/about" title="Event date, hours and reminders">🎃 {{ event_badge(c.event.date) }}</a>
+        <a class="event-pill" href="/about" title="Event date, hours and reminders">{{ et.copy.event_icon }} {{ event_badge(c.event.date) }}</a>
         <button type="button" class="top-icon" data-appearance aria-haspopup="dialog" aria-controls="appearanceDialog" aria-label="Appearance and accessibility" title="Appearance and accessibility"><span aria-hidden="true">🎨</span></button>
         <a class="top-add" href="/#list-my-house" data-action="register">+ List your home</a>
       </div>

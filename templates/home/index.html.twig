@@ -1,7 +1,9 @@
 {% extends 'base.html.twig' %}
 {# Public family map. Mirrors prototype/index.html: hero, stats chips, search/filter row,
-   list + real Leaflet map, bottom bar, modals. Works as a readable list without JavaScript. #}
+   list + real Leaflet map, bottom bar, modals. Works as a readable list without JavaScript. The community's event
+   type supplies the words, filters, legend and fragments (Twig/EventTypeExtension). #}
 {% set nav = 'map' %}
+{% set et = event_type(c.event.type) %}
 {% set zones = c.zones %}
 {% set zs = zone_summary(zones) %}
 {# Map styles load from home.js without blocking the first paint; open the connection to the tile server early. #}
@@ -14,12 +16,12 @@
     <h1>{{ c.branding.headline }} <span>{{ c.branding.headline_accent }}</span></h1>
     <p>{{ c.branding.intro }}{% if c.community.name %} All across {{ c.community.name }}.{% endif %}</p>
   </div>
-  <div class="hero-illustration" aria-hidden="true"><span class="hero-star one">✦</span><span class="hero-moon">🌕</span><span class="hero-ghost">👻</span><span class="hero-star two">✧</span></div>
+  <div class="hero-illustration" aria-hidden="true">{% include event_fragment(c.event.type, 'hero_art') %}</div>
 </section>
 
-<section id="explore" aria-label="Find treat stops">
+<section id="explore" aria-label="{{ et.copy.explore_label }}">
   <div class="controls">
-    <div class="search"><input id="search" type="search" placeholder="Search streets, treats, or notes…" aria-label="Search homes" autocomplete="off"></div>
+    <div class="search"><input id="search" type="search" placeholder="{{ et.copy.search_placeholder }}" aria-label="Search homes" autocomplete="off"></div>
     {% if zones|length > 0 %}
     <div class="phase-wrap"><span class="fi" aria-hidden="true">📍</span>
     <select class="phase-select" id="zone" aria-label="Filter by {{ zs ? zs.title|split(' ')|last : 'zone' }}">
@@ -34,36 +36,32 @@
     {% endif %}
     {# Quick filters: icon + count everywhere; the name is visually hidden text (screen readers) and the title (hover). #}
     <div class="quick-filters">
-      {% if c.features.candy %}<button type="button" class="filter-button" id="btnCandy" data-filter="candy" aria-pressed="false" title="Candy"><span class="fi" aria-hidden="true">🍬</span><span class="sr-only">Candy</span></button>{% endif %}
-      {% if c.features.sensory_filters %}<button type="button" class="filter-button" id="btnQuiet" data-filter="lowSensory" aria-pressed="false" title="Sensory-friendly"><span class="fi" aria-hidden="true">🧩</span><span class="sr-only">Sensory-friendly</span></button>{% endif %}
-      {% if c.features.adult_refreshments %}<button type="button" class="filter-button" data-filter="adult" aria-pressed="false" title="21+ refreshments"><span class="fi" aria-hidden="true">🍺</span><span class="sr-only">21+ refreshments</span></button>{% endif %}
+      {% for f in et.filters|filter(f => f.quick and (f.feature is null or (c.features[f.feature] ?? false))) %}
+      <button type="button" class="filter-button"{% if f.id is defined %} id="{{ f.id }}"{% endif %} data-filter="{{ f.key }}" aria-pressed="false" title="{{ f.label }}"><span class="fi{% if f.icon_class is defined %} {{ f.icon_class }}{% endif %}" aria-hidden="true">{{ f.icon }}</span><span class="sr-only">{{ f.label }}</span></button>
+      {% endfor %}
       <button type="button" class="filter-button" data-filter="saved" aria-pressed="false" title="Saved only"><span class="fi" aria-hidden="true">🧡</span><span class="sr-only">Saved only</span></button>
     </div>
     <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters"><span class="fi" aria-hidden="true">⚙️</span>Filters<span class="filter-count hide" id="filterCount"></span></button>
   </div>
   <div class="filter-more" id="moreFilters" role="group" aria-label="More filters">
-    {% if c.features.sensory_filters %}
-    <button type="button" class="mini-filter" data-filter="noScares" aria-pressed="false" title="No jump scares or intense setups"><span class="fi" aria-hidden="true">😱</span>No big scares</button>
-    <button type="button" class="mini-filter" data-filter="noFlashing" aria-pressed="false"><span class="fi" aria-hidden="true">🔦</span>No flashing lights</button>
-    <button type="button" class="mini-filter" data-filter="noLoud" aria-pressed="false"><span class="fi" aria-hidden="true">🔊</span>No loud audio</button>
-    {% endif %}
-    {% if c.features.nonfood_treats %}<button type="button" class="mini-filter" data-filter="nonfood" aria-pressed="false"><span class="fi teal-pumpkin" aria-hidden="true">🎃</span>Non-food treats</button>{% endif %}
-    <button type="button" class="mini-filter" data-filter="stroller" aria-pressed="false"><span class="fi" aria-hidden="true">👶</span>Kid-friendly</button>
+    {% for f in et.filters|filter(f => not f.quick and (f.feature is null or (c.features[f.feature] ?? false))) %}
+    <button type="button" class="mini-filter" data-filter="{{ f.key }}" aria-pressed="false"{% if f.title is defined %} title="{{ f.title }}"{% endif %}><span class="fi{% if f.icon_class is defined %} {{ f.icon_class }}{% endif %}" aria-hidden="true">{{ f.icon }}</span>{{ f.label }}</button>
+    {% endfor %}
     <label class="time-filter"><span class="fi" aria-hidden="true">🕐</span>Visit at
       <select id="time">
         <option value="any">Any time</option>
         <option value="now">Open now</option>
-        {% for h in 15..22 %}<option value="{{ '%02d'|format(h) }}:00">{{ ('%02d:00'|format(h))|time12 }}</option>{% endfor %}
+        {% for h in range(et.hours.visit[0], et.hours.visit[1]) %}<option value="{{ '%02d'|format(h) }}:00">{{ ('%02d:00'|format(h))|time12 }}</option>{% endfor %}
       </select>
     </label>
     <button type="button" class="link-button hide" id="btnReset">Reset filters</button>
   </div>
   <div class="workarea">
     <div class="list-pane">
-      <div class="list-head"><h2>🍬 Treat stops nearby</h2><div class="list-tools"><span id="listCount" aria-live="polite">{{ homes|length }} showing</span><div class="view-toggle" role="group" aria-label="List layout"><button type="button" data-view="cards" aria-pressed="true" aria-label="Cards" title="Cards">▦</button><button type="button" data-view="compact" aria-pressed="false" aria-label="Compact list" title="Compact list">☰</button></div></div></div>
+      <div class="list-head"><h2>{{ et.copy.list_heading }}</h2><div class="list-tools"><span id="listCount" aria-live="polite">{{ homes|length }} showing</span><div class="view-toggle" role="group" aria-label="List layout"><button type="button" data-view="cards" aria-pressed="true" aria-label="Cards" title="Cards">▦</button><button type="button" data-view="compact" aria-pressed="false" aria-label="Compact list" title="Compact list">☰</button></div></div></div>
       <div class="list-sub" id="listSub">{% if homes|length == 0 %}No homes have listed yet — check back soon!{% else %}Self-reported by residents · tap a card to see it on the map{% endif %}</div>
       <ul class="cards" id="homeCards" aria-label="Participating homes">
-        {% for home in homes %}{% include 'home/_card.html.twig' with {home: home, zones: zones} only %}{% else %}<li class="empty">No homes are listed yet. Residents can add theirs with “List your home”.</li>{% endfor %}
+        {% for home in homes %}{% include 'home/_card.html.twig' with {home: home, zones: zones, type: c.event.type} only %}{% else %}<li class="empty">No homes are listed yet. Residents can add theirs with “List your home”.</li>{% endfor %}
       </ul>
     </div>
     <div class="map-pane" id="mapPane">
@@ -79,7 +77,7 @@
         <button type="button" data-action="info" aria-label="Map information" title="Map information">ⓘ</button>
       </div>
       <div class="map-selected" id="mapSelected" role="dialog" aria-label="Selected home"></div>
-      <div class="map-legend" aria-hidden="true"><span><i class="legend-bullet candy"></i>🍬 Treats</span><span><i class="legend-bullet gentle"></i>🧩 Sensory-friendly</span><span><i class="legend-bullet spooky"></i>👻 Spooky</span>{% if c.features.adult_refreshments %}<span><i class="legend-bullet adult"></i>🍺 21+</span>{% endif %}</div>
+      <div class="map-legend" aria-hidden="true">{% for l in et.legend|filter(l => l.feature is null or (c.features[l.feature] ?? false)) %}<span><i class="legend-bullet {{ l.cls }}"></i>{{ l.icon }} {{ l.label }}</span>{% endfor %}</div>
       </div>
       <div class="map-footer"><span>⚠️ Listings are self-reported. Pins show only homes that chose to participate.</span><strong id="footerZones">{% if zs %}{{ zs.title }}{% endif %}</strong></div>
     </div>
@@ -87,7 +85,7 @@
   </div>
 </section>
 
-<p class="disclaimer">Listings, hours and sensory details are self-reported by residents and may change. Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{% else %}; this site does not grant access to gated areas{% endif %}.</p>
+<p class="disclaimer">{{ et.copy.disclaimer }} Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{% else %}; this site does not grant access to gated areas{% endif %}.</p>
 <script type="application/json" id="boot">{{ boot|boot_json }}</script>
 {% endblock %}
 

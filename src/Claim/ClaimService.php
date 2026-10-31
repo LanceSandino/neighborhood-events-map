@@ -8,6 +8,7 @@ use App\Address\AddressEligibility;
 use App\Address\AddressRegistry;
 use App\Audit\AuditLog;
 use App\Community\CommunityConfig;
+use App\Event\EventTypeRegistry;
 use App\Listing\ListingDraft;
 use App\Listing\ListingRepository;
 use App\Security\EmailNormalizer;
@@ -22,7 +23,7 @@ use Symfony\Component\Uid\Uuid;
  *     taken with INSERT … ON CONFLICT DO NOTHING inside one transaction, and the listing is
  *     published in that same transaction. A losing racer gets already_claimed; nothing is overwritten.
  *
- * @dependencies Address/*, Listing/*, Audit/AuditLog, DBAL
+ * @dependencies Address/*, Listing/*, Audit/AuditLog, Event/EventTypeRegistry, DBAL
  */
 final class ClaimService
 {
@@ -33,6 +34,7 @@ final class ClaimService
         private readonly AddressRegistry $registry,
         private readonly ListingRepository $listings,
         private readonly AuditLog $audit,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -51,7 +53,7 @@ final class ClaimService
         if (null !== $target['address_id'] && $this->registry->isClaimed($target['address_id'])) {
             throw new ClaimRejectedException('already_claimed', 'This home is already claimed.', $target['address_id']);
         }
-        $draft = ListingDraft::fromInput($listingInput, $community);
+        $draft = ListingDraft::fromInput($listingInput, $community, false, null, $this->types);
         $id = Uuid::v4()->toRfc4122();
         $now = $this->clock->now();
         $this->db->insert('claim_intents', [
@@ -107,7 +109,8 @@ final class ClaimService
             if (false === $intent) {
                 return new ClaimOutcome('rejected', null, null, 'This listing request expired. Please start again.');
             }
-            $draft = json_decode((string) $intent['listing_draft'], true, 16, \JSON_THROW_ON_ERROR);
+            // A request made before 0.10 stored only the flat Halloween fields.
+            $draft = ListingDraft::withDetails(json_decode((string) $intent['listing_draft'], true, 16, \JSON_THROW_ON_ERROR), $this->types->for($community));
             $input = null !== $intent['address_id']
                 ? ['address_id' => (int) $intent['address_id']]
                 : json_decode((string) $intent['candidate'], true, 16, \JSON_THROW_ON_ERROR);
@@ -124,7 +127,7 @@ final class ClaimService
      */
     public function claimDirect(array $addressInput, array $listingInput, int $userId, CommunityConfig $community): ClaimOutcome
     {
-        $draft = ListingDraft::fromInput($listingInput, $community);
+        $draft = ListingDraft::fromInput($listingInput, $community, false, null, $this->types);
 
         return $this->db->transactional(fn (Connection $db) => $this->claimInTransaction($db, $addressInput, $userId, $draft, $community, 'dashboard', false));
     }

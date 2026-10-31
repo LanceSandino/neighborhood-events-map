@@ -1,0 +1,4 @@
+{# Halloween full-width field of "My house" (before the note): the treats & environment chips. Expects `c`. #}
+<div class="field full"><span class="label">Treats &amp; environment</span><div class="checks">
+        {% include event_fragment(c.event.type, 'listing_checks') with {c: c, defaults: false} only %}
+      </div><span class="form-caption">The same choices visitors filter by. Your home shows as 🧩 Sensory-friendly when it is quiet and has no flashing lights, loud audio or big scares.</span></div>

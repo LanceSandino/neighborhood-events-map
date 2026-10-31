@@ -148,4 +148,29 @@ final class CommunitySchemaTest extends TestCase
             }
         }
     }
+
+    public function testTheEventTypeDefaultsToHalloweenAndAnUnknownOrDisabledTypeIsRefused(): void
+    {
+        $schema = new CommunitySchema();
+        $base = ['community' => ['id' => 'lakeside', 'name' => 'Lakeside'], 'event' => ['date' => '2027-10-31']];
+        $n = $schema->normalize($base);
+        self::assertSame('halloween', $n['event']['type']);
+        self::assertSame(['name', 'date', 'starts_at', 'ends_at', 'type'], array_keys($n['event']));
+        self::assertSame($n, $schema->normalize(array_replace_recursive($base, ['event' => ['type' => 'halloween']])));
+        // The type supplies the defaults it always had: name, subtitle, branding and the feature switches.
+        self::assertSame(['Halloween', 'Your neighborhood. Your Halloween.', '🎃', 'Little ghosts.', 'Big adventures.'],
+            [$n['event']['name'], $n['community']['subtitle'], $n['branding']['brand_emoji'], $n['branding']['headline'], $n['branding']['headline_accent']]);
+        self::assertSame(['candy', 'nonfood_treats', 'adult_refreshments', 'sensory_filters', 'optional_zones', 'walking_routes'], array_keys($n['features']));
+        foreach (['config/community.example.yaml', 'examples/demo/community.yaml', 'examples/ventura-reserve/community.yaml'] as $file) {
+            self::assertSame('halloween', $schema->normalize(Yaml::parseFile(self::root().'/'.$file))['event']['type'], $file);
+        }
+        foreach (['christmas' => 'is not a known event type', 'holiday_lights' => 'is not available in this version', 'garage_sale' => 'is not available in this version', 'HALLOWEEN' => 'is not a known event type'] as $type => $why) {
+            try {
+                $schema->normalize(array_replace_recursive($base, ['event' => ['type' => $type]]));
+                self::fail("expected ConfigException for $type");
+            } catch (ConfigException $e) {
+                self::assertSame([sprintf('event.type "%s" %s', $type, $why).('is not a known event type' === $why ? ' (halloween, holiday_lights, garage_sale).' : '; choose halloween.')], $e->errors);
+            }
+        }
+    }
 }

@@ -22,6 +22,7 @@ community:
   links:
     - { label: "Plat source: Orange County open data", url: "https://ocgis4.ocfl.net/arcgis/rest/services/AGOL_Open_Data/MapServer/54" }
 event:
+  type: halloween
   name: "Halloween"
   date: "2026-10-31"
   starts_at: "17:00"

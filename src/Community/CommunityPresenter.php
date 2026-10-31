@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventTypeRegistry;
 use App\Routing\RoutingProviderInterface;
 use App\Shared\RuntimeConfig;
 
@@ -11,7 +12,10 @@ use App\Shared\RuntimeConfig;
  * @module Community/CommunityPresenter
  * @description Builds the PUBLIC community payload (branding, event, map extent, enabled zones,
  *     registration state, stats). Never includes addresses, emails, admin identity or session data.
- *     The boundary outline is published only after organizer approval.
+ *     The boundary outline is published only after organizer approval. The event carries its type key; the
+ *     type supplies the default reminders and its own stats counts.
+ *
+ * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Routing/RoutingProviderInterface, Shared/RuntimeConfig
  */
 final class CommunityPresenter
 {
@@ -20,6 +24,7 @@ final class CommunityPresenter
         private readonly RoutingProviderInterface $routing,
         private readonly string $appVersion,
         private readonly BrandingStore $branding,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -31,6 +36,7 @@ final class CommunityPresenter
     public function publicPayload(CommunityConfig $c, array $homes): array
     {
         $s = $c->settings;
+        $type = $this->types->for($c);
         $approved = $c->boundaryApproved && null !== $c->boundary;
         // Hidden zones are left out of the public payload entirely; "coming soon" zones are drawn but not listable.
         $zones = $c->zonesEnabled() ? array_values(array_map(static fn (array $z) => [
@@ -39,15 +45,14 @@ final class CommunityPresenter
             'geometry' => $approved && isset($c->zoneShapes[$z['key']]) ? $c->zoneShapes[$z['key']]->toGeometry() : null,
         ], array_filter($c->zones(), static fn (array $z) => 'hidden' !== $z['status']))) : [];
         $state = $c->registrationState();
-        $lowSensory = \count(array_filter($homes, static fn (array $h) => $h['low_noise'] && !$h['flashing_lights'] && !$h['jump_scares'] && !$h['loud_audio'] && 'intense' !== $h['scare_level']));
 
         return [
             'configured' => $c->configured,
             // Defaults keep settings saved by older versions valid (fields added later are optional).
             'community' => array_intersect_key($s['community'] + ['about' => '', 'access' => 'unspecified', 'links' => [], 'contact_url' => null, 'gate_notice' => ''],
                 array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links']))
-                + ['reminders' => ($s['community']['reminders'] ?? []) ?: CommunitySchema::DEFAULT_REMINDERS],
-            'event' => $s['event'] + ['timezone' => $s['community']['timezone']],
+                + ['reminders' => ($s['community']['reminders'] ?? []) ?: $type->copy()['reminders']],
+            'event' => $s['event'] + ['type' => $type->key(), 'timezone' => $s['community']['timezone']],
             'branding' => [
                 'logo_url' => $this->branding->url($s['branding']['logo']),
             ] + array_intersect_key($s['branding'], array_flip(['brand_emoji', 'primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality'])),
@@ -72,11 +77,7 @@ final class CommunityPresenter
             // Walking groups keep their positions (labels follow them) but never name a hidden zone.
             'routing' => ['groups' => array_map(static fn (array $g) => array_values(array_diff($g, $c->hiddenZoneKeys())), $s['routing']['groups']), 'group_labels' => $s['routing']['group_labels'] ?? [], 'crossings_verified' => $s['routing']['crossings_verified'],
                 'provider' => $s['routing']['provider_enabled'] && $s['routing']['crossings_verified'] && $this->routing->available()],
-            'stats' => [
-                'homes' => \count($homes),
-                'candy' => \count(array_filter($homes, static fn (array $h) => $h['candy'])),
-                'low_sensory' => $lowSensory,
-                'adult' => \count(array_filter($homes, static fn (array $h) => $h['adult_drinks'])),
+            'stats' => ['homes' => \count($homes)] + $type->stats($homes) + [
                 'zones' => \count(array_filter($zones, static fn (array $z) => $z['residential'] && 'active' === $z['status'])),
             ],
             'demo' => $this->config->demoMode,

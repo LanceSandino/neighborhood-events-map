@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Audit\AuditLog;
 use App\Claim\ClaimService;
 use App\Community\CommunityRepository;
+use App\Event\EventTypeRegistry;
 use App\Listing\ListingDraft;
 use App\Listing\ListingRepository;
 use App\Listing\ResidentHomes;
@@ -29,7 +30,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @module Controller/Api/MeApiController
  * @description Owner-only API (ROLE_USER, declared here and in access_control; CSRF on writes; idle
  *     timeout enforced before this runs). A resident's own homes are reached only through the
- *     owner-scoped ResidentHomes, so no query here can touch another resident's home.
+ *     owner-scoped ResidentHomes, so no query here can touch another resident's home. Listing details are
+ *     validated by the community's event type (ListingDraft).
+ *
+ * @dependencies Listing/*, Claim/ClaimService, Community/CommunityRepository, Event/EventTypeRegistry, Security/*, Audit/AuditLog
  */
 #[IsGranted('ROLE_USER')]
 final class MeApiController
@@ -43,6 +47,7 @@ final class MeApiController
         private readonly AuditLog $audit,
         private readonly Throttle $throttle,
         private readonly UserRepository $users,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -58,6 +63,7 @@ final class MeApiController
             'session' => $this->sessionInfo($request),
             'claim_outcome' => $outcome,
             'event_date' => $this->community->current()->eventDate(),
+            'event_type' => $this->community->current()->eventTypeKey(),
             'homes' => $this->homes($user),
         ]);
     }
@@ -118,7 +124,7 @@ final class MeApiController
             return ApiError::response(404, 'not_found', 'You do not manage that home.');
         }
         $c = $this->community->current();
-        $draft = ListingDraft::fromInput(JsonBody::decode($request), $c, true, ListingRepository::toDraft($row));
+        $draft = ListingDraft::fromInput(JsonBody::decode($request), $c, true, ListingRepository::toDraft($row, $this->types->for($c)), $this->types);
         // Saving opts the home into the current event date (seasonal re-opt-in).
         if (!$homes->update($id, $c->eventDate(), $draft)) {
             return ApiError::response(404, 'not_found', 'You do not manage that home.');
@@ -144,8 +150,9 @@ final class MeApiController
     private function homes(User $user): array
     {
         $c = $this->community->current();
+        $type = $this->types->for($c);
 
-        return array_map(static function (array $r) use ($c): array {
+        return array_map(static function (array $r) use ($c, $type): array {
             $hasListing = null !== ($r['address_id'] ?? null);
 
             return [
@@ -154,7 +161,7 @@ final class MeApiController
                 'zone' => $r['zone_key'],
                 'zone_label' => $c->zone($r['zone_key'])['label'] ?? null,
                 'inside_boundary' => (bool) $r['inside_boundary'],
-                'listing' => $hasListing ? ListingRepository::toDraft($r) + [
+                'listing' => $hasListing ? ListingRepository::toDraft($r, $type) + [
                     'event_date' => $r['event_date'],
                     'current_season' => $r['event_date'] === $c->eventDate(),
                     'moderation_hidden' => (bool) $r['moderation_hidden'],
