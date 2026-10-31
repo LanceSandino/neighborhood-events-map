@@ -21,8 +21,9 @@ use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * @module Controller/PageController
- * @description Server-rendered pages: public map shell (with a no-JS readable list of homes),
- *     sign-in page, owner dashboard shell, theme CSS from config, uploaded logo, health check.
+ * @description Server-rendered pages: public map shell (with a no-JS readable list of homes) or, with no active
+ *     event, a neutral "no event right now" page; sign-in page, owner dashboard shell, theme CSS from config,
+ *     uploaded logo, health check.
  *
  * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, About/ChangelogReader
  */
@@ -40,7 +41,11 @@ final class PageController extends AbstractController
     public function home(): Response
     {
         $c = $this->community->current();
-        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c));
+        if (null === $c->event) {
+            // Between events (or an event this release does not offer): a neutral page, no listings, no map scripts.
+            return $this->render('home/no_event.html.twig', ['c' => $this->presenter->publicPayload($c, [])]);
+        }
+        $homes = $this->listings->publicHomes($c, $this->types->for($c));
         $payload = $this->presenter->publicPayload($c, $homes);
 
         return $this->render('home/index.html.twig', ['c' => $payload, 'homes' => $homes, 'boot' => ['community' => $payload, 'homes' => $homes]]);

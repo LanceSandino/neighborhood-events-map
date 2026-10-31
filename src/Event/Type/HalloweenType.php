@@ -76,6 +76,20 @@ final class HalloweenType implements EventType
         ];
     }
 
+    /** The 0.9 status words of the map (events/halloween.js statusOf): open, later, done, paused, out. */
+    public function displayRules(): array
+    {
+        return [
+            'statuses' => [
+                'active' => ['day_scoped' => false, 'display' => null],
+                'paused' => ['day_scoped' => false, 'display' => 'paused'],
+                'out_of_candy' => ['day_scoped' => false, 'display' => 'out'],
+                'done' => ['day_scoped' => false, 'display' => 'done'],
+            ],
+            'phases' => ['inside' => 'open', 'later_today' => 'later', 'ended_today' => 'done', 'not_today' => 'later'],
+        ];
+    }
+
     public function features(): array
     {
         return [

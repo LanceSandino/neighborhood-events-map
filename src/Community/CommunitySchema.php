@@ -15,11 +15,12 @@ use App\Shared\TextInput;
  *     admin settings form) into the canonical settings document stored in community_settings.
  *     Unknown keys are dropped; every value is type-checked; nothing neighborhood-specific is assumed. The
  *     event's type (event.type, default halloween) must be one this version enables; it supplies the defaults
- *     for the event name, subtitle and branding and the feature switches offered.
+ *     for the event name, subtitle and branding and the feature switches offered. The event block itself (name,
+ *     dates, hours) is checked by EventBlockSchema.
  *
  * @input array<string,mixed> raw configuration
  * @output array<string,mixed> normalized settings
- * @dependencies Address/AddressNormalizer, Event/EventTypeRegistry, Community/ConfigException
+ * @dependencies Address/AddressNormalizer, Event/EventTypeRegistry, Community/EventBlockSchema, Community/ConfigException
  */
 final class CommunitySchema
 {
@@ -79,17 +80,8 @@ final class CommunitySchema
         $type = $this->types->get(null === $problem ? $typeKey : EventTypeRegistry::DEFAULT);
         $brand = $type->defaultBranding();
 
-        $eventName = self::text($ev['name'] ?? '', 40) ?: $type->defaultName();
-        $date = (string) ($ev['date'] ?? '');
-        $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
-        if (false === $d || $d->format('Y-m-d') !== $date) {
-            $e[] = 'event.date must be YYYY-MM-DD.';
-        }
-        $start = self::time($ev['starts_at'] ?? '17:00');
-        $end = self::time($ev['ends_at'] ?? '21:00');
-        if (null === $start || null === $end || $end <= $start) {
-            $e[] = 'event.starts_at/ends_at must be HH:MM with the end after the start.';
-        }
+        // The event block: the active event occurrence's name, dates and default hours (Community/EventBlockSchema).
+        $event = EventBlockSchema::normalize($ev, $type, $e);
 
         $access = (string) ($c['access'] ?? 'unspecified');
         if (!\in_array($access, self::ACCESS, true)) {
@@ -242,7 +234,7 @@ final class CommunitySchema
                 'links' => $links,
                 'reminders' => $reminders,
             ],
-            'event' => ['name' => $eventName, 'date' => $date, 'starts_at' => $start, 'ends_at' => $end, 'type' => $type->key()],
+            'event' => $event,
             'branding' => [
                 'logo' => self::text($b['logo'] ?? '', 200) ?: null,
                 'brand_emoji' => self::text($b['brand_emoji'] ?? $brand['brand_emoji'], 8) ?: $brand['brand_emoji'],
@@ -339,16 +331,6 @@ final class CommunitySchema
     private static function text(mixed $v, int $max): string
     {
         return TextInput::line($v, $max);
-    }
-
-    private static function time(mixed $v): ?string
-    {
-        $s = \is_scalar($v) ? (string) $v : '';
-        if (\is_int($v)) { // YAML may parse 17:00 as sexagesimal integer (1020)
-            $s = sprintf('%02d:%02d', intdiv($v, 60), $v % 60);
-        }
-
-        return preg_match('~^([01]\d|2[0-3]):[0-5]\d$~', $s) ? $s : null;
     }
 
     /** @param list<string> $e */

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventOccurrence;
+use App\Event\EventOccurrenceRepository;
 use App\Event\EventTypeRegistry;
+use App\Event\OccurrenceSettingsSync;
 use App\Geo\GeoJsonParser;
 use App\Geo\GeometryException;
 use App\Geo\PolygonSet;
@@ -17,11 +20,15 @@ use Psr\Clock\ClockInterface;
  * @description Persists the single community's settings and versioned boundary/zone geometry
  *     (PostgreSQL JSONB), tracks boundary approval, and imports/exports the canonical
  *     GeoJSON FeatureCollection (features tagged kind=boundary|zone). Every geometry change
- *     creates a new version, resets approval and recomputes address boundary membership.
+ *     creates a new version, resets approval and recomputes address boundary membership. The settings' `event`
+ *     block is a view of the active event occurrence: loading puts the occurrence's values there, saving writes
+ *     them to the occurrence first (Event/OccurrenceSettingsSync), and the stored block mirrors it for the
+ *     previous release.
  *
  * @input DBAL connection, clock, parser, schema
  * @output CommunityConfig snapshots, export documents, change summaries
- * @dependencies Community/CommunitySchema, Community/CommunityConfig, Geo/*, Event/EventTypeRegistry (default type key)
+ * @dependencies Community/CommunitySchema, Community/CommunityConfig, Geo/*, Event/EventTypeRegistry, Event/EventOccurrenceRepository,
+ *     Event/OccurrenceSettingsSync
  */
 final class CommunityRepository
 {
@@ -32,6 +39,9 @@ final class CommunityRepository
         private readonly ClockInterface $clock,
         private readonly GeoJsonParser $parser,
         private readonly CommunitySchema $schema,
+        private readonly EventOccurrenceRepository $occurrences,
+        private readonly OccurrenceSettingsSync $sync,
+        private readonly EventTypeRegistry $types,
     ) {
     }
 
@@ -59,12 +69,22 @@ final class CommunityRepository
     {
         $settings = $this->schema->normalize($raw);
         $now = $this->now();
-        $this->db->executeStatement(
-            'INSERT INTO community_settings (id, deployment_id, settings, created_at, updated_at, updated_by)
-             VALUES (1, :dep, :s, :now, :now, :actor)
-             ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, updated_at = EXCLUDED.updated_at, updated_by = EXCLUDED.updated_by',
-            ['dep' => $settings['community']['id'], 's' => json_encode($settings, \JSON_THROW_ON_ERROR), 'now' => $now, 'actor' => $actorId],
-        );
+        // The event block goes to the active occurrence first; the stored block then mirrors the occurrence.
+        $settings = $this->db->transactional(function (Connection $db) use ($settings, $now, $actorId): array {
+            $this->sync->apply($settings['event']);
+            $active = $this->usableActive();
+            if (null !== $active) {
+                $settings['event'] = self::eventBlock($active) + $settings['event'];
+            }
+            $db->executeStatement(
+                'INSERT INTO community_settings (id, deployment_id, settings, created_at, updated_at, updated_by)
+                 VALUES (1, :dep, :s, :now, :now, :actor)
+                 ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, updated_at = EXCLUDED.updated_at, updated_by = EXCLUDED.updated_by',
+                ['dep' => $settings['community']['id'], 's' => json_encode($settings, \JSON_THROW_ON_ERROR), 'now' => $now, 'actor' => $actorId],
+            );
+
+            return $settings;
+        });
         $this->reset();
 
         return $settings;
@@ -270,8 +290,42 @@ final class CommunityRepository
 
         // Settings saved before event.name or event.type existed keep the event they were made for (Halloween).
         $settings['event'] = (array) ($settings['event'] ?? []) + ['name' => CommunitySchema::DEFAULT_EVENT_NAME, 'type' => EventTypeRegistry::DEFAULT];
+        $event = $this->usableActive();
+        if (null !== $event) {
+            $settings['event'] = self::eventBlock($event) + $settings['event'];
+        } elseif (!$this->types->isEnabled((string) $settings['event']['type'])) {
+            // The last event was of a type this release does not offer (a newer release ran): the page chrome
+            // between events uses the default type's words; nothing is listed.
+            $settings['event']['type'] = EventTypeRegistry::DEFAULT;
+        }
 
-        return new CommunityConfig($settings, $boundary, $approved, $version, $zones);
+        return new CommunityConfig($settings, $boundary, $approved, $version, $zones, true, $event);
+    }
+
+    /**
+     * Writes the active occurrence into the stored settings' event block (after an organizer switched or edited
+     * events), so the previous release, which reads only the settings, shows the same event.
+     */
+    public function mirrorEvent(Connection $db, EventOccurrence $event): void
+    {
+        $db->executeStatement("UPDATE community_settings SET settings = jsonb_set(settings, '{event}', COALESCE(settings->'event', '{}'::jsonb) || CAST(:e AS JSONB)) WHERE id = 1",
+            ['e' => json_encode(self::eventBlock($event), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE)]);
+        $this->reset();
+    }
+
+    /** The active occurrence when this release offers its type; otherwise there is no event on the map. */
+    private function usableActive(): ?EventOccurrence
+    {
+        $active = $this->occurrences->active();
+
+        return null !== $active && $this->types->isEnabled($active->type) ? $active : null;
+    }
+
+    /** @return array{name:string,date:string,starts_at:string,ends_at:string,type:string,starts_on:string,ends_on:string} */
+    private static function eventBlock(EventOccurrence $o): array
+    {
+        return ['name' => $o->name, 'date' => $o->startsOn, 'starts_at' => $o->defaultStart, 'ends_at' => $o->defaultEnd, 'type' => $o->type,
+            'starts_on' => $o->startsOn, 'ends_on' => $o->endsOn];
     }
 
     /** Stored geometry was validated on write; convert without re-running O(n²) checks. */

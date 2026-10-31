@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Listing;
 
 use App\Community\CommunityConfig;
+use App\Event\EventOccurrence;
 use App\Event\EventType;
 use App\Event\EventTypeRegistry;
 use App\Event\OccurrenceSettings;
+use App\Event\Schedule\ScheduleWindows;
 use App\Shared\TextInput;
 use App\Shared\ValidationException;
 
@@ -17,11 +19,13 @@ use App\Shared\ValidationException;
  *     shares (hours, status, note, visibility) here, the type-specific details through the community's event
  *     type (strict: unknown keys are refused). Input sends details as a `details` object; during the
  *     compatibility window (D-20261031-02) the Halloween type's flat fields are accepted too, and a draft also
- *     carries them flat next to `details` (the shape 0.9 code and the legacy columns know).
+ *     carries them flat next to `details` (the shape 0.9 code and the legacy columns know). A one-day event's listing
+ *     takes the event day with its own hours (start/end); a type with several days also sends `windows`, checked by
+ *     the schedule core (Event/Schedule/ScheduleWindows) against the active event.
  *
  * @input array<string,mixed> raw form/JSON input, CommunityConfig
  * @output array<string,mixed> normalized listing draft
- * @dependencies Community/CommunityConfig, Event/EventTypeRegistry, Shared/TextInput, Shared/ValidationException
+ * @dependencies Community/CommunityConfig, Event/EventTypeRegistry, Event/Schedule/ScheduleWindows, Shared/TextInput, Shared/ValidationException
  */
 final class ListingDraft
 {
@@ -87,13 +91,66 @@ final class ListingDraft
         if (\array_key_exists('published', $in)) {
             $published = filter_var($in['published'], \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE) ?? true;
         }
+        $windows = self::hasDays($type) ? ($current['windows'] ?? null) : null;
+        if (self::hasDays($type) && \array_key_exists('windows', $in)) {
+            try {
+                $windows = null === $community->event
+                    ? throw new ValidationException(['windows' => 'There is no event on the map right now.'])
+                    : ScheduleWindows::normalize($type->scheduleKind(), $community->event, $in['windows'], ScheduleWindows::DAY, self::dayCap($community->event));
+            } catch (ValidationException $e) {
+                $errors += $e->fields;
+            }
+        }
 
         $errors += $unknown;
         if ([] !== $errors || null === $details) {
             throw new ValidationException($errors);
         }
 
-        return $out + $type->legacyFields($details) + ['note' => $note, 'status' => $status, 'published' => $published, 'details' => $details];
+        return $out + $type->legacyFields($details) + ['note' => $note, 'status' => $status, 'published' => $published, 'details' => $details]
+            + (null !== $windows ? ['windows' => $windows] : []);
+    }
+
+    /**
+     * The windows a draft takes part in for an event: a one-day event's day with the draft's hours, or the draft's
+     * own windows for a type with several days.
+     *
+     * @param array<string,mixed> $draft a normalized draft
+     *
+     * @return list<array{date:string,start:string,end:string}>
+     *
+     * @throws ValidationException when a type with several days got no days
+     */
+    public static function windowsFor(array $draft, EventOccurrence $event, EventType $type): array
+    {
+        if (!self::hasDays($type)) {
+            return ScheduleWindows::singleDay($event, (string) $draft['start'], (string) $draft['end']);
+        }
+
+        return ScheduleWindows::normalize($type->scheduleKind(), $event, $draft['windows'] ?? null, ScheduleWindows::DAY, self::dayCap($event));
+    }
+
+    /**
+     * The status_date a listing stores with its status: the community-local date for a day-scoped status (it holds
+     * only that day), else null.
+     *
+     * @param array<string,mixed> $draft
+     */
+    public static function statusDate(array $draft, EventType $type, CommunityConfig $community, \DateTimeImmutable $now): ?string
+    {
+        return ($type->statuses()[$draft['status']]['day_scoped'] ?? false) ? $community->localDate($now) : null;
+    }
+
+    /** A type whose listings choose their own days (not a one-day event). */
+    private static function hasDays(EventType $type): bool
+    {
+        return 'single_day' !== $type->scheduleKind();
+    }
+
+    /** The organizer's own limit of days per listing (occurrence settings max_days), if any. */
+    private static function dayCap(EventOccurrence $event): ?int
+    {
+        return isset($event->settings['max_days']) && \is_int($event->settings['max_days']) ? $event->settings['max_days'] : null;
     }
 
     /**
@@ -140,7 +197,7 @@ final class ListingDraft
         $unknown = [];
         foreach ($in as $k => $v) {
             $k = (string) $k;
-            if (\in_array($k, self::CORE_FIELDS, true) || 'details' === $k) {
+            if (\in_array($k, self::CORE_FIELDS, true) || 'details' === $k || ('windows' === $k && self::hasDays($type))) {
                 continue;
             }
             if (\array_key_exists($k, $legacy)) {

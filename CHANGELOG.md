@@ -6,6 +6,25 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.11.0-beta.1] - 2026-10-31
+
+Update by pulling `0.11.0-beta.1` and recreating the stack. The database gets one additive migration, applied at start: every event becomes a row of its own and each listing belongs to one event; your current Halloween and its homes carry over unchanged. Take a backup first. Going back to 0.10.0-beta.1 or 0.9.0-beta.1 needs only the older image (the database keeps working with it), or the pre-upgrade backup; both ways and their limits are in `docs/runbooks/event-types-migration.md`.
+
+### Added
+- Each event now has its own listings. A home's Halloween listing belongs to that Halloween; next year's, or a different kind of event, starts fresh, and last season's homes never show up again by accident. Your claim on your home stays yours.
+- The public event information (`/api/event`) and each home (`/api/homes`) also say which event they belong to, the home's days and hours, and its current status.
+- Organizers can prepare and switch events under Organizer → Events: prepare the next event as a draft, preview it, put it on the map when the time comes (the current event ends at the same moment), end an event, export one event's listings and delete an old event's listings.
+- Residents list each home for the current event in My house with "List for …": the form starts empty, so nothing from last season carries over.
+
+### Changed
+- Between events, the map says that there is no event right now instead of showing an old one.
+- Saved homes and routes are kept per event; the ones you saved for this Halloween are still there. A shared stop list made for an earlier event opens without its stops.
+- Under Organizer → Community → Event, the name and hours still change the current event; its date changes there only while nobody is listed. The next season is a new event under Organizer → Events, so this season's listings stay with this season.
+- Restoring a backup (`bin/restore.sh`) now replaces the whole database in one step: a backup taken before an upgrade restores cleanly, and a restore that fails changes nothing.
+
+### Known limitations
+- Halloween is still the only event type; Christmas lights and garage sales come next. Inviting residents by email to list for a new event is not built yet.
+
 ## [0.10.0-beta.1] - 2026-10-31
 
 Update by pulling `0.10.0-beta.1` and recreating the stack. The database gets one additive migration, applied at start; nothing visible changes for visitors or residents. Going back to 0.9.0-beta.1 needs only the older image: the database keeps working with it.

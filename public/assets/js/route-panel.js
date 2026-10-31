@@ -30,9 +30,10 @@ export function createRoutePanel(d) {
   let locating = false;
   let pathLayer = null;
 
-  /** Link to this exact view: the active filters and, for a route, its stops and starting point. */
+  /** Link to this exact view: the event, the active filters and, for a route, its stops and starting point. */
   function shareLink() {
     const url = new URL('/', location.origin);
+    url.searchParams.set('e', String(C.event.id)); // the event the stops belong to
     const filters = d.filters();
     const changed = Object.fromEntries(Object.entries(filters).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(DEFAULTS[k])));
     if (Object.keys(changed).length) url.searchParams.set('f', btoa(JSON.stringify(changed)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));

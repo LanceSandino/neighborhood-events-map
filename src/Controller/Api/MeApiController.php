@@ -31,7 +31,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @description Owner-only API (ROLE_USER, declared here and in access_control; CSRF on writes; idle
  *     timeout enforced before this runs). A resident's own homes are reached only through the
  *     owner-scoped ResidentHomes, so no query here can touch another resident's home. Listing details are
- *     validated by the community's event type (ListingDraft).
+ *     validated by the community's event type (ListingDraft). Claims stay with the resident across events; each
+ *     home shows its listing for the ACTIVE event, or can be listed for it from an empty form. The client never
+ *     names an event: the server always uses the active one.
  *
  * @dependencies Listing/*, Claim/ClaimService, Community/CommunityRepository, Event/EventTypeRegistry, Security/*, Audit/AuditLog
  */
@@ -65,6 +67,7 @@ final class MeApiController
             'event_date' => $this->community->current()->eventDate(),
             'event_type' => $this->community->current()->eventTypeKey(),
             'homes' => $this->homes($user),
+            'event' => $this->eventView(),
         ]);
     }
 
@@ -119,19 +122,56 @@ final class MeApiController
     {
         $this->throttle->hit('listing_user', 'user:'.$user->id); // every save writes an audit record
         $homes = $this->residentHomes->of($user);
-        $row = $homes->find($id);
-        if (null === $row) {
-            return ApiError::response(404, 'not_found', 'You do not manage that home.');
-        }
         $c = $this->community->current();
-        $draft = ListingDraft::fromInput(JsonBody::decode($request), $c, true, ListingRepository::toDraft($row, $this->types->for($c)), $this->types);
-        // Saving opts the home into the current event date (seasonal re-opt-in).
-        if (!$homes->update($id, $c->eventDate(), $draft)) {
+        $event = $c->event;
+        $row = null === $event ? null : $homes->find($id, $event->id);
+        if (null === $row) {
+            return null !== $event && $homes->owns($id)
+                ? ApiError::response(404, 'not_listed', sprintf('This home is not listed for %s yet. Use “List for %s” to add it.', $c->eventName(), $c->eventName()))
+                : ApiError::response(404, 'not_found', 'You do not manage that home.');
+        }
+        $type = $this->types->for($c);
+        $stored = ListingRepository::toDraft($row, $type);
+        $draft = ListingDraft::fromInput(JsonBody::decode($request), $c, true, $stored, $this->types);
+        // A day-scoped status keeps the day it was set unless it changes now.
+        $statusDate = $draft['status'] === $stored['status'] ? ($row['status_date'] ?? null) : ListingDraft::statusDate($draft, $type, $c, $this->clock->now());
+        if (!$homes->update($id, $event, $draft, ListingDraft::windowsFor($draft, $event, $type), $statusDate)) {
             return ApiError::response(404, 'not_found', 'You do not manage that home.');
         }
-        $this->audit->record($user->id, 'user#'.$user->id, 'listing.updated', 'address', (string) $id, ['status' => $draft['status'], 'published' => $draft['published']]);
+        $this->audit->record($user->id, 'user#'.$user->id, 'listing.updated', 'address', (string) $id, ['status' => $draft['status'], 'published' => $draft['published'], 'event_id' => $event->id]);
 
         return new JsonResponse(['ok' => true, 'home' => $this->homeFor($user, $id)]);
+    }
+
+    /**
+     * "List for <event>": lists one of the resident's claimed homes for the active event from the submitted form
+     * only. Nothing is copied from an earlier event's listing; the client never names the event.
+     */
+    #[Route('/api/me/homes/{id}/listing', name: 'api_me_home_list', requirements: ['id' => '\d{1,12}'], methods: ['POST'])]
+    public function listForEvent(#[CurrentUser] User $user, Request $request, int $id): JsonResponse
+    {
+        $this->throttle->hit('listing_user', 'user:'.$user->id);
+        $c = $this->community->current();
+        $event = $c->event;
+        $state = $c->registrationState();
+        if (null === $event || !$state['open']) {
+            return ApiError::response(403, 'closed', (string) $state['reason']);
+        }
+        $homes = $this->residentHomes->of($user);
+        if (!$homes->owns($id)) {
+            return ApiError::response(404, 'not_found', 'You do not manage that home.');
+        }
+        $type = $this->types->for($c);
+        $draft = ListingDraft::fromInput(JsonBody::decode($request), $c, false, null, $this->types);
+        $result = $homes->create($id, $event, $draft, ListingDraft::windowsFor($draft, $event, $type), ListingDraft::statusDate($draft, $type, $c, $this->clock->now()));
+        if ('created' !== $result) {
+            return 'exists' === $result
+                ? ApiError::response(409, 'already_listed', sprintf('This home is already listed for %s.', $c->eventName()))
+                : ApiError::response(404, 'not_found', 'You do not manage that home.');
+        }
+        $this->audit->record($user->id, 'user#'.$user->id, 'listing.created', 'address', (string) $id, ['status' => $draft['status'], 'published' => $draft['published'], 'event_id' => $event->id]);
+
+        return new JsonResponse(['ok' => true, 'home' => $this->homeFor($user, $id)], 201);
     }
 
     #[Route('/api/me/homes/{id}', name: 'api_me_home_release', requirements: ['id' => '\d{1,12}'], methods: ['DELETE'])]
@@ -151,9 +191,10 @@ final class MeApiController
     {
         $c = $this->community->current();
         $type = $this->types->for($c);
+        $canList = null !== $c->event && $c->registrationState()['open'];
 
-        return array_map(static function (array $r) use ($c, $type): array {
-            $hasListing = null !== ($r['address_id'] ?? null);
+        return array_map(static function (array $r) use ($c, $type, $canList): array {
+            $listing = null === ($r['listing_id'] ?? null) ? null : ListingRepository::toDraft($r, $type);
 
             return [
                 'id' => (int) $r['id'],
@@ -161,14 +202,25 @@ final class MeApiController
                 'zone' => $r['zone_key'],
                 'zone_label' => $c->zone($r['zone_key'])['label'] ?? null,
                 'inside_boundary' => (bool) $r['inside_boundary'],
-                'listing' => $hasListing ? ListingRepository::toDraft($r, $type) + [
-                    'event_date' => $r['event_date'],
-                    'current_season' => $r['event_date'] === $c->eventDate(),
+                'listing' => null === $listing ? null : $listing + [
+                    'event_date' => $listing['windows'][0]['date'] ?? $c->event?->startsOn,
+                    'current_season' => true, // only the active event's listing is shown
                     'moderation_hidden' => (bool) $r['moderation_hidden'],
                     'pending_review' => (bool) $r['moderation_hidden'] && ListingRepository::PENDING_REVIEW === $r['moderation_reason'],
-                ] : null,
+                ],
+                'can_list' => null === $listing && $canList,
             ];
-        }, $this->residentHomes->of($user)->all());
+        }, $this->residentHomes->of($user)->all($c->event?->id));
+    }
+
+    /** @return array{id:?int, name:string, type:string, active:bool, starts_on:?string, ends_on:?string, start:string, end:string} the active event, for the forms */
+    private function eventView(): array
+    {
+        $c = $this->community->current();
+        $e = $c->event;
+
+        return ['id' => $e?->id, 'name' => $c->eventName(), 'type' => $c->eventTypeKey(), 'active' => null !== $e, 'starts_on' => $e?->startsOn, 'ends_on' => $e?->endsOn,
+            'start' => (string) $c->settings['event']['starts_at'], 'end' => (string) $c->settings['event']['ends_at']];
     }
 
     /** @return array<string,mixed>|null */

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Listing;
 
 use App\Audit\AuditLog;
+use App\Event\EventOccurrence;
 use App\Security\User;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Query\QueryBuilder;
@@ -16,10 +17,12 @@ use Psr\Clock\ClockInterface;
  *     scoped() (or scopedClaimsDelete()), which binds the claim owner to the bound user before any
  *     other condition, so a home outside the resident's own claims can never be read, changed or
  *     released, whatever id a caller passes. Resident-facing controllers reach their homes only
- *     through of($user); organizer remediation lives in Admin/ClaimAdministration. Listing writes store the
- *     details and keep the legacy Halloween columns in step (Listing/LegacyListingColumns).
+ *     through of($user); organizer remediation lives in Admin/ClaimAdministration. Claims are the
+ *     resident's for good; listings belong to one event: a home shows its listing for the active event,
+ *     and listing a home for a new event starts from an empty form, never from an earlier event's listing.
+ *     Writes keep the legacy row in step (Listing/LegacyListingBridge).
  *
- * @dependencies DBAL QueryBuilder, AuditLog, clock, Listing/ListingRepository (bindings), Listing/LegacyListingColumns
+ * @dependencies DBAL QueryBuilder, AuditLog, clock, Event/EventOccurrence, Listing/ListingRepository, Listing/LegacyListingBridge
  */
 final class ResidentHomes
 {
@@ -29,6 +32,7 @@ final class ResidentHomes
         private readonly Connection $db,
         private readonly AuditLog $audit,
         private readonly ClockInterface $clock,
+        private readonly LegacyListingBridge $bridge,
     ) {
     }
 
@@ -41,45 +45,97 @@ final class ResidentHomes
         return $scoped;
     }
 
-    /** @return list<array<string,mixed>> the resident's homes with their listing (if any) */
-    public function all(): array
+    /** @return list<array<string,mixed>> the resident's homes with their listing for the event (if any) */
+    public function all(?int $eventId): array
     {
         return $this->scoped()
-            ->select('a.id', 'a.display_address', 'a.zone_key', 'a.latitude', 'a.longitude', 'a.inside_boundary', 'c.claimed_at', 'l.*')
+            ->select('a.id', 'a.display_address', 'a.zone_key', 'a.latitude', 'a.longitude', 'a.inside_boundary', 'c.claimed_at',
+                'el.id AS listing_id', 'el.event_id', 'el.details', 'el.status', 'el.status_date', 'el.note', 'el.published', 'el.moderation_hidden',
+                'el.moderation_reason', 'el.published_at', 'el.updated_at', ListingRepository::WINDOWS_JSON.' AS windows')
             ->innerJoin('c', 'eligible_addresses', 'a', 'a.id = c.address_id')
-            ->leftJoin('c', 'listings', 'l', 'l.address_id = c.address_id')
+            ->leftJoin('c', 'event_listings', 'el', 'el.address_id = c.address_id AND el.event_id = :event')->setParameter('event', $eventId ?? 0)
             ->orderBy('a.display_address')
             ->executeQuery()->fetchAllAssociative();
     }
 
-    /** @return array<string,mixed>|null the listing row of one of the resident's homes */
-    public function find(int $addressId): ?array
+    /** @return array<string,mixed>|null the event's listing row of one of the resident's homes */
+    public function find(int $addressId, int $eventId): ?array
     {
         $row = $this->scoped()
-            ->select('l.*')
-            ->innerJoin('c', 'listings', 'l', 'l.address_id = c.address_id')
+            ->select('el.*', ListingRepository::WINDOWS_JSON.' AS windows')
+            ->innerJoin('c', 'event_listings', 'el', 'el.address_id = c.address_id AND el.event_id = :event')->setParameter('event', $eventId)
             ->andWhere('c.address_id = :address')->setParameter('address', $addressId)
             ->executeQuery()->fetchAssociative();
 
         return false === $row ? null : $row;
     }
 
-    /** @param array<string,mixed> $draft a normalized ListingDraft */
-    public function update(int $addressId, string $eventDate, array $draft): bool
+    public function owns(int $addressId): bool
+    {
+        return false !== $this->scoped()->select('1')->andWhere('c.address_id = :address')->setParameter('address', $addressId)->executeQuery()->fetchOne();
+    }
+
+    /**
+     * Saves the event's listing of one of the resident's homes.
+     *
+     * @param array<string,mixed>                              $draft   a normalized ListingDraft
+     * @param list<array{date:string,start:string,end:string}> $windows
+     */
+    public function update(int $addressId, EventOccurrence $event, array $draft, array $windows, ?string $statusDate): bool
     {
         $owned = $this->scoped()->select('c.address_id');
 
-        return 1 === $this->db->executeStatement(
-            'UPDATE listings l SET event_date = :date, start_local = :start, end_local = :end, details = CAST(:details AS JSONB),
-                '.LegacyListingColumns::updateAssignments().', note = :note, status = :status, published = :pub,
-                published_at = CASE WHEN :pub AND NOT l.published THEN :now ELSE l.published_at END, updated_at = :now
-             WHERE l.address_id = :id AND l.address_id IN ('.$owned->getSQL().')',
-            ListingRepository::bindings($addressId, $eventDate, $draft) + ['now' => $this->clock->now()->format('Y-m-d H:i:s.uP')] + $owned->getParameters(),
-            ListingRepository::bindingTypes(),
-        );
+        return $this->db->transactional(function (Connection $db) use ($addressId, $event, $draft, $windows, $statusDate, $owned): bool {
+            $id = $db->fetchOne(
+                'UPDATE event_listings el SET details = CAST(:details AS JSONB), note = :note, status = :status, status_date = :sdate, published = :pub,
+                    published_at = CASE WHEN :pub AND NOT el.published THEN :now ELSE el.published_at END, updated_at = :now
+                 WHERE el.event_id = :event AND el.address_id = :id AND el.address_id IN ('.$owned->getSQL().') RETURNING el.id',
+                ListingRepository::bindings($addressId, $draft) + ['event' => $event->id, 'sdate' => $statusDate, 'now' => $this->now()] + $owned->getParameters(),
+                ['pub' => 'boolean'],
+            );
+            if (false === $id) {
+                return false;
+            }
+            ListingRepository::replaceWindows($db, (int) $id, $windows);
+            $this->bridge->mirror($db, $event->id, $addressId);
+
+            return true;
+        });
     }
 
-    /** Gives up management of one of the resident's homes (its listing cascades away). */
+    /**
+     * Lists one of the resident's homes for the event ("List for <event>"): a new listing from the resident's own
+     * input. An address under an organizer's hold starts hidden.
+     *
+     * @param array<string,mixed>                              $draft   a normalized ListingDraft built without any earlier listing
+     * @param list<array{date:string,start:string,end:string}> $windows
+     *
+     * @return 'created'|'exists'|'not_found'
+     */
+    public function create(int $addressId, EventOccurrence $event, array $draft, array $windows, ?string $statusDate): string
+    {
+        return $this->db->transactional(function (Connection $db) use ($addressId, $event, $draft, $windows, $statusDate): string {
+            $now = $this->now();
+            $id = $db->fetchOne(
+                'INSERT INTO event_listings (event_id, address_id, details, status, status_date, note, published, moderation_hidden, published_at, updated_at)
+                 SELECT CAST(:event AS BIGINT), c.address_id, CAST(:details AS JSONB), CAST(:status AS TEXT), CAST(:sdate AS DATE), CAST(:note AS TEXT),
+                    CAST(:pub AS BOOLEAN), a.moderation_hold, CAST(:now AS TIMESTAMPTZ), CAST(:now AS TIMESTAMPTZ)
+                 FROM claims c JOIN eligible_addresses a ON a.id = c.address_id WHERE c.user_id = :owner AND c.address_id = :id
+                 ON CONFLICT (event_id, address_id) DO NOTHING RETURNING id',
+                ListingRepository::bindings($addressId, $draft) + ['event' => $event->id, 'sdate' => $statusDate, 'now' => $now, 'owner' => $this->owner()],
+                ['pub' => 'boolean'],
+            );
+            if (false === $id) {
+                return $this->owns($addressId) ? 'exists' : 'not_found';
+            }
+            ListingRepository::replaceWindows($db, (int) $id, $windows);
+            $this->bridge->mirror($db, $event->id, $addressId);
+
+            return 'created';
+        });
+    }
+
+    /** Gives up management of one of the resident's homes (its listings of every event cascade away). */
     public function release(int $addressId): string
     {
         return $this->db->transactional(function () use ($addressId): string {
@@ -108,5 +164,10 @@ final class ResidentHomes
     private function owner(): int
     {
         return $this->ownerId ?? throw new \LogicException('Call ResidentHomes::of($user) before querying a resident\'s homes.');
+    }
+
+    private function now(): string
+    {
+        return $this->clock->now()->format('Y-m-d H:i:s.uP');
     }
 }

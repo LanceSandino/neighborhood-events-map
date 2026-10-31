@@ -1,0 +1,75 @@
+{
+  "description": "Shared table-driven cases for the display status (src/Event/Schedule/DisplayStatus.php and public/assets/js/lib/schedule.js). Each case: the event type's rules, the community time zone, an instant (UTC), the stored status and its status_date, the listing's windows (local dates and times) and the expected display key. Halloween's rules must equal HalloweenType::displayRules() and events/halloween.js displayRules; the other types' rules are what their modules will export.",
+  "rules": {
+    "halloween": {
+      "statuses": {
+        "active": { "day_scoped": false, "display": null },
+        "paused": { "day_scoped": false, "display": "paused" },
+        "out_of_candy": { "day_scoped": false, "display": "out" },
+        "done": { "day_scoped": false, "display": "done" }
+      },
+      "phases": { "inside": "open", "later_today": "later", "ended_today": "done", "not_today": "later" }
+    },
+    "holiday_lights": {
+      "statuses": {
+        "active": { "day_scoped": false, "display": null },
+        "off_tonight": { "day_scoped": true, "display": "off_tonight" },
+        "finished": { "day_scoped": false, "display": "finished" }
+      },
+      "phases": { "inside": "lights_on", "later_today": "later_tonight", "ended_today": "not_tonight", "not_today": "not_tonight" }
+    },
+    "garage_sale": {
+      "statuses": {
+        "active": { "day_scoped": false, "display": null },
+        "paused": { "day_scoped": true, "display": "paused" },
+        "sold_out": { "day_scoped": true, "display": "sold_out" },
+        "closed": { "day_scoped": false, "display": "closed" }
+      },
+      "phases": { "inside": "open", "later_today": "opens_at", "ended_today": "not_today", "not_today": "not_today" }
+    }
+  },
+  "cases": [
+    { "name": "halloween inside the window", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T22:15:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "open" },
+    { "name": "halloween before the window", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T21:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "later" },
+    { "name": "halloween at the start minute (inclusive)", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T21:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "open" },
+    { "name": "halloween at the end minute (exclusive)", "type": "halloween", "timezone": "America/New_York", "now": "2026-11-01T00:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "done" },
+    { "name": "halloween 23:30 local is still October 31 although UTC is November 1", "type": "halloween", "timezone": "America/New_York", "now": "2026-11-01T03:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "23:45" }], "expected": "open" },
+    { "name": "halloween after local midnight: no window today", "type": "halloween", "timezone": "America/New_York", "now": "2026-11-01T04:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "later" },
+    { "name": "halloween in Chicago, 18:15 CDT", "type": "halloween", "timezone": "America/Chicago", "now": "2026-10-30T23:15:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-30", "start": "16:30", "end": "20:30" }], "expected": "open" },
+    { "name": "halloween a week early", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-24T22:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "later" },
+    { "name": "halloween a week later", "type": "halloween", "timezone": "America/New_York", "now": "2026-11-07T22:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "later" },
+    { "name": "halloween paused shows paused at any moment", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T22:15:00Z", "status": "paused", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "paused" },
+    { "name": "halloween out of candy", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T21:00:00Z", "status": "out_of_candy", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "out" },
+    { "name": "halloween done for tonight inside the hours", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T22:15:00Z", "status": "done", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "done" },
+    { "name": "halloween not day-scoped: paused the day before still paused", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T22:15:00Z", "status": "paused", "status_date": "2026-10-30", "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "paused" },
+    { "name": "an unknown stored status reads as active", "type": "halloween", "timezone": "America/New_York", "now": "2026-10-31T22:15:00Z", "status": "lights_on", "status_date": null, "windows": [{ "date": "2026-10-31", "start": "17:30", "end": "20:30" }], "expected": "open" },
+    { "name": "DST ends in New York (Nov 1): 16:30 EST is before a 17:00 start", "type": "halloween", "timezone": "America/New_York", "now": "2026-11-01T21:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-11-01", "start": "17:00", "end": "21:00" }], "expected": "later" },
+    { "name": "DST ends in New York: 17:30 EST is inside", "type": "halloween", "timezone": "America/New_York", "now": "2026-11-01T22:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-11-01", "start": "17:00", "end": "21:00" }], "expected": "open" },
+    { "name": "DST ends in Chicago (Nov 1): 07:30 CST is before an 08:00 sale", "type": "garage_sale", "timezone": "America/Chicago", "now": "2026-11-01T13:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-11-01", "start": "08:00", "end": "12:00" }], "expected": "opens_at" },
+    { "name": "DST ends in Chicago: 08:30 CST is open", "type": "garage_sale", "timezone": "America/Chicago", "now": "2026-11-01T14:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-11-01", "start": "08:00", "end": "12:00" }], "expected": "open" },
+    { "name": "DST starts in Chicago (Mar 14): 08:30 CDT is open", "type": "garage_sale", "timezone": "America/Chicago", "now": "2027-03-14T13:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2027-03-14", "start": "08:00", "end": "12:00" }], "expected": "open" },
+    { "name": "DST starts in New York (Mar 14): 07:59 EDT is before 08:00", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-03-14T11:59:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2027-03-14", "start": "08:00", "end": "12:00" }], "expected": "opens_at" },
+    { "name": "DST starts in New York: 08:00 EDT opens", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-03-14T12:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2027-03-14", "start": "08:00", "end": "12:00" }], "expected": "open" },
+    { "name": "lights on New Year's Eve, 22:30 CST", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2027-01-01T04:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-12-31", "start": "18:00", "end": "23:00" }, { "date": "2027-01-01", "start": "18:00", "end": "22:00" }], "expected": "lights_on" },
+    { "name": "lights after New Year's Eve's window, still Dec 31 locally", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2027-01-01T05:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-12-31", "start": "18:00", "end": "23:00" }, { "date": "2027-01-01", "start": "18:00", "end": "22:00" }], "expected": "not_tonight" },
+    { "name": "lights just after midnight on Jan 1: later tonight", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2027-01-01T06:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-12-31", "start": "18:00", "end": "23:00" }, { "date": "2027-01-01", "start": "18:00", "end": "22:00" }], "expected": "later_tonight" },
+    { "name": "lights on Jan 1 evening", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2027-01-02T01:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-12-31", "start": "18:00", "end": "23:00" }, { "date": "2027-01-01", "start": "18:00", "end": "22:00" }], "expected": "lights_on" },
+    { "name": "lights on Jan 2: no window", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2027-01-03T01:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-12-31", "start": "18:00", "end": "23:00" }, { "date": "2027-01-01", "start": "18:00", "end": "22:00" }], "expected": "not_tonight" },
+    { "name": "month end: 21:30 CST on Nov 30 is Dec 1 in UTC", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2026-12-01T03:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-11-30", "start": "17:00", "end": "22:00" }, { "date": "2026-12-01", "start": "17:00", "end": "22:00" }], "expected": "lights_on" },
+    { "name": "month end: Apr 30 23:00 EDT after the sale's hours", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-01T03:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2027-04-30", "start": "08:00", "end": "13:00" }, { "date": "2027-05-01", "start": "08:00", "end": "13:00" }], "expected": "not_today" },
+    { "name": "month end: May 1 08:30 EDT open", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-01T12:30:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2027-04-30", "start": "08:00", "end": "13:00" }, { "date": "2027-05-01", "start": "08:00", "end": "13:00" }], "expected": "open" },
+    { "name": "off tonight holds on its own night", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2026-12-19T01:00:00Z", "status": "off_tonight", "status_date": "2026-12-18", "windows": [{ "date": "2026-12-17", "start": "18:00", "end": "22:00" }, { "date": "2026-12-18", "start": "18:00", "end": "22:00" }, { "date": "2026-12-19", "start": "18:00", "end": "22:00" }], "expected": "off_tonight" },
+    { "name": "off tonight set for Dec 18 does not hold on Dec 17", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2026-12-18T01:00:00Z", "status": "off_tonight", "status_date": "2026-12-18", "windows": [{ "date": "2026-12-17", "start": "18:00", "end": "22:00" }, { "date": "2026-12-18", "start": "18:00", "end": "22:00" }, { "date": "2026-12-19", "start": "18:00", "end": "22:00" }], "expected": "lights_on" },
+    { "name": "off tonight is over the next night", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2026-12-20T01:00:00Z", "status": "off_tonight", "status_date": "2026-12-18", "windows": [{ "date": "2026-12-17", "start": "18:00", "end": "22:00" }, { "date": "2026-12-18", "start": "18:00", "end": "22:00" }, { "date": "2026-12-19", "start": "18:00", "end": "22:00" }], "expected": "lights_on" },
+    { "name": "off tonight before local midnight but after UTC midnight", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2026-12-19T04:30:00Z", "status": "off_tonight", "status_date": "2026-12-18", "windows": [{ "date": "2026-12-18", "start": "18:00", "end": "23:00" }], "expected": "off_tonight" },
+    { "name": "finished for the season inside a window", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2026-12-19T01:00:00Z", "status": "finished", "status_date": null, "windows": [{ "date": "2026-12-18", "start": "18:00", "end": "22:00" }], "expected": "finished" },
+    { "name": "lights later tonight", "type": "holiday_lights", "timezone": "America/Chicago", "now": "2026-12-18T20:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2026-12-18", "start": "18:00", "end": "22:00" }], "expected": "later_tonight" },
+    { "name": "a sale paused today", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-01T14:00:00Z", "status": "paused", "status_date": "2027-05-01", "windows": [{ "date": "2027-05-01", "start": "08:00", "end": "13:00" }, { "date": "2027-05-02", "start": "09:00", "end": "12:00" }], "expected": "paused" },
+    { "name": "a sale paused yesterday opens again", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-02T14:00:00Z", "status": "paused", "status_date": "2027-05-01", "windows": [{ "date": "2027-05-01", "start": "08:00", "end": "13:00" }, { "date": "2027-05-02", "start": "09:00", "end": "12:00" }], "expected": "open" },
+    { "name": "sold out today", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-01T14:00:00Z", "status": "sold_out", "status_date": "2027-05-01", "windows": [{ "date": "2027-05-01", "start": "08:00", "end": "13:00" }, { "date": "2027-05-02", "start": "09:00", "end": "12:00" }], "expected": "sold_out" },
+    { "name": "sold out yesterday: Sunday's own hours, later", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-02T12:30:00Z", "status": "sold_out", "status_date": "2027-05-01", "windows": [{ "date": "2027-05-01", "start": "08:00", "end": "13:00" }, { "date": "2027-05-02", "start": "09:00", "end": "12:00" }], "expected": "opens_at" },
+    { "name": "closed for the sale", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-01T14:00:00Z", "status": "closed", "status_date": null, "windows": [{ "date": "2027-05-01", "start": "08:00", "end": "13:00" }], "expected": "closed" },
+    { "name": "a sale day the home does not take part in", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-02T14:00:00Z", "status": "active", "status_date": null, "windows": [{ "date": "2027-05-01", "start": "08:00", "end": "13:00" }], "expected": "not_today" },
+    { "name": "no windows at all is never open", "type": "garage_sale", "timezone": "America/New_York", "now": "2027-05-01T14:00:00Z", "status": "active", "status_date": null, "windows": [], "expected": "not_today" }
+  ]
+}

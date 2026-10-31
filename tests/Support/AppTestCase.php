@@ -17,7 +17,7 @@ use Symfony\Component\Mime\Email;
 
 /**
  * @module tests/Support/AppTestCase
- * @description Integration harness: real PostgreSQL test DB (truncated per test), frozen clock,
+ * @description Integration harness: real PostgreSQL test DB (truncated per test, event tables included), frozen clock,
  *     a generic fictional test community (zones "west"/"east" + non-claimable "park"), PoW solver,
  *     email-link extraction and JSON helpers. Requests carry a same-origin Origin header.
  */
@@ -41,7 +41,8 @@ abstract class AppTestCase extends WebTestCase
         $this->client = static::createClient([], ['HTTP_ORIGIN' => 'http://localhost', 'REMOTE_ADDR' => '127.0.0.1']);
         $this->clock = static::mockTime('2026-10-31 22:00:00 UTC'); // 6 PM America/New_York on Halloween
         $this->db()->executeStatement('TRUNCATE community_settings, community_geometries, eligible_addresses, users, claims, claim_intents,
-            listings, auth_link_tokens, pow_challenges, throttle_events, disputes, audit_events, sessions, route_cache, account_ledger RESTART IDENTITY CASCADE');
+            listings, auth_link_tokens, pow_challenges, throttle_events, disputes, audit_events, sessions, route_cache, account_ledger,
+            event_occurrences, event_listings, event_listing_windows RESTART IDENTITY CASCADE');
         $this->repo()->reset();
     }
 

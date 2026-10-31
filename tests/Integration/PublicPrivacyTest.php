@@ -8,10 +8,17 @@ use App\Tests\Support\AppTestCase;
 
 /**
  * Traceability: ACCEPTANCE #2, #12, #13 — public endpoints never expose unclaimed inventory, hidden or
- * out-of-season listings, emails or tokens; security headers/CSP; no fake pins.
+ * out-of-season listings, drafts or archived events, emails or tokens; security headers/CSP; no fake pins. The home
+ * keys are the 0.9 ones plus exactly the event-scoped ones (D-20261031-09).
  */
 final class PublicPrivacyTest extends AppTestCase
 {
+    /** A public home's keys in 0.9.0-beta.1 (and 0.10), in their order. */
+    private const KEYS_09 = ['id', 'address', 'zone', 'lat', 'lon', 'start', 'end', 'candy', 'nonfood', 'adult_drinks', 'low_noise', 'jump_scares',
+        'flashing_lights', 'loud_audio', 'scare_level', 'stroller_friendly', 'note', 'status', 'updated_at'];
+    /** The keys event-scoped listings add (0.11), nothing else. */
+    private const EVENT_KEYS = ['event_id', 'event_type', 'details', 'windows', 'display_status'];
+
     public function testOnlyOptedInCurrentSeasonListingsArePublic(): void
     {
         $this->configureCommunity();
@@ -30,13 +37,65 @@ final class PublicPrivacyTest extends AppTestCase
         foreach (['@', '5 Pumpkin', 'user', 'token', 'claimed_at', 'normalized'] as $needle) {
             self::assertStringNotContainsString($needle, $raw);
         }
-        self::assertSame(['id', 'address', 'zone', 'lat', 'lon', 'start', 'end', 'candy', 'nonfood', 'adult_drinks', 'low_noise', 'jump_scares',
-            'flashing_lights', 'loud_audio', 'scare_level', 'stroller_friendly', 'note', 'status', 'updated_at'], array_keys($homes[0]));
+        // The 0.9 keys in their order, then (D-20261031-09, widened on purpose) exactly the event-scoped ones.
+        self::assertSame([...self::KEYS_09, ...self::EVENT_KEYS], array_keys($homes[0]));
         $this->json('GET', '/api/homes/'.$b);
         self::assertSame(404, $this->code(), 'last season is not public');
         $c = (string) json_encode($this->json('GET', '/api/community'));
         self::assertStringNotContainsString('@example.test', $c);
         self::assertStringNotContainsString('organizer', strtolower($c));
+    }
+
+    /**
+     * Widening the whitelist changed no 0.9 key or value: the 0.9 part of a home is what 0.10 published for the same
+     * listing (its flat details equal the new details object), and the new keys say nothing private.
+     */
+    public function testTheNewKeysLeaveThe09KeysAndValuesUnchanged(): void
+    {
+        $this->configureCommunity();
+        $a = $this->addAddress('1', 'Pumpkin Ln', 40.004, -75.004, 'west');
+        $this->confirm($this->requestLink('a@example.test', ['address' => $this->byId($a), 'listing' => self::listing(['nonfood' => true, 'jump_scares' => true, 'scare_level' => 'mild'])]));
+        $home = $this->json('GET', '/api/homes')['homes'][0];
+        self::assertSame($home, $this->json('GET', '/api/homes/'.$a)['home'], 'the list and the single home agree');
+        $row = $this->db()->fetchAssociative('SELECT start_local, end_local, candy, nonfood, adult_drinks, low_noise, jump_scares, flashing_lights, loud_audio, scare_level,
+            stroller_friendly, note, status, updated_at FROM listings WHERE address_id = ?', [$a]);
+        self::assertIsArray($row);
+        $expected = ['id' => $a, 'address' => '1 Pumpkin Ln', 'zone' => 'west', 'lat' => 40.004, 'lon' => -75.004, 'start' => '17:30', 'end' => '20:30',
+            'candy' => true, 'nonfood' => true, 'adult_drinks' => false, 'low_noise' => true, 'jump_scares' => true, 'flashing_lights' => false, 'loud_audio' => false,
+            'scare_level' => 'mild', 'stroller_friendly' => false, 'note' => 'Porch light on.', 'status' => 'active',
+            'updated_at' => (new \DateTimeImmutable((string) $row['updated_at']))->format(\DATE_ATOM)];
+        self::assertSame($expected, array_intersect_key($home, array_flip(self::KEYS_09)), 'the 0.9 keys keep their values (the legacy row says the same)');
+        self::assertSame(array_intersect_key($expected, (new \App\Event\Type\HalloweenType())->defaultDetails()), $home['details'], 'details is the flat details as an object');
+        self::assertSame([['date' => '2026-10-31', 'start' => '17:30', 'end' => '20:30']], $home['windows']);
+        self::assertSame('halloween', $home['event_type']);
+        self::assertSame($this->json('GET', '/api/event')['event']['id'], $home['event_id']);
+        self::assertSame('open', $home['display_status'], '6 PM in New York on the event day');
+    }
+
+    /** Drafts and archived events are never public: not their homes, not their names. */
+    public function testNoDraftOrArchivedEventIsEverPublic(): void
+    {
+        $this->configureCommunity();
+        $a = $this->addAddress('1', 'Pumpkin Ln', 40.004, -75.004, 'west');
+        $this->confirm($this->requestLink('a@example.test', ['address' => $this->byId($a), 'listing' => self::listing()]));
+        $db = $this->db();
+        $draft = (int) $db->fetchOne("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at)
+            VALUES ('halloween', 'Secret Draft Night', '2027-10-31', '2027-10-31', '17:00', '21:00', 'draft', NOW()) RETURNING id");
+        $archived = (int) $db->fetchOne("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at, archived_at)
+            VALUES ('halloween', 'Old Archived Night', '2025-10-31', '2025-10-31', '17:00', '21:00', 'archived', NOW(), NOW()) RETURNING id");
+        foreach ([$draft, $archived] as $event) {
+            $id = (int) $db->fetchOne("INSERT INTO event_listings (event_id, address_id, details, status, note, published, updated_at) VALUES (?, ?, '{}', 'active', 'Not for today', TRUE, NOW()) RETURNING id", [$event, $a]);
+            $db->executeStatement("INSERT INTO event_listing_windows (listing_id, local_date, start_local, end_local) SELECT ?, starts_on, '17:00', '21:00' FROM event_occurrences WHERE id = ?", [$id, $event]);
+        }
+        $this->client->getCookieJar()->clear();
+        foreach (['/api/homes', '/api/homes/'.$a, '/api/event', '/api/community', '/'] as $uri) {
+            $this->client->request('GET', $uri);
+            $raw = (string) $this->client->getResponse()->getContent();
+            foreach (['Secret Draft', 'Old Archived', 'Not for today', '2027-10-31', '2025-10-31'] as $needle) {
+                self::assertStringNotContainsString($needle, $raw, "$uri never shows $needle");
+            }
+        }
+        self::assertCount(1, $this->json('GET', '/api/homes')['homes'], 'only the active event\'s listing');
     }
 
     public function testSecurityHeadersAndCsp(): void

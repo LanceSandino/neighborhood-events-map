@@ -34,7 +34,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * @description Organizer API (ROLE_ADMIN via access_control; CSRF + idle timeout enforced first):
  *     community settings/branding, GeoJSON boundary & zones (import/export/approve), registration
  *     switch, address inventory, claim transfer/unclaim, listing moderation, disputes, audit, export. The
- *     settings come with the event types an organizer may choose and the current type's console labels.
+ *     settings come with the event types an organizer may choose and the current type's console labels. Listing
+ *     counts and states are the active event's; events themselves are managed by EventsAdminApiController.
  *
  * @dependencies Community/*, Admin/ClaimAdministration, Address/*, Dispute/DisputeService, Event/EventTypeRegistry, Audit/AuditLog, DBAL
  */
@@ -47,6 +48,7 @@ final class AdminApiController
         private readonly AuditLog $audit,
         private readonly Connection $db,
         private readonly EventTypeRegistry $types,
+        private readonly ListingRepository $listings,
     ) {
     }
 
@@ -55,6 +57,7 @@ final class AdminApiController
     {
         $c = $this->community->current();
         $count = fn (string $sql) => (int) $this->db->fetchOne($sql);
+        $listingCounts = $this->listings->counts($c->event?->id); // the active event's listings
         $warnings = [];
         foreach ((new ZoneResolver($c->zoneShapes))->overlaps() as $o) {
             $warnings[] = sprintf('Zones "%s" and "%s" overlap by about %s m².', $o['a'], $o['b'], number_format($o['approx_m2']));
@@ -71,15 +74,14 @@ final class AdminApiController
                 'addresses' => $count('SELECT COUNT(*) FROM eligible_addresses'),
                 'addresses_outside_boundary' => $count('SELECT COUNT(*) FROM eligible_addresses WHERE NOT inside_boundary'),
                 'claims' => $count('SELECT COUNT(*) FROM claims'),
-                'public_listings' => \count(array_filter($this->db->fetchFirstColumn('SELECT 1 FROM listings l JOIN eligible_addresses a ON a.id = l.address_id WHERE l.published AND NOT l.moderation_hidden AND a.inside_boundary AND l.event_date = ?', [$c->eventDate()]))),
-                'hidden_listings' => $count("SELECT COUNT(*) FROM listings WHERE moderation_hidden AND moderation_reason IS DISTINCT FROM '".ListingRepository::PENDING_REVIEW."'"),
-                'pending_review' => $count("SELECT COUNT(*) FROM listings WHERE moderation_hidden AND moderation_reason = '".ListingRepository::PENDING_REVIEW."'"),
+                'public_listings' => $listingCounts['public'],
+                'hidden_listings' => $listingCounts['hidden'],
+                'pending_review' => $listingCounts['pending_review'],
                 'open_disputes' => $count("SELECT COUNT(*) FROM disputes WHERE status = 'open'"),
             ],
             'versions' => $this->community->geometryVersions(),
-            'pending_addresses' => $this->db->fetchAllAssociative(
-                'SELECT a.id, a.display_address AS address FROM listings l JOIN eligible_addresses a ON a.id = l.address_id
-                 WHERE l.moderation_hidden AND l.moderation_reason = ? ORDER BY a.created_at LIMIT 20', [ListingRepository::PENDING_REVIEW]),
+            'pending_addresses' => $this->listings->pendingAddresses($c->event?->id),
+            'event' => null === $c->event ? null : ['id' => $c->event->id, 'name' => $c->event->name, 'type' => $c->event->type, 'starts_on' => $c->event->startsOn, 'ends_on' => $c->event->endsOn],
         ]);
     }
 
@@ -198,7 +200,7 @@ final class AdminApiController
     #[Route('/addresses', methods: ['GET'])]
     public function addresses(Request $request, AddressRegistry $registry): JsonResponse
     {
-        $rows = $registry->search((string) $request->query->get('q', ''), 200, max(0, (int) $request->query->get('offset', 0)));
+        $rows = $registry->search((string) $request->query->get('q', ''), 200, max(0, (int) $request->query->get('offset', 0)), $this->community->current()->event?->id);
 
         return new JsonResponse(['total' => $registry->count(), 'addresses' => array_map(static fn (array $r) => [
             'id' => (int) $r['id'], 'address' => $r['display_address'], 'zone' => $r['zone_key'], 'lat' => (float) $r['latitude'], 'lon' => (float) $r['longitude'],

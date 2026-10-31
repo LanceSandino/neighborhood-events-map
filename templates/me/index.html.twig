@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 {# "My house": the resident's own homes (assets/js/me.js fills the template). The event type supplies the statuses
-   and its listing fields. #}
+   and its listing fields. A home not listed for the event on the map offers "List for <event>" with an empty form. #}
 {% set nav = 'me' %}
 {% set et = event_type(c.event.type) %}
 {% block title %}My house · {{ c.community.name }} {{ c.event.name }}{% endblock %}
@@ -24,6 +24,7 @@
     <h2 data-f="address"></h2>
     <p class="introtext" data-f="meta"></p>
     <div class="notice hide" data-f="warning"></div>
+    <div class="list-for hide" data-f="listFor"><p class="introtext" data-f="listForText"></p><button type="button" class="primary hide" data-f="listForButton"></button></div>
     <div class="status-row" role="group" aria-label="{{ et.copy.status_group }}">
       {%- for key, s in et.statuses %}
       <button type="button" class="secondary" data-status="{{ key }}">{{ s.icon }} {{ s.label }}</button>
@@ -37,7 +38,7 @@
       {% include event_fragment(c.event.type, 'manage_full') %}
       <div class="field full"><label>Short public note<textarea name="note" maxlength="400"></textarea></label></div>
       <div class="field full"><div class="notice danger hide" data-f="error" role="alert"></div>
-        <div class="modal-actions"><button type="button" class="danger" data-f="release">Give up this home</button><button type="submit" class="primary">Save changes</button></div></div>
+        <div class="modal-actions"><button type="button" class="danger" data-f="release">Give up this home</button><button type="submit" class="primary" data-f="save">Save changes</button></div></div>
     </form>
   </article>
 </template>

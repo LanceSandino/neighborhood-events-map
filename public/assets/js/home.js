@@ -8,11 +8,12 @@
  * @dependencies lib/*, events/index.js, route-panel.js, register.js, Leaflet (global L, optional)
  */
 import { api } from './lib/api.js';
-import { createStore } from './lib/store.js';
+import { createStore, migrateYearStore } from './lib/store.js';
 import { defaultFilters, matches, activeFilterCount, normalizeFilters, choiceCounts } from './lib/filters.js';
 import { eventType } from './events/index.js';
 import { nowInZone } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
+import { otherEvent } from './lib/share.js';
 import { focusMap } from './lib/map-focus.js';
 import { labelPoint, resolveOverlaps } from './lib/zone-labels.js';
 import { initModals, openModal, closeModal, toast } from './lib/modal.js';
@@ -25,9 +26,12 @@ const T = eventType(C.event.type);
 const DEFAULT_FILTERS = defaultFilters(T);
 let homes = boot.homes;
 const zoneLabels = Object.fromEntries(C.zones.map((z) => [z.key, z.label]));
-const store = createStore(C.community.id, C.event.date.slice(0, 4));
+// Saved homes and routes belong to this event (nhm:<community>:<event id>); a 0.10 season store moves in once.
+if (T.migratesYearStore) migrateYearStore(C.community.id, C.event.date.slice(0, 4), C.event.id);
+const store = createStore(C.community.id, String(C.event.id));
 let filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
-// A shared link (?f=<filters>&stops=<ids>&start=<id>) opens exactly that view, in the unsaved route so a saved one stays as it was.
+// A shared link (?f=<filters>&stops=<ids>&start=<id>&e=<event id>) opens exactly that view, in the unsaved route so a
+// saved one stays as it was; a link made for another event opens the map without its stops.
 const shared = readSharedLink();
 if ((shared.filters || shared.stops) && store.get().activeRoute) {
   store.switchRoute(null);
@@ -238,6 +242,7 @@ function selectHome(id, { pan = true } = {}) {
 function readSharedLink() {
   const q = new URLSearchParams(location.search);
   const out = {};
+  if (otherEvent(q.get('e'), C.event.id)) { out.otherEvent = true; return out; }
   try {
     if (q.get('f')) {
       const json = JSON.parse(atob(q.get('f').replace(/-/g, '+').replace(/_/g, '/')));
@@ -399,4 +404,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 addEventListener('hashchange', routeFromHash);
 // A link to a sheet or to My route opens once the page (and the map above the route) has its final layout.
 const whenLoaded = (fn) => (document.readyState === 'complete' ? fn() : addEventListener('load', fn, { once: true }));
-whenLoaded(() => { routeFromHash(); if (shared.stops) route.open(); });
+whenLoaded(() => {
+  routeFromHash();
+  if (shared.stops) route.open();
+  if (shared.otherEvent) { history.replaceState(null, '', '/'); toast('That shared link was made for another event, so its stops are not shown.', 10000); }
+});

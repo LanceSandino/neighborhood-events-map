@@ -31,6 +31,7 @@ table.data td.nowrap, table.data td:first-child { white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
 .pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.row-actions a { font-size: 11px; padding: 6px 9px; min-height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-weight: 800; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; }
 .row-actions button { font-size: 11px; padding: 6px 9px; min-height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-weight: 800; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
 .toolbar input[type=search], .toolbar select { border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; height: 44px; }
