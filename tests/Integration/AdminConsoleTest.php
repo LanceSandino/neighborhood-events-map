@@ -8,7 +8,7 @@ use App\Tests\Support\AppTestCase;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
- * Traceability: OPEN_SOURCE_AND_RELEASES (config-only branding/zones/logo), GEOGRAPHY (file import),
+ * Traceability: OPEN_SOURCE_AND_RELEASES (config-only branding/zones/logo; an event's colours are its own, ADR 0012), GEOGRAPHY (file import),
  * BLUEPRINT §4/§7 (address add/edit/import screens), admin pages render for organizers only.
  */
 final class AdminConsoleTest extends AppTestCase
@@ -49,12 +49,19 @@ final class AdminConsoleTest extends AppTestCase
     public function testSettingsUpdateValidatesAndRebrandsWithoutCodeChanges(): void
     {
         $s = $this->json('GET', '/api/admin/community')['settings'];
+        self::assertSame(['logo', 'show_locality'], array_keys($s['branding']), 'the community console carries only the community\'s own branding (ADR 0012)');
         $s['community']['name'] = 'Lakeside Commons';
-        $s['branding']['primary_color'] = '#2255AA';
+        $s['branding']['primary_color'] = '#2255AA'; // an event's colour: not the community console's any more
         $s['zones'][] = ['key' => 'lakefront', 'label' => 'Lakefront'];
         $r = $this->json('PUT', '/api/admin/community', ['settings' => $s], ['X-CSRF-Token' => $this->csrf]);
         self::assertSame(200, $this->code(), json_encode($r));
         self::assertSame('Lakeside Commons', $this->json('GET', '/api/community')['community']['name']);
+        $this->client->request('GET', '/theme.css');
+        self::assertStringNotContainsString('#2255AA', (string) $this->client->getResponse()->getContent(), 'the community console does not colour an event');
+        // The event's own branding rebrands it, still without code changes (Organizer → Events).
+        $event = $this->json('GET', '/api/admin/events')['events'][0];
+        $r = $this->json('PUT', '/api/admin/events/'.$event['id'], ['settings' => ['branding' => ['primary_color' => '#2255AA']]], ['X-CSRF-Token' => $this->csrf]);
+        self::assertSame(200, $this->code(), json_encode($r));
         $this->client->request('GET', '/theme.css');
         self::assertStringContainsString('#2255AA', (string) $this->client->getResponse()->getContent());
         self::assertSame(['lakefront'], $this->json('GET', '/api/admin/overview')['boundary']['zones_without_geometry']);

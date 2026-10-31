@@ -113,7 +113,7 @@
     </div>
     <h3 class="pref-heading">Reminders</h3>
     <ul class="reminders compact">{% for r in c.community.reminders|slice(0, 3) %}<li>{{ r }}</li>{% endfor %}</ul>
-    <div class="modal-actions"><a class="secondary" href="/about">Full guide &amp; links</a><button type="button" class="primary" data-close>Got it!</button></div>
+    <div class="modal-actions"><a class="secondary" href="/about{{ event_query() }}">Full guide &amp; links</a><button type="button" class="primary" data-close>Got it!</button></div>
     <p class="form-caption guide-foot">{{ et.copy.guide_foot }}</p>
   </div>
 </div>

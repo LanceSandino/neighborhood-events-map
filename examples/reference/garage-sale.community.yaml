@@ -16,7 +16,8 @@ community:
   gate_notice: ""
   contact_url: null                 # REPLACE with a mailto link to the organizer or a contact page (About, Privacy, Terms)
   access: public                    # public | gated_open | gated_guests | private | unspecified
-  about: ""
+  about: ""                         # this event's About page text (the first event's own)
+  general_about: ""                 # optional: About text for the whole neighborhood, shown for events without their own
   links: []
   reminders: []                     # your own sale etiquette (up to 12 lines); empty = the built-in list
 event:
@@ -37,7 +38,9 @@ event:
       - "Park on one side of the street; keep driveways clear."
       - "No recalled or prohibited items."
     route_modes: [walking]          # add driving for a driving tour; it needs a configured routing provider too
-# branding: leave it out to get the sale defaults (teal and coral, "Good finds. Close to home.").
+# branding: leave it out to get the sale defaults (teal and coral, "Good finds. Close to home."); anything you set here
+# (brand_emoji, headline, headline_accent, intro, primary_color, accent_color) is this first event's own branding
+# (ADR 0012); logo and show_locality are the community's. Later events: Organizer → Events.
 map:
   boundary_file: null
   zoom: 16

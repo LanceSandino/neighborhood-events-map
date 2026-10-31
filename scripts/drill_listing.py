@@ -5,14 +5,18 @@
     stack: sign in with a real proof-of-work and the one-time link from the stack's Mailpit, then edit a listing (PATCH),
     list a new self-entered home (POST /api/me/homes) with a pin placed inside the approved boundary, away from every
     other home, list a claimed home for another event (POST /api/me/homes/{id}/listing?e=<event>, 0.15) or, as an
-    organizer, close an event (POST /api/admin/events/{id}/close, 0.15: next year's event is created). edit and claim
-    work against the 0.9 and later APIs (the same endpoints). Prints one JSON line with the outcome.
+    organizer, close an event (POST /api/admin/events/{id}/close, 0.15: next year's event is created), prepare and open
+    an event of another type (POST /api/admin/events, then its open step) or change an event's headline (its branding,
+    PUT /api/admin/events/{id} with every other setting kept, 0.16). edit and claim work against the 0.9 and later APIs
+    (the same endpoints). Prints one JSON line with the outcome.
 @dependencies Python 3 standard library only
 Usage:
   python3 scripts/drill_listing.py --base http://localhost:8198 --mailpit http://localhost:8197 --email demo-resident-01@example.invalid edit --home-id 1 --note "Drill edit"
   python3 scripts/drill_listing.py ... claim --house 901 --street "Moonbeam Dr" --note "Listed in the drill"
   python3 scripts/drill_listing.py ... list-for --home-id 1 --event-id 2 --note "Next year"
   python3 scripts/drill_listing.py ... close --event-id 1
+  python3 scripts/drill_listing.py ... open-event --type holiday_lights --name "Christmas Lights" --starts-on 2026-11-27 --ends-on 2027-01-01
+  python3 scripts/drill_listing.py ... brand --event-id 1 --headline "Drill streets."
 """
 import argparse
 import hashlib
@@ -74,6 +78,13 @@ def pick_pin(ring: list, homes: list, steps: int = 40) -> tuple:
     if best is None:
         raise ValueError("no point inside the boundary")
     return best
+
+
+def with_headline(settings: dict, headline: str) -> dict:
+    """An event's settings with its branding's headline changed; every other setting and branding field kept."""
+    out = dict(settings or {})
+    out["branding"] = {**(out.get("branding") or {}), "headline": headline}
+    return out
 
 
 class Client:
@@ -153,6 +164,14 @@ def main() -> int:
     f.add_argument("--note", required=True)
     x = sub.add_parser("close")
     x.add_argument("--event-id", type=int, required=True)
+    o = sub.add_parser("open-event")
+    o.add_argument("--type", required=True)
+    o.add_argument("--name", required=True)
+    o.add_argument("--starts-on", required=True)
+    o.add_argument("--ends-on", required=True)
+    b = sub.add_parser("brand")
+    b.add_argument("--event-id", type=int, required=True)
+    b.add_argument("--headline", required=True)
     a = ap.parse_args()
 
     client = Client(a.base)
@@ -170,6 +189,22 @@ def main() -> int:
         nxt = body.get("next", {}) if isinstance(body, dict) else {}
         print(json.dumps({"step": "close", "status": st, "next_id": nxt.get("id"), "next_starts_on": nxt.get("starts_on"), "next_state": nxt.get("state")}))
         return 0 if st == 200 else 1
+    if a.cmd == "open-event":
+        st, body = client.req("POST", "/api/admin/events", {"type": a.type, "name": a.name, "starts_on": a.starts_on, "ends_on": a.ends_on})
+        event_id = (body.get("event") or {}).get("id") if isinstance(body, dict) else None
+        if st != 201 or not event_id:
+            print(json.dumps({"step": "open-event", "status": st}))
+            return 1
+        st, body = client.req("POST", f"/api/admin/events/{event_id}/open", {"confirm": True})
+        print(json.dumps({"step": "open-event", "status": st, "event_id": event_id}))
+        return 0 if st == 200 else 1
+    if a.cmd == "brand":
+        _, listing = client.req("GET", "/api/admin/events")
+        event = next(e for e in listing["events"] if e["id"] == a.event_id)
+        st, body = client.req("PUT", f"/api/admin/events/{a.event_id}", {"settings": with_headline(event["settings"], a.headline)})
+        headline = ((body.get("event") or {}).get("settings") or {}).get("branding", {}).get("headline") if isinstance(body, dict) else None
+        print(json.dumps({"step": "brand", "status": st, "headline": headline}))
+        return 0 if st == 200 and headline == a.headline else 1
     _, community = client.req("GET", "/api/community")
     _, homes = client.req("GET", "/api/homes")
     ring = community["map"]["boundary"]["coordinates"][0] if community["map"]["boundary"]["type"] == "Polygon" else community["map"]["boundary"]["coordinates"][0][0]

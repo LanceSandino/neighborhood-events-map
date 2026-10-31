@@ -12,7 +12,8 @@ use PHPUnit\Framework\TestCase;
  *   replaces the whole schema in one transaction (a pre-upgrade backup restores cleanly after newer tables with
  *   foreign keys into it were added, and a failed restore changes nothing); bin/drill-event-upgrade.sh runs the
  *   published 0.9.0-beta.1 images, the upgrade, both rollback paths and a second upgrade on a disposable project and
- *   always removes it; the runbook names both paths and is linked from the release and upgrade runbooks. The drill's
+ *   always removes it, and checks the Halloween's custom branding on both sides of the image rollback (ADR 0012); the
+ *   runbook names both paths and is linked from the release and upgrade runbooks. The drill's
  *   real output is in docs/quality/test-report.md.
  * @dependencies bin/restore.sh, bin/drill-event-upgrade.sh, docs/runbooks/*.md
  */
@@ -45,6 +46,19 @@ final class RollbackDrillTest extends TestCase
         foreach (['path (a)', 'path (b)', 'forward again', 'upgrades again'] as $step) {
             self::assertStringContainsString($step, $drill);
         }
+    }
+
+    /** Per-event branding (ADR 0012): the 0.9 page still shows the Halloween's custom headline after an image rollback. */
+    public function testTheDrillChecksTheCustomHalloweenBrandingAcrossTheRollback(): void
+    {
+        $drill = self::read('bin/drill-event-upgrade.sh');
+        foreach (['Version20261031000004', 'custom="Spooky streets. Sweet treats."', 'open-event --type holiday_lights', 'brand --event-id "$closed_id"',
+            'does not show the Halloween\'s custom headline after the image rollback', 'the lights show Halloween\'s branding',
+            'the 0.9 keys did not follow the Halloween\'s branding'] as $needle) {
+            self::assertStringContainsString($needle, $drill);
+        }
+        self::assertLessThan(strpos($drill, 'step "5. path (a)'), strpos($drill, 'brand --event-id'), 'the headline changes on the new release, before the rollback');
+        self::assertLessThan(strpos($drill, 'custom headline after the image rollback'), strpos($drill, 'step "5. path (a)'));
     }
 
     public function testTheRunbookNamesBothPathsAndIsLinked(): void

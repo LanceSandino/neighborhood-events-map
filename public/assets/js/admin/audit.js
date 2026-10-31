@@ -1,12 +1,16 @@
 /**
  * @module assets/js/admin/audit
- * @description Read-only audit log (claims, edits, moderation, transfers, config, sign-ins).
+ * @description Read-only audit log (claims, edits, moderation, transfers, config, sign-ins). A row about one event (an
+ *     event's own change, or a listing of an event) is marked as that event's (data-event-section): its details may
+ *     carry the event's type and words; the page itself names no event (D-20261031-52).
  */
 import { $, call, esc, fmtDate } from './common.js';
+
+const aboutAnEvent = (e) => e.target_type === 'event' || /"event_id"\s*:/.test(e.details || '');
 
 (async () => {
   const { events } = await call('/api/admin/audit?limit=500');
   $('#admin-audit').innerHTML = `<div class="panel table-wrap"><table class="data"><thead><tr><th>When (UTC)</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th><th>Source</th></tr></thead><tbody>
-    ${events.map((e) => `<tr><td class="nowrap">${esc(fmtDate(e.created_at))}</td><td>${esc(e.actor_label)}</td><td><b>${esc(e.action)}</b></td><td>${esc(e.target_type)} ${esc(e.target_id ?? '')}</td><td><code>${esc(e.details)}</code></td><td>${esc(e.source)}</td></tr>`).join('') || '<tr><td colspan="6">No events yet.</td></tr>'}
+    ${events.map((e) => `<tr${aboutAnEvent(e) ? ' data-event-section="event"' : ''}><td class="nowrap">${esc(fmtDate(e.created_at))}</td><td>${esc(e.actor_label)}</td><td><b>${esc(e.action)}</b></td><td>${esc(e.target_type)} ${esc(e.target_id ?? '')}</td><td><code>${esc(e.details)}</code></td><td>${esc(e.source)}</td></tr>`).join('') || '<tr><td colspan="6">No events yet.</td></tr>'}
   </tbody></table></div>`;
 })();

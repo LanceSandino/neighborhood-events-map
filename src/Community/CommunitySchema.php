@@ -16,7 +16,11 @@ use App\Shared\TextInput;
  *     Unknown keys are dropped; every value is type-checked; nothing neighborhood-specific is assumed. The
  *     event's type (event.type, default halloween) must be one this version enables; it supplies the defaults
  *     for the event name, subtitle and branding and the feature switches offered. The event block itself (name,
- *     dates, hours) is checked by EventBlockSchema.
+ *     dates, hours) is checked by EventBlockSchema. The community's own branding is its name, subtitle, city line,
+ *     logo, links and an optional general About text for the neighborhood (community.general_about, every event); the
+ *     branding block's emoji, headline, intro and colours and community.about keep their 0.9 shape: from community.yaml
+ *     they brand the install's first event (Community/CommunityBootstrapper), and the stored settings keep them as the
+ *     previous release reads them (Community/EventBlockMirror); each event's own branding is in its settings (ADR 0012).
  *
  * @input array<string,mixed> raw configuration
  * @output array<string,mixed> normalized settings
@@ -234,6 +238,7 @@ final class CommunitySchema
                 'gate_notice' => self::text($c['gate_notice'] ?? '', 300),
                 'contact_url' => self::url($c['contact_url'] ?? null),
                 'about' => self::paragraphs($c['about'] ?? '', 1500),
+                'general_about' => self::paragraphs($c['general_about'] ?? '', 1500),
                 'access' => $access,
                 'links' => $links,
                 'reminders' => $reminders,

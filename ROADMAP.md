@@ -107,12 +107,19 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - Residents switch events in My house and may start next year's listing from their own details of last time.
    - Status: shipped in 0.15.0-beta.1 ([D-20261031-37](DECISIONS.md) to [-45](DECISIONS.md), [ADR 0011](docs/adr/0011-several-published-events.md), [event types](docs/architecture/event-types.md#several-events-at-once-015), [organizer guide](docs/runbooks/organizer-events.md)).
 
+8. **Stage 7 — community branding and each event's branding (done in 0.16.0-beta.1; the owner's request of 2026-10-31).**
+   - The community keeps its name, subtitle, city, logo, contact, links and an optional general About text; each event has its own emoji, headline, intro, colours and About text, each falling back to its type's look, edited under Organizer → Events.
+   - A community's own Halloween branding moves to its Halloween events on the upgrade; Christmas lights and sales show their own look. The 0.9 image still shows the Halloween branding after an image-only rollback (the drill checks it).
+   - Emails name what they concern (the sign-in link only the community); "What's new" shows plain notes for residents and organizers.
+   - Status: shipped in 0.16.0-beta.1 ([D-20261031-46](DECISIONS.md) to [-51](DECISIONS.md), [ADR 0012](docs/adr/0012-community-and-event-branding.md), [event types](docs/architecture/event-types.md#community-branding-and-event-branding-016), [organizer guide](docs/runbooks/organizer-events.md#community-branding-and-each-events-branding)).
+
 ## What remains
 
 These are known, deliberate gaps, each tracked here (there are no TODO notes in the code):
 
 - **Inviting residents to a new event.** Organizer → Events switches the map; residents keep their claims and list again from an empty form, but they are told by hand (newsletter, group chat). An opt-in email through the existing mailer, with consent and the same limits as sign-in links, is the next step.
-- **Retiring the legacy `listings` table.** It and its two triggers keep an image-only rollback to 0.9 working for one Halloween — the newest open or closed one (D-20261031-03, -06, -41). A later release drops them once no install needs that rollback; the drill (`bin/drill-event-upgrade.sh`) proves the path until then.
+- **Retiring the legacy `listings` table.** It and its two triggers keep an image-only rollback to 0.9 working for one Halloween — the newest open or closed one (D-20261031-03, -06, -41). A later release drops them once no install needs that rollback, together with the community branding keys kept for 0.9 (D-20261031-49); the drill (`bin/drill-event-upgrade.sh`) proves the path until then.
+- **Reminders per event.** An organizer's own reminders (Community & branding) still show for every event; each kind of event's built-in list applies only while they are empty. Moving them to each event, like its rules and branding, is the next step for them.
 - **Ordering the switcher's tabs.** Tabs are the default first, then by date; an organizer-chosen order is not built.
 - **Per-night hours in the lights forms.** A lights home has one start and end time for all its nights in the forms; the server and the API already take hours per night.
 - **44 px targets on Halloween.** Halloween's filter chips, time picker and card hearts stay 40 px high so its pages stay as they were; the other types have 44 px.

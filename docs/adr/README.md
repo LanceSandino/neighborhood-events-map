@@ -13,5 +13,6 @@
 | [0009](0009-least-privilege-and-abuse-resistance.md) | Least privilege in code, owner-scoped resident data, abuse budgets | Accepted |
 | [0010](0010-generic-event-types.md) | Generic, code-defined event types (Christmas lights, garage sale) | Accepted (one-event part superseded by 0011) |
 | [0011](0011-several-published-events.md) | Several published events per community (switcher, default, close and next year) | Accepted |
+| [0012](0012-community-and-event-branding.md) | Community branding and each event's own branding | Accepted |
 
 Template: Context → Decision → Consequences → Alternatives considered.

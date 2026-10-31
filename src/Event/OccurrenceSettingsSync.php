@@ -12,7 +12,8 @@ use Doctrine\DBAL\Connection;
  * @module Event/OccurrenceSettingsSync
  * @description The community settings' `event` block is a view of the default event (D-20261031-07, ADR 0011). When
  *     settings are saved (community.yaml bootstrap, Organizer → Community → Event) this writes the block to that
- *     event: with no event at all it creates the first one, open and the default; otherwise it updates the default
+ *     event: with no event at all it creates the first one, open and the default, with the branding the settings give in
+ *     their 0.9 shape (Event/EventBranding::fromLegacy, ADR 0012); otherwise it updates the default
  *     event's name and default hours, and its dates only while no home is listed for it and it has dates (moving a
  *     season's listings is an explicit step under Organizer → Events, and the next season is a new event). An event's
  *     type never changes. Takes the same lock as every life-cycle change, so a save never interleaves with one.
@@ -32,13 +33,14 @@ final class OccurrenceSettingsSync
     }
 
     /**
-     * @param array<string,mixed> $event the normalized settings block (Community/EventBlockSchema)
+     * @param array<string,mixed>  $event         the normalized settings block (Community/EventBlockSchema)
+     * @param array<string,string> $firstBranding the branding of the install's first event, if this creates it
      *
      * @throws ConfigException when the change must go through Organizer → Events
      */
-    public function apply(array $event): void
+    public function apply(array $event, array $firstBranding = []): void
     {
-        $this->db->transactional(function (Connection $db) use ($event): void {
+        $this->db->transactional(function (Connection $db) use ($event, $firstBranding): void {
             self::lock($db);
             $active = $this->occurrences->defaultEvent($db);
             [$first, $last] = EventBlockSchema::range($event);
@@ -49,6 +51,9 @@ final class OccurrenceSettingsSync
                     // The install's first event; a type's settings are completed (e.g. a weekend sale takes its days).
                     $type = $this->types->isEnabled($fields['type']) ? $this->types->get($fields['type']) : null;
                     $settings = $type instanceof EventSettingsType ? $type->finishSettings([], $first, $last)[0] : [];
+                    if ([] !== $firstBranding) {
+                        $settings['branding'] = $firstBranding;
+                    }
                     $this->occurrences->insert($db, $fields + ['settings' => $settings], EventOccurrence::OPEN, true);
                 }
 

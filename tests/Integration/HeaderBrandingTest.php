@@ -9,8 +9,8 @@ use App\Tests\Support\AppTestCase;
 /**
  * Traceability: branding.show_locality shows "City, ST" under the community name (header and rail);
  * off by default; the header carries the Appearance button and the version appears once (footer).
- * Titles, brand, footer, meta description and emails name the community's event (event.name, default
- * Halloween), never a fixed holiday. A community or event name longer than the rail's column gets the compact brand
+ * Titles, brand, footer and meta description name the community's event (event.name, default
+ * Halloween), never a fixed holiday; the sign-in email names only the community. A community or event name longer than the rail's column gets the compact brand
  * (smaller, evenly wrapped) instead of three full-size lines.
  */
 final class HeaderBrandingTest extends AppTestCase
@@ -53,8 +53,9 @@ final class HeaderBrandingTest extends AppTestCase
         $messages = self::getMailerMessages();
         $mail = end($messages);
         \assert($mail instanceof \Symfony\Component\Mime\Email);
-        self::assertSame('Your Testville Spring Fair sign-in link', $mail->getSubject());
+        self::assertSame('Your Testville sign-in link', $mail->getSubject(), 'an account is the community\'s: the sign-in link names no event (ADR 0012)');
         self::assertStringNotContainsString('HALLOWEEN', (string) $mail->getHtmlBody());
+        self::assertStringNotContainsString('Spring Fair', (string) $mail->getHtmlBody().$mail->getTextBody());
     }
 
     public function testANameLongerThanTheRailColumnGetsTheCompactBrand(): void

@@ -15,11 +15,14 @@ use App\Shared\ValidationException;
  *     the dates are tentative, default hours, and the settings every type shares — rules (up to 8 short plain-text lines,
  *     shown with the event), route_modes (walking, plus the type's other profiles), the closing message (the thank-you
  *     text of a closed event, plain text up to 400 characters) and, for a type with several days, max_days (the
- *     organizer's cap of days per listing). A type with settings of its own (Event/EventSettingsType, e.g. the lights'
- *     best night, a sale's days) checks those against the event's dates and completes them as a whole; an event without
- *     dates has none of the settings that depend on them. Unknown fields are refused.
+ *     organizer's cap of days per listing) and the event's own branding (Event/EventBranding: emoji, headline, intro,
+ *     colours, About text; settings sent without it keep the event's branding, so a client that does not know it never
+ *     clears it). A type with settings of its own (Event/EventSettingsType, e.g. the lights' best night, a sale's days)
+ *     checks those against the event's dates and completes them as a whole; an event without dates has none of the
+ *     settings that depend on them. Unknown fields are refused.
  *
- * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Community/EventBlockSchema, Shared/TextInput, Shared/ValidationException
+ * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Event/EventBranding, Community/EventBlockSchema, Shared/TextInput,
+ *     Shared/ValidationException
  */
 final class OccurrenceInput
 {
@@ -77,6 +80,9 @@ final class OccurrenceInput
             $e['default_end'] = 'The end must be a time after the start, on the same day.';
         }
         $settings = \array_key_exists('settings', $in) ? self::settings($in['settings'], $type, $startsOn, $endsOn, $e) : ($current->settings ?? []);
+        if (\array_key_exists('settings', $in) && !\array_key_exists('branding', (array) $in['settings']) && [] !== ($current->settings['branding'] ?? [])) {
+            $settings['branding'] = $current->settings['branding']; // kept: the client did not send the event's branding
+        }
         if ($tbd && $type instanceof EventSettingsType) {
             // Without dates there is nothing for a best night or sale days to lie in.
             foreach ($type->dateBoundSettings() as $key) {
@@ -129,8 +135,13 @@ final class OccurrenceInput
                 'closing_message' => $out['closing_message'] = self::closingMessage($v, $e),
                 'route_modes' => $out['route_modes'] = self::routeModes($v, $type, $e),
                 'max_days' => $out['max_days'] = self::maxDays($v, $type, $e),
+                'branding' => $out['branding'] = EventBranding::normalize($v, $e),
                 default => $e['settings.'.$k] = 'Unknown field.',
             };
+        }
+
+        if ([] === ($out['branding'] ?? null)) {
+            unset($out['branding']); // nothing of its own: the type's defaults
         }
 
         return $out;

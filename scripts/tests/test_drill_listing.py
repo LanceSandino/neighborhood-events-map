@@ -1,7 +1,8 @@
 """
 @module scripts/tests/test_drill_listing
-@description The drill helper's pure parts: proof-of-work bit counting (as the server counts) and the pin it places
-    for a new home (inside the boundary, farthest from every listed home, the same every run).
+@description The drill helper's pure parts: proof-of-work bit counting (as the server counts), the pin it places
+    for a new home (inside the boundary, farthest from every listed home, the same every run) and the settings it sends
+    to change an event's headline (every other setting and branding field kept).
 @dependencies scripts/drill_listing.py, unittest
 """
 import hashlib
@@ -31,6 +32,15 @@ class DrillHelperTest(unittest.TestCase):
         self.assertFalse(d.inside(-81.6806, 29.2037, ring), "the cut corner is outside")
         with self.assertRaises(ValueError):
             d.pick_pin([[0, 0], [0, 0], [0, 0]], homes)
+
+
+    def test_a_new_headline_keeps_every_other_setting(self):
+        settings = {"rules": ["Park on one side"], "branding": {"headline": "Spooky streets.", "intro": "Ours."}}
+        self.assertEqual(d.with_headline(settings, "Drill streets."),
+                         {"rules": ["Park on one side"], "branding": {"headline": "Drill streets.", "intro": "Ours."}})
+        self.assertEqual(settings["branding"]["headline"], "Spooky streets.", "the event's settings are not changed in place")
+        self.assertEqual(d.with_headline({}, "New."), {"branding": {"headline": "New."}})
+        self.assertEqual(d.with_headline(None, "New."), {"branding": {"headline": "New."}})
 
 
 if __name__ == "__main__":

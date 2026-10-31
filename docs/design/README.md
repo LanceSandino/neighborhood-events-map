@@ -88,3 +88,20 @@ view; nothing scrolls the page sideways. It appears only while two or more event
 `events-switcher-1440.png`, `events-switcher-390.png`, `events-switcher-dark-1440.png`, `events-switcher-dark-390.png`,
 `events-closed-1440.png`, `events-closed-390.png` (fictional lights demo, browser clock pinned to a night of the season).
 
+
+## Each event's own branding (0.16)
+
+The community's look (name, subtitle, city line, logo) is the same for every event; the hero's headline and accent part,
+intro, the sidebar emoji and the brand colours are the event's own, each falling back to its type's look (ADR 0012).
+Nothing moves in the layout: the same hero, sidebar and theme tokens, with the event's values. The hero art stays the
+type's. In Organizer → Events each event's form has a "Branding of this event" section; an empty field shows the
+type's value as its grey placeholder, and a colour is a `#RRGGBB` field with a picker next to it (44 px). Screenshots
+(fictional lights demo, whose Halloween has its own branding): `events-closed-{1440,390}.png` (the Halloween's own
+headline and colours), `events-sale-{1440,390}.png` (the sale's own look next to it).
+
+The organizer console is the community's (D-20261031-52): the header mark is the logo or the community's initial on the
+console's own slate-blue tokens (light and dark, admin.css), the console never loads an event's /theme.css, and an
+event's look appears only in that event's own sections (Events rows and form with the type's mark, the draft preview,
+the Overview's events, the Addresses listing column). Without a logo the browser tab shows a neutral community icon in
+the console and the type's icon on public pages. Screenshots: `ventura-admin-overview.png`, `ventura-admin-map.png`,
+`admin-events-1440.png`.

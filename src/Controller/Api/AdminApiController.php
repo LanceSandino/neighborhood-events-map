@@ -32,7 +32,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 /**
  * @module Controller/Api/AdminApiController
  * @description Organizer API (ROLE_ADMIN via access_control; CSRF + idle timeout enforced first):
- *     community settings/branding, GeoJSON boundary & zones (import/export/approve), registration
+ *     the community's own settings and branding (each event's branding is the Events API's), GeoJSON boundary & zones
+ *     (import/export/approve), registration
  *     switch, address inventory, claim transfer/unclaim, listing moderation, disputes, audit, export. The
  *     settings come with the event types an organizer may choose and the current type's console labels. Listing
  *     counts and states are the active event's; events themselves are managed by EventsAdminApiController.
@@ -89,8 +90,13 @@ final class AdminApiController
     public function getCommunity(): JsonResponse
     {
         $c = $this->community->current();
+        // The community's own settings only: each event's emoji, headline, intro, colours and About text are edited under
+        // Organizer → Events (ADR 0012).
+        $settings = $c->settings;
+        $settings['branding'] = array_intersect_key($settings['branding'], array_flip(['logo', 'show_locality']));
+        unset($settings['community']['about']);
 
-        return new JsonResponse(['settings' => $c->settings, 'event_types' => array_map(fn (EventType $t) => $this->typeView($t), $this->types->enabled()),
+        return new JsonResponse(['settings' => $settings, 'event_types' => array_map(fn (EventType $t) => $this->typeView($t), $this->types->enabled()),
             'event_type' => $this->typeView($this->types->for($c))]);
     }
 
@@ -99,7 +105,11 @@ final class AdminApiController
     {
         $body = JsonBody::decode($request);
         $settings = \is_array($body['settings'] ?? null) ? $body['settings'] : throw new ValidationException(['settings' => 'Missing settings object.']);
-        $settings['branding']['logo'] = $this->community->current()->settings['branding']['logo'];
+        $current = $this->community->current()->settings;
+        $settings['branding']['logo'] = $current['branding']['logo'];
+        // The console no longer edits the default event here (Organizer → Events does): without an event block the
+        // default event keeps exactly its own values.
+        $settings['event'] ??= $current['event'];
         $saved = $this->community->saveSettings($settings, $admin->id);
         $this->audit->record($admin->id, 'admin#'.$admin->id, 'community.updated', 'community', $saved['community']['id'], [], 'admin');
 
@@ -200,13 +210,20 @@ final class AdminApiController
     #[Route('/addresses', methods: ['GET'])]
     public function addresses(Request $request, AddressRegistry $registry): JsonResponse
     {
-        $rows = $registry->search((string) $request->query->get('q', ''), 200, max(0, (int) $request->query->get('offset', 0)), $this->community->current()->event?->id);
+        $c = $this->community->current();
+        $rows = $registry->search((string) $request->query->get('q', ''), 200, max(0, (int) $request->query->get('offset', 0)), $c->event?->id);
+        // The listings shown are the default event's; the list names that event and its type (the console itself names none).
+        $type = null === $c->event ? null : $this->types->for($c);
+        $statuses = null === $type ? [] : $type->statuses();
 
-        return new JsonResponse(['total' => $registry->count(), 'addresses' => array_map(static fn (array $r) => [
+        return new JsonResponse(['total' => $registry->count(), 'event' => null === $c->event || null === $type ? null
+            : ['id' => $c->event->id, 'name' => $c->event->name, 'type' => $c->event->type, 'icon' => (string) ($type->copy()['event_icon'] ?? '')],
+            'addresses' => array_map(static fn (array $r) => [
             'id' => (int) $r['id'], 'address' => $r['display_address'], 'zone' => $r['zone_key'], 'lat' => (float) $r['latitude'], 'lon' => (float) $r['longitude'],
             'enabled' => (bool) $r['enabled'], 'inside_boundary' => (bool) $r['inside_boundary'], 'source' => $r['source'],
             'owner_user_id' => null !== $r['user_id'] ? (int) $r['user_id'] : null, 'owner_email' => $r['owner_email'], 'claimed_at' => $r['claimed_at'],
-            'listing' => null === $r['status'] ? null : ['status' => $r['status'], 'published' => (bool) $r['published'], 'hidden' => (bool) $r['moderation_hidden'],
+            'listing' => null === $r['status'] ? null : ['status' => $r['status'], 'status_label' => (string) ($statuses[$r['status']]['label'] ?? $r['status']),
+                'published' => (bool) $r['published'], 'hidden' => (bool) $r['moderation_hidden'],
                 'pending_review' => (bool) $r['moderation_hidden'] && ListingRepository::PENDING_REVIEW === $r['moderation_reason'], 'event_date' => $r['event_date']],
         ], $rows)]);
     }

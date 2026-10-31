@@ -2,16 +2,18 @@
  * @module assets/js/admin/addresses
  * @description Private address registry and claims: search, add (with explicit coordinates — never
  *     geocoded), edit coordinates/zone/enabled, CSV import (dry run first), transfer/unclaim with
- *     explicit confirmation, hide/unhide listings. Organizer-only.
+ *     explicit confirmation, hide/unhide listings. Organizer-only. The listing column shows the default event's
+ *     listings and names that event with its type's mark and status words; the page itself names no event (D-20261031-52).
  */
 import { $, call, esc, flash } from './common.js';
 
 let zones = [];
+let event = null; // the event whose listings the list shows: { id, name, type, icon }
 
 function shell() {
   $('#admin-addresses').innerHTML = `
     <div class="panel"><div class="toolbar"><input type="search" id="q" placeholder="Search address or owner email" aria-label="Search addresses"><button type="button" class="secondary" id="btnSearch">Search</button><span id="total" class="form-caption"></span></div>
-      <div class="table-wrap"><table class="data"><thead><tr><th>Address</th><th>Zone</th><th>Location</th><th>Owner (private)</th><th>Listing</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Address</th><th>Zone</th><th>Location</th><th>Owner (private)</th><th id="listingHead">Listing</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
       <div class="pager"><button type="button" class="secondary" id="btnPrev">← Previous</button><span id="pageInfo" class="form-caption"></span><button type="button" class="secondary" id="btnNext">Next →</button></div></div>
     <div class="panel"><h2>Add an address</h2><form id="addForm" class="form-grid" novalidate>
       <div class="field full"><label for="aAddr">Address</label><input id="aAddr" placeholder="123 Main St"></div>
@@ -28,13 +30,13 @@ function shell() {
 }
 
 function row(a) {
-  const listing = a.listing ? `${esc(a.listing.status)}${a.listing.published ? '' : ' · unpublished'}${a.listing.pending_review ? ' · <b class="todo">new address — waiting for approval</b>' : a.listing.hidden ? ' · <b class="todo">hidden</b>' : ''}<br><span class="form-caption">${esc(a.listing.event_date)}</span>` : '—';
+  const listing = a.listing ? `${esc(a.listing.status_label || a.listing.status)}${a.listing.published ? '' : ' · unpublished'}${a.listing.pending_review ? ' · <b class="todo">new address — waiting for approval</b>' : a.listing.hidden ? ' · <b class="todo">hidden</b>' : ''}<br><span class="form-caption">${event ? `${esc(event.name)} · ` : ''}${esc(a.listing.event_date)}</span>` : '—';
   return `<tr data-id="${a.id}">
     <td><b>${esc(a.address)}</b><br><span class="form-caption">#${a.id} · ${esc(a.source)}${a.enabled ? '' : ' · disabled'}${a.inside_boundary ? '' : ' · <span class="todo">outside boundary</span>'}</span></td>
     <td>${esc(a.zone ?? '—')}</td>
     <td><span class="form-caption">${a.lat.toFixed(6)}, ${a.lon.toFixed(6)}</span></td>
     <td>${a.owner_email ? `${esc(a.owner_email)}<br><span class="form-caption">user #${a.owner_user_id}</span>` : '<span class="form-caption">unclaimed</span>'}</td>
-    <td>${listing}</td>
+    <td data-event-section="${event ? esc(event.type) : ''}">${listing}</td>
     <td><div class="row-actions">
       <button type="button" data-act="edit">Edit</button>
       ${a.owner_user_id ? '<button type="button" data-act="transfer">Transfer</button><button type="button" data-act="unclaim">Unclaim</button>' : ''}
@@ -57,6 +59,9 @@ function renderPage() {
 async function search() {
   const res = await call(`/api/admin/addresses?q=${encodeURIComponent($('#q').value)}`);
   rows = res.addresses;
+  event = res.event || null;
+  // The listings are one event's: the column names it with its type's mark.
+  $('#listingHead').innerHTML = event ? `<span data-event-section="${esc(event.type)}"><span aria-hidden="true">${esc(event.icon)}</span> ${esc(event.name)} listing</span>` : 'Listing';
   page = 0;
   $('#total').textContent = `${res.total} addresses${rows.length < res.total ? ` · first ${rows.length} shown — refine the search` : ''}`;
   renderPage();

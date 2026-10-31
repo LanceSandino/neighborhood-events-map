@@ -1,7 +1,8 @@
 // Several events at once on the fictional lights demo stack (examples/demo-lights, ADR 0011): Christmas lights open and
 // the default, a Halloween that has ended with its thank-you message, next year's Halloween (upcoming, tentative) and a
 // rummage sale whose dates are to be announced. Runs in the "season" project, after the other lights tests: visitors
-// switch events with the switcher (mouse and keyboard), each tab has its own theme and saved stops; a resident lists
+// switch events with the switcher (mouse and keyboard), each tab has its own theme, branding (the demo's Halloween has
+// its own, ADR 0012) and saved stops; a resident lists
 // next year's Halloween with "Use last year's details"; an organizer closes an event (next year's is created) and
 // changes the default. It gives everything back (archiving what it added); bin/e2e.sh's demo seed brings next year's
 // Halloween back for the next run. Browser clocks are pinned to a night of the lights season.
@@ -85,6 +86,81 @@ test('the switcher: the default event at "/", every public event by mouse and ke
   await tabs.first().click();
   await expect(page).toHaveURL(`${LIGHTS}/`);
   await expect(page.locator('html')).toHaveAttribute('data-event-type', 'holiday_lights');
+  guard.assertClean();
+});
+
+// Words of Halloween (the owner's list) that must not show on another event's page (ADR 0012); the switcher's tab labels
+// and a closed event's thank-you message name other events on purpose, and the residents' listings (cards, pins, the
+// selected home, the route) are their own words — a lights home may offer treats or a "candy cane lane".
+const HALLOWEEN = /ghost|trick[- ]?or[- ]?treat|\btreats?\b|candy|candies|scare|pumpkin|🎃|👻/giu;
+const visibleWords = (page) => page.evaluate((src) => {
+  const doc = document.documentElement.cloneNode(true);
+  doc.querySelectorAll('script, style, .event-switch, .event-status-message, #homeCards, #map, #mapSelected, #routeItems').forEach((n) => n.remove());
+  const attrs = [...doc.querySelectorAll('[title], [aria-label], [placeholder], [alt]')].map((n) => ['title', 'aria-label', 'placeholder', 'alt'].map((a) => n.getAttribute(a) || '').join(' '));
+  const text = `${doc.textContent} ${attrs.join(' ')}`.replace(/🍬\s*Treats|Music, flashing and treats/g, ''); // the lights' own listing option
+  return [...new Set(text.match(new RegExp(src, 'giu')) || [])];
+}, HALLOWEEN.source);
+
+test('each event has its own branding: the Halloween look stays on Halloween\'s tabs, the lights and the sale show their own and no Halloween word', async ({ page, request }) => {
+  const e = await events(request);
+  await page.clock.install({ time: NIGHT });
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const halloween of [e.closed, e.next]) {
+      await page.goto(`${LIGHTS}/?e=${halloween.id}`);
+      await expect(page.locator('.intro h1')).toHaveText('👻 Hollow haunts. Big adventures.');
+      await expect(page.locator('.brand-icon')).toHaveText('🎃');
+      expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toUpperCase())).toBe('#E0702B');
+    }
+    for (const [path, headline, color] of [['/', 'Holiday nights. Bright lights.', '#38597F'], [`/?e=${e.sale.id}`, 'Good finds. Close to home.', '#178D80']]) {
+      await page.goto(LIGHTS + path);
+      await expect(page.locator('.intro h1')).toHaveText(headline);
+      expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toUpperCase())).toBe(color);
+      expect(await visibleWords(page), `${path} at ${width}px`).toEqual([]);
+      await page.goto(LIGHTS + '/about' + path.slice(1));
+      expect(await visibleWords(page), `About ${path} at ${width}px`).toEqual([]);
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${LIGHTS}/?e=${e.sale.id}`);
+  await page.screenshot({ path: `${SHOTS}/events-sale-1440.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${LIGHTS}/?e=${e.sale.id}`);
+  await page.screenshot({ path: `${SHOTS}/events-sale-390.png` });
+});
+
+// The organizer console is the community's (D-20261031-52): outside an event's own section (data-event-section: its
+// row, summary or form in Events, its listing column, its audit rows) no page shows an event's words, emoji or colours —
+// not the default event's (here the lights: ✨, midnight blue) and not the Halloween's own branding (🎃, 👻, orange).
+const CONSOLE_FORBIDDEN = /ghost|trick[- ]?or[- ]?treat|\btreats?\b|candy|candies|scare|pumpkin|halloween|holiday nights|hollow haunts|🎃|👻|✨/giu;
+test('the organizer console names the community and uses its own colours; event branding stays in each event\'s own section', async ({ page, request }) => {
+  const guard = watchConsole(page);
+  await signIn(page, request, ORGANIZER, '/admin');
+  await expect(page).toHaveURL(/\/admin$/);
+  for (const scheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: scheme });
+    for (const [path, ready] of [['/admin', '.checklist'], ['/admin/community', '#settingsForm'], ['/admin/community/map', '#status'], ['/admin/addresses', '#rows tr'],
+      ['/admin/disputes', '#list'], ['/admin/audit', 'table.data'], ['/admin/events', '.events-table']]) {
+      await page.goto(LIGHTS + path);
+      await expect(page.locator(ready).first()).toBeAttached();
+      await expect(page.locator('.admin-top .brand-icon')).toHaveText('M');
+      expect(await page.locator('link[href*="theme.css"]').count(), `${path}: no event's stylesheet`).toBe(0);
+      const look = await page.evaluate(() => [getComputedStyle(document.body).getPropertyValue('--orange').trim().toUpperCase(), getComputedStyle(document.querySelector('.admin-top .brand-icon')).backgroundColor]);
+      expect(look[0], `${path} (${scheme}): the console's own colour`).toBe(scheme === 'light' ? '#3B5674' : '#93B2D6');
+      const words = await page.evaluate((src) => {
+        const doc = document.documentElement.cloneNode(true);
+        doc.querySelectorAll('script, style, [data-event-section]').forEach((n) => n.remove());
+        const attrs = [...doc.querySelectorAll('[title], [aria-label], [placeholder], [alt]')].map((n) => ['title', 'aria-label', 'placeholder', 'alt'].map((a) => n.getAttribute(a) || '').join(' '));
+        return [...new Set(`${doc.textContent} ${attrs.join(' ')}`.match(new RegExp(src, 'giu')) || [])];
+      }, CONSOLE_FORBIDDEN.source);
+      expect(words, `${path} (${scheme}) outside an event's own section`).toEqual([]);
+    }
+  }
+  // Where an event is in focus it shows: its row in Events with its type's mark, its listing column in Addresses.
+  await page.goto(LIGHTS + '/admin/events');
+  await expect(page.locator('.events-table [data-event-section="halloween"]').first()).toContainText('🎃');
+  await page.goto(LIGHTS + '/admin/addresses');
+  await expect(page.locator('#listingHead')).toHaveText('✨ Christmas Lights listing');
   guard.assertClean();
 });
 

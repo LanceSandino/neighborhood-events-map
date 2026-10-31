@@ -142,6 +142,20 @@ the API take different hours per night (windows), so a later form can offer them
 - The fictional demo with every public state: `I/MultiEventTest.php::testTheFictionalDemoSeedsEveryPublicState`.
 - Halloween parity with several events possible: a one-event install shows no switcher and keeps its answers (`I/GoldenApiParityTest.php::testTheAnswersAreThe015Ones`: the 0.11 answers plus exactly `state`, `dates_tentative`, `is_default` at the end of the event; homes unchanged).
 
+## Community branding and each event's branding (0.16)
+
+- The owner's acceptance case — a fictional community with its own Halloween branding (ghost headline, trick-or-treat intro, colours, About text) and Halloween, Christmas lights and a yard sale open at once: the lights' and the sale's map, About, sign-in, My house, legal pages and What's new carry no Halloween word (ghost, trick-or-treat, treats, candy, scare, pumpkin, 🎃, 👻) outside the switcher's tab labels, while Halloween keeps its branding: `I/PerEventBrandingTest.php::testTheOtherEventsCarryNoHalloweenWordWhileHalloweenKeepsItsBranding`; the same for emails (sign-in names only the community, a claim names its event and address, a review request the page's event): `::testEmailsNameTheEventTheyConcernAndCarryNoOtherEventsWords`; on the fictional lights demo in a browser: `E/events.spec.mjs` "each event has its own branding…", and `E/season.spec.mjs` (the demo's Halloween branding stays off the lights and the sale it opens).
+- Halloween looks exactly as before after the upgrade from 0.15 and from 0.9: `I/EventBrandingMigrationTest.php` (2 tests; the Halloween pages, /theme.css and /api/community compared with `tests/fixtures/golden/0.15.0-beta.1/branding-halloween.json`, captured from 0.15.0-beta.1 on the same data; down and up again); `I/GoldenApiParityTest.php` (the 0.9, 0.11 and 0.15 answers unchanged).
+- The 0.9 image after an image-only rollback: the stored community keys follow the Halloween it shows (`I/PerEventBrandingTest.php::testTheKeysThe09ImageReadsFollowTheHalloweenItShows`); the drill checks the 0.9 page shows the custom headline (step 5).
+- Organizer → Events branding (strict checks, empty is the type default, kept when a client leaves it out, next year keeps it, BrandPalette per event, the draft preview): `::testOrganizersSetAnEventsBrandingUnderEvents`; `U/Event/EventBrandingTest.php` (4 tests); the community console's own fields: `::testTheCommunityConsoleKeepsOnlyTheCommunitysOwnFields`; community.yaml: `::testCommunityYamlBrandsTheFirstEventAndAnExplicitEventBrandingWins`.
+- What's new without operator words: `I/WhatsNewTest.php`.
+- The organizer console is the community's (D-20261031-52): every console page's chrome (mark, icon, colours, title) is the community's with no Halloween word or emoji, the data of an event names its event and type, the draft preview uses its own colours: `I/OrganizerConsoleNeutralTest.php` (2 tests); in a browser on the fictional lights demo (whose default is the lights and whose Halloween has its own branding), in light and dark, no word, emoji or colour of the default event or of Halloween outside an event's own section on Overview, Community, Boundary, Addresses, Review requests, Audit and Events: `E/events.spec.mjs` "the organizer console names the community and uses its own colours…".
+
+## Known limitations at 0.16.0-beta.1
+
+- An organizer's own reminders (Community & branding) show for every event; each kind of event's built-in list applies only while they are empty.
+- Branding changed on the 0.9 image after an image-only rollback is replaced by the events' own when 0.16 runs again.
+
 ## Known limitations at 0.15.0-beta.1
 
 - Halloween's filter chips, time picker and card hearts are 40 px high (44 px on the other types), kept for parity.

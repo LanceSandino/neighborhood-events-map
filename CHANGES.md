@@ -1441,4 +1441,94 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/multi-event"
   author: "Lance Sandino"
   timestamp: "2026-10-31T17:50:00Z"
+- id: CU-20261031-54
+  type: fix
+  title: "What's new shows plain notes for residents and organizers"
+  description: "The public What's new dialog (every page, three releases) and /changelog (six) rendered CHANGELOG sections that had grown operator and developer text (image-only rollback to 0.9, migrations, pixel sizes, API keys, Halloween's peach). Each release now opens with a plain summary paragraph (ChangelogReader parses the text between a release heading and its first section; templates/partials/_releases.html.twig shows it as .release-summary) and the sections 0.10.0-beta.1 to 0.15.0-beta.1 are rewritten in plain language (also without Halloween words such as treats, so the notes read right on every event's page). The upgrade facts moved to docs/runbooks/upgrade-rollback.md (Notes for each release), whose first step now points there; this file keeps the engineering records (D-20261031-50)."
+  impact: low
+  affected_modules: ["src/About/ChangelogReader.php", "templates/partials/_releases.html.twig", "public/assets/css/app.css", "CHANGELOG.md", "docs/runbooks/upgrade-rollback.md"]
+  related_tests: ["tests/Integration/WhatsNewTest.php: testWhatsNewShowsPlainNotesWithoutOperatorWords", "tests/Unit/About/ChangelogReaderTest.php: testEachReleaseMayOpenWithAPlainSummaryParagraph"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:00:00Z"
+- id: CU-20261031-55
+  type: feat
+  title: "Each event has its own branding; the community keeps only its own"
+  description: "Event/EventBranding: an event's settings.branding (brand_emoji, headline, headline_accent, intro, primary_color, accent_color, about), every field optional (empty is the type's default), strict (unknown keys, over-long text and non-#RRGGBB colours refused with settings.branding.<field> errors, never cut); OccurrenceInput accepts it and keeps it when a client sends settings without it, so next year's event (EventLifecycle::nextFields) and the close step carry it. Community/EventBrandingView puts the selected event's look over its type's defaults into the settings a page sees (keys keep their stored positions, so answers keep their order) and its About text (else the new community.general_about, else the type's built-in text); TypeDefaults keeps only the subtitle and feature defaults (D-20261031-16's branding clause superseded). Branding in its 0.9 shape (top-level branding keys and community.about, as community.yaml gives them) brands the install's first event when a settings save creates it (OccurrenceSettingsSync, CommunityBootstrapper; event.settings.branding names fields explicitly and wins); GET /api/admin/community returns only the community's branding (logo, show_locality) and no community.about, PUT ignores event keys and keeps the default event when no event block is sent; GET /api/admin/events adds each type's default branding (placeholders). The draft preview is CommunityRepository::forEvent(draft), so it shows the draft's own branding. The sidebar's call-to-action icon class is side-icon (no ghost in a core template); About's actions and the map guide's Full guide link keep the page's event (D-20261031-46, -47, -48)."
+  impact: high
+  affected_modules: ["src/Event/EventBranding.php", "src/Event/OccurrenceInput.php", "src/Event/OccurrenceSettingsSync.php", "src/Community/EventBrandingView.php", "src/Community/TypeDefaults.php", "src/Community/CommunityRepository.php", "src/Community/CommunitySchema.php", "src/Community/CommunityBootstrapper.php", "src/Controller/AdminPageController.php", "src/Controller/Api/AdminApiController.php", "src/Controller/Api/EventsAdminApiController.php", "templates/base.html.twig", "templates/legal/about.html.twig", "templates/home/_modals.html.twig", "public/assets/css/app.css"]
+  related_tests: ["tests/Unit/Event/EventBrandingTest.php", "tests/Integration/PerEventBrandingTest.php: testTheOtherEventsCarryNoHalloweenWordWhileHalloweenKeepsItsBranding", "tests/Integration/PerEventBrandingTest.php: testOrganizersSetAnEventsBrandingUnderEvents", "tests/Integration/PerEventBrandingTest.php: testTheCommunityConsoleKeepsOnlyTheCommunitysOwnFields", "tests/Integration/PerEventBrandingTest.php: testCommunityYamlBrandsTheFirstEventAndAnExplicitEventBrandingWins", "tests/Integration/GoldenApiParityTest.php", "tests/Integration/AdminConsoleTest.php: testSettingsUpdateValidatesAndRebrandsWithoutCodeChanges"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:10:00Z"
+- id: CU-20261031-56
+  type: feat
+  title: "Migration: the community's Halloween branding moves to its Halloween events; the 0.9 keys stay as a mirror"
+  description: "migrations/Version20261031000004 (data only): copies the community's custom branding values (not equal to any type's built-in default, the defaults frozen in the migration) and its About text into settings.branding of every Halloween event without one; Christmas lights and sales then show their type's look. The stored community keys are left as they are for the 0.9.0-beta.1 image, and Community/EventBlockMirror now writes the mirrored Halloween's look and About text into them (with the event block) on every settings save and event change; this release never shows them for an event. Down writes them from the Halloween the 0.9 image shows (newest open or closed one-day Halloween, else the newest) and removes every event's branding and community.general_about. tests/fixtures/golden/0.15.0-beta.1/branding-halloween.json holds the Halloween fragments 0.15.0-beta.1 rendered for a fictional community with custom Halloween branding and three open events, captured from that release before any change (D-20261031-49)."
+  impact: high
+  affected_modules: ["migrations/Version20261031000004.php", "src/Community/EventBlockMirror.php", "tests/Support/CustomHalloweenCommunity.php", "tests/fixtures/golden/0.15.0-beta.1/branding-halloween.json"]
+  related_tests: ["tests/Integration/EventBrandingMigrationTest.php: testA015CommunityKeepsItsHalloweenBrandingOnHalloweenOnly", "tests/Integration/EventBrandingMigrationTest.php: testA09InstallUpgradesStraightToPerEventBrandingAndKeeps09sKeys", "tests/Integration/PerEventBrandingTest.php: testTheKeysThe09ImageReadsFollowTheHalloweenItShows"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:20:00Z"
+- id: CU-20261031-57
+  type: feat
+  title: "Emails name the event they concern; the sign-in link names only the community"
+  description: "Mail/Notifier: the sign-in subject is 'Your <community> sign-in link' and its body names no event and no event emoji (an account is the community's); a claim email reads 'Confirm your <community> <event> listing for <address>' with that event's emoji; a review request names the event of the page it was sent from (register.js sends e= with POST /api/disputes). The sender stays MAIL_FROM."
+  impact: medium
+  affected_modules: ["src/Mail/Notifier.php", "templates/email/magic_link.html.twig", "templates/email/magic_link.txt.twig", "public/assets/js/register.js"]
+  related_tests: ["tests/Integration/PerEventBrandingTest.php: testEmailsNameTheEventTheyConcernAndCarryNoOtherEventsWords", "tests/Integration/HeaderBrandingTest.php: testThePageNamesTheCommunitysEventNotAFixedHoliday"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:30:00Z"
+- id: CU-20261031-58
+  type: feat
+  title: "Organizer console: Branding for each event under Events; Community & branding keeps the community's fields"
+  description: "admin/events.js: every event's form has a Branding section (emoji, headline, accent part, main and accent colour — a #RRGGBB text field with a picker kept in step —, intro, About this event), each empty by default with the type's default as its placeholder (types[].branding from the API; a new draft's placeholders follow the chosen type), sent as settings.branding without empty fields, and a link to see it (a draft's preview, a public event's page). admin/community.js: the Branding panel becomes Community branding (all events) with the logo and the city line only, the About panel About the neighborhood (all events) with community.general_about, the event fields give way to an Events panel naming the default event (its type read-only, as D-20261031-01 wants it seen) with a link to Events, the save sends no event block, and the reminders' help says a list of one's own shows for every event (D-20261031-48)."
+  impact: medium
+  affected_modules: ["public/assets/js/admin/events.js", "public/assets/js/admin/community.js", "public/assets/css/admin.css"]
+  related_tests: ["tests/e2e/specs/season.spec.mjs (the restored Halloween's branding entered in the Branding section)", "tests/e2e/specs/admin.spec.mjs: organizer reviews the real-plat example, draws, saves, re-imports and exports identically", "tests/Integration/PerEventBrandingTest.php: testTheCommunityConsoleKeepsOnlyTheCommunitysOwnFields"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:40:00Z"
+- id: CU-20261031-59
+  type: test
+  title: "The fictional lights demo's Halloween has its own branding; e2e checks each event's look"
+  description: "examples/demo-lights/homes.json gives its Halloween (closed by the seed; next year's copies it) a fictional custom branding like a real community's (pumpkin emoji, a ghost headline, a candy intro, orange and purple, an About text). events.spec.mjs adds 'each event has its own branding': both Halloween tabs show it at 390 and 1440 px, the lights and the sale show their own headline and brand colour and no Halloween word on their map and About pages (outside the switcher), and takes events-sale-{1440,390}.png; season.spec.mjs checks the demo's Halloween branding stays off the lights and the sale it opens and puts it back through the Branding section when it restores the demo's Halloween."
+  impact: none
+  affected_modules: ["examples/demo-lights/homes.json", "tests/e2e/specs/events.spec.mjs", "tests/e2e/specs/season.spec.mjs"]
+  related_tests: ["tests/e2e/specs/events.spec.mjs: each event has its own branding", "tests/e2e/specs/season.spec.mjs", "tests/Integration/MultiEventTest.php: testTheFictionalDemoSeedsEveryPublicState"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:50:00Z"
+- id: CU-20261031-60
+  type: test
+  title: "The rollback drill checks the Halloween's custom branding on both sides of the image rollback"
+  description: "bin/drill-event-upgrade.sh: the demo's custom headline on 0.9 before the upgrade; after it (Version20261031000004 at start) the Halloween owns it and still shows it; (4a) an organizer opens Christmas lights, which show their own headline, and changes the Halloween's, which reaches the keys the 0.9 image reads; (5) the 0.9 page shows that headline after the image rollback; (6) each event keeps its look forward again; (8) the restored database's upgrade moves the branding again. scripts/drill_listing.py gains open-event and brand (every other setting kept, with_headline)."
+  impact: none
+  affected_modules: ["bin/drill-event-upgrade.sh", "scripts/drill_listing.py", "docs/runbooks/event-types-migration.md"]
+  related_tests: ["tests/Unit/Deploy/RollbackDrillTest.php: testTheDrillChecksTheCustomHalloweenBrandingAcrossTheRollback", "scripts/tests/test_drill_listing.py: test_a_new_headline_keeps_every_other_setting", "bin/drill-event-upgrade.sh (run on the built images, docs/quality/test-report.md)"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T20:00:00Z"
+- id: CU-20261031-61
+  type: feat
+  title: "The organizer console is the community's; event branding only where an event is in focus"
+  description: "templates/admin/_layout.html.twig: the header mark is the community's logo, else its initial (never the default event's emoji), the browser icon the logo, else public/assets/img/favicon-community.svg, and no /theme.css; admin.css gives the console its own neutral slate-blue tokens (light and two identical dark blocks), so no event's colours and none of Halloween's orange and peach. Event-in-focus sections are marked data-event-section: each event's row, summary and form in Events (with its type's mark, type_icon from GET /api/admin/events), the Overview's new list of public events (default first, with type mark, state, dates and homes; the stat cards are the community's), the Addresses listing column (GET /api/admin/addresses names the event and gives the type's status_label), audit rows about an event and the default event's registration reason. Community & branding: neutral reminders and access labels; switches only one kind of event has are grouped under that kind's name. The draft preview takes its own colours from /admin/events/{id}/theme.css (organizers only, no-store) through a theme block in base.html.twig. Public pages without a logo show the type's tab icon (page_favicon: favicon-lights.svg, favicon-sale.svg; Halloween keeps favicon.svg); the boundary editor draws the outline in the console's colour instead of Halloween's orange (D-20261031-52)."
+  impact: medium
+  affected_modules: ["templates/admin/_layout.html.twig", "templates/admin/event_preview.html.twig", "templates/base.html.twig", "public/assets/css/admin.css", "public/assets/js/admin/overview.js", "public/assets/js/admin/community.js", "public/assets/js/admin/addresses.js", "public/assets/js/admin/audit.js", "public/assets/js/admin/events.js", "public/assets/js/admin/map.js", "public/assets/img/", "src/Controller/AdminPageController.php", "src/Controller/Api/AdminApiController.php", "src/Controller/Api/EventsAdminApiController.php", "src/Event/Type/*Copy.php"]
+  related_tests: ["tests/Integration/OrganizerConsoleNeutralTest.php: testTheConsoleChromeIsTheCommunitysOnEveryPage", "tests/Integration/OrganizerConsoleNeutralTest.php: testTheDataOfAnEventNamesItsEventAndType", "tests/e2e/specs/events.spec.mjs: the organizer console names the community and uses its own colours; event branding stays in each event's own section"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T20:20:00Z"
+- id: CU-20261031-62
+  type: chore
+  title: "0.16.0-beta.1: version, release notes, decisions, ADR 0012, roadmap, docs, acceptance audit, test report and screenshots"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.16.0-beta.1; the release notes (plain, with a summary) describe each event's own branding, the community console's fields, the emails and What's new. DECISIONS D-20261031-46 to -51 (the branding clause of D-20261031-16 superseded; D-20261031-07 and -29 refined), ADR 0012 accepted. ROADMAP Stage 7 and the reminders-per-event gap; docs/architecture/event-types.md (community branding and event branding), the organizer guide (community vs event branding), setup and the lights and sale checklists, the migration runbook (0.16, the drill's step 4a), the upgrade runbook's notes for each release, the reference configurations (branding.* brands the first event; general_about), docs/design/README.md and the README's screenshot table. The acceptance audit gains a per-event branding section; every test it cites exists. Screenshots of the lights demo's Halloween with its own branding and of the sale next to it, with tiles."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "DECISIONS.md", "ROADMAP.md", "docs/adr/", "docs/architecture/", "docs/runbooks/", "docs/design/", "docs/quality/", "config/community.example.yaml", "examples/reference/"]
+  related_tests: ["tests/Unit/About/ReleaseConsistencyTest.php", "tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Integration/EventBootstrapTest.php (the reference configurations import)", "tests/Unit/Deploy/RollbackDrillTest.php"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T20:30:00Z"
 ```

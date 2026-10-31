@@ -42,10 +42,10 @@ or from their own details of the last sale. This page is the organizer's checkli
 3. **Announce** it (residents can list once it has dates), then **Open** it (it needs its dates and days) and **Make
    default** if the front page should show it. Residents see "List for Community Rummage Sale" in My house. When the
    sale is over, **Close** it: the next sale is created with its dates to be announced.
-4. Optional: under **Community & branding**, adjust the words or colours. Branding you never changed already follows the
-   sale (teal and coral, "Good finds. Close to home."); anything you changed stays as you set it
-   ([D-20261031-16](../../DECISIONS.md)). Teal buttons carry dark text so they stay readable
-   ([D-20261031-32](../../DECISIONS.md)).
+4. Optional: in the sale's **Branding of this event** (Organizer → Events → Edit), set its own emoji, headline, intro,
+   colours or About text. Empty fields keep the sale's look (teal and coral, "Good finds. Close to home."); another
+   event's branding never shows on the sale ([ADR 0012](../adr/0012-community-and-event-branding.md)). Teal buttons
+   carry dark text so they stay readable ([D-20261031-32](../../DECISIONS.md)).
 5. For a driving tour, enable the routing provider under Community & branding → Map & routes (an openrouteservice key,
    `ROUTING_PROVIDER=openrouteservice` and `ROUTING_API_KEY`).
 
@@ -88,7 +88,7 @@ event:
     rules:
       - "Park on one side of the street so traffic can pass."
     route_modes: [walking, driving]                  # driving needs a routing provider
-# Leave branding out to use the sale defaults, or set your own colours and words.
+# Leave branding out to use the sale defaults, or set your own colours and words (this first event's own).
 ```
 
 ## Try it locally

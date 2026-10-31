@@ -1,7 +1,8 @@
 /**
  * @module assets/js/register
  * @description "List my house" bottom sheet (address → stop details → email + PoW → link sent) and the
- *     "already claimed → request a review" dispute sheet. The server is the eligibility authority;
+ *     "already claimed → request a review" dispute sheet (sent for the page's event, so the organizer's email names it).
+ *     The server is the eligibility authority;
  *     this file only collects input, solves PoW in a worker and shows friendly results. The event type reads and
  *     checks its own listing fields (events/index.js); the listing goes out with them as `details`. The self-entry
  *     pin goes on the map by a tap or click, or with the keyboard (arrow keys move the map, Enter drops the pin at its
@@ -337,7 +338,7 @@ function initDispute() {
     btn.disabled = true;
     try {
       const pow = await solvePow('dispute', (p) => { $('#dPowBar').style.width = `${Math.round(p * 100)}%`; });
-      const res = await api('/api/disputes', { method: 'POST', body: { address_id: disputeAddressId, house_number: disputeHouse, reporter_email: email, reason, pow, website: $('#dWebsite')?.value || '' } });
+      const res = await api(withEvent('/api/disputes', C.event.id), { method: 'POST', body: { address_id: disputeAddressId, house_number: disputeHouse, reporter_email: email, reason, pow, website: $('#dWebsite')?.value || '' } });
       form.hidden = true;
       const ok = $('#disputeSuccess');
       ok.innerHTML = `<b>🎟️ Request ${esc(res.ticket)} sent.</b><br>${esc(res.message)}<div class="modal-actions"><button type="button" class="secondary" data-close>Close</button></div>`;

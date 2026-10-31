@@ -3,10 +3,14 @@
  * @description Organizer → Events (ADR 0011): every event with its state, how many homes opted in and how many the map
  *     shows; prepare a draft (types this version offers, starting on the type's usual dates: Halloween October 31,
  *     Christmas lights November 1 to January 1, a sale's dates to be announced), edit (name, dates or "to be
- *     announced", tentative, hours, rules, the thank-you message, the type's own settings), preview a draft, announce
+ *     announced", tentative, hours, rules, the thank-you message, the type's own settings and the event's own branding —
+ *     emoji, headline, intro, colours and About text, each optional with the type's default as its placeholder, ADR 0012),
+ *     preview a draft (a public event: its page), announce
  *     it (upcoming), open, close (the confirmation shows the thank-you text and next year's dates it creates), make an
  *     event the default (what "/" shows), archive, export one event's listings (CSRF-checked form POST) and delete an
- *     archived event's listings. Several events may be on at once, one of each kind. The server checks everything.
+ *     archived event's listings. Several events may be on at once, one of each kind. Each event's row, summary and form
+ *     is its own section (data-event-section) with its type's mark: the one place in the console an event's words and
+ *     branding show (D-20261031-52). The server checks everything.
  * @dependencies admin/common.js, lib/api.js
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
@@ -28,7 +32,7 @@ function form(e) {
   const rules = ((e && e.settings && e.settings.rules) || []).join('\n');
   const [first, last] = e ? [e.starts_on, e.ends_on] : ((typeOf(type) || {}).new_dates || [null, null]);
   const tbd = !first;
-  return `<form id="eventForm" class="form-grid" novalidate>
+  return `<form id="eventForm" class="form-grid" data-event-section="${esc(type || '')}" novalidate>
     <div class="field"><label for="evType">Event type</label><select id="evType" ${e ? 'disabled' : ''}>${(e ? [{ key: e.type, name: e.type_name }] : data.types).map((t) => `<option value="${esc(t.key)}" ${t.key === type ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
       <span class="form-caption">${e ? 'The type of an event never changes.' : 'This version offers ' + esc(data.types.map((t) => t.name).join(', ')) + '.'}</span></div>
     <div class="field"><label for="evName">Public name</label><input id="evName" maxlength="60" value="${esc(e ? e.name : '')}" placeholder="${esc((typeOf(type) || {}).name || '')}"></div>
@@ -44,8 +48,42 @@ function form(e) {
     <div class="field full"><label for="evClosing">Thank-you message when it closes (optional, up to 400 characters)</label><textarea id="evClosing" maxlength="400" placeholder="${esc(closingPlaceholder(type))}">${esc((e && e.settings && e.settings.closing_message) || '')}</textarea>
       <span class="form-caption">Leave it empty for the default, which names next year's dates. Shown instead of homes once the event is closed.</span></div>
     <div class="field full">${typeFields(type, e)}</div>
+    <fieldset class="field full brand-fields" aria-describedby="evBrandHelp"><legend class="label">Branding of this event</legend>
+      <p class="form-caption" id="evBrandHelp">Every field is optional: an empty field uses the built-in look of this kind of event, shown in grey. The community’s name, logo and links are the same for every event (Community &amp; branding).</p>
+      <div class="form-grid" id="evBrandFields">${brandFields(type, e)}</div>
+      <p class="form-caption">${previewLink(e)}</p></fieldset>
     <div class="field full"><div class="modal-actions"><button type="button" class="secondary" id="evCancel">Cancel</button><button type="submit" class="primary">${e ? 'Save event' : 'Save draft'}</button></div></div>
   </form>`;
+}
+
+/** The event's own branding; each field shows the type's default as its placeholder (an empty field keeps it). */
+function brandFields(type, e) {
+  const b = (e && e.settings && e.settings.branding) || {};
+  const d = (typeOf(type) || {}).branding || {};
+  const text = (id, key, label, max) => `<div class="field"><label for="${id}">${label}</label><input id="${id}" data-brand="${key}" maxlength="${max}" value="${esc(b[key] || '')}" placeholder="${esc(d[key] || '')}"></div>`;
+  const color = (id, key, label) => `<div class="field"><label for="${id}">${label}</label><div class="color-row"><input id="${id}" data-brand="${key}" maxlength="7" spellcheck="false" autocomplete="off" value="${esc(b[key] || '')}" placeholder="${esc(d[key] || '')}" aria-describedby="${id}Help"><input type="color" id="${id}Pick" value="${esc((b[key] || d[key] || '#000000').toLowerCase())}" aria-label="Pick the ${label.toLowerCase()}"></div><span class="form-caption" id="${id}Help">Like ${esc(d[key] || '#38597F')}; text on it stays readable.</span></div>`;
+  return [text('evEmoji', 'brand_emoji', 'Emoji', 8), text('evHeadline', 'headline', 'Headline', 40), text('evHeadlineAccent', 'headline_accent', 'Headline (accent part)', 40),
+    color('evPrimary', 'primary_color', 'Main colour'), color('evAccent', 'accent_color', 'Accent colour'),
+    `<div class="field full"><label for="evIntro">Intro text</label><textarea id="evIntro" data-brand="intro" maxlength="280" placeholder="${esc(d.intro || '')}">${esc(b.intro || '')}</textarea></div>`,
+    `<div class="field full"><label for="evAbout">About this event</label><textarea id="evAbout" data-brand="about" maxlength="1500" placeholder="${esc(d.about || '')}">${esc(b.about || '')}</textarea><span class="form-caption">Shown on the event’s About page; empty: the neighborhood’s general text, or the built-in one. Blank lines start a new paragraph.</span></div>`].join('');
+}
+
+/** Where to see the branding: a draft's preview, a public event's own page. */
+function previewLink(e) {
+  if (!e) return 'Save the draft, then preview it to see its look.';
+  if (e.state === 'draft') return `<a href="/admin/events/${e.id}/preview">Preview this draft</a> to see its look (save first).`;
+  return e.state === 'archived' ? '' : `<a href="/?e=${e.id}">Open this event’s page</a> to see its look (save first).`;
+}
+
+/** A colour's text field and its picker stay in step; the text may be empty (the type's default). */
+function bindColors() {
+  for (const id of ['evPrimary', 'evAccent']) {
+    const textBox = $(`#${id}`);
+    const pick = $(`#${id}Pick`);
+    if (!textBox || !pick) continue;
+    pick.addEventListener('input', () => { textBox.value = pick.value.toUpperCase(); });
+    textBox.addEventListener('input', () => { if (/^#[0-9a-f]{6}$/i.test(textBox.value.trim())) pick.value = textBox.value.trim().toLowerCase(); });
+  }
 }
 
 const closingPlaceholder = (type) => ((typeOf(type) || {}).closing_template || '').replace('{event}', 'This year’s event').replace('{next}', 'next year’s dates');
@@ -83,7 +121,7 @@ function row(e) {
   if (e.state !== 'archived') a.push(`<button type="button" class="secondary" data-archive="${e.id}">Archive</button>`);
   a.push(`<form class="inline-form" method="post" action="/api/admin/events/${e.id}/export"><input type="hidden" name="_csrf" value="${esc(csrfToken())}"><button type="submit" class="secondary">Export CSV</button></form>`);
   if (e.state === 'archived' && e.opted_in > 0) a.push(`<button type="button" class="danger" data-purge="${e.id}">Delete listings</button>`);
-  return `<tr data-event="${e.id}"><td><b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''}<br><span class="form-caption">${esc(e.type_name)}${offered ? '' : ' · not offered by this version'}</span></td>
+  return `<tr data-event="${e.id}" data-event-section="${esc(e.type)}"><td><span aria-hidden="true">${esc(e.type_icon || '')}</span> <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''}<br><span class="form-caption">${esc(e.type_name)}${offered ? '' : ' · not offered by this version'}</span></td>
     <td class="nowrap">${esc(dates(e))}<br><span class="form-caption">${esc(e.default_start)}–${esc(e.default_end)}</span></td>
     <td>${esc(STATE[e.state] || e.state)}${e.state === 'open' && e.activated_at ? `<br><span class="form-caption">since ${esc(fmtDate(e.activated_at))}</span>` : ''}${e.state === 'closed' && e.closed_at ? `<br><span class="form-caption">since ${esc(fmtDate(e.closed_at))}</span>` : ''}</td>
     <td>${e.opted_in}</td><td>${e.state === 'open' ? e.public : '—'}</td><td><div class="row-actions">${a.join('')}</div></td></tr>`;
@@ -93,7 +131,7 @@ function render() {
   const shown = data.events.filter((e) => ['upcoming', 'open', 'closed'].includes(e.state));
   $('#admin-events').innerHTML = `
     <div class="panel"><h2>On the public site</h2>${shown.length
-      ? `<ul class="event-summary">${shown.map((e) => `<li><b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''} · ${esc(STATE[e.state])} · ${esc(dates(e))}${e.state === 'open' ? ` · ${e.public} of ${e.opted_in} listed homes on the map` : (e.opted_in ? ` · ${e.opted_in} homes listed` : '')}</li>`).join('')}</ul>`
+      ? `<ul class="event-summary">${shown.map((e) => `<li data-event-section="${esc(e.type)}"><span aria-hidden="true">${esc(e.type_icon || '')}</span> <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''} · ${esc(STATE[e.state])} · ${esc(dates(e))}${e.state === 'open' ? ` · ${e.public} of ${e.opted_in} listed homes on the map` : (e.opted_in ? ` · ${e.opted_in} homes listed` : '')}</li>`).join('')}</ul>`
       : '<p class="notice">No event is public. Visitors see “No event on the map right now” and nobody can list a home until you announce or open an event.</p>'}
       <p class="form-caption">Several events can be on at once, one of each kind; visitors switch between them and “/” shows the default. Closing an event shows its thank-you message and creates next year's event of the same kind (upcoming, tentative dates). Claims stay with their residents; listings belong to one event, and nothing is copied from an earlier event unless a resident chooses “Use last year's details”.</p></div>
     <div class="panel"><h2>${editing ? 'Edit event' : 'Prepare an event'}</h2><div id="eventFormHost">${editing !== undefined && editing !== false ? form(editing) : '<button type="button" class="primary" id="evNew">+ Prepare an event</button>'}</div></div>
@@ -118,6 +156,7 @@ function readForm() {
     body.settings.categories = [...document.querySelectorAll('input[name="evCategory"]:checked')].map((i) => i.value);
     body.settings.early_bird_time = $('#evEarly').value || null;
   }
+  body.settings.branding = Object.fromEntries([...document.querySelectorAll('#evBrandFields [data-brand]')].map((i) => [i.dataset.brand, i.value.trim()]).filter(([, v]) => v !== ''));
   if (!editing) body.type = type;
   return body;
 }
@@ -184,8 +223,11 @@ function bindForm() {
     $('#evEnd').value = last || '';
     $('#evClosing').placeholder = closingPlaceholder(type);
     $('#evTypeFields').outerHTML = typeFields(type, null);
+    $('#evBrandFields').innerHTML = brandFields(type, null); // the new type's defaults as placeholders
+    bindColors();
     syncDates();
   });
+  bindColors();
   $('#evTbd').addEventListener('change', syncDates);
   syncDates();
   $('#evCancel').addEventListener('click', () => { editing = false; render(); });
