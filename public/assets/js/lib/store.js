@@ -1,7 +1,7 @@
 /**
  * @module assets/js/lib/store
  * @description Browser-only preferences (filters, saved homes, chosen start, own stop order, skipped stops) namespaced by
- *     community and season year, plus named saved routes: each keeps its own copy of those route fields, and edits go
+ *     community and event (one-time move of the 0.10 year store, migrateYearStore), plus named saved routes: each keeps its own copy of those route fields, and edits go
  *     to the active route (or to the unsaved draft). Nothing here is sent to the server; GPS is never stored.
  */
 const ROUTE_FIELDS = ['saved', 'filters', 'start', 'order', 'skipped', 'routeAll'];
@@ -19,8 +19,27 @@ function clean(r) {
   };
 }
 
-export function createStore(communityId, year, storage = globalThis.localStorage) {
-  const key = `nhm:${communityId}:${year}`;
+/**
+ * Since 0.11 the store is namespaced by community and EVENT id (nhm:<community>:<eventId>); 0.10 and earlier used the
+ * season's year. This moves a year store into the active Halloween event's store once and removes it, so visitors keep
+ * their saved homes and routes and the old store can never reach a later event. Returns true when it moved one.
+ */
+export function migrateYearStore(communityId, year, eventId, storage = globalThis.localStorage) {
+  const from = `nhm:${communityId}:${year}`;
+  const to = `nhm:${communityId}:${eventId}`;
+  if (from === to) return false;
+  try {
+    const old = storage.getItem(from);
+    if (old === null) return false;
+    if (storage.getItem(to) === null) storage.setItem(to, old);
+    storage.removeItem(from);
+    return true;
+  } catch { return false; /* private mode: nothing stored, nothing to move */ }
+}
+
+/** @param {string} namespace the event id (0.10 and earlier: the season's year) */
+export function createStore(communityId, namespace, storage = globalThis.localStorage) {
+  const key = `nhm:${communityId}:${namespace}`;
   const defaults = { saved: [], filters: {}, start: '', order: [], skipped: [], routeAll: false, view: 'cards', routes: [], activeRoute: null, draft: null };
   let state;
   try { state = { ...defaults, ...JSON.parse(storage.getItem(key) || '{}') }; } catch { state = { ...defaults }; }

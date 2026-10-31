@@ -74,7 +74,7 @@ function render() {
       ${field('eName', 'Event name', s.event.name, `maxlength="40" placeholder="${esc(type.name)}"`)}
       ${field('eStart', 'Suggested start', s.event.starts_at, 'type="time"')}
       ${field('eEnd', 'Suggested end', s.event.ends_at, 'type="time"')}
-    </div><p class="form-caption">Public listings show only homes that opted in for this date. Changing the date to next year hides last season's homes until owners save again.</p></div>
+    </div><p class="form-caption">This is the event on the map now (<a href="/admin/events">Organizer → Events</a>). Its name and hours change here, its date only while no home is listed. For next season, prepare a new event under Events: each season's listings stay with their season.</p></div>
     <div class="panel"><h2>Branding</h2><div class="form-grid">
       ${field('bEmoji', 'Brand emoji', s.branding.brand_emoji, 'maxlength="8"')}
       <div class="field"><span class="label">Name</span><label class="check-chip"><input type="checkbox" id="bPlace" ${s.branding.show_locality ? 'checked' : ''}> Show city under the name</label></div>

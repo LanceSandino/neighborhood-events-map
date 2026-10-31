@@ -1,6 +1,6 @@
 /**
  * @module assets/js/admin/overview
- * @description Setup checklist, counts, warnings and the registration switch.
+ * @description Setup checklist (with the event on the map), the active event's counts, warnings and the registration switch.
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
 import { csrfToken } from '../lib/api.js';
@@ -21,7 +21,8 @@ async function load() {
     ${o.pending_addresses.length ? `<div class="panel"><h2>New addresses to approve</h2><p class="form-caption">Residents added these homes themselves. Check each one, then choose Approve (or Hide) on the Addresses page.</p>
       <ul class="link-list">${o.pending_addresses.map((p) => `<li><a href="/admin/addresses?q=${encodeURIComponent(p.address)}">${esc(p.address)}</a></li>`).join('')}</ul></div>` : ''}
     <div class="panel"><h2>Setup checklist</h2><ul class="checklist">
-      ${item(o.configured, 'Community details', '<a href="/admin/community">Name, branding, event date and time zone</a>')}
+      ${item(o.configured, 'Community details', '<a href="/admin/community">Name, branding and time zone</a>')}
+      ${item(o.event ? true : 'warn', o.event ? `Event on the map: ${esc(o.event.name)} (${esc(o.event.starts_on === o.event.ends_on ? o.event.starts_on : `${o.event.starts_on} – ${o.event.ends_on}`)})` : 'No event is on the map', '<a href="/admin/events">Prepare, switch or end events</a>')}
       ${item(b.present, 'Neighborhood boundary', '<a href="/admin/community/map">Draw or import a real GeoJSON boundary</a>')}
       ${item(b.approved ? true : (b.present ? 'warn' : false), b.approved ? `Boundary v${b.version} approved` : 'Boundary approval', 'House listings stay closed until you review the outline against real streets and approve it.')}
       ${item(b.zones_without_geometry.length === 0 ? true : 'warn', 'Zone geometry', b.zones_without_geometry.length ? 'Zones without polygons: ' + esc(b.zones_without_geometry.join(', ')) : 'Every configured zone has a polygon (or none are used).')}

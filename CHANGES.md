@@ -1031,4 +1031,34 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p2"
   author: "Lance Sandino"
   timestamp: "2026-10-31T09:00:00Z"
+- id: CU-20261031-13
+  type: feature
+  title: "Organizer → Events: list events with opted-in and public counts, prepare drafts, preview, put a draft on the map (archiving the current event in one locked transaction), end an event, export one event's listings, delete an archived event's listings"
+  description: "EventsAdminApiController (ROLE_ADMIN, CSRF): GET /api/admin/events, POST /api/admin/events (a draft of a type this version offers; Event/OccurrenceInput validates name, days — one for a one-day type, at most 62 —, default hours and the shared settings rules, route_modes and max_days; unknown fields refused), PUT /api/admin/events/{id} (a draft or the active event; the type never changes; moving the active event while homes are listed needs move_listings and moves a one-day event's windows with its day, mirrored to the legacy rows), POST …/activate {confirm, replaces} (Event/EventLifecycle: the occurrences advisory lock, the draft FOR UPDATE, the event it replaces must still be the active one — otherwise 409 changed —, the current one archived and its day's legacy rows unpublished, the draft activated, the settings mirror written; a unique violation is a 409 too), POST …/archive {confirm} (any type, including one this version does not offer), POST …/export (a CSRF-checked form POST; Event/EventListingExport, no owner emails, formula cells quoted), POST …/purge-listings {confirm: DELETE} (archived events only; their legacy rows go too unless the active event shares the day). Every change is audited (event.created/updated/activated/archived/exported/listings_purged). The console page /admin/events (admin/events.js) and an organizer-only draft preview /admin/events/{id}/preview (the public page with the draft's type, words and dates, no homes, no map scripts, no-store, noindex). The overview names the event on the map; Community → Event explains that the next season is a new event. Community → Event saves still write the active event (name, hours; dates only while nobody is listed)."
+  impact: high
+  affected_modules: ["src/Event/EventLifecycle.php", "src/Event/OccurrenceInput.php", "src/Event/EventListingExport.php", "src/Event/EventConflictException.php", "src/Controller/Api/EventsAdminApiController.php", "src/Controller/AdminPageController.php", "templates/admin/", "public/assets/js/admin/events.js", "public/assets/js/admin/overview.js", "public/assets/js/admin/community.js", "public/assets/css/admin.css"]
+  related_tests: ["tests/Integration/EventsConsoleTest.php: testAnOrganizerPreparesPreviewsAndSwitchesToTheNextEventWithoutCarryingAnythingOver, testEndingTheEventLeavesANeutralMapAndRetentionDeletesItsListings, testTheActiveEventMovesOnlyWithItsHomesAndTheCommunityFormIsAViewOfIt, testAnEventOfATypeThisVersionDoesNotOfferBreaksNothingAndCanBeArchived, testOnlyOrganizersReachEventsAndThePreview", "tests/Integration/EventActivationRaceTest.php (forked processes: four drafts at once → one winner; the same draft three times → one activation; the index refuses a second active row)", "tests/Integration/EventBootstrapTest.php"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T11:00:00Z"
+- id: CU-20261031-14
+  type: feature
+  title: "My house: each claimed home shows its listing for the event on the map, or \"List for <event>\" with an empty form; claim requests belong to their event"
+  description: "GET /api/me names the event (id, name, type, active, dates, default hours) and each home's can_list; a home's listing is only the active event's. POST /api/me/homes/{id}/listing lists an owned home for the active event from the submitted fields only (ResidentHomes::create; the address's hold applies; 409 already_listed; closed between events or when listings are closed); PATCH of a home not listed for the event answers 404 not_listed instead of reviving last season's listing. me.js hides the status buttons and the form of such a home and offers \"List for <event>\": the form opens with the event's default hours and nothing else filled in. The client never sends an event id. A claim intent records the event it was made for and is refused if another event is active when it is confirmed."
+  impact: medium
+  affected_modules: ["src/Controller/Api/MeApiController.php", "src/Listing/ResidentHomes.php", "src/Claim/ClaimService.php", "templates/me/index.html.twig", "public/assets/js/me.js", "public/assets/css/app.css"]
+  related_tests: ["tests/Integration/EventsConsoleTest.php: testAnOrganizerPreparesPreviewsAndSwitchesToTheNextEventWithoutCarryingAnythingOver (listing null, can_list, PATCH 404, List for starts empty, 409 twice, last season kept apart)", "tests/e2e/specs/season.spec.mjs"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T11:00:00Z"
+- id: CU-20261031-15
+  type: feature
+  title: "Saved homes, filters and routes are kept per event (nhm:<community>:<event id>); the 0.10 year store moves in once; shared links carry e=<event id> and a link for another event drops its stops"
+  description: "lib/store.js migrateYearStore moves nhm:<community>:<year> into the active Halloween event's store once and removes it (the Halloween module sets migratesYearStore), so current visitors keep their saved homes and named routes and no later event inherits them. home.js opens the store by event id. route-panel.js puts e=<event id> on every shared link; lib/share.js otherEvent recognizes a link for another event (or a damaged value), and home.js then opens the map without that link's stops or filters and says so; links made before 0.11 (no e) open as before."
+  impact: low
+  affected_modules: ["public/assets/js/lib/store.js", "public/assets/js/lib/share.js", "public/assets/js/home.js", "public/assets/js/route-panel.js", "public/assets/js/events/halloween.js"]
+  related_tests: ["tests/js/event-storage.test.mjs", "tests/js/lib.test.mjs (unchanged)", "tests/e2e/specs/season.spec.mjs: a link for the archived event shows the notice and no stops", "tests/e2e/specs/public.spec.mjs: the store key names the event"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T11:00:00Z"
 ```

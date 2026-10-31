@@ -23,7 +23,7 @@
   <a class="brand" href="/admin"><div class="brand-icon" aria-hidden="true">{{ c.branding.brand_emoji }}</div><div><div class="brand-name">{{ c.community.name }}</div><div class="brand-sub">Organizer console</div></div></a>
   <nav class="admin-tabs" aria-label="Organizer sections">
     {% for key, label in pages %}
-      <a href="{{ {'overview': '/admin', 'community': '/admin/community', 'map': '/admin/community/map', 'addresses': '/admin/addresses', 'disputes': '/admin/disputes', 'audit': '/admin/audit'}[key] }}" {% if key == page %}aria-current="page" class="active"{% endif %}>{{ label }}</a>
+      <a href="{{ {'overview': '/admin', 'events': '/admin/events', 'community': '/admin/community', 'map': '/admin/community/map', 'addresses': '/admin/addresses', 'disputes': '/admin/disputes', 'audit': '/admin/audit'}[key] }}" {% if key == page %}aria-current="page" class="active"{% endif %}>{{ label }}</a>
     {% endfor %}
   </nav>
   <div class="admin-actions"><a class="secondary" href="/">View site</a><a class="secondary" href="/me">My house</a><button type="button" class="secondary" id="btnLogout">Sign out</button></div>

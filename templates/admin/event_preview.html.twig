@@ -1,0 +1,11 @@
+{% extends 'home/index.html.twig' %}
+{# Organizer-only preview of a draft event (Organizer → Events → Preview): the public map's page with the draft's type,
+   words and dates and no listings. No map scripts run (nothing loads the active event's homes), robots are told to
+   stay away and the response is not cached. #}
+{% block meta %}<meta name="robots" content="noindex">{% endblock %}
+{% block title %}Preview · {{ c.event.name }} · {{ c.community.name }}{% endblock %}
+{% block body %}
+<p class="notice preview-banner" role="status">Preview of the draft “{{ c.event.name }}” ({{ c.event.starts_on }}{% if c.event.ends_on != c.event.starts_on %} – {{ c.event.ends_on }}{% endif %}). Only organizers see this page; it shows no homes. <a href="/admin/events">Back to Events</a></p>
+{{ parent() }}
+{% endblock %}
+{% block scripts %}{% endblock %}

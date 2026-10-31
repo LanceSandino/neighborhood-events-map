@@ -10,6 +10,9 @@ import { time12, toMinutes } from '../lib/clock.js';
 
 export const key = 'halloween';
 
+/** Saved homes and routes of 0.10 were kept per season year; the active Halloween event takes them over once. */
+export const migratesYearStore = true;
+
 /** Filter toggles, in the order of the saved and shared filter object; quick ones are icon buttons on the map. */
 export const filters = [
   { key: 'candy', quick: true }, { key: 'lowSensory', quick: true }, { key: 'noScares', quick: false },
