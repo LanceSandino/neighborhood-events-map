@@ -148,6 +148,36 @@ a.crumb:hover strong { color: var(--link); }
 .crumb-name strong { overflow: hidden; text-overflow: ellipsis; }
 .crumb-sub { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .2px; }
 .topright { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+/* The event switcher (ADR 0011): while several events are public, a second row of the top bar holds a segmented
+   control of links (the Appearance panel's look), 44 px targets, scrolling inside its own box when it is wider than
+   the screen. The current event is raised and outlined; an event that is not open says so in words. */
+.topline.has-switch { border-bottom: 0; }
+.event-switch-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 38px 12px; }
+.event-switch { display: flex; gap: 4px; width: max-content; max-width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-3); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.event-switch::-webkit-scrollbar { display: none; }
+/* A soft edge where more events are (a mask: only the opacity counts). */
+.event-switch.more-after { mask-image: linear-gradient(90deg, var(--text) calc(100% - 36px), transparent); }
+.event-switch.more-before { mask-image: linear-gradient(90deg, transparent, var(--text) 36px); }
+.event-switch.more-before.more-after { mask-image: linear-gradient(90deg, transparent, var(--text) 36px, var(--text) calc(100% - 36px), transparent); }
+.event-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border-radius: 10px; color: var(--text-2); font-size: 13px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.event-tab:hover { color: var(--text-strong); background: var(--surface-2); }
+.event-tab.current { background: var(--surface); color: var(--text-strong); box-shadow: var(--shadow-sm); outline: 1px solid var(--warm-border); }
+.event-tab:focus-visible { outline-offset: -2px; }
+.event-tab-icon { font-size: 16px; line-height: 1; }
+.event-tab-state { padding: 2px 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+/* An upcoming or closed event's page: one card where the map would be, then the event's rules. */
+.event-status { display: flex; align-items: flex-start; gap: 16px; margin-top: 20px; padding: 22px 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 15px; }
+.event-status-icon { font-size: 34px; line-height: 1; flex-shrink: 0; }
+.event-status-body { min-width: 0; }
+.event-status h2 { margin: 2px 0 0; font-size: 22px; color: var(--text-strong); }
+.event-status-message { margin: 8px 0 0; max-width: 68ch; color: var(--text-2); font-size: 15px; line-height: 1.55; }
+.event-status-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
+.event-status-actions .form-caption { margin: 0; }
+.event-status-rules { margin-top: 16px; padding: 18px 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 15px; }
+.event-status-rules h2 { margin: 0 0 8px; font-size: 16px; color: var(--text-strong); }
+.home-events { font-size: 13px; color: var(--muted); }
+.copy-previous { margin: 4px 0 12px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-2); }
+.copy-previous .introtext { margin: 0 0 8px; }
 .event-pill { text-decoration: none; }
 .demo-pill, .event-pill, .top-add { height: 32px; display: inline-flex; align-items: center; padding-top: 0; padding-bottom: 0; }
 .event-pill { background: var(--warm); color: var(--warm-text); border: 1px solid var(--warm-border); font-size: 12px; font-weight: 900; letter-spacing: .7px; padding: 8px 12px; border-radius: 30px; white-space: nowrap; }
@@ -501,6 +531,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 @media (max-width: 850px), (max-height: 500px) and (orientation: landscape) {
   .sidebar { display: none; }
   .topline { padding: 0 20px; }
+  .event-switch-bar { padding: 0 20px 10px; }
   .content { padding: 23px 16px 24px; }
   .site-footer { padding-bottom: calc(136px + env(safe-area-inset-bottom)); }
   .to-top { bottom: calc(76px + env(safe-area-inset-bottom)); }
@@ -517,6 +548,13 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 @media (max-width: 660px) {
   body { background: var(--bg); }
   .topline { height: 56px; padding: 0 12px; }
+  .event-switch-bar { padding: 0 12px 10px; }
+  .event-tab { padding: 0 11px; gap: 6px; font-size: 12px; }
+  .event-status { margin-top: 14px; padding: 16px; gap: 12px; }
+  .event-status-icon { font-size: 28px; }
+  .event-status h2 { font-size: 19px; }
+  .event-status-message { font-size: 14px; }
+  .event-status-rules { padding: 14px 16px; }
   .crumb { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .topright .top-add { display: none; }
   .topright { gap: 6px; }

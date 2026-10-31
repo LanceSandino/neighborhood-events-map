@@ -11,7 +11,8 @@
   {% if c.community.subtitle %}<p class="legal-lead">{{ c.community.subtitle }}</p>{% endif %}
 
   <div class="about-facts">
-    {% if (c.event.active ?? true) and (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ c.event.days ?? false ? day_list(c.event.days) : date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; {{ et.copy.own_schedule ?? 'each home sets its own nights and hours' }}.</p></div></div>
+    {% if (c.event.active ?? true) and c.event.starts_on is defined and c.event.starts_on is null %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>Dates to be announced</b><p>Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; each home sets its own.</p></div></div>
+    {%- elseif (c.event.active ?? true) and (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ c.event.days ?? false ? day_list(c.event.days) : date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; {{ et.copy.own_schedule ?? 'each home sets its own nights and hours' }}.</p></div></div>
     {%- elseif c.event.active ?? true %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; each home sets its own.</p></div></div>
     {%- else %}<div class="about-fact"><span aria-hidden="true">📅</span><div><b>No event on the map right now</b><p>The next event's date appears here when the organizer starts it.</p></div></div>{% endif %}
     {% if c.community.locality %}<div class="about-fact"><span aria-hidden="true">📍</span><div><b>{{ c.community.locality }}{% if c.community.region %}, {{ c.community.region }}{% endif %}</b><p>{{ c.map.boundary_status == 'approved' ? 'Homes inside the neighborhood outline can take part.' : 'The neighborhood outline is still being reviewed.' }}</p></div></div>{% endif %}
@@ -21,7 +22,7 @@
   <nav class="about-connect" aria-label="Links and contact">
     {% for l in c.community.links ?? [] %}<a class="pill-link" href="{{ l.url }}" rel="noopener noreferrer"><span aria-hidden="true">🔗</span>{{ l.label }}</a>{% endfor %}
     {% if c.community.contact_url %}<a class="pill-link" href="{{ c.community.contact_url }}" rel="noopener"><span aria-hidden="true">✉️</span>Contact the organizer</a>{% endif %}
-    <a class="pill-link accent" href="/"><span aria-hidden="true">🗺️</span>Open the map</a>
+    <a class="pill-link accent" href="/{{ event_query() }}"><span aria-hidden="true">🗺️</span>Open the map</a>
   </nav>
   {% if not c.community.contact_url %}<p class="form-caption">Questions about the event, a listing or your data? {% include 'legal/_contact.html.twig' %}.</p>{% endif %}
 

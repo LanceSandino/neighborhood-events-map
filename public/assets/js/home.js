@@ -7,7 +7,7 @@
  *     toggles, symbols, tags, statuses and words.
  * @dependencies lib/*, events/index.js, home-map.js, route-panel.js, register.js
  */
-import { api } from './lib/api.js';
+import { api, withEvent } from './lib/api.js';
 import { createStore, migrateYearStore } from './lib/store.js';
 import { defaultFilters, matches, activeFilterCount, normalizeFilters, choiceCounts } from './lib/filters.js';
 import { eventType } from './events/index.js';
@@ -284,7 +284,7 @@ function bind() {
 async function refresh() {
   if (document.hidden) return;
   try {
-    const data = await api('/api/homes');
+    const data = await api(withEvent('/api/homes', C.event.id));
     homes = data.homes;
     render();
     if (activeId) selectHome(activeId, { pan: false });
@@ -320,5 +320,5 @@ const whenLoaded = (fn) => (document.readyState === 'complete' ? fn() : addEvent
 whenLoaded(() => {
   routeFromHash();
   if (shared.stops) route.open();
-  if (shared.otherEvent) { history.replaceState(null, '', '/'); toast('That shared link was made for another event, so its stops are not shown.', 10000); }
+  if (shared.otherEvent) { history.replaceState(null, '', C.event.is_default === false ? `/?e=${C.event.id}` : '/'); toast('That shared link was made for another event, so its stops are not shown.', 10000); }
 });

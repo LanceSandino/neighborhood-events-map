@@ -1,12 +1,15 @@
 {% extends 'base.html.twig' %}
-{# "My house": the resident's own homes (assets/js/me.js fills the template). The event type supplies the statuses
-   and its listing fields. A home not listed for the event on the map offers "List for <event>" with an empty form. #}
+{# "My house": the resident's own homes (assets/js/me.js fills the template) for the event the page is about (the
+   switcher above, ?e=<id>, else the default event; ADR 0011). The event type supplies the statuses and its listing
+   fields. A home not listed for an upcoming or open event offers "List for <event>" with an empty form and, when the
+   resident listed it for the previous event of the same type, "Use last year's details". A closed event is read-only. #}
 {% set nav = 'me' %}
+{% set switch_path = '/me' %}
 {% set et = event_type(c.event.type) %}
 {% block title %}My house · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block meta %}<meta name="csrf-token" content="{{ csrf_token('nhm') }}">{% endblock %}
 {% block body %}
-<div class="dash" id="dashboard">
+<div class="dash" id="dashboard" data-event="{{ c.event.id ?? '' }}">
   <div class="dash-head">
     <div><div class="eyebrow">🔑 Signed in</div><h1>My house</h1><p class="session-hint" id="sessionHint">Loading…</p></div>
     <div class="bottom-actions"><a class="secondary hide" href="/admin" id="adminLink">Organizer console</a><button type="button" class="secondary" id="btnLogoutAll">Sign out everywhere</button><button type="button" class="secondary" id="btnLogout">Sign out</button></div>
@@ -23,8 +26,10 @@
   <article class="dash-home">
     <h2 data-f="address"></h2>
     <p class="introtext" data-f="meta"></p>
+    <p class="home-events hide" data-f="events"></p>
     <div class="notice hide" data-f="warning"></div>
     <div class="list-for hide" data-f="listFor"><p class="introtext" data-f="listForText"></p><button type="button" class="primary hide" data-f="listForButton"></button></div>
+    <div class="copy-previous hide" data-f="copyBox"><p class="introtext">You listed this home last time. Start from those details, check them and save — nothing is shown until you save.</p><button type="button" class="secondary" data-f="copyPrevious">Use last year’s details</button></div>
     <div class="status-row" role="group" aria-label="{{ et.copy.status_group }}">
       {%- for key, s in et.statuses %}
       <button type="button" class="secondary" data-status="{{ key }}">{{ s.icon }} {{ s.label }}</button>
