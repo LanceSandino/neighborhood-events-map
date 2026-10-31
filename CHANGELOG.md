@@ -6,6 +6,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Fixed
+- A sale note with an ordinary number range such as "items 100-1000" is no longer refused as a phone number. Real phone numbers are still refused: a seven-digit number counts when it could be a real local number (its first digit is 2 to 9).
+
 ## [0.13.0-beta.1] - 2026-10-31
 
 Update by pulling `0.13.0-beta.1` and recreating the stack. No database migration: Halloween and Christmas lights maps look and work exactly as before. Going back to 0.12.0-beta.1 needs only the older image while a Halloween or Christmas lights event is on the map; a garage sale is not shown by older versions (they show "No event on the map right now").

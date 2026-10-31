@@ -14,8 +14,9 @@ use PHPUnit\Framework\TestCase;
  * @description The contact-detail check on public free text (garage-sale notes, D-20261021-23): phone numbers in
  *   their usual shapes (spaced, dotted, dashed, parenthesized, with a country code), email addresses (also written
  *   "name at domain dot com"), payment handles ($cashtags, @handles, a payment app followed by a username) and web
- *   addresses are found; ordinary sale notes with times, prices, sizes, ranges and dates are not. Number words
- *   ("five five five") are out of scope.
+ *   addresses are found; ordinary sale notes with times, prices, sizes, ranges and dates are not. A seven-digit local
+ *   number needs an exchange code that starts with 2–9, as every real one does, so "items 100-1000" passes while
+ *   "212-1000" is refused. Number words ("five five five") are out of scope.
  * @dependencies Shared/ContactDetails
  */
 #[CoversClass(ContactDetails::class)]
@@ -28,6 +29,8 @@ final class ContactDetailsTest extends TestCase
             'Call 555-123-4567', 'call (555) 123-4567', '(555)123-4567', '555.123.4567', '555 123 4567', 'text 5551234567', '+1 555 123 4567',
             '+1-555-123-4567', '+15551234567', '1-800-555-0199', '555 - 123 - 4567', 'text me at 555-1234', 'or 555.1234', '+44 20 7946 0958',
             'Questions? ５５５-１２３-４５６７', 'Phone: 555 123 4567 after 8',
+            // seven-digit local numbers: every real exchange code starts with 2–9 (NANP), so these stay refused
+            'call 212-1000', 'ring 867-5309', 'or 987.6543', 'text 200 - 1000', 'cell 555-0000', 'home 230-1999', 'items 100-1000 or 312-1000',
         ] as $text) {
             yield 'phone: '.$text => [$text, 'phone'];
         }
@@ -70,6 +73,9 @@ final class ContactDetailsTest extends TestCase
             'Open Sat 8–2 · Sun 9–1', 'Lamps at 50% off', 'DVDs, CDs, games', 'Two families. No. 5 is the blue house', 'Prices from $1 to $20',
             'Half price after 12:30', 'Toddler bed 1 of 2', 'Garage, porch and driveway', 'Back door is 2nd on the left', "Pay with cash, card or apps",
             "Tools: drills, saws, 3/8\" sockets", 'Ends at 1 PM', 'U.S. coins and stamps', '   ',
+            // ranges whose first number cannot be a local exchange code (it starts with 0 or 1)
+            'items 100-1000', 'Puzzles 100 - 1000 pieces', 'Lot numbers 101-1200', 'Cards 150-2000', 'Nos. 199.1999', 'items 1-100 and 100-1000',
+            'Sizes 000-0000 in the bin', '120-1500 ml bottles',
         ] as $text) {
             yield $text => [$text];
         }

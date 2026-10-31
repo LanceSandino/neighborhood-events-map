@@ -1211,4 +1211,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p4"
   author: "Lance Sandino"
   timestamp: "2026-10-31T23:00:00Z"
+- id: CU-20261031-31
+  type: fix
+  title: "Sale notes: a seven-digit local number needs an exchange code starting with 2–9, so ranges such as \"items 100-1000\" pass"
+  description: "Shared/ContactDetails refused \"items 100-1000\" as a seven-digit local phone number. Every real North American exchange code starts with 2–9, so the seven-digit shape now requires that first digit; ten-digit, parenthesized, country-code and spaced shapes are unchanged. Table tests both ways: 7 more numbers still refused (212-1000, 867-5309, 987.6543, 200 - 1000, 555-0000, 230-1999 and a real number after a range) and 8 more ordinary notes pass (100-1000, 100 - 1000 pieces, 101-1200, 150-2000, 199.1999, 000-0000, 120-1500 ml). A range starting at 200 or more stays a rare false positive; numbers written as words stay out of scope (D-20261031-33)."
+  impact: low
+  affected_modules: ["src/Shared/ContactDetails.php"]
+  related_tests: ["tests/Unit/Shared/ContactDetailsTest.php: testContactDetailsAreFound, testOrdinaryNotesPass (8 new ordinary notes failed before the change)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:10:00Z"
 ```
