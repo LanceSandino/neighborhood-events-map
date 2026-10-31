@@ -29,8 +29,8 @@ use Psr\Clock\ClockInterface;
  *
  * @input DBAL connection, clock, parser, schema
  * @output CommunityConfig snapshots, export documents, change summaries
- * @dependencies Community/CommunitySchema, Community/CommunityConfig, Community/TypeDefaults, Geo/*, Event/EventTypeRegistry,
- *     Event/EventOccurrenceRepository, Event/OccurrenceSettingsSync
+ * @dependencies Community/CommunitySchema, Community/CommunityConfig, Community/TypeDefaults, Community/EventBlockMirror, Geo/*,
+ *     Event/EventTypeRegistry, Event/EventOccurrenceRepository, Event/OccurrenceSettingsSync
  */
 final class CommunityRepository
 {
@@ -47,6 +47,7 @@ final class CommunityRepository
         private readonly EventOccurrenceRepository $occurrences,
         private readonly OccurrenceSettingsSync $sync,
         private readonly EventTypeRegistry $types,
+        private readonly EventBlockMirror $mirror,
     ) {
     }
 
@@ -116,9 +117,9 @@ final class CommunityRepository
         // The event block goes to the active occurrence first; the stored block then mirrors the occurrence.
         $settings = $this->db->transactional(function (Connection $db) use ($settings, $now, $actorId): array {
             $this->sync->apply($settings['event']);
-            $legacy = $this->legacyEvent($db);
+            $legacy = $this->mirror->legacyEvent($db);
             if (null !== $legacy) {
-                $settings['event'] = self::eventBlock($legacy, (string) ($settings['event']['date'] ?? '')) + $settings['event'];
+                $settings['event'] = EventBlockMirror::block($legacy, (string) ($settings['event']['date'] ?? '')) + $settings['event'];
             }
             $db->executeStatement(
                 'INSERT INTO community_settings (id, deployment_id, settings, created_at, updated_at, updated_by)
@@ -338,7 +339,7 @@ final class CommunityRepository
             $event = null;
         }
         if (null !== $event) {
-            $settings['event'] = self::eventBlock($event, (string) ($settings['event']['date'] ?? '')) + $settings['event'];
+            $settings['event'] = EventBlockMirror::block($event, (string) ($settings['event']['date'] ?? '')) + $settings['event'];
         } elseif (!$this->types->isEnabled((string) $settings['event']['type'])) {
             // The last event was of a type this release does not offer (a newer release ran): the page chrome
             // between events uses the default type's words; nothing is listed.
@@ -350,20 +351,10 @@ final class CommunityRepository
         return new CommunityConfig($settings, $boundary, $approved, $version, $zones, true, $event);
     }
 
-    /**
-     * Writes the event the previous release shows into the stored settings' event block (after an organizer changed
-     * events): the bridged Halloween — the event whose homes the legacy table holds —, else the default event; the
-     * previous release reads only the settings and the legacy table (D-20261031-41).
-     */
+    /** Writes the event the previous release shows into the stored settings' event block (Community/EventBlockMirror). */
     public function mirrorLegacy(Connection $db): void
     {
-        $event = $this->legacyEvent($db);
-        if (null === $event) {
-            return;
-        }
-        $stored = (string) ($db->fetchOne("SELECT settings->'event'->>'date' FROM community_settings WHERE id = 1") ?: '');
-        $db->executeStatement("UPDATE community_settings SET settings = jsonb_set(settings, '{event}', COALESCE(settings->'event', '{}'::jsonb) || CAST(:e AS JSONB)) WHERE id = 1",
-            ['e' => json_encode(self::eventBlock($event, $stored), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE)]);
+        $this->mirror->write($db);
         $this->reset();
     }
 
@@ -373,24 +364,6 @@ final class CommunityRepository
         $default = $this->occurrences->defaultEvent();
 
         return null !== $default && $this->types->isEnabled($default->type) ? $default : null;
-    }
-
-    /** The event the stored settings block mirrors for the previous release: the bridged Halloween, else the default. */
-    private function legacyEvent(Connection $db): ?EventOccurrence
-    {
-        return $this->occurrences->bridged($db) ?? $this->occurrences->defaultEvent($db);
-    }
-
-    /**
-     * An event as the settings' event block. An event whose dates are to be announced keeps the block's last date
-     * (the block always has one) and names no first or last day.
-     *
-     * @return array{name:string,date:string,starts_at:string,ends_at:string,type:string,starts_on:?string,ends_on:?string}
-     */
-    private static function eventBlock(EventOccurrence $o, string $fallbackDate): array
-    {
-        return ['name' => $o->name, 'date' => $o->startsOn ?? $fallbackDate, 'starts_at' => $o->defaultStart, 'ends_at' => $o->defaultEnd, 'type' => $o->type,
-            'starts_on' => $o->startsOn, 'ends_on' => $o->endsOn];
     }
 
     /** Stored geometry was validated on write; convert without re-running O(n²) checks. */

@@ -71,19 +71,6 @@ final class EventOccurrenceRepository
         return false === $row ? null : EventOccurrence::fromRow($row);
     }
 
-    /**
-     * The newest event of the same type before $event (by first day, else by id), any state but draft: the event whose
-     * listing "Use last year's details" copies.
-     */
-    public function previousOfType(EventOccurrence $event, ?Connection $db = null): ?EventOccurrence
-    {
-        $row = ($db ?? $this->db)->fetchAssociative('SELECT '.self::COLUMNS." FROM event_occurrences
-            WHERE type = :type AND id <> :id AND state <> 'draft' AND (CAST(:starts AS DATE) IS NULL OR starts_on < CAST(:starts AS DATE)) AND (starts_on IS NOT NULL OR id < :id)
-            ORDER BY ".self::NEWEST.' LIMIT 1', ['type' => $event->type, 'id' => $event->id, 'starts' => $event->startsOn]);
-
-        return false === $row ? null : EventOccurrence::fromRow($row);
-    }
-
     /** The event the legacy `listings` table mirrors for the previous release: the newest open or closed one-day Halloween. */
     public function bridged(?Connection $db = null): ?EventOccurrence
     {

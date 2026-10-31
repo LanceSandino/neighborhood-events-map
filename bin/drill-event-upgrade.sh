@@ -130,13 +130,14 @@ step "4b. several events: the Halloween closes, next year's is created, a reside
 organizer=drill-organizer@example.invalid
 "${compose[@]}" exec -T app php bin/console app:admin:grant "$organizer" >/dev/null
 closed_id=$(sql "SELECT id FROM event_occurrences WHERE state = 'open'")
+closed_day=$(sql "SELECT starts_on FROM event_occurrences WHERE id = $closed_id")
 closing=$(python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" close --event-id "$closed_id") || fail "close"
 next_id=$(printf '%s' "$closing" | python3 -c 'import json,sys; print(json.load(sys.stdin)["next_id"])')
 [ "$(sql "SELECT state || ' ' || starts_on || ' ' || dates_tentative FROM event_occurrences WHERE id = $next_id")" = "upcoming 2027-10-31 true" ] || fail "next year's Halloween"
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" list-for --home-id "$home" --event-id "$next_id" --note "Next year on $new_tag" || fail "list for next year"
-[ "$(sql "SELECT event_date || ' ' || note FROM listings WHERE address_id = $home")" = "2026-10-31 Edited on $new_tag" ] || fail "next year's listing reached the legacy table"
+[ "$(sql "SELECT event_date || ' ' || note FROM listings WHERE address_id = $home")" = "$closed_day Edited on $new_tag" ] || fail "next year's listing reached the legacy table"
 [ "$(homes | count)" = 0 ] || fail "a closed event shows homes"
-pass "closed event $closed_id (no homes on the map), next year's $next_id upcoming on 2027-10-31 (tentative); the legacy row keeps the closed Halloween's listing"
+pass "closed event $closed_id of $closed_day (no homes on the map), next year's $next_id upcoming on 2027-10-31 (tentative); the legacy row keeps the closed Halloween's listing"
 
 step "5. path (a): images back to $old_tag, database kept"
 images "$old_app" "$old_nginx" "$old_tag"
