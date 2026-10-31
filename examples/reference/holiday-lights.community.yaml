@@ -16,7 +16,8 @@ community:
   gate_notice: ""                   # access notes for visitors, e.g. "Enter by the north gate"
   contact_url: null                 # REPLACE with a mailto link to the organizer or a contact page (About, Privacy, Terms)
   access: public                    # public | gated_open | gated_guests | private | unspecified
-  about: ""                         # About page text; a blank line starts a new paragraph
+  about: ""                         # this event's About page text (the first event's own); a blank line starts a new paragraph
+  general_about: ""                 # optional: About text for the whole neighborhood, shown for events without their own
   links: []
   reminders: []                     # your own viewing etiquette (up to 12 lines); empty = the built-in list
 event:
@@ -34,7 +35,8 @@ event:
       - "Drive-by homes: please stay in your car."
     route_modes: [walking]          # add driving for a drive-by tour; it needs a configured routing provider too
 # branding: leave it out to get the lights defaults (midnight blue and warm gold, "Holiday nights. Bright lights.");
-# anything you set here replaces them.
+# anything you set here (brand_emoji, headline, headline_accent, intro, primary_color, accent_color) is this first
+# event's own branding (ADR 0012); logo and show_locality are the community's. Later events: Organizer → Events.
 map:
   boundary_file: null               # a reviewed GeoJSON next to this file, or draw it in Organizer → Boundary & zones
   zoom: 16

@@ -1,7 +1,8 @@
 # Event types
 
 The map serves one community; since 0.15 several of its events can be public at once — upcoming, open or closed —
-and visitors switch between them ([ADR 0011](../adr/0011-several-published-events.md), [below](#several-events-at-once-015)).
+and visitors switch between them ([ADR 0011](../adr/0011-several-published-events.md), [below](#several-events-at-once-015)),
+and since 0.16 each event has its own branding next to the community's ([below](#community-branding-and-event-branding-016)).
 What differs between a Halloween map, a Christmas lights map and a garage sale map (listing fields, statuses, filters,
 icons, words) lives in an **event type**: a code module chosen for each event ([ADR 0010](../adr/0010-generic-event-types.md),
 D-20261021-19, D-20261031-01). Claims, sign-in, abuse controls, moderation, routes and privacy are shared and never
@@ -104,6 +105,22 @@ kind-of-sale toggles).
 | Bridge | the newest open or closed one-day Halloween (`EventOccurrenceRepository::bridged`, `LegacyListingBridge::MIRRORED`, the trigger); the settings block mirrors it, else the default event (D-20261031-41) |
 | Demo | `examples/demo-lights/homes.json` "events": a closed Halloween with next year's upcoming one and a rummage sale to be announced next to the open lights (D-20261031-44) |
 
+## Community branding and event branding (0.16)
+
+[ADR 0012](../adr/0012-community-and-event-branding.md), D-20261031-46 to -52.
+
+| Part | What it does |
+|---|---|
+| Community | name, subtitle (a subtitle still at a type's default follows the event's type, Community/TypeDefaults), city line (`locality`, `branding.show_locality`), logo, contact, links, optional `community.general_about` — the same for every event; Organizer → Community & branding edits only these (GET /api/admin/community carries no event branding; PUT without an event block keeps the default event) |
+| Event | `settings.branding` of the event (`Event/EventBranding`): `brand_emoji`, `headline`, `headline_accent`, `intro`, `primary_color`, `accent_color`, `about`, each optional with the type's default; strict (`settings.branding.<field>` errors); settings sent without it keep it; next year's event keeps it; Organizer → Events edits it (the type's defaults are the placeholders, `types[].branding` of GET /api/admin/events) |
+| A page | `Community/EventBrandingView` puts the selected event's look over its type's defaults into the settings the page sees (the payload's `branding` keeps its keys and order) and its About text — its own, else the general one, else the type's built-in `copy.about` (`community.about` in the payload); /theme.css?e= gives BrandPalette's variables for that event; hero art is the type's `hero_art` fragment |
+| community.yaml | the top-level `branding` keys and `community.about` (their 0.9 shape) brand the install's first event when the settings save creates it (`OccurrenceSettingsSync`); `event.settings.branding` names fields explicitly and wins; a forced re-import never changes an existing event's branding |
+| 0.9 mirror | the stored community keys under their old names (`branding.brand_emoji` … `accent_color`, `community.about`) are what the 0.9.0-beta.1 image shows; `Community/EventBlockMirror` writes them from the Halloween that image shows on every settings save and event change; this release never shows them for an event |
+| Upgrade | `migrations/Version20261031000004` (data only): the community's custom values (not equal to any type's built-in default) and About text into every Halloween event without a branding; down writes the community keys from the mirrored Halloween and removes the events' branding |
+| Emails | sign-in: the community only; claim: the listing's event and address; review request: the page's event (`Mail/Notifier`) |
+| Console | `templates/admin/_layout.html.twig` and admin.css: the community's name, logo or initial, a neutral icon (`favicon-community.svg`) and neutral colour tokens, no /theme.css; an event shows only in its own sections (`data-event-section`: Events rows, summary and form with `type_icon`, the Overview's events, the Addresses listing column with `event` and `status_label`, audit rows about an event); the draft preview's colours come from `/admin/events/{id}/theme.css` (D-20261031-52) |
+| Tab icon | public pages: the logo, else the type's `page_favicon` (Halloween's pumpkin, the lights' sparkles, the sale's tag) |
+
 ## Christmas lights (0.12)
 
 | Part | Christmas lights (`HolidayLightsType`, `events/holiday_lights.js`, `templates/event/holiday_lights/`) |
@@ -118,8 +135,8 @@ kind-of-sale toggles).
 | Look | midnight blue `#38597F`, warm gold `#CE9D3D`, calm cream; navy dark mode; non-flashing icons (✨ 🌟 🎵 ⛄ 🎄 🚗 🚶 🕯️ ⚡), nothing animates |
 | Event settings | `best_night` (inside the event), `quiet_hours` (≤ 120 characters), plus the shared `rules`, `route_modes`, `max_days` |
 
-Branding that still holds a type's built-in default follows the type of the event on the map, and the draft preview
-uses the draft's type (Community/TypeDefaults, D-20261031-16). The fictional demo is `examples/demo-lights/` (ten homes,
+Each event shows its own branding over its type's defaults, and the draft preview shows the draft's
+([below](#community-branding-and-event-branding-016)). The fictional demo is `examples/demo-lights/` (ten homes,
 Dec 1, 2026 – Jan 3, 2027; the dev stack `.env.lights` on port 8089).
 
 ## Garage sale (0.13)

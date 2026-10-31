@@ -6,17 +6,21 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.16.0-beta.1] - 2026-10-31
+
 Each event now has its own look. The neighborhood keeps its name, logo, links and an optional general description for every event, while Halloween, the Christmas lights and a sale each have their own emoji, headline, introduction, colours and About text. Halloween looks exactly as before, and the Christmas lights and sales no longer borrow Halloween's words and colours.
 
 ### New for organizers
 - **Branding for each event.** Under Organizer → Events every event has a Branding section: the emoji, the headline and its coloured second part, the introduction, the two colours and the About text visitors read for that event. Every field is optional: an empty field uses the built-in look of that kind of event, shown in grey in the field. Preview a draft, or open a public event's page, to see the result.
 - **Community & branding is for the whole neighborhood.** It keeps the name, subtitle, city line, logo, contact, links and an optional general About text that shows for every event without an About text of its own. Event names, dates and hours are changed under Organizer → Events.
 - **Your own Halloween look stays with Halloween.** If you gave your map its own emoji, headline, colours or About text before, they now belong to your Halloween (next year's Halloween keeps them too). Your Christmas lights and sales show their own look until you give them one.
+- **The organizer console is the neighborhood's.** Its header shows your logo (or your community's initial) and it keeps its own calm colours on every page. An event's look appears only where that event is in focus: its row and form in Organizer → Events, its preview, the list of events on the Overview and the listing column of Addresses, which now names the event it shows.
 
 ### Changed
 - The sign-in email belongs to the whole neighborhood: "Your <community> sign-in link", without an event name. The email that confirms a new listing names its event and address ("Confirm your <community> Christmas Lights listing for 12 Holly Dr"), and a review request names the event it was sent from.
 - "What's new" shows a short summary for residents and organizers with each version.
 - On the About page, "List your home" and "Open the map" stay with the event you were looking at, and so does "Full guide & links" on the map.
+- Without a logo, the browser tab shows the icon of the kind of event you are looking at.
 
 ### Known limitations
 - Reminders you write yourself under Community & branding still show for every event; leave them empty to use each kind of event's own list.

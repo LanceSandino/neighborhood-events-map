@@ -33,9 +33,9 @@ empty form, or from their own details of last season. This page is the organizer
    dates) and **Make default** so the front page shows it. Close Halloween first if it is over: closing shows its
    thank-you message and creates next year's. Residents see "List for Christmas Lights" in My house.
    When the season is over, **Close** it: next season's event is created with the same nights a year later.
-4. Optional: under **Community & branding**, adjust the words or colours. Branding you never changed already follows the
-   lights type (midnight blue and gold, "Holiday nights. Bright lights."); anything you changed stays as you set it
-   ([D-20261031-16](../../DECISIONS.md)).
+4. Optional: in the season's **Branding of this event** (Organizer → Events → Edit), set its own emoji, headline, intro,
+   colours or About text. Empty fields keep the lights' look (midnight blue and gold, "Holiday nights. Bright
+   lights."); another event's branding never shows on the lights ([ADR 0012](../adr/0012-community-and-event-branding.md)).
 5. For a drive-by tour, enable the routing provider under Community & branding → Map & routes (it needs an
    openrouteservice key, `ROUTING_PROVIDER=openrouteservice` and `ROUTING_API_KEY`). Driving routes are cached and rate
    limited like walking paths.
@@ -58,7 +58,7 @@ event:
   ends_on: "2027-01-03"     # at most 62 nights
   starts_at: "18:00"        # most homes' hours
   ends_at: "22:00"
-# Leave branding out to use the lights defaults, or set your own colours and words.
+# Leave branding out to use the lights defaults, or set your own colours and words (this first event's own).
 ```
 
 Rules, the best night, quiet hours and the drive-by tour are event settings: set them under Organizer → Events.

@@ -44,8 +44,32 @@ A closed event never opens again, and archived is final: next year's event is a 
    **Open** it to put it on the map right away. Opening needs dates (a sale also its days) and confirms tentative dates.
    Only one event of each kind can be upcoming or open: close or archive the current one first.
 
-Community branding that you never changed follows the kind of event shown (the lights' midnight blue and gold, the
-sale's teal and coral); branding you set yourself stays ([D-20261031-16](../../DECISIONS.md)).
+## Community branding and each event's branding
+
+Since 0.16 the neighborhood's look and each event's look are separate ([ADR 0012](../adr/0012-community-and-event-branding.md)):
+
+| Where | What it is | Shown on |
+|---|---|---|
+| **Organizer → Community & branding** | the community's name, subtitle, city (and "Show city under the name"), logo, contact, links and, if you like, a general **About the neighborhood** text | every event |
+| **Organizer → Events → Edit → Branding of this event** | the event's emoji, headline and its accent part, intro text, main and accent colours, and **About this event** (what visitors read on the About page for it) | that event only |
+
+- Every field of an event's branding is optional. An empty field uses the built-in look of that kind of event — the
+  field shows it in grey — so a Christmas lights event is midnight blue and gold with "Holiday nights. / Bright lights."
+  and a sale teal and coral with "Good finds. / Close to home." until you change them. The decorations of the top of the
+  page (moon and ghost, tree, moving box) belong to the kind of event and cannot be changed.
+- The About page of an event shows its own About text, else your general neighborhood text, else the built-in text of
+  that kind of event. Rules (one per line) are set per event as before.
+- Colours: type `#RRGGBB` or use the picker next to the field. Text and buttons on your colours stay readable in light
+  and dark mode: the site adjusts the text colour automatically.
+- See the result: **Preview this draft** for a draft, **Open this event's page** for a public one (save first).
+- Next year's event (created when you close one) keeps the branding; change it there if you like.
+- If you gave the map your own Halloween look before 0.16, the upgrade moved it to your Halloween events; your other
+  events start from their own built-in look.
+- Your own reminders (Community & branding) still show for every event; leave them empty for each kind of event's list.
+- The organizer console itself is the neighborhood's: its header shows your logo (or the community's initial) and the
+  console keeps its own neutral colours. An event's look shows only where that event is in focus — its row and form in
+  Events, its preview, the Overview's list of events and the Addresses listing column, which names the event it shows
+  ([D-20261031-52](../../DECISIONS.md)).
 
 ## Close an event when it is over
 
@@ -65,7 +89,7 @@ Two organizers closing at the same moment cannot both succeed (the second gets "
 
 ## The default event
 
-**Make default** on any upcoming, open or closed event: "/" shows it, and Community → Event edits it. A typical year:
+**Make default** on any upcoming, open or closed event: "/" shows it (Community & branding names it). A typical year:
 Halloween open and default in October; closed (still default, showing its thank-you) on November 1; the Christmas lights
 opened and made default in December; the sale announced months ahead. If you archive the default event, the newest
 open event (else the newest public one) becomes the default.
@@ -110,7 +134,7 @@ to 0.9.
 | Command | What it does |
 |---|---|
 | `app:admin:grant <email>` (`--revoke`) | grant or revoke the organizer role |
-| `app:community:bootstrap <file>` (`--force`) | import `community.yaml` and its GeoJSON into an empty install (the first event comes from its `event` block and `event.settings`) |
+| `app:community:bootstrap <file>` (`--force`) | import `community.yaml` and its GeoJSON into an empty install (the first event comes from its `event` block and `event.settings`; the file's `branding` keys and `community.about` are that first event's branding) |
 | `app:community:export <dir>` | export the settings (YAML) and the boundary and zones (GeoJSON) |
 | `app:addresses:import <file.csv>` (`--dry-run`) | import a reviewed address list (address, latitude, longitude, zone_key) |
 | `app:zone:label` | pin a zone's name to a point on the map |

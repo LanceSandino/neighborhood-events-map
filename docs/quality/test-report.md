@@ -1,6 +1,46 @@
 # Test and verification report
 
-## Latest run — 2026-10-31, release 0.15.0-beta.1
+## Latest run — 2026-10-31, release 0.16.0-beta.1
+
+Community branding and each event's own branding (ADR 0012; CU-20261031-54 to -62), on PHP 8.5.12 + PostgreSQL 18.6,
+Symfony 8.1.10. The bar: the owner's report (Halloween words on the Christmas lights and the yard sale of a community
+with its own Halloween branding) fixed for pages, emails and the organizer console (a second owner requirement during the
+work: the console is the community's, D-20261031-52), Halloween looking exactly as before after the upgrade production
+takes — 0.9.0-beta.1 straight to this release — and after an image rollback to 0.9, and What's new without operator
+notes.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.15.0-beta.1 (branch start, dev stack) | PHPUnit **OK — 616 tests, 16678 assertions** |
+| PHPUnit 13.4.5 (with pcov) | **OK — 634 tests, 17044 assertions** (new: EventBrandingTest 4, PerEventBrandingTest 6, EventBrandingMigrationTest 2, OrganizerConsoleNeutralTest 2, WhatsNewTest 2, a summary paragraph in ChangelogReaderTest, the drill's branding checks in RollbackDrillTest; AdminConsoleTest and HeaderBrandingTest each assert the new contract — the community console no longer colours an event, the sign-in subject names no event — keeping every earlier assertion's guarantee) |
+| Coverage (pcov) | Lines **95.46 %** ✓ ≥ 85 · Methods 84.07 % · Branches n/a. New modules: EventBranding 100 % lines, EventBrandingView 100 %, EventBlockMirror 95.65 %, ChangelogReader 100 % |
+| Halloween parity | `tests/fixtures/golden/0.15.0-beta.1/branding-halloween.json`, captured from the unchanged 0.15.0-beta.1 code for a fictional community with its own Halloween branding and three open events: after the migration (from 0.15 data and from a 0.9 database) the Halloween hero, sidebar brand, side panel, About page, /theme.css and /api/community are identical (EventBrandingMigrationTest). GoldenApiParityTest: the 0.9, 0.11 and 0.15 answers unchanged. Page by page against the published 0.15.0-beta.1 images (fictional demo, own Halloween branding, normalized for asset fingerprints, versions, CSRF tokens and the What's new dialog): `/`, `/about`, `/privacy`, `/terms`, `/accessibility`, `/login` differ only in the sidebar icon's class (`ghost` → `side-icon`); `/api/community`, `/api/event`, `/api/homes` identical. (A first comparison found the new theme block had joined `</head>` onto the stylesheet line; fixed, compared again) |
+| Organizer console | OrganizerConsoleNeutralTest: on every console page the community's mark (logo, else initial), icon and title, no /theme.css, no Halloween word or emoji; an event's data names its event and type; the draft preview uses its own colours (organizer-only stylesheet). In a browser (events.spec, lights demo whose default is the lights and whose Halloween has its own branding), light and dark: Overview, Community, Boundary, Addresses, Review requests, Audit and Events show no word, emoji or colour of the default event or of Halloween outside an event's own section, and the console's own colour. Console viewport screenshots at 390 and 1440 px, light and dark, on the owner-like community were looked at (not committed) |
+| Acceptance (owner's case) | PerEventBrandingTest: the lights' and the sale's `/`, `/about`, `/login`, `/me` (signed in), `/privacy`, `/terms`, `/accessibility`, `/changelog` show none of ghost, trick-or-treat, treats, candy, scare, pumpkin, 🎃, 👻 outside the switcher's tab labels; the sign-in, claim and review emails neither; Halloween keeps its branding. Viewport screenshots at 390 and 1440 px, light and dark, of a fictional owner-like community with all three events open, and of the console's Branding and Community pages, were looked at (not committed) |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` · `lint:container` | No errors · no advisories · 80 files OK · 21 files OK · OK |
+| Migrations up / down to zero / up (test database) | OK (7 migrations, Version20261031000004 new) |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **68/68** · **48/48** (1 new: the drill's headline change keeps every other setting) |
+| Playwright E2E on the four dev stacks, tiles blocked | **232 passed, 2 skipped** (17.0 min) on the finished feature. New: events.spec "each event has its own branding…" (both Halloween tabs keep the demo's own branding at 390 and 1440 px; the lights and the sale show their own look and no Halloween word) and "the organizer console names the community…"; season.spec checks the lights and the sale it opens take nothing of the demo's Halloween branding and restores the demo's Halloween through the new Branding section. Two later fixes (the line break before `</head>`, the boundary editor's outline colour) were followed by admin.spec **3/3** and events.spec **7/7** again (with tiles, for the screenshots). An earlier full run had **223 passed** and 1 failure (admin.spec read the Community page's event type, which the first console change had removed; it is kept read-only now) with the 7 season tests not run; the season project then passed after the e2e word check left out residents' listings (below) |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images (final tree) | **7/7 passed** (0.16.0-beta.1) |
+| `bin/drill-event-upgrade.sh nhm-app nhm-nginx smoke` (final images) | **all steps passed** (116 s): published 0.9.0-beta.1 with 14 fictional homes and the demo's own headline "Spooky streets. Sweet treats." → backup → upgrade (4 migrations at start; same 14 homes, keys and values; 1 occurrence, open and the default; the Halloween owns the custom branding and shows it) → edit + new self-entered home → (4a) Christmas lights opened next to it show "Holiday nights. Bright lights."; the Halloween's headline changed to "Drill streets." also reaches the keys the 0.9 image reads → (4b) the Halloween closes, next year's is created upcoming on 2027-10-31 (tentative), a resident lists for it, the legacy row keeps the closed Halloween's listing → images back to 0.9.0-beta.1 ("You have 4 previously executed migrations", "Already at the latest version"; the same 15 homes; the page shows "Drill streets. Sweet treats.") → edit on 0.9 → forward again (the 0.9 edit in the closed Halloween; next year's listing untouched; /api/events closed, open, upcoming; each event keeps its look) → 0.9 + `bin/restore.sh` of the pre-upgrade dump (exactly the 14 homes, no event tables, 3 migrations) → upgraded again (same 14 homes; the custom headline moved again) |
+| Trivy | not run locally (CI scans the images) |
+
+Found on the way: the e2e word check first flagged the lights demo's own listing words ("candy cane lane" in a fictional
+note, the lights' "Treats" tag) — resident content, now left out of the check like the switcher; the console's
+community page had lost the read-only event type that the admin e2e test (D-20261031-01) reads, and keeps it now; the
+default tab icon was Halloween's pumpkin on every event (now the type's own), the draft preview took the default event's
+colours (now its own, from an organizer-only stylesheet) and the boundary editor drew in Halloween's orange (now the
+console's colour).
+
+Screenshots (`docs/design/screenshots/`, with OpenStreetMap tiles, fictional lights demo whose Halloween now has its
+own branding, browser clock pinned to a night of the season; the console on fresh stacks): new `events-sale-{1440,390}.png`
+(the sale next to a Halloween with its own branding); refreshed `events-closed-{1440,390}.png` (the Halloween's own
+headline and colours), `admin-events-1440.png`, `ventura-admin-overview.png` and `ventura-admin-map.png` (the console's
+own colours, the community's mark, each event's type mark). The others were left as committed (their pages do not
+change).
+
+## Run — 2026-10-31, release 0.15.0-beta.1
 
 Several published events per community (ADR 0011; CU-20261031-45 to -53), on PHP 8.5.12 + PostgreSQL 18.6, Symfony
 8.1.10. The bar: the owner's decisions of 2026-10-31 (several events, default event, close → next year, residents per

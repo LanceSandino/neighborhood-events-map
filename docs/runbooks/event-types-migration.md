@@ -1,15 +1,52 @@
-# Event migrations: upgrade to 0.11 and 0.15 and both rollback paths
+# Event migrations: upgrade to 0.11, 0.15 and 0.16 and both rollback paths
 
 0.11.0-beta.1 gives every event its own listings (ROADMAP Stage 2, [DECISIONS](../../DECISIONS.md) D-20261031-05 to
 -14). This runbook says what the upgrade changes in the database, how to check it, and how to go back — with the
 image only (the database is kept) or with the backup taken before the upgrade. The drill script runs all of it on a
 throwaway stack; run it before upgrading a real installation.
 
-0.12, 0.13 and 0.14 add no migration; 0.15 adds one (several published events, below). An installation still on
-0.9.0-beta.1 that upgrades straight to the latest release runs `Version20261031000001` (0.10, `listings.details`),
-`Version20261031000002` (0.11, event-scoped listings) and `Version20261031000003` (0.15, several events) in that order
-when the app starts; everything below applies, and the drill starts from the published 0.9.0-beta.1 images for exactly
-that path. Set `APP_IMAGE_TAG` to the release you deploy wherever this page says 0.11.0-beta.1.
+0.12, 0.13 and 0.14 add no migration; 0.15 adds one (several published events) and 0.16 one (per-event branding,
+below). An installation still on 0.9.0-beta.1 that upgrades straight to the latest release runs `Version20261031000001`
+(0.10, `listings.details`), `Version20261031000002` (0.11, event-scoped listings), `Version20261031000003` (0.15,
+several events) and `Version20261031000004` (0.16, per-event branding) in that order when the app starts; everything
+below applies, and the drill starts from the published 0.9.0-beta.1 images for exactly that path. Set `APP_IMAGE_TAG`
+to the release you deploy wherever this page says 0.11.0-beta.1.
+
+## 0.16: per-event branding
+
+0.16.0-beta.1 adds `Version20261031000004` ([ADR 0012](../adr/0012-community-and-event-branding.md), D-20261031-46 to
+-51). It changes data only — no table or column — and keeps what it copies:
+
+- **What moves.** The community's branding values that differ from every type's built-in default (emoji, headline, its
+  accent part, intro, the two colours) and its About text are copied into `settings.branding` of every Halloween event
+  that has none (open, closed, archived, upcoming and drafts alike). Values equal to a built-in default are not copied:
+  the event shows its own type's default for them, exactly as 0.15 showed them. Christmas lights and sales get nothing
+  and show their type's look.
+- **What stays.** The community settings keep `branding.brand_emoji`, `headline`, `headline_accent`, `intro`,
+  `primary_color`, `accent_color` and `community.about` under those names: the 0.9.0-beta.1 image reads them. 0.16
+  writes the Halloween the 0.9 image shows (the newest open or closed one-day Halloween, else the default event) into
+  them on every settings save and every change of the events, and never shows them for an event. The community's own
+  general About text is a new key, `community.general_about` (empty after the upgrade).
+- **Halloween looks exactly as before**; `tests/Integration/EventBrandingMigrationTest.php` compares its pages with what
+  0.15.0-beta.1 rendered for the same data.
+
+Check after the upgrade:
+
+```bash
+docker compose exec postgres psql -U halloween -d halloween -c \
+  "SELECT id, type, name, state, settings->'branding' AS branding FROM event_occurrences ORDER BY id"
+docker compose exec postgres psql -U halloween -d halloween -c \
+  "SELECT settings->'branding'->>'headline' AS headline_for_09, settings->'community'->>'about' AS about_for_09 FROM community_settings"
+```
+
+Every Halloween shows your own branding values (only the ones you had changed); the community keys still hold them.
+
+**Rollback.** Path (a) below with the 0.9.0-beta.1 images shows the mirrored Halloween's branding (the drill checks the
+0.9 page shows the custom headline after the image rollback). Branding changed on 0.9 (Community → Branding there) is
+replaced by the events' own when 0.16 runs again. To leave 0.16's data before going back to 0.15 (a restore is still
+the way to 0.10–0.14): `docker compose exec app php bin/console doctrine:migrations:migrate 'DoctrineMigrations\Version20261031000003' -n`
+writes the community keys and About text from the mirrored Halloween and removes every event's branding and
+`community.general_about`.
 
 ## 0.15: several published events
 
@@ -163,14 +200,18 @@ bin/drill-event-upgrade.sh nhm-app nhm-nginx drill
    `/api/homes` shows the same homes, keys and values and that the Halloween is the open default event;
 4. signs a fictional resident in (real proof-of-work, link from the drill's Mailpit), edits a listing and lists a new
    self-entered home (`scripts/drill_listing.py`);
+   4a. (per-event branding) checks the Halloween kept the demo's custom headline ("Spooky streets.", now its own), an
+   organizer opens Christmas lights next to it — they show "Holiday nights. Bright lights.", not Halloween's — and
+   changes the Halloween's headline, which also reaches the keys the 0.9 image reads;
    4b. (several events) an organizer closes the Halloween — next year's is created as upcoming on October 31 —, the
    resident lists the home for next year, and the legacy row keeps the closed Halloween's listing;
 5. path (a): rolls the images back to `0.9.0-beta.1`, checks it starts, reports the newer migrations and shows the
-   bridged homes (the closed Halloween's, with the edit and the new home); a resident edits on 0.9;
+   bridged homes (the closed Halloween's, with the edit and the new home) and the Halloween's custom headline (the one
+   changed in step 4a); a resident edits on 0.9;
 6. goes forward again and checks the edit made on 0.9 reached the closed Halloween and next year's listing is
    untouched;
 7. path (b): restores the pre-upgrade backup with `bin/restore.sh` on `0.9.0-beta.1` and checks the homes are exactly
    the pre-upgrade ones and the event tables are gone;
-8. upgrades the restored database once more and checks the homes again.
+8. upgrades the restored database once more and checks the homes again and the custom headline (moved again).
 
 The latest result is in [docs/quality/test-report.md](../quality/test-report.md).

@@ -15,7 +15,8 @@ community:
   gate_notice: ""                   # access notes, e.g. "Enter by the north gate; park on Main St."
   contact_url: "mailto:organizer@example.org"   # REPLACE: shown on About/Privacy/Terms/Accessibility for questions and data requests
   access: unspecified               # public | gated_open | gated_guests | private | unspecified
-  about: ""                         # About page text; a blank line starts a new paragraph
+  about: ""                         # this event's About page text (the first event's own; a blank line starts a new paragraph)
+  general_about: ""                 # optional: About text for the whole neighborhood, shown for events without their own
   links: []                         # e.g. [{ label: "Neighborhood Facebook group", url: "https://www.facebook.com/groups/…" }]
   reminders: []                     # your own trick-or-treat reminders (one line each, up to 12); empty = built-in list
 event:
@@ -24,6 +25,9 @@ event:
   date: "2026-10-31"
   starts_at: "17:00"
   ends_at: "21:00"
+# The logo and show_locality are the community's (every event). The emoji, colours, headline and intro (and
+# community.about above) are the FIRST event's own branding (ADR 0012): later events start from their own type's look
+# and are branded in Organizer → Events. Leave a field out for the type's default.
 branding:
   logo: null                        # optional path to SVG/PNG next to this file (≤ 512 KB)
   brand_emoji: "🎃"
