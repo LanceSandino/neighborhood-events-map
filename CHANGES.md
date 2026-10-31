@@ -1221,4 +1221,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-10-31T23:10:00Z"
+- id: CU-20261031-32
+  type: fix
+  title: "Sale filters: only the categories the event allows are drawn and named in the public event; the sale-day toggles come before multi-family and early birds"
+  description: "EventSettingsType gains offersFilter(filterKey, settings): GarageSaleType offers a category filter (kids & toys, furniture, tools, household, electronics, free items) only while the event allows one of its categories; the lights offer every filter. CommunityPresenter keeps the public event's filters to those the feature switches and the event's settings offer, and templates/home/index.html.twig draws exactly that list (c.event.filters) instead of repeating the feature check, so Halloween and the lights render byte-identical pages (28 pages of the four stacks diffed; only the sale's Filters panel changed). A filter definition may carry after_controls: the sale's multi-family and early-bird toggles follow its filter_controls fragment (Open <weekday>), so the panel reads open now, the sale days, then the kind of sale."
+  impact: low
+  affected_modules: ["src/Event/EventSettingsType.php", "src/Event/EventType.php", "src/Event/Type/GarageSaleType.php", "src/Event/Type/HolidayLightsType.php", "src/Community/CommunityPresenter.php", "templates/home/index.html.twig"]
+  related_tests: ["tests/Integration/GarageSaleTest.php: testOnlyTheCategoriesTheSaleAllowsHaveFiltersAndTheDayTogglesComeBeforeTheKindOfSale (failed before the change)", "tests/Integration/GoldenApiParityTest.php (unchanged)", "tests/Integration/HolidayLightsTest.php (unchanged)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:20:00Z"
 ```

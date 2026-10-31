@@ -7,6 +7,7 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 ## [Unreleased]
 
 ### Fixed
+- A sale shows filters only for the item categories its organizer allows (no more filters with a count of 0), and the "Open Saturday" / "Open Sunday" filters come right after "Open now", before multi-family and early birds.
 - A sale note with an ordinary number range such as "items 100-1000" is no longer refused as a phone number. Real phone numbers are still refused: a seven-digit number counts when it could be a real local number (its first digit is 2 to 9).
 
 ## [0.13.0-beta.1] - 2026-10-31

@@ -15,7 +15,8 @@ use App\Shared\RuntimeConfig;
  * @description Builds the PUBLIC community payload (branding, event, map extent, enabled zones,
  *     registration state, stats). Never includes addresses, emails, admin identity or session data.
  *     The boundary outline is published only after organizer approval. The event is the active occurrence (its
- *     id, type, dates, hours, filters and words); the type supplies the default reminders and its own stats counts.
+ *     id, type, dates, hours, the filters it offers and words); the type supplies the default reminders and its own
+ *     stats counts.
  *     A type with settings of its own adds their public part (the lights' best night and quiet hours) and, when it
  *     allows driving, the route modes visitors can use; Halloween's event keeps exactly its keys.
  *
@@ -117,7 +118,8 @@ final class CommunityPresenter
             'default_hours' => null === $o ? null : ['start' => $o->defaultStart, 'end' => $o->defaultEnd],
             'schedule_kind' => null === $o ? null : $type->scheduleKind(),
             'filters' => null === $o ? [] : array_values(array_map(static fn (array $f) => ['key' => $f['key'], 'label' => $f['label'], 'icon' => $f['icon'], 'quick' => $f['quick']],
-                array_filter($type->filters(), static fn (array $f) => null === $f['feature'] || ($features[$f['feature']] ?? false)))),
+                array_filter($type->filters(), static fn (array $f) => (null === $f['feature'] || ($features[$f['feature']] ?? false))
+                    && (!$type instanceof EventSettingsType || $type->offersFilter($f['key'], $o->settings))))),
             'copy' => null === $o ? (object) [] : array_filter($type->copy(), static fn ($v, string $k) => \is_string($v) && !str_starts_with($k, 'admin_'), \ARRAY_FILTER_USE_BOTH),
             'rules' => null === $o ? [] : array_values(array_filter((array) ($o->settings['rules'] ?? []), 'is_string')),
             'timezone' => $c->settings['community']['timezone'],

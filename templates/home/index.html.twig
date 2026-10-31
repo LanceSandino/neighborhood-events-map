@@ -6,6 +6,7 @@
 {% set et = event_type(c.event.type) %}
 {% set zones = c.zones %}
 {% set zs = zone_summary(zones) %}
+{% set offered = c.event.filters|map(f => f.key) %}
 {# Map styles load from home.js without blocking the first paint; open the connection to the tile server early. #}
 {% block styles %}{% set tile_origin = c.map.tiles.url|split('/')|slice(0, 3)|join('/') %}<link rel="preconnect" href="{{ tile_origin }}" crossorigin><link rel="dns-prefetch" href="{{ tile_origin }}">{% endblock %}
 {% block footer_credit %}<span>Map data © OpenStreetMap contributors</span>{% endblock %}
@@ -36,9 +37,10 @@
     </select>
     </div>
     {% endif %}
-    {# Quick filters: icon + count everywhere; the name is visually hidden text (screen readers) and the title (hover). #}
+    {# Quick filters: icon + count everywhere; the name is visually hidden text (screen readers) and the title (hover).
+       Only the filters the event offers (its feature switches and settings: c.event.filters) are drawn. #}
     <div class="quick-filters">
-      {% for f in et.filters|filter(f => f.quick and (f.feature is null or (c.features[f.feature] ?? false))) %}
+      {% for f in et.filters|filter(f => f.quick and f.key in offered) %}
       <button type="button" class="filter-button"{% if f.id is defined %} id="{{ f.id }}"{% endif %} data-filter="{{ f.key }}" aria-pressed="false" title="{{ f.label }}"><span class="fi{% if f.icon_class is defined %} {{ f.icon_class }}{% endif %}" aria-hidden="true">{{ f.icon }}</span><span class="sr-only">{{ f.label }}</span></button>
       {% endfor %}
       <button type="button" class="filter-button" data-filter="saved" aria-pressed="false" title="Saved only"><span class="fi" aria-hidden="true">🧡</span><span class="sr-only">Saved only</span></button>
@@ -46,10 +48,13 @@
     <button type="button" class="filter-button" id="btnFilters" aria-expanded="false" aria-controls="moreFilters"><span class="fi" aria-hidden="true">⚙️</span>Filters<span class="filter-count hide" id="filterCount"></span></button>
   </div>
   <div class="filter-more" id="moreFilters" role="group" aria-label="More filters">
-    {% for f in et.filters|filter(f => not f.quick and (f.feature is null or (c.features[f.feature] ?? false))) %}
+    {% for f in et.filters|filter(f => not f.quick and f.key in offered and not (f.after_controls ?? false)) %}
     <button type="button" class="mini-filter" data-filter="{{ f.key }}" aria-pressed="false"{% if f.title is defined %} title="{{ f.title }}"{% endif %}><span class="fi{% if f.icon_class is defined %} {{ f.icon_class }}{% endif %}" aria-hidden="true">{{ f.icon }}</span>{{ f.label }}</button>
     {% endfor %}
     {% include event_fragment(c.event.type, 'filter_controls') %}
+    {%- for f in et.filters|filter(f => not f.quick and f.key in offered and (f.after_controls ?? false)) %}
+    <button type="button" class="mini-filter" data-filter="{{ f.key }}" aria-pressed="false"{% if f.title is defined %} title="{{ f.title }}"{% endif %}><span class="fi{% if f.icon_class is defined %} {{ f.icon_class }}{% endif %}" aria-hidden="true">{{ f.icon }}</span>{{ f.label }}</button>
+    {% endfor %}
     <button type="button" class="link-button hide" id="btnReset">Reset filters</button>
   </div>
   <div class="workarea">
