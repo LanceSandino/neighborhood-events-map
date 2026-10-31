@@ -49,7 +49,7 @@ final class AddressNormalizer
         self::assertPlain($address);
         $clean = $this->clean($address);
         if (!preg_match('~^(\d{1,6}[A-Z]?)\s+(.+)$~', $clean, $m)) {
-            throw new InvalidAddressException('Start the address with the house number, e.g. "123 Pumpkin Ln".');
+            throw new InvalidAddressException('Start the address with the house number, e.g. "123 Main St".');
         }
         $unit = null;
         $rest = $m[2];

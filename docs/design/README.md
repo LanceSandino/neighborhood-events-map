@@ -53,3 +53,26 @@ the `garage_sale` type; the repository's UX decisions win (D-20261031-27):
 Screenshots (fictional sale demo, browser clock pinned to Sat, April 10, 2027, 9:30 AM; tiles blocked until the polish
 stage): `screenshots/sale-{390,1440}.png`, `screenshots/sale-dark-{390,1440}.png`, `screenshots/sale-register-390.png`
 (the listing form's days with their own hours and details), `screenshots/sale-me-390.png` (My house after "Closed").
+
+## Polish pass (0.14)
+
+Every type was compared again with its mockups at 375, 390, 430, 768, 956, 1180 and 1440 px, light and dark, with
+larger text, more contrast and reduced motion (viewport screenshots). Changes:
+
+- The top-bar date of an event of several days reads like the mockups: "Dec 1 – Jan 3", "Apr 10–11" (it was
+  "DEC 1 – JAN 3", "APR 10 – APR 11"); Halloween's one-day "OCT 31, 2026" is unchanged.
+- A long community or event name gets a compact sidebar brand (smaller, evenly wrapped, the year on one line) instead
+  of three large lines (D-20261031-34); the footer name wraps on phones for every type.
+- The route's notices and rules take the type's colours (gold on cream, teal on mint) instead of Halloween's peach.
+- Lights and sale tags have a small gap between icon and words, as in the mockups; cards no longer repeat the note as a
+  "📝 Note" tag (a cascade bug on every type; the marker stays in the compact list), which removed many half-empty tag
+  rows.
+- A sale shows filters only for the categories it allows, and its sale-day toggles come before multi-family and early
+  birds.
+
+Kept: the shared compact controls (D-20261021-01), the list header (heading, count and layout toggle, which wraps in the
+346 px list column on every type), Halloween's 40 px chips.
+
+Screenshots (0.14, with OpenStreetMap tiles, one local run): `screenshots/demo-*.png` and `ventura-*.png` (Halloween,
+existing names, plus `demo-390.png` and `demo-dark-390.png`), `screenshots/lights-*.png`, `screenshots/sale-*.png` and
+`screenshots/admin-events-1440.png` (Organizer → Events with the event on the map and a prepared draft).

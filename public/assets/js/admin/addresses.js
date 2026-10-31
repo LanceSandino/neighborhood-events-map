@@ -14,7 +14,7 @@ function shell() {
       <div class="table-wrap"><table class="data"><thead><tr><th>Address</th><th>Zone</th><th>Location</th><th>Owner (private)</th><th>Listing</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
       <div class="pager"><button type="button" class="secondary" id="btnPrev">← Previous</button><span id="pageInfo" class="form-caption"></span><button type="button" class="secondary" id="btnNext">Next →</button></div></div>
     <div class="panel"><h2>Add an address</h2><form id="addForm" class="form-grid" novalidate>
-      <div class="field full"><label for="aAddr">Address</label><input id="aAddr" placeholder="123 Pumpkin Ln"></div>
+      <div class="field full"><label for="aAddr">Address</label><input id="aAddr" placeholder="123 Main St"></div>
       <div class="field"><label for="aLat">Latitude</label><input id="aLat" inputmode="decimal"></div>
       <div class="field"><label for="aLon">Longitude</label><input id="aLon" inputmode="decimal"></div>
       <div class="field"><label for="aZone">Zone</label><select id="aZone"><option value="">(none)</option>${zones.map((z) => `<option value="${esc(z.key)}">${esc(z.label)}</option>`).join('')}</select></div>

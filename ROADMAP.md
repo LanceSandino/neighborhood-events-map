@@ -77,7 +77,7 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - A migration copies today's Halloween columns into `details`; the old columns stay until the following minor release, so a rollback keeps working.
    - Done when the full suite and the e2e flows pass unchanged with Halloween expressed as the first event type.
    - Status: the registry, the Halloween module (PHP, browser, Twig fragments) and `listings.details` with its rollback trigger shipped in 0.10.0-beta.1; the public API answers, pages and screenshots are the 0.9 ones plus `event.type` ([D-20261031-01](DECISIONS.md) to [-04](DECISIONS.md), [event types](docs/architecture/event-types.md)).
-3. **Stage 2 — multi-day events.**
+3. **Stage 2 — multi-day events (done in 0.11.0-beta.1, completed by the types in 0.12 and 0.13).**
    - Add date ranges and daily hours to the event ([D-20261021-22](DECISIONS.md)).
    - A listing's own subset of days and hours.
    - “Open now” and “open on <day>” in the community time zone.
@@ -92,11 +92,22 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - The `garage_sale` type: categories, days and hours, statuses, moderation rules and the server-side contact-detail check on notes.
    - Demo data: a fictional sale under `examples/`.
    - Status: shipped in 0.13.0-beta.1 — organizers choose Garage Sale under Organizer → Events (a public name such as "Community Rummage Sale", one to three sale days, default hours, the categories residents may list, an early-bird time, rules, a driving tour); residents pick their sale days with their own hours on each, categories, multi-family, early birds and payment kinds (the kind only), and mark "Paused today", "Sold out today" or "Closed"; a note with a phone number, email, payment handle or web address is refused and never stored; visitors get the teal and coral theme, the sale row, filters by category, open now, each sale day, multi-family and early birds, search over categories and notes, and statuses on their own clock; the fictional sale demo is `examples/demo-sale/` ([D-20261031-24](DECISIONS.md) to [-32](DECISIONS.md), [event types](docs/architecture/event-types.md), [organizer checklist](docs/runbooks/garage-sale.md)).
-6. **Stage 5 — switching seasons.**
+6. **Stage 5 — switching seasons (done in 0.11.0-beta.1; polished in 0.14.0-beta.1).**
    - An organizer flow to archive the current event and start the next one, possibly of another type.
    - Claims are kept; residents are invited, not re-registered.
    - A per-event export and retention clean-up of old listings.
    - Status: shipped in 0.11.0-beta.1 except inviting residents — Organizer → Events prepares a draft, previews it, puts it on the map in one step (the current event is archived; nothing carries over), ends an event, exports one event's listings and deletes an archived event's listings; residents keep their claims and list each home for the new event from an empty form ([D-20261031-12](DECISIONS.md), [-13](DECISIONS.md)). Emailing residents about a new event is not built yet.
+   - 0.14.0-beta.1 finished the roadmap's polish: a release-blocking acceptance audit ([event-types-acceptance.md](docs/quality/event-types-acceptance.md)), every type checked at 375–1440 px in light and dark with larger text, more contrast and reduced motion, axe on every public page, keyboard-only use end to end, event-neutral copy outside the type modules, the organizer runbook ([organizer-events.md](docs/runbooks/organizer-events.md)) and commented reference configurations per type.
+
+## What remains
+
+These are known, deliberate gaps, each tracked here (there are no TODO notes in the code):
+
+- **Inviting residents to a new event.** Organizer → Events switches the map; residents keep their claims and list again from an empty form, but they are told by hand (newsletter, group chat). An opt-in email through the existing mailer, with consent and the same limits as sign-in links, is the next step.
+- **Retiring the legacy `listings` table.** It and its two triggers keep an image-only rollback to 0.9/0.10 working while a one-day Halloween event is on the map (D-20261031-03, -06). A later release drops them once no install needs that rollback; the drill (`bin/drill-event-upgrade.sh`) proves the path until then.
+- **Per-night hours in the lights forms.** A lights home has one start and end time for all its nights in the forms; the server and the API already take hours per night.
+- **44 px targets on Halloween.** Halloween's filter chips, time picker and card hearts stay 40 px high so its pages stay as they were; the other types have 44 px.
+- **Contact check limits.** Numbers written as words are not caught, and a range starting at 200 or more ("500-1000") is refused as a phone number (D-20261031-33).
 
 ## Not planned
 

@@ -6,6 +6,38 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.14.0-beta.1] - 2026-10-31
+
+The finishing release of the event-types work. Update by pulling `0.14.0-beta.1` and recreating the stack. This release adds no database migration; an install still on 0.9 or 0.10 runs the event migrations of 0.10 and 0.11 in order when it starts (back up first: `docs/runbooks/event-types-migration.md` has the checks and both ways back). Halloween maps work as before; the fixes below that say "also on Halloween maps" are the only visible changes there.
+
+### What's new for organizers since 0.9: Christmas lights and garage sales
+- One install now runs **Halloween, a Christmas lights season or a garage (or rummage) sale**, one at a time. Under **Organizer → Events** you prepare the next event as a draft, preview it, put it on the map in one step and end it when it is over; residents keep their homes and list them again for each event from an empty form. Nothing from an earlier event is copied or shown again.
+- **Christmas lights:** up to 62 nights with the hours most homes keep; homes pick their nights and hours, display styles, drive-by or walk-up, music with an FM station, a flashing warning and treats; visitors filter by drive-by, no flashing reported, music, open tonight, a night or a style, and plan a lights tour.
+- **Garage sales:** one to three sale days; homes pick their days with their own hours on each, categories, multi-family, early birds and payment kinds (the kind only); notes never carry phone numbers, emails, payment usernames or links; visitors filter by category, open now and sale day, and plan their sale stops.
+- Each kind of event has its own look and words (midnight blue and gold, teal and coral), which your own branding still overrides. Inviting residents to a new event is still done by hand (newsletter, group chat).
+- New: an organizer guide for events through the year (`docs/runbooks/organizer-events.md`) and commented example settings for each kind of event (`examples/reference/`).
+
+### Changed
+- The accessibility statement, the terms of use and the address example in "List your home" use the words of the event on the map (for example the lights' and the sale's own pin icons and labels) instead of Halloween's; between events they stay general. Halloween's pages read exactly as before. The organizer console's address example and the address error message use a neutral "123 Main St".
+
+### Fixed
+- In Organizer → Events, a draft's "Put on the map" button shows its words again (they were white on white).
+- With "Larger text" on a phone 380 to 440 pixels wide, the list's cards take one column instead of pushing the page sideways (also on Halloween maps).
+- Cards in the list show a home's note itself and no longer also a "📝 Note" tag, which often sat alone on an extra row; the 📝 marker stays in the compact list, as intended (also on Halloween maps). On Christmas lights and sale maps the tags have a little space between icon and words.
+- Keyboard use, for every kind of event: a map pin reached with Tab opens its home with Enter or Space (it did nothing before); in "List your home", the pin for a new address can be placed without a mouse (arrow keys move the map, Enter drops the pin at its centre, marked with a +); in My house, the keyboard stays on the button or field you used after a change is saved instead of jumping back to the top of the page.
+- A long community or event name no longer fills the sidebar with three large lines: it is set a little smaller and wraps evenly, and the year line stays on one line (for every kind of event, also a Halloween community with a long name). A long name also wraps in the footer instead of widening a phone screen.
+- The route's notices on a Christmas lights or sale map use that map's colours instead of Halloween's peach.
+- The map's closing note no longer ends with two full stops after the organizer's gate notice.
+- The date in the top bar is written compactly for events of several days: "Apr 10–11" or "Dec 1 – Jan 3" (it read "APR 10 – APR 11"); a range inside one month reads "Dec 1–24, 2026" everywhere. A one-day event such as Halloween keeps its date as before.
+- A sale shows filters only for the item categories its organizer allows (no more filters with a count of 0), and the "Open Saturday" / "Open Sunday" filters come right after "Open now", before multi-family and early birds.
+- A sale note with an ordinary number range such as "items 100-1000" is no longer refused as a phone number. Real phone numbers are still refused: a seven-digit number counts when it could be a real local number (its first digit is 2 to 9).
+
+### Known limitations
+- Inviting residents by email to list for a new event is not built yet.
+- A Christmas lights home has one set of hours for all its nights in the forms.
+- The sale-note check does not catch numbers written as words, and still refuses a range starting at 200 or more (for example "500-1000") as a phone number.
+- Halloween's filter buttons stay 40 pixels high (44 on the other kinds of event) so Halloween pages look as before.
+
 ## [0.13.0-beta.1] - 2026-10-31
 
 Update by pulling `0.13.0-beta.1` and recreating the stack. No database migration: Halloween and Christmas lights maps look and work exactly as before. Going back to 0.12.0-beta.1 needs only the older image while a Halloween or Christmas lights event is on the map; a garage sale is not shown by older versions (they show "No event on the map right now").

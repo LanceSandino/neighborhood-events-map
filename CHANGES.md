@@ -1211,4 +1211,144 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p4"
   author: "Lance Sandino"
   timestamp: "2026-10-31T23:00:00Z"
+- id: CU-20261031-31
+  type: fix
+  title: "Sale notes: a seven-digit local number needs an exchange code starting with 2–9, so ranges such as \"items 100-1000\" pass"
+  description: "Shared/ContactDetails refused \"items 100-1000\" as a seven-digit local phone number. Every real North American exchange code starts with 2–9, so the seven-digit shape now requires that first digit; ten-digit, parenthesized, country-code and spaced shapes are unchanged. Table tests both ways: 7 more numbers still refused (212-1000, 867-5309, 987.6543, 200 - 1000, 555-0000, 230-1999 and a real number after a range) and 8 more ordinary notes pass (100-1000, 100 - 1000 pieces, 101-1200, 150-2000, 199.1999, 000-0000, 120-1500 ml). A range starting at 200 or more stays a rare false positive; numbers written as words stay out of scope (D-20261031-33)."
+  impact: low
+  affected_modules: ["src/Shared/ContactDetails.php"]
+  related_tests: ["tests/Unit/Shared/ContactDetailsTest.php: testContactDetailsAreFound, testOrdinaryNotesPass (8 new ordinary notes failed before the change)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:10:00Z"
+- id: CU-20261031-32
+  type: fix
+  title: "Sale filters: only the categories the event allows are drawn and named in the public event; the sale-day toggles come before multi-family and early birds"
+  description: "EventSettingsType gains offersFilter(filterKey, settings): GarageSaleType offers a category filter (kids & toys, furniture, tools, household, electronics, free items) only while the event allows one of its categories; the lights offer every filter. CommunityPresenter keeps the public event's filters to those the feature switches and the event's settings offer, and templates/home/index.html.twig draws exactly that list (c.event.filters) instead of repeating the feature check, so Halloween and the lights render byte-identical pages (28 pages of the four stacks diffed; only the sale's Filters panel changed). A filter definition may carry after_controls: the sale's multi-family and early-bird toggles follow its filter_controls fragment (Open <weekday>), so the panel reads open now, the sale days, then the kind of sale."
+  impact: low
+  affected_modules: ["src/Event/EventSettingsType.php", "src/Event/EventType.php", "src/Event/Type/GarageSaleType.php", "src/Event/Type/HolidayLightsType.php", "src/Community/CommunityPresenter.php", "templates/home/index.html.twig"]
+  related_tests: ["tests/Integration/GarageSaleTest.php: testOnlyTheCategoriesTheSaleAllowsHaveFiltersAndTheDayTogglesComeBeforeTheKindOfSale (failed before the change)", "tests/Integration/GoldenApiParityTest.php (unchanged)", "tests/Integration/HolidayLightsTest.php (unchanged)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:20:00Z"
+- id: CU-20261031-33
+  type: fix
+  title: "Compact date ranges: the top-bar badge reads \"Apr 10–11\" or \"Dec 1 – Jan 3\"; date_range writes a range inside one month with a closed dash"
+  description: "Twig event_badge wrote an event of several days in capitals with the month twice (\"APR 10 – APR 11\"). It now writes the month once inside one month (\"Apr 10–11\") and a spaced dash between months (\"Dec 1 – Jan 3\"), in the mockups' case; a one-day event keeps \"OCT 31, 2026\", so Halloween's badge is unchanged. date_range follows the same rule (\"Dec 1–24, 2026\", as the sale's day list already wrote \"April 10–11, 2027\")."
+  impact: low
+  affected_modules: ["src/Twig/AppExtension.php"]
+  related_tests: ["tests/Unit/Twig/AppExtensionTest.php: testFormatting (the new badge cases failed before the change)", "tests/Integration/HolidayLightsTest.php, tests/Integration/GarageSaleTest.php (the badge in the page)", "tests/e2e/specs/lights.spec.mjs, tests/e2e/specs/sale.spec.mjs (the badge text)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:30:00Z"
+- id: CU-20261031-34
+  type: fix
+  title: "Shell for long names and per-type notices: the compact sidebar brand, the footer name wraps for every type, notices in the type's colours, one full stop after the gate notice"
+  description: "base.html.twig adds .long to the brand when the community or event name is longer than 12 characters; app.css sets it at 15 px, evenly wrapped (text-wrap: balance), with the year line kept on one line, so \"Maple Hollow / Christmas Lights\" and \"Ventura Reserve / Halloween\" take two lines instead of three and \"Community Rummage Sale\" wraps evenly; the Halloween demo's brand (names that fit) is unchanged (D-20261031-34). The footer's name wraps between words for every type (the rule moved from garage_sale.css to app.css; the version link stays whole). holiday_lights.css and garage_sale.css set --notice-bg/--notice-fg in their light and both dark blocks (gold on cream, teal on mint; 6.3:1 and 6.6:1 light, 9.8:1 and 9.2:1 dark), so the route's notice and rules no longer show Halloween's peach. The map's closing note adds a full stop after the gate notice only when it does not end with one (the demos and the Ventura example read \"exist..\"). Halloween's rendered pages (7 per stack) are byte-identical apart from those two fixes."
+  impact: low
+  affected_modules: ["templates/base.html.twig", "templates/home/index.html.twig", "public/assets/css/app.css", "public/assets/css/events/holiday_lights.css", "public/assets/css/events/garage_sale.css"]
+  related_tests: ["tests/Integration/HeaderBrandingTest.php: testANameLongerThanTheRailColumnGetsTheCompactBrand, testTheGateNoticeEndsTheMapDisclaimerWithOneFullStop (both failed before the change)", "tests/e2e/specs/types.spec.mjs: <type>: the brand handles the names, notices take the type's colours, a long footer wraps"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:40:00Z"
+- id: CU-20261031-35
+  type: fix
+  title: "Event-neutral copy outside the type modules: the legal pages and the address example take the event type's words (page_* copy); a test keeps holiday words in the type modules"
+  description: "tests/Unit/Event/EventNeutralCopyTest scans every template outside templates/event/ (Twig comments and class names left out), every string literal of src/ outside src/Event/Type and every browser string outside events/ for holiday words; it found the accessibility statement's pin icons and sensory filters, the terms' \"treats and sensory details\" and \"Check treats\" lines, the register sheet's \"123 Pumpkin Ln\" example, the address error message and the organizer console's address placeholder. Each type's copy gains page_address_example, page_a11y_icons, page_a11y_filters, page_terms_details and page_terms_check (Halloween's hold exactly the old text); the accessibility and terms pages use them while an event is on the map and stay general between events; CommunityPresenter leaves page_* keys out of the public event like admin_* (GoldenApiParityTest unchanged). The address error and the console placeholder read \"123 Main St\". Allowed literals, each with its reason: the type keys, the legacy listings columns and their developer error, the name of settings saved before event.name existed, and filters.js re-exporting two Halloween helpers (D-20261031-35). Halloween's pages are byte-identical."
+  impact: low
+  affected_modules: ["src/Event/Type/HalloweenCopy.php", "src/Event/Type/HolidayLightsCopy.php", "src/Event/Type/GarageSaleCopy.php", "src/Event/EventType.php", "src/Community/CommunityPresenter.php", "src/Address/AddressNormalizer.php", "templates/legal/accessibility.html.twig", "templates/legal/terms.html.twig", "public/assets/js/admin/addresses.js"]
+  related_tests: ["tests/Unit/Event/EventNeutralCopyTest.php (failed before the change: 5 template lines, 1 server string, 1 console string)", "tests/Integration/LegalPagesTest.php: testTheLegalPagesUseTheWordsOfTheEventOnTheMap", "tests/Integration/GoldenApiParityTest.php (unchanged)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:50:00Z"
+- id: CU-20261031-36
+  type: fix
+  title: "Keyboard-only use for every type: pins select their home with Enter or Space, the self-entry pin is placed with the keyboard, My house keeps the focus after a save; cross-type e2e (widths, themes, larger text, contrast, motion, axe, keyboard)"
+  description: "tests/e2e/specs/types.spec.mjs walks each type's map page with the keyboard alone (skip link, search, a quick filter, the Filters panel, Reset, a card, the selected home's Save, a pin, the route), lists a home (self entry, the pin by keyboard, the type's details, the email, the emailed link confirmed with Enter) and acts in My house (a status, the note saved, the home given back). It found three gaps, all also on Halloween: Leaflet 1.9 markers only open popups on Enter, so a focused pin did nothing (home.js now selects its home on Enter or Space); the self-entry pin map had only a click handler (register.js: arrow keys move the map, Enter or Space puts the pin at its centre, a + marks it while focused, the caption says so; the test fails without it: no marker); me.js redrew a saved home and the focus fell to the page (focusSame puts it back on the same status button, field or Save). Mouse and touch behave as before. The same spec checks the compact brand, the type-coloured notices and a long footer name, no horizontal overflow at 375/390/430/768/956/1180/1440 px in light and dark, larger text with more contrast at every width (44 px targets on the lights and the sale; Halloween's 40 px chips are a documented limitation), nothing animating with reduced motion, and axe WCAG 2.1 AA on the lights' and the sale's sign-in, privacy, terms, accessibility and changelog pages and every type's selected-home panel, in both themes (D-20261031-36)."
+  impact: low
+  affected_modules: ["public/assets/js/home.js", "public/assets/js/register.js", "public/assets/js/me.js", "public/assets/css/app.css", "templates/home/_modals.html.twig"]
+  related_tests: ["tests/e2e/specs/types.spec.mjs: <type>: keyboard only: filters, list, map pins, selected home, saved stops, route, listing a home and My house (the pin and focus steps failed before the change)", "tests/e2e/specs/types.spec.mjs (overflow, larger text, reduced motion and axe tests for the three types)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:00:00Z"
+- id: CU-20261031-37
+  type: fix
+  title: "Cards: the 📝 note marker only in the compact list (a cascade bug showed it on cards too); a gap between tag icon and words on the lights and the sale"
+  description: "app.css hid .note-icon and showed it in .cards.compact, but the later .tag { display: inline-flex } of equal specificity won, so every card with a note also carried a \"📝 Note\" tag next to the note text, often alone on an extra, indented row (seen on all three types; the 0.7 notes say the marker is for the compact list). The rules now read .tag.note-icon. events/common.css gives the lights' and the sale's tags a 3 px gap between icon and words, as in the mockups (Halloween's tags are unchanged). This changes Halloween's cards: the redundant tag is gone."
+  impact: low
+  affected_modules: ["public/assets/css/app.css", "public/assets/css/events/common.css"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs: compact list: one row per home with icons, remembered after reload; long notes are clamped on cards (the new hidden-on-cards assertion failed before the change)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:10:00Z"
+- id: CU-20261031-38
+  type: refactor
+  title: "home.js split: the family page's Leaflet map moves to home-map.js (home.js 428 → 324 lines, home-map.js 137)"
+  description: "createHomeMap({C, T, homes, filters, activeId, numbers, ctx, selectHome, reducedMotion, onReady}) owns the tiles, the outline, the zone shapes and their spaced names, the dimmed outside, fitting the neighborhood or a zone, the pins (with the keyboard selection of CU-20261031-36) and the location dot; home.js keeps the page state, list, filters, selected home, route wiring and refresh and reaches the map through view.map. No behaviour change: public.spec and types.spec (124 tests on chromium) pass on the split code."
+  impact: none
+  affected_modules: ["public/assets/js/home.js", "public/assets/js/home-map.js"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs", "tests/e2e/specs/types.spec.mjs", "tests/e2e/specs/lights.spec.mjs", "tests/e2e/specs/sale.spec.mjs"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:20:00Z"
+- id: CU-20261031-39
+  type: fix
+  title: "Larger text on phones of 381–440 px: the cards take one column (Halloween's two columns pushed the page 43 px sideways)"
+  description: "Larger text draws the page 15 % larger (body zoom), but media queries still see the real width, so a 390 or 430 px phone kept Halloween's two card columns in a 339–374 px page and a card's hours and status chip widened the page by 43 px. app.css gives the cards one column under data-text=\"large\" up to 440 px (the 380 px breakpoint × 1.15). Normal text is unchanged. types.spec.mjs now waits until home.js has drawn the page (the filter counts) before measuring, which made the failure reproducible."
+  impact: low
+  affected_modules: ["public/assets/css/app.css"]
+  related_tests: ["tests/e2e/specs/types.spec.mjs: halloween: larger text and more contrast at 390px / 430px: no overflow (failed before the change: 43 px)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:30:00Z"
+- id: CU-20261031-40
+  type: test
+  title: "Acceptance tests for items no test pinned: listings of every event vs release, unclaim, erasure and transfer; one event's changes and purge never touch another's; ended events hidden by id; route plans; another type's status; List for without CSRF; escaped organizer text; a hostile shared link"
+  description: "tests/Integration/EventTypesAcceptanceTest (5 tests, 297 assertions) and a node test in tests/js/event-storage.test.mjs cover the gaps the acceptance audit found (docs/quality/event-types-acceptance.md). All passed on the first run: they pin behaviour the code already had (no bug found), e.g. that an organizer's transfer keeps an address's listings of every season with the address and the old owner reaches none, while release, unclaim and erasure remove archived seasons' listings too."
+  impact: none
+  affected_modules: ["tests/Integration/EventTypesAcceptanceTest.php", "tests/js/event-storage.test.mjs"]
+  related_tests: ["tests/Integration/EventTypesAcceptanceTest.php", "tests/js/event-storage.test.mjs: a hostile shared link changes nothing: markup in e=, stops or start is never a stop, a filter or this event"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:40:00Z"
+- id: CU-20261031-41
+  type: docs
+  title: "Organizer runbook for events through the year, commented reference configs for the lights and the sale, the acceptance audit, stale \"after the event\" steps replaced, the release runbook names the drill for every upgrade from 0.9 or 0.10"
+  description: "docs/runbooks/organizer-events.md: the life of an event (draft, active, archived), preparing, previewing, switching, ending, export and retention, what release, unclaim, erasure and transfer do to listings, residents invited by hand (no app email yet), seasonal archiving of legacy rows, backups and upgrades, and every console command. examples/reference/holiday-lights.community.yaml and garage-sale.community.yaml are commented reference configurations (event settings included, no geometry, no contact address); config/community.example.yaml stays the Halloween one and no longer says Halloween is the only type. tests/Integration/EventBootstrapTest::testTheCommentedReferenceConfigsOfEachTypeImport imports all three. setup.md and event-day.md said to change the event date for next year (pre-0.11); they now point to Organizer → Events. release.md runs bin/drill-event-upgrade.sh for every release a live install reaches from 0.9 or 0.10 and links the organizer runbook. docs/quality/event-types-acceptance.md maps the ten release-blocking items and nine risks to tests (all cited methods checked to exist). season.spec.mjs captures Organizer → Events (admin-events-1440.png)."
+  impact: none
+  affected_modules: ["docs/runbooks/organizer-events.md", "docs/runbooks/setup.md", "docs/runbooks/event-day.md", "docs/runbooks/release.md", "docs/quality/event-types-acceptance.md", "examples/reference/", "config/community.example.yaml", "tests/e2e/specs/season.spec.mjs"]
+  related_tests: ["tests/Integration/EventBootstrapTest.php: testTheCommentedReferenceConfigsOfEachTypeImport"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:50:00Z"
+- id: CU-20261031-42
+  type: chore
+  title: "0.14.0-beta.1: version, release notes with a what's-new summary for organizers, README for three kinds of event with a screenshots table, ROADMAP stages done and what remains, event-types architecture and design notes"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.14.0-beta.1. The release notes open with what organizers got since 0.9 (Organizer → Events, Christmas lights, garage sales, their looks, invitations by hand), say this release adds no migration and that an install on 0.9 or 0.10 runs the event migrations in order, and list the fixes and known limitations. README: what each kind of event offers (a table), a screenshots table per type (desktop, phone, dark phone, with tiles), Organizer → Events, links to the organizer guide, the migration runbook and the acceptance audit. ROADMAP marks Stages 1–5 done and lists what remains (resident invitations, retiring the legacy table, per-night hours in the lights forms, Halloween's 40 px chips, the contact check's limits); there are no TODO notes in the code. docs/architecture/event-types.md describes offersFilter, after_controls, page_* copy and home-map.js; docs/design/README.md records the polish pass. public.spec.mjs adds Halloween phone screenshots at 390 px (demo-390, demo-dark-390) during the event."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "ROADMAP.md", "docs/architecture/event-types.md", "docs/design/README.md", "tests/e2e/specs/public.spec.mjs"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T01:00:00Z"
+- id: CU-20261031-43
+  type: fix
+  title: "Organizer → Events: the draft's \"Put on the map\" button was white on white"
+  description: "admin.css's .row-actions button (0,1,1) set the plain surface background over .primary (0,1,0) but left .primary's white text, so the main action of a draft row was a blank box (seen in the refreshed screenshot admin-events-1440.png; present since 0.11). .row-actions button.primary keeps the primary colours."
+  impact: low
+  affected_modules: ["public/assets/css/admin.css"]
+  related_tests: ["tests/e2e/specs/season.spec.mjs: an organizer switches the map to the next event; last season disappears and residents list again from an empty form (the new legibility check failed before the change: text and background both rgb(255, 255, 255))"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T01:10:00Z"
+- id: CU-20261031-44
+  type: chore
+  title: "0.14.0-beta.1 screenshots with OpenStreetMap tiles for every event type and Organizer → Events, and the test report's latest run"
+  description: "One local e2e run with tiles (E2E_BLOCK_TILES unset, fresh stacks) refreshed the lights and sale captures (desktop 1440 and phone 390, light and dark, the listing form, My house), Halloween's under their existing names plus demo-390 and demo-dark-390, and the Ventura map pages (which now show the compact brand); admin-events-1440.png was retaken after the CU-20261031-43 fix with season alone (that page has no map). The organizer overview and boundary captures stay as committed. docs/quality/test-report.md records every gate of the final tree; the event-types migration runbook (committed separately) covers the direct upgrade from 0.9, erasure and date boundaries."
+  impact: none
+  affected_modules: ["docs/design/screenshots/", "docs/quality/test-report.md", "docs/runbooks/event-types-migration.md"]
+  related_tests: ["tests/e2e (225 passed, 2 skipped, with tiles)", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T01:20:00Z"
 ```

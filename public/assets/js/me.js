@@ -2,8 +2,9 @@
  * @module assets/js/me
  * @description Resident dashboard: lists only the signed-in user's homes with their listing for the event on the
  *     map; status buttons and the edit form PATCH /api/me/homes/{id} (CSRF header); a home not listed for the event
- *     offers "List for <event>" (POST /api/me/homes/{id}/listing) from an empty form, never from an earlier event. Session expiry is enforced by the server; the
- *     countdown here is only a hint and never polls protected endpoints. The event type (events/index.js) fills and
+ *     offers "List for <event>" (POST /api/me/homes/{id}/listing) from an empty form, never from an earlier event.
+ *     After a save the home is drawn again and the keyboard stays on the same control. Session expiry is enforced by
+ *     the server; the countdown here is only a hint and never polls protected endpoints. The event type (events/index.js) fills and
  *     reads its own listing fields, sent as `details`, and supplies its hours and words.
  * @dependencies lib/api.js, lib/render.js, lib/time.js, lib/modal.js, events/index.js
  */
@@ -45,6 +46,15 @@ function tick() {
   $('#sessionHint').textContent = expiresAt === 0 ? '' : left > 0
     ? `For your security you’ll be signed out after ${idleMinutes} minutes of inactivity (about ${left} min left).`
     : 'Your session has probably ended. Saving will ask you to sign in again.';
+}
+
+/** After a home is drawn again, the keyboard stays on the same control (a status button, Save, a field). */
+function focusSame(fresh, was) {
+  const box = ['checkbox', 'radio'].includes(was.type) ? `[value="${CSS.escape(was.value)}"]` : '';
+  const key = was.dataset.status ? `[data-status="${CSS.escape(was.dataset.status)}"]` : (was.dataset.f ? `[data-f="${CSS.escape(was.dataset.f)}"]`
+    : (was.name ? `[name="${CSS.escape(was.name)}"]${box}` : null));
+  const target = (key && fresh.querySelector(key)) || fresh.querySelector('[data-status]');
+  if (target) target.focus();
 }
 
 function homeCard(home, ev) {
@@ -103,7 +113,10 @@ function homeCard(home, ev) {
     try {
       const res = await api(url, { method, body });
       touch();
-      node.replaceWith(homeCard(res.home, ev));
+      const fresh = homeCard(res.home, ev);
+      const was = node.contains(document.activeElement) ? document.activeElement : null;
+      node.replaceWith(fresh);
+      if (was) focusSame(fresh, was);
       toast(msg);
     } catch (e) { if (!handleAuthError(e)) showError(e); }
   };

@@ -103,6 +103,13 @@ final class GarageSaleCopy
         'reminders_heading' => 'Sale etiquette',
         // How visitors may reach the homes: the title of the "gated, open during the event" choice.
         'access_gated_open' => 'Gated — open for the sale',
+        // Server-rendered pages only (page_* keys are not in the public event): the address example in "List your
+        // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
+        'page_address_example' => '123 Main St',
+        'page_a11y_icons' => '🧸 toys, 🪑 furniture, 🛠️ tools',
+        'page_a11y_filters' => 'Filters by category, sale day and opening hours help plan a short route.',
+        'page_terms_details' => 'categories, payment kinds and notes',
+        'page_terms_check' => 'Check items yourself before you buy — categories and the other labels are only what residents tell us, and this map sells nothing.',
         // Organizer console
         'admin_access_gated_open' => 'Gated — gates open to shoppers during sale hours',
         'admin_reminders_label' => 'Sale etiquette (one per line, up to 12)',

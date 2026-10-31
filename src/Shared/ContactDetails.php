@@ -8,11 +8,12 @@ namespace App\Shared;
  * @module Shared/ContactDetails
  * @description Finds contact details in public free text (garage-sale notes, D-20261021-23): phone numbers in their
  *     usual shapes (spaced, dotted, dashed, parenthesized, with a country code, ten digits in a row, seven-digit local
- *     numbers with a dash or dot), email addresses (also "name (at) domain" and "name at domain dot com"), payment
- *     handles ($cashtags, @handles, a payment app followed by a username) and web addresses (with or without a
- *     scheme, "name dot com"). It only reports what it found; the caller refuses the text and nothing is stored.
- *     Text is checked after Unicode compatibility folding, so full-width digits and at signs count. Numbers written
- *     as words ("five five five") are out of scope; times, prices, sizes, ranges and dates are not contact details.
+ *     numbers with a dash or dot whose exchange code starts with 2–9, as every real one does), email addresses (also
+ *     "name (at) domain" and "name at domain dot com"), payment handles ($cashtags, @handles, a payment app followed
+ *     by a username) and web addresses (with or without a scheme, "name dot com"). It only reports what it found;
+ *     the caller refuses the text and nothing is stored. Text is checked after Unicode compatibility folding, so
+ *     full-width digits and at signs count. Numbers written as words ("five five five") are out of scope; times,
+ *     prices, sizes, ranges and dates are not contact details.
  *
  * @dependencies none
  */
@@ -79,8 +80,9 @@ final class ContactDetails
         if (preg_match('~(?<![\d$])(?:\+?\s*1'.$sep.')?(?:\(\s*\d{3}\s*\)|\d{3})'.$sep.'\d{3}'.$sep.'\d{4}(?!\d)~u', $t)) {
             return true;
         }
-        // seven-digit local numbers with a dash or a dot: 555-1234
-        if (preg_match('~(?<![\d$])\d{3}\s*[.\-]\s*\d{4}(?!\d)~u', $t)) {
+        // seven-digit local numbers with a dash or a dot: 555-1234. Every real exchange code starts with 2–9 (NANP), so a
+        // range such as "items 100-1000" is not a number
+        if (preg_match('~(?<![\d$])[2-9]\d{2}\s*[.\-]\s*\d{4}(?!\d)~u', $t)) {
             return true;
         }
         // international: a plus, a country code and enough digits for a number (+44 20 7946 0958)

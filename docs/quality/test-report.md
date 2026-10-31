@@ -1,6 +1,46 @@
 # Test and verification report
 
-## Latest run — 2026-10-31, release 0.13.0-beta.1
+## Latest run — 2026-10-31, release 0.14.0-beta.1
+
+The finishing release of the event-types roadmap (CU-20261031-31 to -44), on PHP 8.5.12 + PostgreSQL 18.6, Symfony
+8.1.10. No schema change. The bar: the release-blocking acceptance audit ([event-types-acceptance.md](event-types-acceptance.md))
+with a test behind every item, Halloween unchanged apart from named bug fixes, and the upgrade production takes —
+0.9.0-beta.1 straight to this release, every migration in sequence — run on the built images.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.13.0-beta.1 (branch start, dev stacks) | PHPUnit **OK — 558 tests, 14176 assertions** |
+| PHPUnit 13.4.5 | **OK — 587 tests, 14553 assertions** (29 new: 15 contact-check table cases, the event-neutral copy check, the compact brand and gate notice, the legal pages per type, the sale's offered filters, the reference configs, 5 acceptance tests; the contact, filter, badge, brand, gate-notice and neutral-copy tests ran red before their fix) |
+| Coverage (pcov) | Lines **95.28 %** ✓ ≥ 85 · Methods 83.38 % · Branches n/a |
+| Halloween parity | 28 server-rendered pages of the four stacks diffed before and after (asset fingerprints aside): Halloween's pages are identical except the named fixes (the Ventura example's long name gets the compact brand; one full stop after the gate notice); lights pages change only in the badge, the brand class and the legal words; the sale's also in its Filters order. GoldenApiParityTest and PublicPrivacyTest unchanged and green |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` · `lint:container` | No errors · no advisories · 79 files OK · 21 files OK (config, examples and the two reference configs) · OK |
+| Migrations up / down to zero / up (test database) | OK (5 migrations; no new one) |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **67/67** (1 new: a hostile shared link) · **47/47** |
+| Playwright E2E on the four dev stacks, tiles blocked (fresh stacks) | **225 passed, 2 skipped** (12.9 min; the same 2 skipped as before): 100 new cross-type tests in types.spec.mjs — the brand, notices and footer per type; no overflow at 7 widths in light and dark; larger text with more contrast at 7 widths; reduced motion; axe on the lights' and the sale's other public pages and every type's selected home, both themes; a keyboard-only walk through each type — and Halloween phone screenshots at 390 px on both engines |
+| Playwright E2E with OpenStreetMap tiles (the one tile run, fresh stacks; refreshes the screenshots) | **225 passed, 2 skipped** (12.4 min). Its Organizer → Events screenshot showed the draft's "Put on the map" button white on white (CU-20261031-43): after the fix, `season` alone (`--no-deps`, tiles blocked, a fresh demo stack; that page has no map) passed with the new check and retook `admin-events-1440.png` |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (0.14.0-beta.1: /healthz, the map page, 6 versioned assets, multipart rules, the upload endpoint, all FPM pools, the console); home-map.js and the reference configs are in the images. Rebuilt and run again on the final tree after the admin.css fix: 7/7 |
+| `bin/drill-event-upgrade.sh nhm-app nhm-nginx smoke` (images of the tree before the admin.css-only fix) | **all 8 steps passed** (113 s): published 0.9.0-beta.1 with 14 fictional homes → backup → upgrade to 0.14.0-beta.1 (both migrations at start; same 14 homes, keys and values; 1 occurrence, 14 event listings) → edit + new self-entered home → images back to 0.9.0-beta.1 ("You have 2 previously executed migrations", "Already at the latest version"; the same 15 homes) → edit on 0.9 → forward again (the 0.9 edit is in the event tables) → 0.9 + `bin/restore.sh` of the pre-upgrade dump (exactly the 14 homes, no event tables, 3 migrations) → upgraded again (same 14 homes) |
+| Trivy | not run locally (CI scans the images) |
+
+Bugs the audit and the visual pass found, each with a failing test first: a seven-digit phone rule refusing "items
+100-1000"; sale filters for categories the event leaves out; the sale's day toggles after the kind-of-sale toggles; the
+top-bar range "APR 10 – APR 11"; three-line sidebar brands for long names (also Halloween's Ventura example); the
+footer name widening phones on the lights; peach notices on the lights and the sale; a double full stop after the gate
+notice; holiday words in the legal pages, the address examples and an error message; Leaflet pins that ignored Enter;
+no keyboard way to place the self-entry pin; My house losing the focus after a save; the 📝 marker shown on cards
+(a CSS cascade bug); cards wider than a 390–430 px phone with larger text (Halloween); the console's "Put on the map" button white on white. The acceptance tests added for
+items without a test passed at once: no data bug was found.
+
+Screenshots (`docs/design/screenshots/`, with OpenStreetMap tiles from the one tile run, fictional demo data; browser
+clock pinned for the lights and the sale, and for the new Halloween 390 px shots): `lights-{1440,390}.png`,
+`lights-dark-{1440,390}.png`, `lights-register-390.png`, `lights-me-390.png`, the same six `sale-*.png`, Halloween's
+existing names (`demo-{375,430,768,1180,1440}.png`, `demo-dark-{375,1440}.png`, written at the iPhone's 3× scale by the
+webkit project, as before) plus the new `demo-390.png` and `demo-dark-390.png`, the Ventura map pages
+(`ventura-{375,430,1180,1440}.png`, which show the compact brand), and `admin-events-1440.png`. The organizer
+overview and boundary captures were left as committed.
+
+## Run — 2026-10-31, release 0.13.0-beta.1
 
 The garage sale, the third event type (ROADMAP Stage 4; CU-20261031-25 to -30), on PHP 8.5.12 + PostgreSQL 18.6,
 Symfony 8.1.10. The bar was Halloween and Christmas lights parity first (every earlier test, API answer and page

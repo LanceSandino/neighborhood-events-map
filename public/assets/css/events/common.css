@@ -3,8 +3,8 @@
  * @description Components every event type with several days shares, loaded by those types' head fragments before
  *     their own stylesheet (Christmas lights, the garage sale; Halloween loads none, so its pages are untouched): the
  *     season row under the hero and its pill (before, during, between, after), the route's mode switch and the rules
- *     next to it, fieldset legends, and 44 px touch targets for the filters, cards, the selected home, the map tools
- *     and form chips. Colours come from each type's tokens (--season-*-bg/-fg, --warm-text …); nothing animates.
+ *     next to it, card tags with a gap between icon and words, fieldset legends, and 44 px touch targets for the
+ *     filters, cards, the selected home, the map tools and form chips. Colours come from each type's tokens (--season-*-bg/-fg, --warm-text …); nothing animates.
  * @dependencies assets/css/app.css (tokens and layout), the type's stylesheet (its tokens)
  */
 
@@ -34,6 +34,9 @@
 [data-event-type] .filter-more .link-button { min-height: 44px; }
 [data-event-type] .check-chip { min-height: 44px; }
 fieldset.field > legend.label { padding: 0; }
+
+/* ---- Card tags: a little space between the icon and its words (the mockups) ---- */
+[data-event-type] .tag { gap: 3px; }
 
 /* ---- Route: the mode switch and the rules next to it ---- */
 .route-mode { display: inline-flex; gap: 2px; padding: 3px; margin-top: 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-3); }

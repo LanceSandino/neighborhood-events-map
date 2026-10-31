@@ -35,7 +35,9 @@ interface EventType
     public function defaultBranding(): array;
 
     /**
-     * Plain-text copy by purpose (reminders, headings, labels, captions); Twig and the console escape it.
+     * Plain-text copy by purpose (reminders, headings, labels, captions); Twig and the console escape it. Keys
+     * starting with admin_ (the organizer console) and page_ (server-rendered pages: the legal pages, the address
+     * example) are left out of the public event.
      *
      * @return array<string,mixed>
      */
@@ -119,9 +121,11 @@ interface EventType
 
     /**
      * Filter toggles in display order; quick ones are icon buttons, the others sit under "Filters". Labels are
-     * plain text and icons decorative; `feature` names the community switch that must be on (null: always).
+     * plain text and icons decorative; `feature` names the community switch that must be on (null: always);
+     * `after_controls` puts a "Filters" toggle after the type's filter_controls fragment (the sale's kind-of-sale
+     * toggles after its sale days).
      *
-     * @return list<array{key:string, label:string, icon:string, quick:bool, feature:?string, id?:string, title?:string, icon_class?:string}>
+     * @return list<array{key:string, label:string, icon:string, quick:bool, feature:?string, id?:string, title?:string, icon_class?:string, after_controls?:bool}>
      */
     public function filters(): array;
 

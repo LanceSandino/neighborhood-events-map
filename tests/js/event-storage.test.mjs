@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStore, migrateYearStore } from '../../public/assets/js/lib/store.js';
-import { otherEvent } from '../../public/assets/js/lib/share.js';
+import { otherEvent, readSharedLink } from '../../public/assets/js/lib/share.js';
 import * as halloween from '../../public/assets/js/events/halloween.js';
 
 const memory = () => {
@@ -48,3 +48,18 @@ test('a shared link for another event is recognized; links without an event are 
   assert.equal(otherEvent('-7', 7), true);
   assert.equal(otherEvent('0007', 7), false);
 });
+
+test('a hostile shared link changes nothing: markup in e=, stops or start is never a stop, a filter or this event', () => {
+  const clean = (f) => (f && typeof f === 'object' && !Array.isArray(f) ? Object.fromEntries(Object.entries(f).filter(([k, v]) => k === 'q' && typeof v === 'string')) : {});
+  const q = (o) => '?' + new URLSearchParams(o).toString();
+  assert.deepEqual(readSharedLink(q({ e: '<script>alert(1)</script>', stops: '1.2.3' }), 7, clean), { otherEvent: true }, 'markup in e= is another event: no stops');
+  assert.deepEqual(readSharedLink(q({ e: '7"><img src=x onerror=alert(1)>', stops: '4' }), 7, clean), { otherEvent: true });
+  assert.deepEqual(readSharedLink(q({ e: '7', stops: '<img src=x>.5.-3.x.6', start: '<b>9</b>' }), 7, clean),
+    { stops: [5, 6], start: null, order: false }, 'only positive whole ids (ids that are not listed are dropped by the page); a damaged start is no start');
+  const f = Buffer.from(JSON.stringify({ q: '<script>x</script>', constructor: { polluted: true }, __proto__: { polluted: true } })).toString('base64');
+  const out = readSharedLink(q({ e: '7', f }), 7, clean);
+  assert.deepEqual(out.filters, { q: '<script>x</script>' }, 'the filter text stays text (the page escapes it); nothing else comes through');
+  assert.equal(({}).polluted, undefined, 'no prototype pollution');
+  assert.deepEqual(readSharedLink(q({ e: '7', f: '%%%not-base64' }), 7, clean), {}, 'a damaged filter part is ignored');
+});
+

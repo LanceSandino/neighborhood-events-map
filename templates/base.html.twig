@@ -1,5 +1,6 @@
 {# Shared shell: dark navigation rail (desktop), top bar, mobile bottom navigation. Between events (no active
-   event) the shell names only the community and offers no listing action. <html data-event-type> names the event
+   event) the shell names only the community and offers no listing action. A long community or event name gets the
+   compact brand, and a long name wraps in the footer instead of widening a phone page. <html data-event-type> names the event
    type, whose head fragment may add its theme tokens (organizer colours from /theme.css still win). #}
 {%- set community = c.community -%}
 {%- set branding = c.branding -%}
@@ -9,6 +10,8 @@
 {%- set et = event_type(c.event.type ?? null) -%}
 {%- set place = community.locality ? community.locality ~ (community.region ? ', ' ~ community.region : '') : '' -%}
 {%- set show_place = (branding.show_locality ?? false) and place -%}
+{#- A name longer than the rail's column (about 12 characters at full size) gets the compact brand (app.css .brand.long). -#}
+{%- set brand_long = max(community.name|length, event_name|length) > 12 -%}
 <!doctype html>
 <html lang="en" data-event-type="{{ et.key }}">
 <head>
@@ -34,7 +37,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="app">
   <aside class="sidebar" aria-label="Site">
-    <a class="brand" href="/">
+    <a class="brand{{ brand_long ? ' long' }}" href="/">
       <div class="brand-icon{{ branding.logo_url ? ' has-logo' }}" aria-hidden="true">{% if branding.logo_url %}<img src="{{ branding.logo_url }}" alt="">{% else %}{{ branding.brand_emoji }}{% endif %}</div>
       <div><div class="brand-name">{{ community.name }}{% if event_name %}<br>{{ event_name }}{% endif %}</div><div class="brand-sub">{{ show_place ? place ~ ' · ' ~ year : 'Community ' ~ year }}</div></div>
     </a>

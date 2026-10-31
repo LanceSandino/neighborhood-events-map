@@ -1,0 +1,56 @@
+# Reference configuration for a Christmas lights season (event type holiday_lights) — commented, safe to commit.
+# Copy it to deploy/community/community.yaml, replace the placeholders and set
+# COMMUNITY_BOOTSTRAP_FILE=/app/deploy/community/community.yaml in .env. The file is imported once, into an empty
+# install; afterwards everything is edited in the organizer console, and later seasons are prepared under
+# Organizer → Events (docs/runbooks/organizer-events.md). The Halloween reference is config/community.example.yaml,
+# the garage sale's is garage-sale.community.yaml next to this file. Keys left out take their defaults.
+schema_version: 1
+community:
+  id: example-lights                # lowercase letters, digits, dashes; never changes (saved routes are kept under it)
+  name: "Your Neighborhood"
+  subtitle: "Your neighborhood. Your lights."
+  locality: "Your City"
+  region: "Your State"
+  country: "US"
+  timezone: "America/New_York"      # IANA time zone: every night's hours and "Lights on" are on this clock
+  gate_notice: ""                   # access notes for visitors, e.g. "Enter by the north gate"
+  contact_url: null                 # REPLACE with a mailto link to the organizer or a contact page (About, Privacy, Terms)
+  access: public                    # public | gated_open | gated_guests | private | unspecified
+  about: ""                         # About page text; a blank line starts a new paragraph
+  links: []
+  reminders: []                     # your own viewing etiquette (up to 12 lines); empty = the built-in list
+event:
+  type: holiday_lights
+  name: "Christmas Lights"          # shown in titles, the sidebar and emails
+  starts_on: "2026-12-01"           # the first night
+  ends_on: "2027-01-03"             # the last night (up to 62 nights)
+  starts_at: "18:00"                # the hours most homes keep; each home picks its own nights and hours
+  ends_at: "22:00"                  # a night ends the same day (no window past midnight)
+  settings:                         # applied to the install's first event only
+    best_night: "2026-12-19"        # optional: the night for a neighborhood walk (inside the season)
+    quiet_hours: "Music off by 9 PM on weeknights."   # optional, up to 120 characters
+    rules:                          # up to 8 lines of up to 160 characters, on About and next to the route
+      - "Do not block driveways; park on one side of the street."
+      - "Drive-by homes: please stay in your car."
+    route_modes: [walking]          # add driving for a drive-by tour; it needs a configured routing provider too
+# branding: leave it out to get the lights defaults (midnight blue and warm gold, "Holiday nights. Bright lights.");
+# anything you set here replaces them.
+map:
+  boundary_file: null               # a reviewed GeoJSON next to this file, or draw it in Organizer → Boundary & zones
+  zoom: 16
+  tiles:
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"   # follow the tile provider's usage policy
+    attribution: "© OpenStreetMap contributors"
+zones: []
+features:
+  optional_zones: false
+  walking_routes: true
+registration:
+  enabled: true                     # listings also need an approved boundary
+  address_mode: registry            # registry | self_entry | both
+  street_allowlist: []              # required for self_entry or both
+  review_new_addresses: false       # true: self-entered homes wait for an organizer's approval
+routing:
+  groups: []                        # lists of zone keys verified walkable together
+  crossings_verified: false
+  provider_enabled: false

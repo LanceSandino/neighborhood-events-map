@@ -94,7 +94,7 @@ final class HolidayLightsTest extends AppTestCase
         self::assertStringContainsString('Dec 1, 2026 – Jan 3, 2027', $html, 'the season row');
         self::assertStringContainsString('Most homes: 6–10 PM · Times vary by house', $html);
         self::assertStringContainsString('>Tonight</span>', $html, 'the season pill on Dec 11');
-        self::assertStringContainsString('DEC 1 – JAN 3', $html, 'the top bar badge');
+        self::assertStringContainsString('✨ Dec 1 – Jan 3</a>', $html, 'the top bar badge');
         self::assertStringContainsString('🎵 Music 88.7 FM', $html);
         self::assertStringContainsString('🕯️ No flashing reported', $html);
         self::assertStringNotContainsString('safe for', strtolower(strip_tags($html)), 'no safety promise');

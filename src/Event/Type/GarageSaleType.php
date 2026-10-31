@@ -36,6 +36,9 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
     public const MAX_DAYS = 3;
     /** Canonical details of a new listing. */
     private const DEFAULTS = ['categories' => [], 'multi_family' => false, 'early_birds_allowed' => false, 'payment_types' => []];
+    /** The categories each category filter finds (EventSettingsType::offersFilter: offered while the sale allows one). */
+    private const FILTER_CATEGORIES = ['kidsToys' => ['kids_baby', 'toys'], 'furniture' => ['furniture'], 'tools' => ['tools'], 'household' => ['household'],
+        'electronics' => ['electronics'], 'free' => ['free']];
 
     public function key(): string
     {
@@ -185,8 +188,8 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
             ['key' => 'electronics', 'label' => 'Electronics', 'icon' => '🔌', 'quick' => false, 'feature' => null],
             ['key' => 'free', 'label' => 'Free items', 'icon' => '🆓', 'quick' => false, 'feature' => null],
             ['key' => 'openNow', 'label' => 'Open now', 'icon' => '⏰', 'quick' => false, 'feature' => null, 'title' => 'Open right now, by each home’s own hours today'],
-            ['key' => 'multiFamily', 'label' => 'Multi-family', 'icon' => '🏘️', 'quick' => false, 'feature' => null],
-            ['key' => 'earlyBirds', 'label' => 'Early birds welcome', 'icon' => '🐦', 'quick' => false, 'feature' => null],
+            ['key' => 'multiFamily', 'label' => 'Multi-family', 'icon' => '🏘️', 'quick' => false, 'feature' => null, 'after_controls' => true],
+            ['key' => 'earlyBirds', 'label' => 'Early birds welcome', 'icon' => '🐦', 'quick' => false, 'feature' => null, 'after_controls' => true],
         ];
     }
 
@@ -271,6 +274,14 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
         $all = $event->dates();
 
         return \count($all) <= self::MAX_DAYS ? $all : [];
+    }
+
+    /** A category filter is offered while the sale allows one of its categories; the other filters always. */
+    public function offersFilter(string $filterKey, array $settings): bool
+    {
+        $needs = self::FILTER_CATEGORIES[$filterKey] ?? null;
+
+        return null === $needs || [] !== array_intersect($needs, self::allowedCategories($settings));
     }
 
     public function publicSettings(array $settings): array

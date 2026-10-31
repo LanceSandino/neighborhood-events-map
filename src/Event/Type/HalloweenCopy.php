@@ -57,6 +57,13 @@ final class HalloweenCopy
         'reminders_heading' => 'Trick-or-treat reminders',
         // How visitors may reach the homes: the title of the "gated, open during the event" choice.
         'access_gated_open' => 'Gated — open for trick-or-treating',
+        // Server-rendered pages only (page_* keys are not in the public event): the address example in "List your
+        // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
+        'page_address_example' => '123 Pumpkin Ln',
+        'page_a11y_icons' => '🍬 treats, 🧩 sensory-friendly, 👻 spooky',
+        'page_a11y_filters' => 'Sensory filters (no jump scares, no flashing lights, no loud audio) help plan a calm route.',
+        'page_terms_details' => 'treats and sensory details',
+        'page_terms_check' => 'Check treats and ingredients yourself, especially for allergies — “non-food” and other labels are only what residents tell us.',
         // Organizer console
         'admin_access_gated_open' => 'Gated — gates open to trick-or-treaters during event hours',
         'admin_reminders_label' => 'Trick-or-treat reminders (one per line, up to 12)',

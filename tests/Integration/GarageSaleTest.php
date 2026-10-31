@@ -86,7 +86,7 @@ final class GarageSaleTest extends AppTestCase
         self::assertStringContainsString('Most homes: 8 AM–2 PM · Individual hours vary', $html);
         self::assertStringContainsString('>Today</span>', $html, 'the pill on a sale day');
         self::assertStringContainsString('data-before="Coming this spring"', $html);
-        self::assertStringContainsString('APR 10 – APR 11', $html, 'the top bar badge');
+        self::assertStringContainsString('🏷️ Apr 10–11</a>', $html, 'the top bar badge');
         self::assertStringContainsString('Having a sale?', $html);
         self::assertStringContainsString('Good finds. <span>Close to home.</span>', $html);
         self::assertStringContainsString('data-filter="day1"', $html);
@@ -208,6 +208,31 @@ final class GarageSaleTest extends AppTestCase
         self::assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html, 'the server-rendered card');
         self::assertStringNotContainsString('value="furniture"', $html, 'the form offers only the categories the sale allows');
         self::assertStringContainsString('value="tools"', $html);
+    }
+
+    public function testOnlyTheCategoriesTheSaleAllowsHaveFiltersAndTheDayTogglesComeBeforeTheKindOfSale(): void
+    {
+        $this->configureCommunity(['event' => self::SALE]);
+        $html = $this->page('/');
+        $order = static fn (string $page, array $keys): array => array_map(static fn (string $k) => strpos($page, 'data-filter="'.$k.'"'), $keys);
+        foreach (['kidsToys', 'furniture', 'tools', 'household', 'electronics', 'free'] as $k) {
+            self::assertStringContainsString('data-filter="'.$k.'"', $html, 'every category is allowed by default: '.$k);
+        }
+        [$open, $day1, $day2, $family, $early] = $order($html, ['openNow', 'day1', 'day2', 'multiFamily', 'earlyBirds']);
+        self::assertTrue($open < $day1 && $day1 < $day2 && $day2 < $family && $family < $early, 'Filters: open now, the sale days, then multi-family and early birds');
+
+        // The organizer lists only kids & baby, books and tools: the furniture, household, electronics and free filters go.
+        $this->db()->executeStatement("UPDATE event_occurrences SET settings = '{\"days\": [\"2027-04-10\", \"2027-04-11\"], \"categories\": [\"kids_baby\", \"books_media\", \"tools\"]}'");
+        $this->repo()->reset();
+        $html = $this->page('/');
+        foreach (['kidsToys', 'tools', 'openNow', 'day1', 'day2', 'multiFamily', 'earlyBirds', 'saved'] as $k) {
+            self::assertStringContainsString('data-filter="'.$k.'"', $html, 'still offered: '.$k);
+        }
+        foreach (['furniture', 'household', 'electronics', 'free'] as $k) {
+            self::assertStringNotContainsString('data-filter="'.$k.'"', $html, 'a category the sale leaves out has no filter: '.$k);
+        }
+        $keys = array_column($this->json('GET', '/api/event')['event']['filters'], 'key');
+        self::assertSame(['kidsToys', 'tools', 'openNow', 'multiFamily', 'earlyBirds'], $keys, 'the public event names the same filters');
     }
 
     public function testMyHouseNeverReachesAnotherResidentsSaleHome(): void

@@ -148,6 +148,21 @@ test('dark appearance follows the system setting on public pages (+ screenshots)
   }
 });
 
+test('phone screenshots at 390 px, light and dark, during the event (viewport, for the README)', async ({ browser, request }) => {
+  const { event } = await (await request.get(DEMO + '/api/event')).json();
+  for (const scheme of ['light', 'dark']) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
+    const page = await ctx.newPage();
+    await politeTiles(page);
+    await page.clock.install({ time: atEventTime(event, '18:00') });
+    await page.goto(DEMO + '/');
+    await page.waitForTimeout(1200);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: `${SHOTS}/demo-${scheme === 'dark' ? 'dark-' : ''}390.png` });
+    await ctx.close();
+  }
+});
+
 test('form check chips are compact and aligned (register step 2)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(DEMO + '/#list-my-house');
@@ -357,6 +372,8 @@ test('compact list: one row per home with icons, remembered after reload; long n
   const note = page.locator('#homeCards .card-note').first();
   await expect(note).toBeVisible();
   expect(await note.evaluate((n) => getComputedStyle(n).webkitLineClamp)).toBe('2');
+  // Cards show the note itself; the 📝 marker is only for the compact list (CHANGELOG 0.7: "shown as 📝 in the compact list").
+  await expect(page.locator('#homeCards .note-icon').first()).toBeHidden();
   await page.getByRole('button', { name: 'Compact list' }).click();
   await expect(page.locator('#homeCards')).toHaveClass(/compact/);
   await expect(page.locator('#homeCards .card-note').first()).toBeHidden();

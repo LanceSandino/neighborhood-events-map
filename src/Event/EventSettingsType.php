@@ -9,9 +9,10 @@ namespace App\Event;
  * @description An event type with settings of its own on each event (event_occurrences.settings), next to the
  *     settings every type shares (rules, route_modes, max_days; Event/OccurrenceInput). The type validates its own
  *     keys strictly, completes and checks them as a whole against the event's dates, says which of them the public
- *     event shows (GET /api/event), which choices the organizer console offers for them, and on which days a listing
- *     may take part (a garage sale's own sale days; null: every day of the event). Halloween has none, so its public
- *     event keeps exactly its keys.
+ *     event shows (GET /api/event), which choices the organizer console offers for them, on which days a listing
+ *     may take part (a garage sale's own sale days; null: every day of the event) and which of the type's filters an
+ *     event offers (a sale's category filters only for the categories it allows). Halloween has none, so its public
+ *     event keeps exactly its keys and filters.
  *
  * @dependencies Event/EventOccurrence
  */
@@ -50,6 +51,14 @@ interface EventSettingsType
      * @return list<string>|null
      */
     public function listingDates(EventOccurrence $event): ?array;
+
+    /**
+     * Whether an event with these settings offers one of the type's filters (EventType::filters()); a filter it does
+     * not offer is neither drawn nor named in the public event.
+     *
+     * @param array<string,mixed> $settings validated settings
+     */
+    public function offersFilter(string $filterKey, array $settings): bool;
 
     /**
      * The public part of an event's settings, added to the public event after its shared keys.

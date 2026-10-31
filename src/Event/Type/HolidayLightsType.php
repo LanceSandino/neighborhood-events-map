@@ -264,6 +264,12 @@ final class HolidayLightsType implements EventType, EventSettingsType
         return null;
     }
 
+    /** Every lights filter is offered whatever the event's settings. */
+    public function offersFilter(string $filterKey, array $settings): bool
+    {
+        return true;
+    }
+
     public function publicSettings(array $settings): array
     {
         $best = $settings['best_night'] ?? null;

@@ -21,7 +21,7 @@
         {% if reg.address_mode != 'self_entry' %}
         <div class="field full" id="lookupField">
           <label for="addrQuery">Home address *</label>
-          <input id="addrQuery" autocomplete="off" placeholder="House number and street, e.g. 123 Pumpkin Ln…" maxlength="80" aria-describedby="addrHelp" aria-autocomplete="list" aria-controls="addrSuggestions">
+          <input id="addrQuery" autocomplete="off" placeholder="House number and street, e.g. {{ et.copy.page_address_example }}…" maxlength="80" aria-describedby="addrHelp" aria-autocomplete="list" aria-controls="addrSuggestions">
           <span class="form-caption" id="addrHelp">Start with your house number. Only addresses in {{ c.community.name }} can be listed.</span>
           <ul class="suggestions" id="addrSuggestions" role="listbox" aria-label="Matching addresses"></ul>
           <span class="error" data-error="address"></span>
@@ -38,7 +38,7 @@
           <div class="field full">
             <span class="label" id="pinLabel">Tap your house on the map *</span>
             <div class="pin-map" id="pinMap" role="application" aria-labelledby="pinLabel"></div>
-            <span class="form-caption">Place the pin on your roof. It must be inside the neighborhood boundary. Nothing is geocoded or guessed.{{ reg.review_new_addresses ? ' A new address appears on the map after an organizer approves it.' }}</span>
+            <span class="form-caption">Place the pin on your roof. It must be inside the neighborhood boundary. Nothing is geocoded or guessed. With a keyboard, move the map with the arrow keys and press Enter to put the pin at its centre (+).{{ reg.review_new_addresses ? ' A new address appears on the map after an organizer approves it.' }}</span>
             <span class="error" data-error="pin"></span>
           </div>
         </div>

@@ -33,6 +33,8 @@ table.data td.nowrap, table.data td:first-child { white-space: nowrap; }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .row-actions a { font-size: 11px; padding: 6px 9px; min-height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-weight: 800; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; }
 .row-actions button { font-size: 11px; padding: 6px 9px; min-height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-weight: 800; }
+/* A primary row action (Organizer → Events: "Put on the map") keeps the primary colours; the plain row style gave it white words on white. */
+.row-actions button.primary { background: var(--orange); color: var(--brand-ink); border-color: transparent; box-shadow: none; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
 .toolbar input[type=search], .toolbar select { border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; height: 44px; }
 .toolbar input[type=search] { min-width: 280px; flex: 1 1 280px; max-width: 420px; }

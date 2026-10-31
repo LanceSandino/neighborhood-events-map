@@ -119,6 +119,10 @@ h1, h2, h3, .brand-name, .big-number { font-family: Nunito, 'DM Sans', system-ui
 .brand-icon.has-logo img { transform: none; }
 .brand-name { font-weight: 900; font-size: 17px; line-height: 1.05; letter-spacing: -.5px; }
 .brand-sub { font-size: 12px; color: #b9b9d0; text-transform: uppercase; letter-spacing: 1.9px; margin-top: 4px; font-weight: 800; }
+/* A community or event name longer than the column (base.html.twig adds .long): smaller and evenly wrapped, so a name
+   such as "Christmas Lights" stays on its own line and the year line keeps one line. */
+.brand.long .brand-name { font-size: 15px; line-height: 1.1; text-wrap: balance; }
+.brand.long .brand-sub { letter-spacing: .6px; }
 .nav-title { font-size: 12px; letter-spacing: 1.3px; color: #9294ac; margin: 0 12px 10px; font-weight: 800; }
 .nav { display: flex; flex-direction: column; gap: 7px; }
 .nav a, .nav button { display: flex; gap: 10px; align-items: center; color: #c4c2d4; background: transparent; text-align: left; width: 100%; border-radius: 11px; padding: 12px 10px; font-weight: 800; text-decoration: none; min-height: 48px; white-space: nowrap; }
@@ -234,8 +238,9 @@ a.crumb:hover strong { color: var(--link); }
 .card-status.paused, .card-status.out { background: var(--tag-drinks-bg); color: var(--paused-fg); }
 .card-status.done { background: var(--done-bg); color: var(--muted); }
 .card-note { font-size: 12px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-.note-icon { display: none; }
-.cards.compact .note-icon { display: inline-flex; }
+/* The 📝 marker is for the compact list only; cards show the note itself (.tag would otherwise show it, as it did). */
+.tag.note-icon { display: none; }
+.cards.compact .tag.note-icon { display: inline-flex; }
 .tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .tag { display: inline-flex; align-items: center; padding: 4px 7px; border-radius: 6px; font-size: 11px; font-weight: 900; white-space: nowrap; }
 .tag.candy { background: var(--tag-candy-bg); color: var(--tag-candy-fg); }
@@ -395,6 +400,8 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .suggestions small { color: var(--muted); }
 .suggestions li.form-caption { padding: 10px 12px; margin: 0; }
 .pin-map { height: 240px; border-radius: 12px; border: 1px solid #e5dfe1; margin-top: 8px; }
+/* Where Enter puts the pin while the map has keyboard focus (register.js): its centre. */
+.pin-map:focus-visible::after { content: '+'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 700; pointer-events: none; font: 900 28px/1 system-ui, sans-serif; color: var(--text-strong); text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface); }
 .progress { height: 8px; background: var(--border-soft); border-radius: 8px; overflow: hidden; margin-top: 10px; }
 .progress > span { display: block; height: 100%; width: 0; background: var(--orange); transition: width .2s; }
 .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--night); color: #fff; padding: 11px 16px; border-radius: 10px; font-size: 12px; font-weight: 700; z-index: 3000; box-shadow: 0 10px 30px #0004; max-width: calc(100vw - 32px); }
@@ -434,7 +441,8 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .guide-facts { display: grid; gap: 8px; margin: 12px 0 4px; }
 .guide-facts .about-fact p + p { margin-top: 4px; }
 .guide-foot { margin-top: 12px; text-align: center; }
-.footer-id { white-space: nowrap; }
+/* A long community and event name wraps between its words instead of widening a phone page; the version link stays whole. */
+.footer-id { white-space: normal; }
 .to-top { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 1400; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text-strong); font-size: 20px; font-weight: 900; box-shadow: var(--shadow-sm); display: grid; place-items: center; }
 .to-top[hidden] { display: none; }
 .footer-id a { white-space: nowrap; }
@@ -610,6 +618,9 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
    its pins, taps and drags stay exact. Layout stays fluid, so nothing scrolls sideways. */
 :root[data-text="large"] body { zoom: 1.15; }
 :root[data-text="large"] .leaflet-container { zoom: calc(1 / 1.15); }
+/* Phones draw cards in one column below 380 px; with larger text the page is that narrow up to 437 px (380 × 1.15),
+   so the cards take one column there too and a card's hours and status never push the page sideways. */
+@media (max-width: 440px) { :root[data-text="large"] .cards { grid-template-columns: 1fr; } }
 @media (forced-colors: active) {
   .pin, .legend-bullet, .steps li.done { forced-color-adjust: none; }
   .check-chip, .mini-filter, .filter-button, .secondary, .home-card { border: 1px solid CanvasText; }
