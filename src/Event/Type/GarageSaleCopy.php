@@ -51,13 +51,16 @@ final class GarageSaleCopy
         'url' => 'Please remove the web address: notes are public and never link to other sites.',
     ];
 
-    /** Shown on the About page and in the map's guide when an organizer sets no etiquette of their own. */
+    /**
+     * Shown on the About page and in the map's guide when an organizer sets no etiquette of their own. The first three
+     * (the map's Rules sheet and the route show those) cover early birds, parking and traffic, driveways and private
+     * yards, recalled or prohibited items and that the map sells nothing.
+     */
     public const REMINDERS = [
-        '🐦 Respect each home’s start time: no early birds before the time on the map or the organizer’s early-bird rule.',
-        '🚗 Park only where it is legal, never block driveways, mailboxes or fire hydrants, and keep the street clear for traffic.',
-        '🏠 Stay on driveways, garages and the spots residents set out; yards, porches and houses are private.',
-        '🚫 No recalled, unsafe or prohibited items (weapons, medicines, car seats past their date): report a listing that offers them.',
-        '💬 Prices and payment are between you and the seller at the sale; this map does not sell, reserve or take payments.',
+        '🐦 Respect each home’s start time: no early birds before the hours on the map or the organizer’s early-bird time.',
+        '🚗 Park legally and keep the street clear for traffic; never block driveways or mailboxes, and stay on driveways and in garages — yards and houses are private.',
+        '🚫 No recalled, unsafe or prohibited items (weapons, medicines, expired car seats). This map sells nothing: prices and payment stay between you and the seller.',
+        '🧾 Use “Report this listing” for prohibited items or a listing that looks like a business.',
         '🙏 Be kind to neighbors who are not selling: keep voices low and take your trash with you.',
     ];
 

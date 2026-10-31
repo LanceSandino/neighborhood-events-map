@@ -24,15 +24,16 @@
   --season-after-bg: #eeefed; --season-after-fg: #59625f;
   --side-action-bg: #e77c5d; --side-action-fg: #1d1a22; --hero-glow: #178d8026; --side-hover: #2b3846; --side-line: #394656;
 }
-/* Dark: deep slate teal instead of app.css's plum-grey; must stay identical to the [data-theme="dark"] block below. */
+/* Dark: deep slate teal instead of app.css's plum-grey; must stay identical to the [data-theme="dark"] block below. Surfaces stay
+   no lighter than app.css's dark surface, which /theme.css checks the brand text colour against (BrandPalette). */
 @media (prefers-color-scheme: dark) {
   :root[data-event-type="garage_sale"]:not([data-theme="light"]) {
     --night: #0d151a; --orange2: #f2a98f;
-    --bg: #0f1a1c; --surface: #172426; --surface-2: #1c2b2d; --surface-3: #213234; --glass: #172426eb;
+    --bg: #0e181a; --surface: #152022; --surface-2: #162224; --surface-3: #1b2729; --glass: #152022eb;
     --text: #eef5f3; --text-strong: #f8fbfa; --text-2: #d2dfdc; --muted: #a6b6b3; --muted-2: #84948f;
     --border: #2b3d3f; --border-soft: #243436;
     --warm: #183a35; --warm-soft: #15302c; --warm-border: #2f6b62; --warm-text: #8fe0d1; --link: #8fe0d1; --heart: #ff9b7f;
-    --focus: #5fd0bf; --map-bg: #152220; --overlay: #050a0bcc; --inverse-bg: #eef5f3; --inverse-fg: #172426;
+    --focus: #5fd0bf; --map-bg: #152220; --overlay: #050a0bcc; --inverse-bg: #eef5f3; --inverse-fg: #152022;
     --tag-cat-bg: #183a35; --tag-cat-fg: #9be3d5; --tag-family-bg: #3d2620; --tag-family-fg: #f7b8a3;
     --tag-early-bg: #36301c; --tag-early-fg: #ecd18c; --tag-pay-bg: #253335; --tag-pay-fg: #d2dfdc;
     --pin-sale: #1f9a8b; --pin-closed: #6b7b78;
@@ -43,11 +44,11 @@
 }
 :root[data-event-type="garage_sale"][data-theme="dark"] {
   --night: #0d151a; --orange2: #f2a98f;
-  --bg: #0f1a1c; --surface: #172426; --surface-2: #1c2b2d; --surface-3: #213234; --glass: #172426eb;
+  --bg: #0e181a; --surface: #152022; --surface-2: #162224; --surface-3: #1b2729; --glass: #152022eb;
   --text: #eef5f3; --text-strong: #f8fbfa; --text-2: #d2dfdc; --muted: #a6b6b3; --muted-2: #84948f;
   --border: #2b3d3f; --border-soft: #243436;
   --warm: #183a35; --warm-soft: #15302c; --warm-border: #2f6b62; --warm-text: #8fe0d1; --link: #8fe0d1; --heart: #ff9b7f;
-  --focus: #5fd0bf; --map-bg: #152220; --overlay: #050a0bcc; --inverse-bg: #eef5f3; --inverse-fg: #172426;
+  --focus: #5fd0bf; --map-bg: #152220; --overlay: #050a0bcc; --inverse-bg: #eef5f3; --inverse-fg: #152022;
   --tag-cat-bg: #183a35; --tag-cat-fg: #9be3d5; --tag-family-bg: #3d2620; --tag-family-fg: #f7b8a3;
   --tag-early-bg: #36301c; --tag-early-fg: #ecd18c; --tag-pay-bg: #253335; --tag-pay-fg: #d2dfdc;
   --pin-sale: #1f9a8b; --pin-closed: #6b7b78;
@@ -90,9 +91,8 @@
 
 /* ---- Listing forms: the sale days, each with its own hours ---- */
 .sale-days { display: grid; gap: 8px; }
-.sale-day { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.sale-day .check-chip { min-width: 128px; }
-.sale-hour select { height: 44px; border: 1px solid var(--border); border-radius: 9px; padding: 0 10px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 800; }
+.sale-day { display: grid; grid-template-columns: minmax(128px, auto) minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; max-width: 520px; }
+.sale-hour select { width: 100%; height: 44px; border: 1px solid var(--border); border-radius: 9px; padding: 0 10px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 800; }
 .sale-hour select:disabled { opacity: .5; }
 .sale-to { font-size: 12px; font-weight: 800; color: var(--muted); }
 .sale-days-field .form-caption { display: block; margin-top: 8px; }
@@ -106,9 +106,14 @@
 }
 @media (max-width: 560px) {
   [data-event-type="garage_sale"] .cards { grid-template-columns: 1fr; }
+  /* A sale day on two even rows: the day, then its opening and closing time side by side. */
+  .sale-day { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .sale-day .check-chip { grid-column: 1 / -1; }
 }
 @media (max-width: 660px) {
   [data-event-type="garage_sale"] .intro { gap: 8px; }
 }
+/* A long sale name ("Maple Hollow Community Rummage Sale") may wrap in the footer instead of widening a phone page. */
+[data-event-type="garage_sale"] .footer-id { white-space: normal; }
 /* My house: "Visible on the map" takes the row the sale form has no half-width neighbour for. */
 [data-event-type="garage_sale"] .dash-home .form-grid > .field:has(select[name="published"]) { grid-column: 1 / -1; max-width: 360px; }

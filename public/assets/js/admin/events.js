@@ -58,7 +58,7 @@ function typeFields(type, e) {
   const out = hasSetting(type, 'days') ? saleFields(type, s) : [];
   if (hasSetting(type, 'best_night')) out.push(`<div class="field type-field"><label for="evBest">Best night for a neighborhood walk (optional)</label><input id="evBest" type="date" value="${esc(s.best_night || '')}"></div>`);
   if (hasSetting(type, 'quiet_hours')) out.push(`<div class="field type-field"><label for="evQuiet">Quiet hours (optional)</label><input id="evQuiet" maxlength="120" value="${esc(s.quiet_hours || '')}" placeholder="e.g. Please keep it quiet after 10 PM"></div>`);
-  if (drives(type)) out.push(`<div class="field full type-field"><label class="check-chip"><input type="checkbox" id="evDriving" ${(s.route_modes || []).includes('driving') ? 'checked' : ''}> Offer a drive-by tour</label><span class="form-caption">Driving directions appear only when a routing provider is configured; otherwise visitors get an ordered list of stops.</span></div>`);
+  if (drives(type)) out.push(`<div class="field full type-field"><label class="check-chip"><input type="checkbox" id="evDriving" ${(s.route_modes || []).includes('driving') ? 'checked' : ''}> ${hasSetting(type, 'days') ? 'Offer a driving tour' : 'Offer a drive-by tour'}</label><span class="form-caption">Driving directions appear only when a routing provider is configured; otherwise visitors get an ordered list of stops.</span></div>`);
   return `<div class="form-grid" id="evTypeFields">${out.join('')}</div>`;
 }
 

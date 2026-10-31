@@ -86,7 +86,7 @@ function homeCard(home, ev) {
         box.classList.add('hide');
         form.classList.remove('hide');
         $('[data-f="save"]', node).textContent = `List for ${ev.name}`;
-        form.start.focus();
+        (form.start || form.querySelector('input, select, textarea'))?.focus(); // a sale has no shared start time
       });
     }
   }

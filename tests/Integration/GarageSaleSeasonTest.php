@@ -107,7 +107,14 @@ final class GarageSaleSeasonTest extends AppTestCase
         $about = $this->page('/about');
         self::assertStringContainsString('Park on one side of the street', $about);
         self::assertStringContainsString('🐦 Early birds: not before 7:30 AM', $about);
-        self::assertStringContainsString('prices and payment are between you and the seller', strtolower($about));
+        self::assertStringContainsString('This map sells nothing: prices and payment stay between you and the seller.', $about);
+
+        // The organizer enables a provider: the driving tour is offered.
+        $settings = $this->json('GET', '/api/admin/community')['settings'];
+        $settings['routing']['provider_enabled'] = true;
+        $this->json('PUT', '/api/admin/community', ['settings' => $settings], $this->h());
+        self::assertSame(200, $this->code());
+        self::assertSame(['walking', 'driving'], $this->json('GET', '/api/event')['event']['route_modes']);
 
         // A home takes part on Sunday; that day stays a sale day while it is listed.
         $id = $this->addAddress('21', 'Lantern Way', 40.006, -74.995, 'east');

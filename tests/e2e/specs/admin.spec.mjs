@@ -82,9 +82,9 @@ test('organizer reviews the real-plat example, draws, saves, re-imports and expo
   const placed = zoneOf((await (await request.get(VENTURA + '/api/community')).json()).zones).label_at;
   expect(placed).toHaveLength(2);
   await page.goto(VENTURA + '/admin/community');
-  // The organizer sees the event type; this version offers Halloween and Christmas lights (D-20261031-01, -18).
+  // The organizer sees the event type; this version offers Halloween, Christmas lights and the garage sale (D-20261031-01, -18, -24).
   await expect(page.getByLabel('Event type')).toHaveValue('halloween');
-  await expect(page.locator('#eType option')).toHaveText(['Halloween', 'Christmas Lights']);
+  await expect(page.locator('#eType option')).toHaveText(['Halloween', 'Christmas Lights', 'Garage Sale']);
   const row = page.locator('#zoneRows tr').filter({ has: page.locator(`[data-z="label"][value="${zoneName}"]`) });
   await row.getByRole('button', { name: 'Reset' }).click();
   await page.getByRole('button', { name: 'Save settings' }).click();

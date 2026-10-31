@@ -6,6 +6,9 @@ export const VENTURA = process.env.E2E_VENTURA_URL || 'http://host.docker.intern
 // The fictional Christmas lights demo (examples/demo-lights, .env.lights) and its Mailpit.
 export const LIGHTS = process.env.E2E_LIGHTS_URL || 'http://host.docker.internal:8089';
 export const LIGHTS_MAILPIT = process.env.E2E_LIGHTS_MAILPIT_URL || 'http://host.docker.internal:8027';
+// The fictional garage sale demo (examples/demo-sale, .env.sale) and its Mailpit.
+export const SALE = process.env.E2E_SALE_URL || 'http://host.docker.internal:8090';
+export const SALE_MAILPIT = process.env.E2E_SALE_MAILPIT_URL || 'http://host.docker.internal:8028';
 export const MAILPIT = process.env.E2E_MAILPIT_URL || 'http://host.docker.internal:8026';
 export const SHOTS = process.env.E2E_SHOTS || '/work/docs/design/screenshots';
 
