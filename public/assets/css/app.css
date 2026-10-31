@@ -399,6 +399,8 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .suggestions small { color: var(--muted); }
 .suggestions li.form-caption { padding: 10px 12px; margin: 0; }
 .pin-map { height: 240px; border-radius: 12px; border: 1px solid #e5dfe1; margin-top: 8px; }
+/* Where Enter puts the pin while the map has keyboard focus (register.js): its centre. */
+.pin-map:focus-visible::after { content: '+'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 700; pointer-events: none; font: 900 28px/1 system-ui, sans-serif; color: var(--text-strong); text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface); }
 .progress { height: 8px; background: var(--border-soft); border-radius: 8px; overflow: hidden; margin-top: 10px; }
 .progress > span { display: block; height: 100%; width: 0; background: var(--orange); transition: width .2s; }
 .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--night); color: #fff; padding: 11px 16px; border-radius: 10px; font-size: 12px; font-weight: 700; z-index: 3000; box-shadow: 0 10px 30px #0004; max-width: calc(100vw - 32px); }

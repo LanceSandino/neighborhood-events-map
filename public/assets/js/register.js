@@ -3,7 +3,9 @@
  * @description "List my house" bottom sheet (address → stop details → email + PoW → link sent) and the
  *     "already claimed → request a review" dispute sheet. The server is the eligibility authority;
  *     this file only collects input, solves PoW in a worker and shows friendly results. The event type reads and
- *     checks its own listing fields (events/index.js); the listing goes out with them as `details`.
+ *     checks its own listing fields (events/index.js); the listing goes out with them as `details`. The self-entry
+ *     pin goes on the map by a tap or click, or with the keyboard (arrow keys move the map, Enter drops the pin at its
+ *     centre).
  * @dependencies lib/api.js, lib/pow.js, lib/modal.js, events/index.js, Leaflet (optional, for the self-entry pin map)
  */
 import { api, ApiError, friendlyError } from './lib/api.js';
@@ -278,10 +280,17 @@ function initPinMap() {
   };
   fit();
   requestAnimationFrame(fit); // the sheet may still be laying out when the map is created
-  pinMap.on('click', (e) => {
-    if (pinMarker) pinMarker.setLatLng(e.latlng);
-    else pinMarker = L.marker(e.latlng, { draggable: true, keyboard: true, title: 'Your house' }).addTo(pinMap);
+  const place = (latlng) => {
+    if (pinMarker) pinMarker.setLatLng(latlng);
+    else pinMarker = L.marker(latlng, { draggable: true, keyboard: true, title: 'Your house' }).addTo(pinMap);
     setError($('#registerForm'), 'pin', '');
+  };
+  pinMap.on('click', (e) => place(e.latlng));
+  // Keyboard: the arrow keys move the map (Leaflet), Enter or Space puts the pin at its centre (marked while focused).
+  pinMap.getContainer().addEventListener('keydown', (e) => {
+    if ((e.key !== 'Enter' && e.key !== ' ') || e.target !== pinMap.getContainer()) return;
+    e.preventDefault();
+    place(pinMap.getCenter());
   });
   setTimeout(() => pinMap.invalidateSize(), 50);
 }

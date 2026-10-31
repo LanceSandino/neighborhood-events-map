@@ -1261,4 +1261,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-10-31T23:50:00Z"
+- id: CU-20261031-36
+  type: fix
+  title: "Keyboard-only use for every type: pins select their home with Enter or Space, the self-entry pin is placed with the keyboard, My house keeps the focus after a save; cross-type e2e (widths, themes, larger text, contrast, motion, axe, keyboard)"
+  description: "tests/e2e/specs/types.spec.mjs walks each type's map page with the keyboard alone (skip link, search, a quick filter, the Filters panel, Reset, a card, the selected home's Save, a pin, the route), lists a home (self entry, the pin by keyboard, the type's details, the email, the emailed link confirmed with Enter) and acts in My house (a status, the note saved, the home given back). It found three gaps, all also on Halloween: Leaflet 1.9 markers only open popups on Enter, so a focused pin did nothing (home.js now selects its home on Enter or Space); the self-entry pin map had only a click handler (register.js: arrow keys move the map, Enter or Space puts the pin at its centre, a + marks it while focused, the caption says so; the test fails without it: no marker); me.js redrew a saved home and the focus fell to the page (focusSame puts it back on the same status button, field or Save). Mouse and touch behave as before. The same spec checks the compact brand, the type-coloured notices and a long footer name, no horizontal overflow at 375/390/430/768/956/1180/1440 px in light and dark, larger text with more contrast at every width (44 px targets on the lights and the sale; Halloween's 40 px chips are a documented limitation), nothing animating with reduced motion, and axe WCAG 2.1 AA on the lights' and the sale's sign-in, privacy, terms, accessibility and changelog pages and every type's selected-home panel, in both themes (D-20261031-36)."
+  impact: low
+  affected_modules: ["public/assets/js/home.js", "public/assets/js/register.js", "public/assets/js/me.js", "public/assets/css/app.css", "templates/home/_modals.html.twig"]
+  related_tests: ["tests/e2e/specs/types.spec.mjs: <type>: keyboard only: filters, list, map pins, selected home, saved stops, route, listing a home and My house (the pin and focus steps failed before the change)", "tests/e2e/specs/types.spec.mjs (overflow, larger text, reduced motion and axe tests for the three types)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:00:00Z"
 ```

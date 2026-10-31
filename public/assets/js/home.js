@@ -149,6 +149,12 @@ function renderPins(visibleIds) {
     if (!m) {
       m = L.marker([h.lat, h.lon], { icon, keyboard: true, title: h.address, alt: h.address, riseOnHover: true });
       m.on('click', (e) => { L.DomEvent.stopPropagation(e); selectHome(h.id); });
+      // A focused pin is a button (Leaflet gives it role="button"): Enter or Space selects its home, as a click does.
+      m.on('keydown', (e) => {
+        if (e.originalEvent.key !== 'Enter' && e.originalEvent.key !== ' ') return;
+        e.originalEvent.preventDefault();
+        selectHome(h.id);
+      });
       m.addTo(map);
       markers.set(h.id, m);
     } else {
