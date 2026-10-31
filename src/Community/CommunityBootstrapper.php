@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventBranding;
 use App\Event\EventOccurrenceRepository;
 use App\Event\EventTypeRegistry;
 use App\Event\OccurrenceInput;
@@ -18,11 +19,14 @@ use Symfony\Component\Yaml\Yaml;
  *     forced. Boundaries are imported UNAPPROVED unless explicitly approved by the operator.
  *     `event.settings` (the shared rules and route modes, a type's own settings such as a sale's days) is
  *     checked like Organizer → Events checks it before anything is imported, and applied only to the install's
- *     first event, the one this import creates; an existing event's settings change only under Organizer → Events.
+ *     first event, the one this import creates; an existing event's settings change only under Organizer → Events. So
+ *     does the branding in its 0.9 shape (branding.brand_emoji, headline, headline_accent, intro, the colours and
+ *     community.about: the first event's own branding, ADR 0012; event.settings.branding may name its fields too and
+ *     wins); the community keeps its name, subtitle, logo, city line, links and community.general_about.
  *
  * @input path to community.yaml
  * @output summary array
- * @dependencies Community/CommunityRepository, Community/BrandingStore, Community/EventBlockSchema, Event/OccurrenceInput,
+ * @dependencies Community/CommunityRepository, Community/BrandingStore, Community/EventBlockSchema, Event/OccurrenceInput, Event/EventBranding,
  *     Event/EventOccurrenceRepository, Event/EventTypeRegistry, DBAL, symfony/yaml
  */
 final class CommunityBootstrapper
@@ -68,8 +72,16 @@ final class CommunityBootstrapper
         $settings = $this->repo->saveSettings($raw, null);
         $first = null !== $eventSettings ? $this->occurrences->defaultEvent() : null;
         if (null !== $first) {
-            $this->db->transactional(fn (Connection $db) => $this->occurrences->updateFields($db, $first->id, ['name' => $first->name, 'starts_on' => $first->startsOn,
-                'ends_on' => $first->endsOn, 'default_start' => $first->defaultStart, 'default_end' => $first->defaultEnd, 'settings' => $eventSettings]));
+            // The branding the file gives in its 0.9 shape (top-level branding, community.about) is the first event's
+            // (the settings save gave it); event.settings.branding names fields of it explicitly and wins.
+            $branding = ($eventSettings['branding'] ?? []) + (array) ($first->settings['branding'] ?? []);
+            unset($eventSettings['branding']);
+            $eventSettings += [] !== $branding ? ['branding' => array_intersect_key(array_replace(array_flip(EventBranding::KEYS), $branding), $branding)] : [];
+            $this->db->transactional(function (Connection $db) use ($first, $eventSettings): void {
+                $this->occurrences->updateFields($db, $first->id, ['name' => $first->name, 'starts_on' => $first->startsOn,
+                    'ends_on' => $first->endsOn, 'default_start' => $first->defaultStart, 'default_end' => $first->defaultEnd, 'settings' => $eventSettings]);
+                $this->repo->mirrorLegacy($db);
+            });
             $this->repo->reset();
         }
 

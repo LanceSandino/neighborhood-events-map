@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventBranding;
 use App\Event\EventOccurrence;
 use App\Event\EventOccurrenceRepository;
 use App\Event\EventTypeRegistry;
@@ -24,13 +25,15 @@ use Psr\Clock\ClockInterface;
  *     at once (ADR 0011): a request selects one (`?e=<id>`, Event/EventSelection) or gets the default event, and the
  *     settings' `event` block is a view of that event: loading puts its values there; saving the settings writes them
  *     to the default event first (Event/OccurrenceSettingsSync); the stored block mirrors the event the previous
- *     release shows after an image-only rollback (the bridged Halloween, else the default; D-20261031-41). Branding
- *     still at a type's built-in default follows the selected event's type (Community/TypeDefaults).
+ *     release shows after an image-only rollback (the bridged Halloween, else the default; D-20261031-41), and so do the
+ *     stored branding keys and About text, which only that release reads. A page sees the community's own settings with
+ *     the selected event's branding and About text (Community/EventBrandingView, ADR 0012) and its type's subtitle and
+ *     feature defaults (Community/TypeDefaults).
  *
  * @input DBAL connection, clock, parser, schema
  * @output CommunityConfig snapshots, export documents, change summaries
- * @dependencies Community/CommunitySchema, Community/CommunityConfig, Community/TypeDefaults, Community/EventBlockMirror, Geo/*,
- *     Event/EventTypeRegistry, Event/EventOccurrenceRepository, Event/OccurrenceSettingsSync
+ * @dependencies Community/CommunitySchema, Community/CommunityConfig, Community/TypeDefaults, Community/EventBrandingView, Community/EventBlockMirror, Geo/*,
+ *     Event/EventTypeRegistry, Event/EventOccurrenceRepository, Event/OccurrenceSettingsSync, Event/EventBranding
  */
 final class CommunityRepository
 {
@@ -114,12 +117,15 @@ final class CommunityRepository
     {
         $settings = $this->schema->normalize($raw);
         $now = $this->now();
-        // The event block goes to the active occurrence first; the stored block then mirrors the occurrence.
+        // The event block goes to the default event first; the stored block, branding and About text then mirror the
+        // event the previous release shows.
         $settings = $this->db->transactional(function (Connection $db) use ($settings, $now, $actorId): array {
-            $this->sync->apply($settings['event']);
+            // Branding in its 0.9 shape (community.yaml) brands the install's first event when this save creates it.
+            $this->sync->apply($settings['event'], EventBranding::fromLegacy($settings['branding'], (string) $settings['community']['about'], $this->types));
             $legacy = $this->mirror->legacyEvent($db);
             if (null !== $legacy) {
                 $settings['event'] = EventBlockMirror::block($legacy, (string) ($settings['event']['date'] ?? '')) + $settings['event'];
+                $settings = $this->mirror->withLegacyBranding($settings, $legacy);
             }
             $db->executeStatement(
                 'INSERT INTO community_settings (id, deployment_id, settings, created_at, updated_at, updated_by)
@@ -345,13 +351,14 @@ final class CommunityRepository
             // between events uses the default type's words; nothing is listed.
             $settings['event']['type'] = EventTypeRegistry::DEFAULT;
         }
-        // Branding still at a built-in default follows the event's type (Community/TypeDefaults).
-        $settings = TypeDefaults::apply($settings, $this->types->get((string) $settings['event']['type']), $this->types);
+        // The type's subtitle and feature defaults (Community/TypeDefaults), the event's own branding and About text.
+        $type = $this->types->get((string) $settings['event']['type']);
+        $settings = EventBrandingView::apply(TypeDefaults::apply($settings, $type, $this->types), $type, $event);
 
         return new CommunityConfig($settings, $boundary, $approved, $version, $zones, true, $event);
     }
 
-    /** Writes the event the previous release shows into the stored settings' event block (Community/EventBlockMirror). */
+    /** Writes the event the previous release shows into the stored settings' event block, branding and About text (Community/EventBlockMirror). */
     public function mirrorLegacy(Connection $db): void
     {
         $this->mirror->write($db);

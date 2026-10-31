@@ -13,7 +13,10 @@ use Symfony\Component\Mime\Address;
 /**
  * @module Mail/Notifier
  * @description Sends the transactional emails (one-time sign-in/claim link, organizer dispute
- *     notice) through the configured SMTP transport. Links are built from APP_BASE_URL only.
+ *     notice) through the configured SMTP transport. Links are built from APP_BASE_URL only. An account is the
+ *     community's, so the sign-in link names only the community; a claim link names the event of the listing it
+ *     confirms ("… <event> listing for <address>", with that event's emoji) and a review request the event of the page
+ *     it came from (the selected event, ADR 0012). The sender is MAIL_FROM.
  *
  * @dependencies symfony/mailer, Twig templates under templates/email/
  */
@@ -30,12 +33,13 @@ final class Notifier
             ->from(Address::create($this->config->mailFrom))
             ->to(new Address($email)) // never re-parsed as "name <address>"
             ->subject(null !== $claimAddress
-                ? sprintf('Confirm your %s %s listing', $community->name(), $community->eventName())
-                : sprintf('Your %s %s sign-in link', $community->name(), $community->eventName()))
+                ? sprintf('Confirm your %s %s listing for %s', $community->name(), $community->eventName(), $claimAddress)
+                : sprintf('Your %s sign-in link', $community->name()))
             ->htmlTemplate('email/magic_link.html.twig')
             ->textTemplate('email/magic_link.txt.twig')
-            ->context(['url' => $url, 'minutes' => $minutes, 'community' => $community->name(), 'event' => $community->eventName(),
-                'emoji' => $community->settings['branding']['brand_emoji'] ?? '', 'claim_address' => $claimAddress]);
+            ->context(['url' => $url, 'minutes' => $minutes, 'community' => $community->name(),
+                'event' => null !== $claimAddress ? $community->eventName() : '',
+                'emoji' => null !== $claimAddress ? ($community->settings['branding']['brand_emoji'] ?? '') : '', 'claim_address' => $claimAddress]);
         $message->getHeaders()->addTextHeader('X-Auto-Response-Suppress', 'All');
         $this->mailer->send($message);
     }

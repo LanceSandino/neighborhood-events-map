@@ -1,0 +1,30 @@
+{
+    "home": {
+        "title": "Fernbrook Glen Halloween",
+        "description": "Fernbrook Glen Halloween: a neighborhood map of the homes taking part, with their hours and what each offers.",
+        "brand": "<a class=\"brand long\" href=\"/\">\n      <div class=\"brand-icon\" aria-hidden=\"true\">🎃</div>\n      <div><div class=\"brand-name\">Fernbrook Glen<br>Halloween</div><div class=\"brand-sub\">Community 2026</div></div>\n    </a>",
+        "intro": "<section class=\"intro\">\n  <div>\n    <div class=\"eyebrow\">✦ Your neighborhood. Your Halloween.</div>\n    <h1>👻 Tiny ghosts. <span>Big adventures.</span></h1>\n    <p>Grab a bucket, follow the porch lights and find the candy stops of Fernbrook Glen — skip the scares if you like. All across Fernbrook Glen.</p>\n  </div>\n  <div class=\"hero-illustration\" aria-hidden=\"true\"><span class=\"hero-star one\">✦</span><span class=\"hero-moon\">🌕</span><span class=\"hero-ghost\">👻</span><span class=\"hero-star two\">✧</span></div>\n</section>",
+        "side_panel": "👻 Handing out treats? Put your home on the map so the neighborhood can find you! + Add your house"
+    },
+    "about": {
+        "title": "About · Fernbrook Glen Halloween",
+        "eyebrow": "<div class=\"eyebrow\">🎃 About</div>",
+        "lead": "<p class=\"legal-lead\">Your neighborhood. Your Halloween.</p>",
+        "about_section": "<section class=\"about-section\" aria-labelledby=\"aboutTitle\">\n    <h2 id=\"aboutTitle\">About</h2>\n          <p>Fernbrook Glen's trick-or-treat night: porches with a light on hand out candy, and a few yards go all out with ghosts and pumpkins.</p><p>Please stay on the sidewalks and keep an eye on little ones.</p>      </section>"
+    },
+    "theme_css": ":root{--brand:#D9652B;--brand-accent:#524077;--brand-ink:#111018;--brand-text:#b65524}\n@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){--brand-text:#d9652b}}\n:root[data-theme=\"dark\"]{--brand-text:#d9652b}\n",
+    "api": {
+        "branding": {
+            "logo_url": null,
+            "intro": "Grab a bucket, follow the porch lights and find the candy stops of Fernbrook Glen — skip the scares if you like.",
+            "headline": "👻 Tiny ghosts.",
+            "brand_emoji": "🎃",
+            "accent_color": "#524077",
+            "primary_color": "#D9652B",
+            "show_locality": false,
+            "headline_accent": "Big adventures."
+        },
+        "about": "Fernbrook Glen's trick-or-treat night: porches with a light on hand out candy, and a few yards go all out with ghosts and pumpkins.\n\nPlease stay on the sidewalks and keep an eye on little ones.",
+        "subtitle": "Your neighborhood. Your Halloween."
+    }
+}

@@ -1451,4 +1451,34 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-branding"
   author: "Lance Sandino"
   timestamp: "2026-10-31T19:00:00Z"
+- id: CU-20261031-55
+  type: feat
+  title: "Each event has its own branding; the community keeps only its own"
+  description: "Event/EventBranding: an event's settings.branding (brand_emoji, headline, headline_accent, intro, primary_color, accent_color, about), every field optional (empty is the type's default), strict (unknown keys, over-long text and non-#RRGGBB colours refused with settings.branding.<field> errors, never cut); OccurrenceInput accepts it and keeps it when a client sends settings without it, so next year's event (EventLifecycle::nextFields) and the close step carry it. Community/EventBrandingView puts the selected event's look over its type's defaults into the settings a page sees (keys keep their stored positions, so answers keep their order) and its About text (else the new community.general_about, else the type's built-in text); TypeDefaults keeps only the subtitle and feature defaults (D-20261031-16's branding clause superseded). Branding in its 0.9 shape (top-level branding keys and community.about, as community.yaml gives them) brands the install's first event when a settings save creates it (OccurrenceSettingsSync, CommunityBootstrapper; event.settings.branding names fields explicitly and wins); GET /api/admin/community returns only the community's branding (logo, show_locality) and no community.about, PUT ignores event keys and keeps the default event when no event block is sent; GET /api/admin/events adds each type's default branding (placeholders). The draft preview is CommunityRepository::forEvent(draft), so it shows the draft's own branding. The sidebar's call-to-action icon class is side-icon (no ghost in a core template); About's actions and the map guide's Full guide link keep the page's event (D-20261031-46, -47, -48)."
+  impact: high
+  affected_modules: ["src/Event/EventBranding.php", "src/Event/OccurrenceInput.php", "src/Event/OccurrenceSettingsSync.php", "src/Community/EventBrandingView.php", "src/Community/TypeDefaults.php", "src/Community/CommunityRepository.php", "src/Community/CommunitySchema.php", "src/Community/CommunityBootstrapper.php", "src/Controller/AdminPageController.php", "src/Controller/Api/AdminApiController.php", "src/Controller/Api/EventsAdminApiController.php", "templates/base.html.twig", "templates/legal/about.html.twig", "templates/home/_modals.html.twig", "public/assets/css/app.css"]
+  related_tests: ["tests/Unit/Event/EventBrandingTest.php", "tests/Integration/PerEventBrandingTest.php: testTheOtherEventsCarryNoHalloweenWordWhileHalloweenKeepsItsBranding", "tests/Integration/PerEventBrandingTest.php: testOrganizersSetAnEventsBrandingUnderEvents", "tests/Integration/PerEventBrandingTest.php: testTheCommunityConsoleKeepsOnlyTheCommunitysOwnFields", "tests/Integration/PerEventBrandingTest.php: testCommunityYamlBrandsTheFirstEventAndAnExplicitEventBrandingWins", "tests/Integration/GoldenApiParityTest.php", "tests/Integration/AdminConsoleTest.php: testSettingsUpdateValidatesAndRebrandsWithoutCodeChanges"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:10:00Z"
+- id: CU-20261031-56
+  type: feat
+  title: "Migration: the community's Halloween branding moves to its Halloween events; the 0.9 keys stay as a mirror"
+  description: "migrations/Version20261031000004 (data only): copies the community's custom branding values (not equal to any type's built-in default, the defaults frozen in the migration) and its About text into settings.branding of every Halloween event without one; Christmas lights and sales then show their type's look. The stored community keys are left as they are for the 0.9.0-beta.1 image, and Community/EventBlockMirror now writes the mirrored Halloween's look and About text into them (with the event block) on every settings save and event change; this release never shows them for an event. Down writes them from the Halloween the 0.9 image shows (newest open or closed one-day Halloween, else the newest) and removes every event's branding and community.general_about. tests/fixtures/golden/0.15.0-beta.1/branding-halloween.json holds the Halloween fragments 0.15.0-beta.1 rendered for a fictional community with custom Halloween branding and three open events, captured from that release before any change (D-20261031-49)."
+  impact: high
+  affected_modules: ["migrations/Version20261031000004.php", "src/Community/EventBlockMirror.php", "tests/Support/CustomHalloweenCommunity.php", "tests/fixtures/golden/0.15.0-beta.1/branding-halloween.json"]
+  related_tests: ["tests/Integration/EventBrandingMigrationTest.php: testA015CommunityKeepsItsHalloweenBrandingOnHalloweenOnly", "tests/Integration/EventBrandingMigrationTest.php: testA09InstallUpgradesStraightToPerEventBrandingAndKeeps09sKeys", "tests/Integration/PerEventBrandingTest.php: testTheKeysThe09ImageReadsFollowTheHalloweenItShows"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:20:00Z"
+- id: CU-20261031-57
+  type: feat
+  title: "Emails name the event they concern; the sign-in link names only the community"
+  description: "Mail/Notifier: the sign-in subject is 'Your <community> sign-in link' and its body names no event and no event emoji (an account is the community's); a claim email reads 'Confirm your <community> <event> listing for <address>' with that event's emoji; a review request names the event of the page it was sent from (register.js sends e= with POST /api/disputes). The sender stays MAIL_FROM."
+  impact: medium
+  affected_modules: ["src/Mail/Notifier.php", "templates/email/magic_link.html.twig", "templates/email/magic_link.txt.twig", "public/assets/js/register.js"]
+  related_tests: ["tests/Integration/PerEventBrandingTest.php: testEmailsNameTheEventTheyConcernAndCarryNoOtherEventsWords", "tests/Integration/HeaderBrandingTest.php: testThePageNamesTheCommunitysEventNotAFixedHoliday"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:30:00Z"
 ```

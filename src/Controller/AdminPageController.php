@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Community\CommunityConfig;
 use App\Community\CommunityPresenter;
 use App\Community\CommunityRepository;
-use App\Community\TypeDefaults;
 use App\Event\EventOccurrence;
 use App\Event\EventOccurrenceRepository;
 use App\Event\EventTypeRegistry;
@@ -20,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @module Controller/AdminPageController
  * @description Organizer console page shells (ROLE_ADMIN). Data loads from /api/admin/* via vanilla JS. The draft
  *     preview renders the public page for a draft event without any homes, with the draft type's theme, words,
- *     filters and feature switches (Community/TypeDefaults).
+ *     filters and feature switches and the draft's own branding (Community/CommunityRepository::forEvent).
  */
 #[IsGranted('ROLE_ADMIN')] // also enforced by access_control; declared here so a route rule is never the only lock
 final class AdminPageController extends AbstractController
@@ -54,13 +52,9 @@ final class AdminPageController extends AbstractController
         if (null === $draft || EventOccurrence::DRAFT !== $draft->state || !$types->isEnabled($draft->type)) {
             throw $this->createNotFoundException();
         }
-        $c = $community->current();
-        $settings = $c->settings;
-        $settings['event'] = ['name' => $draft->name, 'date' => $draft->startsOn ?? $c->eventDate(), 'starts_at' => $draft->defaultStart, 'ends_at' => $draft->defaultEnd,
-            'type' => $draft->type, 'starts_on' => $draft->startsOn, 'ends_on' => $draft->endsOn];
-        // The draft's type decides the theme, words, filters and feature switches, as it will once it is on the map.
-        $settings = TypeDefaults::apply($settings, $types->get($draft->type), $types);
-        $payload = $presenter->publicPayload(new CommunityConfig($settings, $c->boundary, $c->boundaryApproved, $c->boundaryVersion, $c->zoneShapes, $c->configured, $draft), []);
+        // The community as the draft shows it: its type's theme, words, filters and switches and its own branding, as
+        // once it is on the map.
+        $payload = $presenter->publicPayload($community->forEvent($draft), []);
         $response = $this->render('admin/event_preview.html.twig', ['c' => $payload, 'homes' => [], 'boot' => ['community' => $payload, 'homes' => []]]);
         $response->headers->set('Cache-Control', 'no-store, private');
         $response->headers->set('X-Robots-Tag', 'noindex');

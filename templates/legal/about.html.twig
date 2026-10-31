@@ -1,4 +1,7 @@
 {% extends 'base.html.twig' %}
+{# The About page of the page's event: its dates, the community's place, access, links and notes, then the About text
+   (the event's own, else the community's general text, else the event type's built-in one; ADR 0012), its rules and
+   reminders. Links keep the page's event. #}
 {% set nav = 'about' %}
 {% block title %}About · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block body %}
@@ -52,6 +55,6 @@
     <ul class="reminders two-col">{% for r in c.community.reminders %}<li>{{ r }}</li>{% endfor %}</ul>
   </section>
 
-  <div class="modal-actions"><a class="secondary" href="/#list-my-house" data-action="register">🏠 List your home</a><a class="primary" href="/">Open the map</a></div>
+  <div class="modal-actions"><a class="secondary" href="/{{ event_query() }}#list-my-house" data-action="register">🏠 List your home</a><a class="primary" href="/{{ event_query() }}">Open the map</a></div>
 </article>
 {% endblock %}

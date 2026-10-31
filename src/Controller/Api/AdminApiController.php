@@ -32,7 +32,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 /**
  * @module Controller/Api/AdminApiController
  * @description Organizer API (ROLE_ADMIN via access_control; CSRF + idle timeout enforced first):
- *     community settings/branding, GeoJSON boundary & zones (import/export/approve), registration
+ *     the community's own settings and branding (each event's branding is the Events API's), GeoJSON boundary & zones
+ *     (import/export/approve), registration
  *     switch, address inventory, claim transfer/unclaim, listing moderation, disputes, audit, export. The
  *     settings come with the event types an organizer may choose and the current type's console labels. Listing
  *     counts and states are the active event's; events themselves are managed by EventsAdminApiController.
@@ -89,8 +90,13 @@ final class AdminApiController
     public function getCommunity(): JsonResponse
     {
         $c = $this->community->current();
+        // The community's own settings only: each event's emoji, headline, intro, colours and About text are edited under
+        // Organizer → Events (ADR 0012).
+        $settings = $c->settings;
+        $settings['branding'] = array_intersect_key($settings['branding'], array_flip(['logo', 'show_locality']));
+        unset($settings['community']['about']);
 
-        return new JsonResponse(['settings' => $c->settings, 'event_types' => array_map(fn (EventType $t) => $this->typeView($t), $this->types->enabled()),
+        return new JsonResponse(['settings' => $settings, 'event_types' => array_map(fn (EventType $t) => $this->typeView($t), $this->types->enabled()),
             'event_type' => $this->typeView($this->types->for($c))]);
     }
 
@@ -99,7 +105,11 @@ final class AdminApiController
     {
         $body = JsonBody::decode($request);
         $settings = \is_array($body['settings'] ?? null) ? $body['settings'] : throw new ValidationException(['settings' => 'Missing settings object.']);
-        $settings['branding']['logo'] = $this->community->current()->settings['branding']['logo'];
+        $current = $this->community->current()->settings;
+        $settings['branding']['logo'] = $current['branding']['logo'];
+        // The console no longer edits the default event here (Organizer → Events does): without an event block the
+        // default event keeps exactly its own values.
+        $settings['event'] ??= $current['event'];
         $saved = $this->community->saveSettings($settings, $admin->id);
         $this->audit->record($admin->id, 'admin#'.$admin->id, 'community.updated', 'community', $saved['community']['id'], [], 'admin');
 

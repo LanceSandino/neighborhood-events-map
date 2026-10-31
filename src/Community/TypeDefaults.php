@@ -9,20 +9,16 @@ use App\Event\EventTypeRegistry;
 
 /**
  * @module Community/TypeDefaults
- * @description The community settings as the active (or previewed) event's type shows them (D-20261031-16). Branding
- *     texts, the brand colours and the subtitle that still equal another type's built-in default follow the event's
- *     type, so a community that never changed them gets the Christmas lights headline, words and midnight blue and
- *     gold when Christmas Lights goes on the map, and Halloween's again next October; anything an organizer changed
- *     stays as they set it (Community & branding). Feature switches the type offers but the settings lack take the
- *     type's defaults. A type's own defaults are never replaced, so Halloween's settings read exactly as stored.
+ * @description The community settings as the selected (or previewed) event's type shows them: a subtitle that still
+ *     equals another type's built-in default follows the event's type (D-20261031-16), and feature switches the type
+ *     offers but the settings lack take the type's defaults. A type's own defaults are never replaced. Since 0.16 the
+ *     emoji, headline, intro and colours are each event's own (Community/EventBrandingView, ADR 0012), with
+ *     defaults() as their fallback.
  *
  * @dependencies Event/EventType, Event/EventTypeRegistry, Community/CommunitySchema
  */
 final class TypeDefaults
 {
-    /** Branding fields that follow the event's type while they hold a built-in default. */
-    public const BRANDING = ['brand_emoji', 'headline', 'headline_accent', 'intro', 'primary_color', 'accent_color'];
-
     /**
      * @param array<string,mixed> $settings normalized settings
      *
@@ -32,11 +28,6 @@ final class TypeDefaults
     {
         $mine = self::defaults($type);
         $others = array_values(array_filter($types->enabled(), static fn (EventType $t) => $t->key() !== $type->key()));
-        foreach (self::BRANDING as $k) {
-            if (isset($settings['branding'][$k]) && self::isDefaultOf($others, $k, $settings['branding'][$k])) {
-                $settings['branding'][$k] = $mine[$k];
-            }
-        }
         if (isset($settings['community']['subtitle']) && self::isDefaultOf($others, 'subtitle', $settings['community']['subtitle'])) {
             $settings['community']['subtitle'] = $mine['subtitle'];
         }
