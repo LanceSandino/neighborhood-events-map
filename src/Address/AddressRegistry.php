@@ -132,21 +132,22 @@ final class AddressRegistry
         $this->db->update('eligible_addresses', $allowed, ['id' => $id], ['enabled' => 'boolean', 'inside_boundary' => 'boolean']);
     }
 
-    /** @return list<array<string,mixed>> admin-only listing */
-    public function search(string $q, int $limit = 100, int $offset = 0): array
+    /** @return list<array<string,mixed>> admin-only listing, with each address's listing for the event (if any) */
+    public function search(string $q, int $limit = 100, int $offset = 0, ?int $eventId = null): array
     {
         $like = '%'.addcslashes(strtoupper(trim($q)), '%_\\').'%';
 
         return $this->db->fetchAllAssociative(
-            'SELECT a.*, c.user_id, u.email_normalized AS owner_email, c.claimed_at, l.status, l.published, l.moderation_hidden, l.moderation_reason, l.event_date
+            'SELECT a.*, c.user_id, u.email_normalized AS owner_email, c.claimed_at, l.status, l.published, l.moderation_hidden, l.moderation_reason,
+                    (SELECT MIN(w.local_date) FROM event_listing_windows w WHERE w.listing_id = l.id) AS event_date
              FROM eligible_addresses a
              LEFT JOIN claims c ON c.address_id = a.id
              LEFT JOIN users u ON u.id = c.user_id
-             LEFT JOIN listings l ON l.address_id = a.id
+             LEFT JOIN event_listings l ON l.address_id = a.id AND l.event_id = :event
              WHERE a.normalized_address LIKE :q OR COALESCE(u.email_normalized, \'\') ILIKE :q2
              ORDER BY a.street, a.house_number LIMIT :lim OFFSET :off',
-            ['q' => $like, 'q2' => '%'.addcslashes(strtolower(trim($q)), '%_\\').'%', 'lim' => $limit, 'off' => $offset],
-            ['lim' => \Doctrine\DBAL\ParameterType::INTEGER, 'off' => \Doctrine\DBAL\ParameterType::INTEGER],
+            ['q' => $like, 'q2' => '%'.addcslashes(strtolower(trim($q)), '%_\\').'%', 'lim' => $limit, 'off' => $offset, 'event' => $eventId ?? 0],
+            ['lim' => \Doctrine\DBAL\ParameterType::INTEGER, 'off' => \Doctrine\DBAL\ParameterType::INTEGER, 'event' => \Doctrine\DBAL\ParameterType::INTEGER],
         );
     }
 

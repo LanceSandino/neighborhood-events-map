@@ -17,13 +17,15 @@ use Symfony\Component\Console\Tester\CommandTester;
  *   before any change): the fictional Maple Hollow demo with its seeded homes and the Ventura Reserve example
  *   (no residents, boundary not approved). This test rebuilds the same communities the same way (bootstrap
  *   command, demo seed) and requires every key of the baseline, with the same value and in the same relative
- *   order; keys may only be added (event.type). Environment values are
+ *   order; keys may only be added (event.type in 0.10, the event-scoped keys in 0.11, which the 0.11 fixtures pin in
+ *   full). Environment values are
  *   compared by kind only: the app version, the APP_DEMO switch and each home's updated_at (seed time).
  * @dependencies tests/Support/AppTestCase, Community/CommunityBootstrapper, Command/DemoSeedCommand
  */
 final class GoldenApiParityTest extends AppTestCase
 {
     private const GOLDEN = __DIR__.'/../fixtures/golden/0.9.0-beta.1';
+    private const GOLDEN_011 = __DIR__.'/../fixtures/golden/0.11.0-beta.1';
 
     public function testTheDemoCommunityAnswersExactlyLikeTheBaseline(): void
     {
@@ -48,17 +50,65 @@ final class GoldenApiParityTest extends AppTestCase
         self::assertSame(404, $this->code());
     }
 
-    public function testTheEventNamesItsTypeWhileHomesKeepExactlyTheirKeys(): void
+    /**
+     * Keys are added on purpose only: the event gains its type (0.10) and the active occurrence's description (0.11);
+     * a home keeps the 0.9 keys in their order, then exactly the event-scoped keys (D-20261031-09, refining
+     * D-20261031-04), and its details object repeats the flat 0.9 details.
+     */
+    public function testTheEventAndHomesAddExactlyTheDeliberateKeys(): void
     {
         $this->bootstrap('examples/demo/community.yaml', true);
         $this->seedDemoHomes();
         $event = $this->json('GET', '/api/event')['event'];
         self::assertSame('halloween', $event['type']);
-        self::assertSame(array_keys(self::golden('demo-event')['event']), array_values(array_diff(array_keys($event), ['type'])), 'event.type is the only new event key');
+        self::assertSame(array_keys(self::golden('demo-event')['event']),
+            array_values(array_diff(array_keys($event), ['type', 'id', 'active', 'starts_on', 'ends_on', 'default_hours', 'schedule_kind', 'filters', 'copy', 'rules'])),
+            'the 0.10 event keys and the occurrence ones are the only new event keys');
         $baseline = array_keys(self::golden('demo-homes')['homes'][0]);
         foreach ($this->json('GET', '/api/homes')['homes'] as $h) {
-            self::assertSame($baseline, array_keys($h), "home {$h['id']}: exactly the 0.9 keys, in their order (D-20261031-04)");
+            self::assertSame([...$baseline, 'event_id', 'event_type', 'details', 'windows', 'display_status'], array_keys($h), "home {$h['id']}: the 0.9 keys in their order, then the event-scoped ones");
+            self::assertSame(array_intersect_key($h, $h['details']), $h['details'], "home {$h['id']}: details are the flat 0.9 details");
+            self::assertSame([['date' => $event['date'], 'start' => $h['start'], 'end' => $h['end']]], $h['windows']);
+            self::assertSame($event['id'], $h['event_id']);
         }
+    }
+
+    /**
+     * The 0.11 answers in full (tests/fixtures/golden/0.11.0-beta.1, the same communities and the frozen test clock):
+     * every key, value and order, including the event-scoped keys. NHM_WRITE_GOLDEN=1 rewrites them after a
+     * deliberate change.
+     */
+    public function testTheEventScopedAnswersAreThe011Ones(): void
+    {
+        $this->bootstrap('examples/demo/community.yaml', true);
+        $this->seedDemoHomes();
+        foreach (['event' => '/api/event', 'homes' => '/api/homes', 'home-3' => '/api/homes/3'] as $name => $uri) {
+            $actual = $this->json('GET', $uri);
+            self::assertSame(200, $this->code(), $uri);
+            $file = self::GOLDEN_011.'/demo-'.$name.'.json';
+            if ('1' === getenv('NHM_WRITE_GOLDEN')) {
+                @mkdir(self::GOLDEN_011, 0o755, true);
+                file_put_contents($file, json_encode($actual, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE)."\n");
+            }
+            $expected = json_decode((string) file_get_contents($file), true, 64, \JSON_THROW_ON_ERROR);
+            self::assertParity($expected, $actual, $uri);
+            self::assertSame(self::keysDeep($expected), self::keysDeep($actual), "$uri has exactly the 0.11 keys");
+        }
+    }
+
+    /**
+     * @param array<mixed> $a
+     *
+     * @return array<mixed> the keys of a nested answer (list items by position)
+     */
+    private static function keysDeep(array $a): array
+    {
+        $out = [];
+        foreach ($a as $k => $v) {
+            $out[$k] = \is_array($v) ? self::keysDeep($v) : null;
+        }
+
+        return $out;
     }
 
     private function bootstrap(string $file, bool $approve): void

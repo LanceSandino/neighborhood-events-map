@@ -9,8 +9,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * @module Routing/OpenRouteServiceProvider
- * @description openrouteservice "foot-walking" directions (server-side; the API key never reaches
- *     browsers). Active only when ROUTING_PROVIDER=openrouteservice and ROUTING_API_KEY are set.
+ * @description openrouteservice directions, "foot-walking" (and "driving-car" for an event type and organizer
+ *     that allow driving), server-side; the API key never reaches browsers. Active only when
+ *     ROUTING_PROVIDER=openrouteservice and ROUTING_API_KEY are set.
  */
 final class OpenRouteServiceProvider implements RoutingProviderInterface
 {
@@ -30,11 +31,19 @@ final class OpenRouteServiceProvider implements RoutingProviderInterface
 
     public function walkingRoute(array $points): array
     {
+        return $this->route($points, 'foot-walking');
+    }
+
+    public function route(array $points, string $profile): array
+    {
+        if (!\in_array($profile, ['foot-walking', 'driving-car'], true)) {
+            throw new RoutingUnavailableException('That route profile is not available.');
+        }
         if (!$this->available()) {
             throw new RoutingUnavailableException('No routing provider is configured.');
         }
         try {
-            $response = $this->http->request('POST', rtrim($this->config->routingBaseUrl, '/').'/v2/directions/foot-walking/geojson', [
+            $response = $this->http->request('POST', rtrim($this->config->routingBaseUrl, '/').'/v2/directions/'.$profile.'/geojson', [
                 'headers' => ['Authorization' => $this->config->routingApiKey, 'Accept' => 'application/geo+json'],
                 'json' => ['coordinates' => array_map(static fn (array $p) => [$p['lon'], $p['lat']], $points), 'instructions' => false],
                 'timeout' => 5, // an outside provider must never hold a PHP worker for long

@@ -1,7 +1,7 @@
 /**
  * @module assets/js/events/halloween
  * @description The Halloween event type in the browser (mirrors src/Event/Type/HalloweenType.php): its filter
- *     toggles and predicates, search words, card tags, pin symbol and class, status labels, route notes, copy,
+ *     toggles and predicates, search words, card tags, pin symbol and class, status labels and display rules, route notes, copy,
  *     hour choices and the listing form fields of templates/event/halloween/. Core modules (lib/filters,
  *     lib/render, lib/time, home, register, me, route-panel) ask this module and never branch on a type key.
  * @dependencies lib/clock.js
@@ -61,6 +61,20 @@ export function statusOf(home, ctx) {
   if (now >= toMinutes(home.end)) return { key: 'done', label: 'Done for tonight' };
   return { key: 'open', label: 'Handing out' };
 }
+
+/**
+ * How visitors see a status (lib/schedule.js, HalloweenType::displayRules): the words of statusOf above — open, later,
+ * done, paused, out — from the stored status and the home's window on the event day.
+ */
+export const displayRules = Object.freeze({
+  statuses: {
+    active: { day_scoped: false, display: null },
+    paused: { day_scoped: false, display: 'paused' },
+    out_of_candy: { day_scoped: false, display: 'out' },
+    done: { day_scoped: false, display: 'done' },
+  },
+  phases: { inside: 'open', later_today: 'later', ended_today: 'done', not_today: 'later' },
+});
 
 /**
  * One vocabulary everywhere (pins, legend, cards, filters): 👻 Spooky, 🧩 Sensory-friendly, 🍺 21+, 🍬 Treats, in that

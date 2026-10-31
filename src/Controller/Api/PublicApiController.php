@@ -23,8 +23,8 @@ use Symfony\Component\Routing\Attribute\Route;
  * @module Controller/Api/PublicApiController
  * @description Anonymous, read-mostly family endpoints: community metadata, published homes,
  *     narrow address lookup / claim status for the listing form, and PoW challenges.
- *     Never returns emails, owner ids or the unclaimed address inventory. Homes are projected by the
- *     community's event type.
+ *     Never returns emails, owner ids or the unclaimed address inventory. Homes are the ACTIVE event's
+ *     public listings, projected by its event type; drafts and archived events are never public.
  *
  * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, Address/*, Security/*
  */
@@ -48,7 +48,7 @@ final class PublicApiController
     public function community(): JsonResponse
     {
         $c = $this->community->current();
-        $homes = $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c));
+        $homes = $this->listings->publicHomes($c, $this->types->for($c));
 
         return self::fresh(new JsonResponse($this->presenter->publicPayload($c, $homes)));
     }
@@ -59,9 +59,10 @@ final class PublicApiController
         $c = $this->community->current();
 
         return self::fresh(new JsonResponse([
-            'event_date' => $c->eventDate(),
+            'event_date' => $c->event?->startsOn,
             'timezone' => $c->settings['community']['timezone'],
-            'homes' => $this->listings->publicHomes($c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c)),
+            'homes' => $this->listings->publicHomes($c, $this->types->for($c)),
+            'event_id' => $c->event?->id,
         ]));
     }
 
@@ -69,7 +70,7 @@ final class PublicApiController
     public function home(int $id): JsonResponse
     {
         $c = $this->community->current();
-        $home = $this->listings->publicHome($id, $c->eventDate(), $c->hiddenZoneKeys(), $this->types->for($c));
+        $home = $this->listings->publicHome($id, $c, $this->types->for($c));
 
         return null === $home ? ApiError::response(404, 'not_found', 'That home is not listed.') : self::fresh(new JsonResponse(['home' => $home]));
     }

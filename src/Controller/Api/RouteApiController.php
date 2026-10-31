@@ -17,7 +17,8 @@ use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * @module Controller/Api/RouteApiController
- * @description POST /api/routes/plan — optional provider walking path for one trip (throttled).
+ * @description POST /api/routes/plan — optional provider path for one trip (walking by default; driving only where
+ *     the event allows it), throttled.
  */
 final class RouteApiController
 {
@@ -25,9 +26,10 @@ final class RouteApiController
     public function plan(Request $request, RoutePlanner $planner, CommunityRepository $community, Throttle $throttle, ClientIdentity $client): JsonResponse
     {
         $throttle->hit('route_ip', $client->ip($request));
-        $stops = JsonBody::decode($request)['stops'] ?? [];
+        $body = JsonBody::decode($request);
+        $stops = $body['stops'] ?? [];
         try {
-            return new JsonResponse(['route' => $planner->plan(\is_array($stops) ? $stops : [], $community->current())]);
+            return new JsonResponse(['route' => $planner->plan(\is_array($stops) ? $stops : [], $community->current(), \is_string($body['profile'] ?? null) ? $body['profile'] : 'walking')]);
         } catch (RoutingUnavailableException $e) {
             return ApiError::response(409, 'routing_unavailable', $e->getMessage());
         }

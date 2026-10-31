@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * @description The contract of a code-defined event type (ADR 0010): its immutable key, default name, branding
  *     and copy, schedule kind, listing statuses, the strict validation and public projection of its listing
  *     details, its filters, legend, statistics and route profiles, and the whitelisted Twig fragments that
- *     present it. Core code asks the type instead of branching on a type key.
+ *     present it, and how a listing's status shows. Core code asks the type instead of branching on a type key.
  *
  * @dependencies Event/OccurrenceSettings, Shared/ValidationException
  */
@@ -57,6 +57,16 @@ interface EventType
      * @return array<string, array{label:string, icon:string, day_scoped:bool, register_label?:string}>
      */
     public function statuses(): array;
+
+    /**
+     * How visitors see a listing's status (Event/Schedule/DisplayStatus): for each stored status whether it is
+     * day-scoped and its own display key (null: today's window phase decides), and the display key of each phase
+     * (inside the window, later today, ended today, no window today). public/assets/js/events/<key>.js exports the
+     * same table.
+     *
+     * @return array{statuses: array<string, array{day_scoped:bool, display:?string}>, phases: array{inside:string, later_today:string, ended_today:string, not_today:string}}
+     */
+    public function displayRules(): array;
 
     /**
      * Community feature switches the type offers organizers, in display order (stored in settings.features).

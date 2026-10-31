@@ -6,6 +6,13 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Added
+- Each event now has its own listings. A home's Halloween listing belongs to that Halloween; next year's, or a different kind of event, starts fresh, and last season's homes never show up again by accident. Your claim on your home stays yours.
+- The public event information (`/api/event`) and each home (`/api/homes`) also say which event they belong to, the home's days and hours, and its current status.
+
+### Changed
+- Between events, the map says that there is no event right now instead of showing an old one.
+
 ## [0.10.0-beta.1] - 2026-10-31
 
 Update by pulling `0.10.0-beta.1` and recreating the stack. The database gets one additive migration, applied at start; nothing visible changes for visitors or residents. Going back to 0.9.0-beta.1 needs only the older image: the database keeps working with it.

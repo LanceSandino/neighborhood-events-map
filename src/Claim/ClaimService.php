@@ -21,7 +21,8 @@ use Symfony\Component\Uid\Uuid;
  * @description "First verified email wins." Prepares claim intents (no address reservation) and
  *     completes claims atomically: the claims primary key is the single source of ownership truth,
  *     taken with INSERT … ON CONFLICT DO NOTHING inside one transaction, and the listing is
- *     published in that same transaction. A losing racer gets already_claimed; nothing is overwritten.
+ *     published in that same transaction. A losing racer gets already_claimed; nothing is overwritten. The listing
+ *     belongs to the active event; a request prepared for an event that is no longer active is refused.
  *
  * @dependencies Address/*, Listing/*, Audit/AuditLog, Event/EventTypeRegistry, DBAL
  */
@@ -53,7 +54,8 @@ final class ClaimService
         if (null !== $target['address_id'] && $this->registry->isClaimed($target['address_id'])) {
             throw new ClaimRejectedException('already_claimed', 'This home is already claimed.', $target['address_id']);
         }
-        $draft = ListingDraft::fromInput($listingInput, $community, false, null, $this->types);
+        // The request belongs to the event it was made for (claim intents last minutes; the event may change).
+        $draft = ListingDraft::fromInput($listingInput, $community, false, null, $this->types) + ['event_id' => $community->event?->id];
         $id = Uuid::v4()->toRfc4122();
         $now = $this->clock->now();
         $this->db->insert('claim_intents', [
@@ -109,8 +111,11 @@ final class ClaimService
             if (false === $intent) {
                 return new ClaimOutcome('rejected', null, null, 'This listing request expired. Please start again.');
             }
-            // A request made before 0.10 stored only the flat Halloween fields.
+            // A request made before 0.10 stored only the flat Halloween fields; one made before 0.11 names no event.
             $draft = ListingDraft::withDetails(json_decode((string) $intent['listing_draft'], true, 16, \JSON_THROW_ON_ERROR), $this->types->for($community));
+            if (\array_key_exists('event_id', $draft) && $draft['event_id'] !== $community->event?->id) {
+                return new ClaimOutcome('rejected', null, null, 'This listing request was for an event that is not on the map any more. Please start again.');
+            }
             $input = null !== $intent['address_id']
                 ? ['address_id' => (int) $intent['address_id']]
                 : json_decode((string) $intent['candidate'], true, 16, \JSON_THROW_ON_ERROR);
@@ -193,9 +198,11 @@ final class ClaimService
             // The claim is ours now: an existing unreviewed self-entry (released earlier) takes this resident's pin.
             $this->registry->repinSelfEntry($addressId, $target['zone_key'], $target['lat'], $target['lon']);
         }
-        $this->listings->insert($db, $addressId, $community->eventDate(), $draft);
-        if ($review && false !== $db->fetchOne('SELECT 1 FROM listings WHERE address_id = ? AND moderation_hidden', [$addressId])) {
-            $db->executeStatement('UPDATE listings SET moderation_reason = ? WHERE address_id = ?', [ListingRepository::PENDING_REVIEW, $addressId]);
+        $event = $community->event ?? throw new \LogicException('Registration is open only while an event is active.');
+        $type = $this->types->for($community);
+        $this->listings->insert($db, $event, $addressId, $draft, ListingDraft::windowsFor($draft, $event, $type),
+            ListingDraft::statusDate($draft, $type, $community, $this->clock->now()));
+        if ($review && $this->listings->markPendingReview($db, $event->id, $addressId)) {
             $this->audit->record($userId, 'user#'.$userId, 'claim.pending_review', 'address', (string) $addressId, ['source' => $source]);
 
             return new ClaimOutcome('pending_review', $addressId, $target['display'], 'Thanks! An organizer will check this new address before it appears on the map.');

@@ -158,15 +158,24 @@ final class OwnershipHardeningTest extends AppTestCase
         $this->residentClaims('b@example.test', $theirs);
         $before = $this->db()->fetchAssociative('SELECT * FROM listings WHERE address_id = ?', [$theirs]);
 
+        $beforeEvent = $this->db()->fetchAssociative('SELECT * FROM event_listings WHERE address_id = ?', [$theirs]);
+
         $users = static::getContainer()->get(UserRepository::class);
         $homes = static::getContainer()->get(ResidentHomes::class)->of($users->findByEmail('a@example.test'));
-        self::assertSame([$mine], array_map(static fn (array $h) => (int) $h['id'], $homes->all()));
-        self::assertNull($homes->find($theirs));
+        $event = $this->repo()->current()->event;
+        self::assertNotNull($event);
+        self::assertSame([$mine], array_map(static fn (array $h) => (int) $h['id'], $homes->all($event->id)));
+        self::assertNull($homes->find($theirs, $event->id));
+        self::assertFalse($homes->owns($theirs));
         $draft = ListingDraft::fromInput(['note' => 'mine now'] + self::listing(), $this->repo()->current());
-        self::assertFalse($homes->update($theirs, '2026-10-31', $draft));
-        self::assertTrue($homes->update($mine, '2026-10-31', $draft), 'the same call works on the resident\'s own home');
+        $windows = ListingDraft::windowsFor($draft, $event, (new \App\Event\Type\HalloweenType()));
+        self::assertFalse($homes->update($theirs, $event, $draft, $windows, null));
+        self::assertTrue($homes->update($mine, $event, $draft, $windows, null), 'the same call works on the resident\'s own home');
+        self::assertSame('not_found', $homes->create($theirs, $event, $draft, $windows, null), 'nor can it list their home for an event');
+        self::assertSame('exists', $homes->create($mine, $event, $draft, $windows, null));
         self::assertSame('not_found', $homes->release($theirs));
         self::assertSame($before, $this->db()->fetchAssociative('SELECT * FROM listings WHERE address_id = ?', [$theirs]));
+        self::assertSame($beforeEvent, $this->db()->fetchAssociative('SELECT * FROM event_listings WHERE address_id = ?', [$theirs]));
         self::assertNotFalse($this->db()->fetchOne('SELECT 1 FROM claims WHERE address_id = ?', [$theirs]));
     }
 }

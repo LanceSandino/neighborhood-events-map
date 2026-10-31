@@ -8,9 +8,9 @@ use App\Community\CommunityConfig;
 
 /**
  * @module Event/OccurrenceSettings
- * @description The settings of the event a listing belongs to, as an event type's validation sees them. Until
- *     events have their own rows (event_occurrences), they come from the community: its feature switches (an
- *     offering the organizer turned off is forced off) and no type-specific settings yet.
+ * @description The settings of the event a listing belongs to, as an event type's validation sees them: the
+ *     community's feature switches (an offering the organizer turned off is forced off) and the active occurrence's
+ *     validated type settings (event_occurrences.settings).
  *
  * @dependencies Community/CommunityConfig
  */
@@ -26,7 +26,7 @@ final class OccurrenceSettings
 
     public static function fromCommunity(CommunityConfig $community): self
     {
-        return new self($community->features());
+        return new self($community->features(), $community->event->settings ?? []);
     }
 
     /** A switch the settings do not mention is on (new switches default to the behaviour before they existed). */

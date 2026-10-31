@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+{# Between events (none active, or one of a type this release does not offer): a neutral page with no listings, no
+   map scripts and no listing action. Residents still reach My house; organizers start the next event in the console. #}
+{% set nav = 'map' %}
+{% block body %}
+<section class="intro no-event" aria-labelledby="noEventTitle">
+  <div>
+    <div class="eyebrow">✦ {{ c.community.name }}</div>
+    <h1 id="noEventTitle">No event on the map right now</h1>
+    <p>The neighborhood map opens again when the organizer starts the next event.{% if c.community.contact_url %} Questions? <a href="{{ c.community.contact_url }}">Contact the organizer</a>.{% endif %}</p>
+    <p><a class="secondary" href="/me">My house</a></p>
+  </div>
+</section>
+{% endblock %}

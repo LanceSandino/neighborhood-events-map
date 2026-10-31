@@ -24,7 +24,10 @@ use Symfony\Component\Console\Output\OutputInterface;
  * @module Command/DemoSeedCommand
  * @description Loads the FICTIONAL demo homes (examples/demo/homes.json). Refuses unless APP_DEMO=1
  *     and the configured community is the demo, so production can never show invented homes. Each home's
- *     listing fields (everything but its address and position) go through ListingDraft.
+ *     listing fields (everything but its address and position) go through ListingDraft and are listed for the
+ *     active event. When the demo homes exist but the active event (a new one an organizer started on the demo
+ *     stack) has no listings yet, the fictional homes are listed for it again, from the file, never from an earlier
+ *     event.
  *
  * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Security/UserRepository
  */
@@ -64,23 +67,38 @@ final class DemoSeedCommand extends Command
 
             return Command::FAILURE;
         }
-        if ((int) $this->db->fetchOne('SELECT COUNT(*) FROM claims') > 0) {
+        $event = $c->event;
+        if (null === $event) {
+            $output->writeln('<error>No event is active; start one under Organizer → Events first.</error>');
+
+            return Command::FAILURE;
+        }
+        $relist = (int) $this->db->fetchOne('SELECT COUNT(*) FROM claims') > 0;
+        if ($relist && (int) $this->db->fetchOne('SELECT COUNT(*) FROM event_listings WHERE event_id = ?', [$event->id]) > 0) {
             $output->writeln('Demo homes already present; nothing to do.');
 
             return Command::SUCCESS;
         }
+        $type = $this->types->for($c);
         $n = 0;
         foreach ($doc['homes'] as $i => $h) {
             $parts = $this->normalizer->fromParts($h['house_number'], $h['street']);
-            $id = $this->addresses->insert($parts, null, (float) $h['lat'], (float) $h['lon'], 'admin', $c->insideBoundary((float) $h['lat'], (float) $h['lon']), true);
-            $user = $this->users->upsertVerified(sprintf('demo-resident-%02d@example.invalid', $i + 1));
-            $this->db->executeStatement('INSERT INTO claims (address_id, user_id, claimed_at, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING',
-                [$id, $user->id, $this->clock->now()->format('Y-m-d H:i:s.uP'), $this->clock->now()->format('Y-m-d H:i:s.uP')]);
-            $listing = array_diff_key($h, array_flip(['house_number', 'street', 'unit', 'lat', 'lon']));
-            $this->listings->insert($this->db, $id, $c->eventDate(), ListingDraft::fromInput($listing, $c, false, null, $this->types));
+            if ($relist) {
+                $id = (int) ($this->addresses->findByNormalized($parts['normalized'])['id'] ?? 0);
+                if (0 === $id || false === $this->db->fetchOne('SELECT 1 FROM claims WHERE address_id = ?', [$id])) {
+                    continue; // a demo home given up since: not listed again
+                }
+            } else {
+                $id = $this->addresses->insert($parts, null, (float) $h['lat'], (float) $h['lon'], 'admin', $c->insideBoundary((float) $h['lat'], (float) $h['lon']), true);
+                $user = $this->users->upsertVerified(sprintf('demo-resident-%02d@example.invalid', $i + 1));
+                $this->db->executeStatement('INSERT INTO claims (address_id, user_id, claimed_at, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING',
+                    [$id, $user->id, $this->clock->now()->format('Y-m-d H:i:s.uP'), $this->clock->now()->format('Y-m-d H:i:s.uP')]);
+            }
+            $draft = ListingDraft::fromInput(array_diff_key($h, array_flip(['house_number', 'street', 'unit', 'lat', 'lon'])), $c, false, null, $this->types);
+            $this->listings->insert($this->db, $event, $id, $draft, ListingDraft::windowsFor($draft, $event, $type), ListingDraft::statusDate($draft, $type, $c, $this->clock->now()));
             ++$n;
         }
-        $output->writeln(sprintf('Seeded %d FICTIONAL demo homes.', $n));
+        $output->writeln(sprintf($relist ? 'Listed %d FICTIONAL demo homes for the current event.' : 'Seeded %d FICTIONAL demo homes.', $n));
 
         return Command::SUCCESS;
     }

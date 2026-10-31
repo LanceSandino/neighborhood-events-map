@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventOccurrence;
 use App\Event\EventTypeRegistry;
 use App\Geo\PolygonSet;
 use App\Geo\ZoneResolver;
@@ -12,11 +13,13 @@ use App\Geo\ZoneResolver;
  * @module Community/CommunityConfig
  * @description Read-only view of the active community: normalized settings plus the active
  *     boundary and zone polygons and the boundary approval state. Answers the questions the
- *     rest of the app asks ("is registration open?", "which zone contains this point?").
+ *     rest of the app asks ("is registration open?", "which zone contains this point?"). The active event
+ *     occurrence (Event/EventOccurrence) comes with it: its settings `event` block is a view of that occurrence;
+ *     without an active event of a type this release offers, nothing is listed and registration is closed.
  *
  * @input normalized settings (CommunitySchema) and geometry rows
  * @output typed getters
- * @dependencies Geo/PolygonSet, Geo/ZoneResolver, Event/EventTypeRegistry (default type key)
+ * @dependencies Geo/PolygonSet, Geo/ZoneResolver, Event/EventTypeRegistry (default type key), Event/EventOccurrence
  */
 final class CommunityConfig
 {
@@ -31,6 +34,7 @@ final class CommunityConfig
         public readonly ?int $boundaryVersion,
         public readonly array $zoneShapes,
         public readonly bool $configured = true,
+        public readonly ?EventOccurrence $event = null,
     ) {
     }
 
@@ -67,9 +71,16 @@ final class CommunityConfig
         return new \DateTimeZone($this->settings['community']['timezone']);
     }
 
+    /** The first day of the active event (the settings' event block mirrors it). */
     public function eventDate(): string
     {
         return $this->settings['event']['date'];
+    }
+
+    /** The community-local date of a moment (default: now), e.g. for day-scoped statuses. */
+    public function localDate(\DateTimeImmutable $at): string
+    {
+        return $at->setTimezone($this->timezone())->format('Y-m-d');
     }
 
     /**
@@ -146,6 +157,9 @@ final class CommunityConfig
         }
         if (!$this->settings['registration']['enabled']) {
             return ['open' => false, 'reason' => 'House listings are closed right now.'];
+        }
+        if (null === $this->event) {
+            return ['open' => false, 'reason' => 'There is no event on the map right now. House listings open when the organizer starts the next one.'];
         }
 
         return ['open' => true, 'reason' => null];

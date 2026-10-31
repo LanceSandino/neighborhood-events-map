@@ -981,4 +981,54 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p1"
   author: "Lance Sandino"
   timestamp: "2026-10-31T07:40:00Z"
+- id: CU-20261031-08
+  type: feature
+  title: "Event occurrences and event-scoped listings: event_occurrences, event_listings, event_listing_windows, backfilled losslessly from listings; a trigger carries the previous release's writes forward"
+  description: "Migration Version20261031000002 adds the three tables exactly as designed (one active occurrence by the partial unique index uniq_one_active_event; UNIQUE(event_id, address_id); windows keyed by listing and local date, end after start) plus indexes for the public query and by address. Backfill: one Halloween occurrence per distinct listings.event_date, name and default hours from the community settings; the configured date is active, earlier ones archived, later ones drafts; without listings the configured event is still created active; a database without settings gets none (the bootstrap creates it). Every listings row is copied with its details, status, note, publication, moderation and timestamps, and one window (its date and hours). The legacy table stays. listings_bridge_to_events (AFTER INSERT/UPDATE/DELETE on listings) copies writes made by the previous release after an image-only rollback into the active one-day Halloween occurrence (a row moved off its day or deleted leaves it), skipping the app's own mirror writes (nhm.bridge_writer). Down drops only the new tables and the function."
+  impact: high
+  affected_modules: ["migrations/Version20261031000002.php", "tests/Support/AppTestCase.php", "tests/Support/RunsMigrations.php"]
+  related_tests: ["tests/Integration/EventOccurrencesMigrationTest.php: testTheBackfillKeepsEverySeasonApartAndThePublicMapExactlyAsItWas (seeded 0.10 database: two past seasons, a future date, hidden, pending review, unpublished, out of boundary, moderation hold; counts, every copied field and the public projection equal 0.10's frozen query; down and up again), testWithoutListingsTheConfiguredEventStillBecomesTheActiveOne, testAnInstallThatIsNotSetUpYetGetsNoEvent", "tests/Integration/LegacyBridgeTest.php: testRowsThe09ImageWritesReachTheActiveEvent, testTheAppsOwnMirrorIsNotCopiedBackAndAnotherDaysRowsStayOut"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T09:00:00Z"
+- id: CU-20261031-09
+  type: feature
+  title: "Listings are read and written per event: the active occurrence (CommunityConfig::event) scopes the map, My house, claims, the demo seed, the season archive, the organizer's counts, address list, export and moderation; the legacy row is mirrored"
+  description: "CommunityRepository loads the active occurrence (when this release offers its type) into CommunityConfig::event and puts its name, day and hours into the settings' event block; saving settings writes the block to the occurrence first (Event/OccurrenceSettingsSync: the first save creates the first occurrence; later saves change name and hours, and dates only while nobody is listed; the type of an existing event never changes) and the stored block mirrors it. EventBlockSchema (moved out of CommunitySchema) also accepts starts_on/ends_on for types with several days; a one-day event's block is unchanged. ListingRepository reads and writes event_listings with windows; public homes are the active event's only. ResidentHomes is owner-scoped per event (all/find/update/create/owns). ClaimService lists for the active event and refuses a claim intent prepared for another event. DemoSeedCommand lists the fictional homes for the active event (again, from the file, when an organizer started a new event on the demo stack). SeasonArchiveCommand unpublishes legacy rows before the active event. Organizer counts, pending addresses, the address list, the claims export and hide/unhide use the active event's listing; the hold stays on the address. LegacyListingBridge mirrors every write of the active one-day Halloween event into the legacy row (0.10's exact values), unpublishes an archived day's rows and deletes purged ones. Registration is closed and the home page is a neutral 'No event on the map right now' page (home/no_event.html.twig, no listing action, no map scripts) when no usable event is active."
+  impact: high
+  affected_modules: ["src/Event/EventOccurrence.php", "src/Event/EventOccurrenceRepository.php", "src/Event/OccurrenceSettingsSync.php", "src/Event/OccurrenceSettings.php", "src/Community/", "src/Listing/", "src/Claim/ClaimService.php", "src/Command/DemoSeedCommand.php", "src/Command/SeasonArchiveCommand.php", "src/Admin/ClaimAdministration.php", "src/Address/AddressRegistry.php", "src/Controller/", "templates/base.html.twig", "templates/home/no_event.html.twig"]
+  related_tests: ["tests/Integration/LegacyBridgeTest.php: testEveryFlowKeepsTheLegacyTableEqualToTheActiveEvent (claim, edit, status, visibility, pending review, hide/unhide, release, erasure)", "tests/Integration/OwnershipHardeningTest.php: testResidentHomesNeverReachAnotherResidentsHome (same assertions on the event-scoped API, plus create and the event row)", "the whole 0.10 suite unchanged otherwise (PublicPrivacyTest last-season case, CommandsTest season archive, ListingDetailsMigrationTest)"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T09:00:00Z"
+- id: CU-20261031-10
+  type: feature
+  title: "Schedule core and display status: windows checked per schedule kind; the display status derived by shared rules in PHP and JS from one fixture file"
+  description: "Event/Schedule/ScheduleWindows validates a listing's windows against its occurrence for every kind (single_day: exactly the event day; nightly_range up to 62 days; sale_days up to 3; the organizer's max_days cap; dates inside the event, no duplicates, end after start on the same day — no overnight windows —, hour bounds) and picks the window that answers 'when' (today, else next, else last). ListingDraft accepts `windows` only for types with several days (Halloween input unchanged: `windows` is an unknown field) and turns a draft into windows (windowsFor) and a day-scoped status into its local date (statusDate). Event/Schedule/DisplayStatus and public/assets/js/lib/schedule.js derive the display status from the stored status, status_date, windows and now in the community time zone, by the type's rule table (EventType::displayRules(); Halloween's gives exactly statusOf's words open/later/done/paused/out); tests/fixtures/schedule/display-status.json holds 42 cases (DST change days in New York and Chicago, New Year's Eve, month ends, day-scoped statuses, before/inside/after a window, other days) and the rules of all three types."
+  impact: medium
+  affected_modules: ["src/Event/Schedule/", "src/Event/EventType.php", "src/Event/Type/HalloweenType.php", "src/Listing/ListingDraft.php", "public/assets/js/lib/schedule.js", "public/assets/js/events/halloween.js", "tests/fixtures/schedule/display-status.json", "tests/Support/TestEventType.php"]
+  related_tests: ["tests/Unit/Event/Schedule/DisplayStatusTest.php (the shared cases)", "tests/js/schedule.test.mjs (the same cases; 2,000 seeded homes and moments where Halloween's rules equal statusOf)", "tests/Unit/Event/Schedule/ScheduleWindowsTest.php", "tests/Unit/Listing/ListingDraftWindowsTest.php"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T09:00:00Z"
+- id: CU-20261031-11
+  type: feature
+  title: "Public API names the event: /api/event gains the occurrence's id, dates, default hours, schedule kind, filters, words and rules; homes gain event_id, event_type, details, windows and display_status after their 0.9 keys"
+  description: "CommunityPresenter builds the event block explicitly: the 0.9 keys keep their order (date, name, ends_at, starts_at … timezone), then type, id, active, starts_on, ends_on, default_hours, schedule_kind, filters (the type's filters the community offers), copy (the type's public words) and rules (the occurrence's own). Between events active is false and no type or occurrence is named. A public home keeps its 0.9 keys and values (the Halloween details flat, the window's hours) and then exactly event_id, event_type, details (the type's strict projection), windows [{date,start,end}] and display_status; status is the effective one. /api/homes also names event_id. PublicPrivacyTest's whitelist is widened on purpose with a test that the 0.9 keys and values are unchanged; the 0.11 answers of the demo are pinned in tests/fixtures/golden/0.11.0-beta.1 (frozen test clock)."
+  impact: medium
+  affected_modules: ["src/Community/CommunityPresenter.php", "src/Listing/ListingRepository.php", "src/Controller/Api/PublicApiController.php", "tests/fixtures/golden/0.11.0-beta.1/"]
+  related_tests: ["tests/Integration/PublicPrivacyTest.php: testOnlyOptedInCurrentSeasonListingsArePublic (0.9 keys then exactly the event keys), testTheNewKeysLeaveThe09KeysAndValuesUnchanged, testNoDraftOrArchivedEventIsEverPublic", "tests/Integration/GoldenApiParityTest.php: the 0.9 baselines unchanged, testTheEventAndHomesAddExactlyTheDeliberateKeys, testTheEventScopedAnswersAreThe011Ones"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T09:00:00Z"
+- id: CU-20261031-12
+  type: feature
+  title: "Route profiles: walking stays the default and keeps its cache key; driving only when the type allows it, the event enables it and a provider is configured"
+  description: "RoutingProviderInterface::route(points, profile); OpenRouteServiceProvider asks foot-walking or driving-car. RoutePlanner::plan(stops, community, profile = walking): walking is unchanged (verified crossings, one walkable group, the 0.9 fingerprint 'provider|foot-walking|points'); driving requires the type's routeProfiles, the active event's settings.route_modes and an enabled, configured provider, may join areas, and is cached under its own profile. POST /api/routes/plan takes an optional profile. No driving UI yet; Halloween routes are walking routes."
+  impact: low
+  affected_modules: ["src/Routing/", "src/Controller/Api/RouteApiController.php", "tests/Support/FixtureRoutingProvider.php"]
+  related_tests: ["tests/Integration/RouteProfileTest.php", "tests/Integration/RoutePlanTest.php (unchanged)"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T09:00:00Z"
 ```

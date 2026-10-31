@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventType;
 use App\Event\EventTypeRegistry;
 use App\Routing\RoutingProviderInterface;
 use App\Shared\RuntimeConfig;
@@ -12,10 +13,10 @@ use App\Shared\RuntimeConfig;
  * @module Community/CommunityPresenter
  * @description Builds the PUBLIC community payload (branding, event, map extent, enabled zones,
  *     registration state, stats). Never includes addresses, emails, admin identity or session data.
- *     The boundary outline is published only after organizer approval. The event carries its type key; the
- *     type supplies the default reminders and its own stats counts.
+ *     The boundary outline is published only after organizer approval. The event is the active occurrence (its
+ *     id, type, dates, hours, filters and words); the type supplies the default reminders and its own stats counts.
  *
- * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Routing/RoutingProviderInterface, Shared/RuntimeConfig
+ * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Routing/RoutingProviderInterface, Shared/RuntimeConfig
  */
 final class CommunityPresenter
 {
@@ -52,7 +53,7 @@ final class CommunityPresenter
             'community' => array_intersect_key($s['community'] + ['about' => '', 'access' => 'unspecified', 'links' => [], 'contact_url' => null, 'gate_notice' => ''],
                 array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links']))
                 + ['reminders' => ($s['community']['reminders'] ?? []) ?: $type->copy()['reminders']],
-            'event' => $s['event'] + ['type' => $type->key(), 'timezone' => $s['community']['timezone']],
+            'event' => $this->event($c, $type),
             'branding' => [
                 'logo_url' => $this->branding->url($s['branding']['logo']),
             ] + array_intersect_key($s['branding'], array_flip(['brand_emoji', 'primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality'])),
@@ -82,6 +83,40 @@ final class CommunityPresenter
             ],
             'demo' => $this->config->demoMode,
             'version' => $this->appVersion,
+        ];
+    }
+
+    /**
+     * The public event: the 0.9 keys in their order (date, name, ends_at, starts_at … timezone), the type, and the
+     * active occurrence's id, dates, default hours, schedule kind, the filters the community offers and the type's
+     * public words. Without an active event, `active` is false and nothing names a type or an occurrence; drafts
+     * are never described here.
+     *
+     * @return array<string,mixed>
+     */
+    private function event(CommunityConfig $c, EventType $type): array
+    {
+        $e = $c->settings['event'];
+        $o = $c->event;
+        $features = $c->features();
+
+        return [
+            'date' => $e['date'],
+            'name' => $e['name'],
+            'type' => null === $o ? null : $type->key(),
+            'ends_at' => $e['ends_at'],
+            'starts_at' => $e['starts_at'],
+            'id' => $o?->id,
+            'active' => null !== $o,
+            'starts_on' => $o?->startsOn,
+            'ends_on' => $o?->endsOn,
+            'default_hours' => null === $o ? null : ['start' => $o->defaultStart, 'end' => $o->defaultEnd],
+            'schedule_kind' => null === $o ? null : $type->scheduleKind(),
+            'filters' => null === $o ? [] : array_values(array_map(static fn (array $f) => ['key' => $f['key'], 'label' => $f['label'], 'icon' => $f['icon'], 'quick' => $f['quick']],
+                array_filter($type->filters(), static fn (array $f) => null === $f['feature'] || ($features[$f['feature']] ?? false)))),
+            'copy' => null === $o ? (object) [] : array_filter($type->copy(), static fn ($v, string $k) => \is_string($v) && !str_starts_with($k, 'admin_'), \ARRAY_FILTER_USE_BOTH),
+            'rules' => null === $o ? [] : array_values(array_filter((array) ($o->settings['rules'] ?? []), 'is_string')),
+            'timezone' => $c->settings['community']['timezone'],
         ];
     }
 }
