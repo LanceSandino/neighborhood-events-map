@@ -1271,4 +1271,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T00:00:00Z"
+- id: CU-20261031-37
+  type: fix
+  title: "Cards: the 📝 note marker only in the compact list (a cascade bug showed it on cards too); a gap between tag icon and words on the lights and the sale"
+  description: "app.css hid .note-icon and showed it in .cards.compact, but the later .tag { display: inline-flex } of equal specificity won, so every card with a note also carried a \"📝 Note\" tag next to the note text, often alone on an extra, indented row (seen on all three types; the 0.7 notes say the marker is for the compact list). The rules now read .tag.note-icon. events/common.css gives the lights' and the sale's tags a 3 px gap between icon and words, as in the mockups (Halloween's tags are unchanged). This changes Halloween's cards: the redundant tag is gone."
+  impact: low
+  affected_modules: ["public/assets/css/app.css", "public/assets/css/events/common.css"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs: compact list: one row per home with icons, remembered after reload; long notes are clamped on cards (the new hidden-on-cards assertion failed before the change)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:10:00Z"
 ```

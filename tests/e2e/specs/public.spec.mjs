@@ -357,6 +357,8 @@ test('compact list: one row per home with icons, remembered after reload; long n
   const note = page.locator('#homeCards .card-note').first();
   await expect(note).toBeVisible();
   expect(await note.evaluate((n) => getComputedStyle(n).webkitLineClamp)).toBe('2');
+  // Cards show the note itself; the 📝 marker is only for the compact list (CHANGELOG 0.7: "shown as 📝 in the compact list").
+  await expect(page.locator('#homeCards .note-icon').first()).toBeHidden();
   await page.getByRole('button', { name: 'Compact list' }).click();
   await expect(page.locator('#homeCards')).toHaveClass(/compact/);
   await expect(page.locator('#homeCards .card-note').first()).toBeHidden();
