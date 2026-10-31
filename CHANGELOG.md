@@ -7,6 +7,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 ## [Unreleased]
 
 ### Fixed
+- A long community or event name no longer fills the sidebar with three large lines: it is set a little smaller and wraps evenly, and the year line stays on one line (for every kind of event, also a Halloween community with a long name). A long name also wraps in the footer instead of widening a phone screen.
+- The route's notices on a Christmas lights or sale map use that map's colours instead of Halloween's peach.
+- The map's closing note no longer ends with two full stops after the organizer's gate notice.
 - The date in the top bar is written compactly for events of several days: "Apr 10–11" or "Dec 1 – Jan 3" (it read "APR 10 – APR 11"); a range inside one month reads "Dec 1–24, 2026" everywhere. A one-day event such as Halloween keeps its date as before.
 - A sale shows filters only for the item categories its organizer allows (no more filters with a count of 0), and the "Open Saturday" / "Open Sunday" filters come right after "Open now", before multi-family and early birds.
 - A sale note with an ordinary number range such as "items 100-1000" is no longer refused as a phone number. Real phone numbers are still refused: a seven-digit number counts when it could be a real local number (its first digit is 2 to 9).

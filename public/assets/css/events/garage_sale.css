@@ -2,7 +2,7 @@
  * @module assets/css/events/garage_sale.css
  * @description The garage sale event type's look (templates/event/garage_sale/_head.html.twig loads it after app.css
  *     and events/common.css): teal, coral, soft mint and off-white tokens in light and dark (the two dark blocks are
- *     identical, like app.css's), and the components only this type draws — the hero's box and plant, the sale-day
+ *     identical, like app.css's; notices such as the route's rules take the mint tokens instead of app.css's peach), and the components only this type draws — the hero's box and plant, the sale-day
  *     rows of the listing form, category, multi-family, early-bird and payment tags, status chips and pins. Every
  *     rule is scoped to <html data-event-type="garage_sale">, so other pages are untouched. The organizer's brand
  *     colours (/theme.css: --brand, --brand-accent, --brand-ink, --brand-text) are never set here, so they still win.
@@ -22,6 +22,7 @@
   --pin-sale: #178d80; --pin-closed: #8c9895;
   --season-before-bg: #e2f2ee; --season-before-fg: #0e6359; --season-during-bg: #fbe4db; --season-during-fg: #8f3a1f;
   --season-after-bg: #eeefed; --season-after-fg: #59625f;
+  --notice-bg: #eff8f5; --notice-fg: #0e6359;
   --side-action-bg: #e77c5d; --side-action-fg: #1d1a22; --hero-glow: #178d8026; --side-hover: #2b3846; --side-line: #394656;
 }
 /* Dark: deep slate teal instead of app.css's plum-grey; must stay identical to the [data-theme="dark"] block below. Surfaces stay
@@ -39,6 +40,7 @@
     --pin-sale: #1f9a8b; --pin-closed: #6b7b78;
     --season-before-bg: #183a35; --season-before-fg: #9be3d5; --season-during-bg: #3d2620; --season-during-fg: #f7b8a3;
     --season-after-bg: #253335; --season-after-fg: #c3cfcc;
+    --notice-bg: #15302c; --notice-fg: #8fe0d1;
     --side-action-bg: #e77c5d; --side-action-fg: #1d1a22; --hero-glow: #5fd0bf24; --side-hover: #1d2b33; --side-line: #2b3a44;
   }
 }
@@ -54,6 +56,7 @@
   --pin-sale: #1f9a8b; --pin-closed: #6b7b78;
   --season-before-bg: #183a35; --season-before-fg: #9be3d5; --season-during-bg: #3d2620; --season-during-fg: #f7b8a3;
   --season-after-bg: #253335; --season-after-fg: #c3cfcc;
+  --notice-bg: #15302c; --notice-fg: #8fe0d1;
   --side-action-bg: #e77c5d; --side-action-fg: #1d1a22; --hero-glow: #5fd0bf24; --side-hover: #1d2b33; --side-line: #2b3a44;
 }
 /* "More contrast" (system or Appearance) keeps winning over this type's tokens. */
@@ -113,7 +116,5 @@
 @media (max-width: 660px) {
   [data-event-type="garage_sale"] .intro { gap: 8px; }
 }
-/* A long sale name ("Maple Hollow Community Rummage Sale") may wrap in the footer instead of widening a phone page. */
-[data-event-type="garage_sale"] .footer-id { white-space: normal; }
 /* My house: "Visible on the map" takes the row the sale form has no half-width neighbour for. */
 [data-event-type="garage_sale"] .dash-home .form-grid > .field:has(select[name="published"]) { grid-column: 1 / -1; max-width: 360px; }

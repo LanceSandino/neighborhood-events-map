@@ -10,7 +10,8 @@ use App\Tests\Support\AppTestCase;
  * Traceability: branding.show_locality shows "City, ST" under the community name (header and rail);
  * off by default; the header carries the Appearance button and the version appears once (footer).
  * Titles, brand, footer, meta description and emails name the community's event (event.name, default
- * Halloween), never a fixed holiday.
+ * Halloween), never a fixed holiday. A community or event name longer than the rail's column gets the compact brand
+ * (smaller, evenly wrapped) instead of three full-size lines.
  */
 final class HeaderBrandingTest extends AppTestCase
 {
@@ -54,6 +55,29 @@ final class HeaderBrandingTest extends AppTestCase
         \assert($mail instanceof \Symfony\Component\Mime\Email);
         self::assertSame('Your Testville Spring Fair sign-in link', $mail->getSubject());
         self::assertStringNotContainsString('HALLOWEEN', (string) $mail->getHtmlBody());
+    }
+
+    public function testANameLongerThanTheRailColumnGetsTheCompactBrand(): void
+    {
+        $this->configureCommunity(['event' => ['name' => 'Spring Fair']]);
+        self::assertSame(['brand'], explode(' ', (string) $this->client->request('GET', '/')->filter('a.brand')->attr('class')), 'names that fit keep the brand as it was');
+        foreach (['event' => ['name' => 'Community Rummage Sale'], 'community' => ['name' => 'Ventura Reserve']] as $section => $values) {
+            $this->configureCommunity([$section => $values]);
+            $crawler = $this->client->request('GET', '/');
+            self::assertSame(['brand', 'long'], explode(' ', (string) $crawler->filter('a.brand')->attr('class')), 'a long '.$section.' name: smaller, evenly wrapped (app.css .brand.long)');
+            self::assertStringContainsString($values['name'], $crawler->filter('.brand-name')->text(), 'the whole name, never cut');
+        }
+    }
+
+    public function testTheGateNoticeEndsTheMapDisclaimerWithOneFullStop(): void
+    {
+        foreach (['Enter by the north gate.' => 'Enter by the north gate.</p>', 'Park on Main St' => 'Park on Main St.</p>', 'Gates close at 9!' => 'Gates close at 9!</p>'] as $notice => $end) {
+            $this->configureCommunity(['community' => ['gate_notice' => $notice]]);
+            $html = (string) $this->client->request('GET', '/')->html();
+            self::assertMatchesRegularExpression('~safe crossings\. '.preg_quote($end, '~').'~', $html, $notice);
+        }
+        $this->configureCommunity(['community' => ['gate_notice' => '']]);
+        self::assertStringContainsString('safe crossings; this site does not grant access to gated areas.</p>', (string) $this->client->request('GET', '/')->html());
     }
 
     public function testSettingsSavedBeforeTheEventNameExistedStillSayHalloween(): void

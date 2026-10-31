@@ -1241,4 +1241,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-10-31T23:30:00Z"
+- id: CU-20261031-34
+  type: fix
+  title: "Shell for long names and per-type notices: the compact sidebar brand, the footer name wraps for every type, notices in the type's colours, one full stop after the gate notice"
+  description: "base.html.twig adds .long to the brand when the community or event name is longer than 12 characters; app.css sets it at 15 px, evenly wrapped (text-wrap: balance), with the year line kept on one line, so \"Maple Hollow / Christmas Lights\" and \"Ventura Reserve / Halloween\" take two lines instead of three and \"Community Rummage Sale\" wraps evenly; the Halloween demo's brand (names that fit) is unchanged (D-20261031-34). The footer's name wraps between words for every type (the rule moved from garage_sale.css to app.css; the version link stays whole). holiday_lights.css and garage_sale.css set --notice-bg/--notice-fg in their light and both dark blocks (gold on cream, teal on mint; 6.3:1 and 6.6:1 light, 9.8:1 and 9.2:1 dark), so the route's notice and rules no longer show Halloween's peach. The map's closing note adds a full stop after the gate notice only when it does not end with one (the demos and the Ventura example read \"exist..\"). Halloween's rendered pages (7 per stack) are byte-identical apart from those two fixes."
+  impact: low
+  affected_modules: ["templates/base.html.twig", "templates/home/index.html.twig", "public/assets/css/app.css", "public/assets/css/events/holiday_lights.css", "public/assets/css/events/garage_sale.css"]
+  related_tests: ["tests/Integration/HeaderBrandingTest.php: testANameLongerThanTheRailColumnGetsTheCompactBrand, testTheGateNoticeEndsTheMapDisclaimerWithOneFullStop (both failed before the change)", "tests/e2e/specs/types.spec.mjs: <type>: the brand handles the names, notices take the type's colours, a long footer wraps"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:40:00Z"
 ```

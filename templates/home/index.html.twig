@@ -86,7 +86,7 @@
   </div>
 </section>
 
-<p class="disclaimer">{{ et.copy.disclaimer }} Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{% else %}; this site does not grant access to gated areas{% endif %}.</p>
+<p class="disclaimer">{{ et.copy.disclaimer }} Favorites, filters and your start point stay only in this browser. Suggested stop orders are not walking directions—use sidewalks and safe crossings{% if c.community.gate_notice %}. {{ c.community.gate_notice }}{{ c.community.gate_notice|trim|last in ['.', '!', '?'] ? '' : '.' }}{% else %}; this site does not grant access to gated areas.{% endif %}</p>
 <script type="application/json" id="boot">{{ boot|boot_json }}</script>
 {% endblock %}
 

@@ -2,7 +2,7 @@
  * @module assets/css/events/holiday_lights.css
  * @description The Christmas lights event type's look (templates/event/holiday_lights/_head.html.twig loads it after
  *     app.css): midnight blue, warm gold and calm cream tokens in light and dark (the two dark blocks are identical,
- *     like app.css's), and the components only this type draws — the night chips, the FM field, pins, tags and status
+ *     like app.css's; notices such as the route's rules take the gold tokens instead of app.css's peach), and the components only this type draws — the night chips, the FM field, pins, tags and status
  *     chips; the season row, the route's mode switch and rules and the 44 px targets come from events/common.css,
  *     which the head fragment loads first. Every rule is scoped to
  *     <html data-event-type="holiday_lights">, so Halloween pages are untouched. The organizer's brand colours
@@ -23,6 +23,7 @@
   --pin-lights: #b98522; --pin-music: #38597f; --pin-inflatable: #3c7a86; --pin-walkthrough: #3b7a50;
   --season-before-bg: #e6f3ec; --season-before-fg: #2a6a4a; --season-during-bg: #f8efd9; --season-during-fg: #74560f;
   --season-after-bg: #eeedf0; --season-after-fg: #5d6170;
+  --notice-bg: #fbf6ea; --notice-fg: #74560f;
   --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #ce9d3d33; --side-hover: #2d3552; --side-line: #3a4362;
 }
 /* Dark: deep navy instead of app.css's plum-grey; must stay identical to the [data-theme="dark"] block below. */
@@ -39,6 +40,7 @@
     --pin-lights: #b98522; --pin-music: #4f74a0; --pin-inflatable: #3c7a86; --pin-walkthrough: #3b7a50;
     --season-before-bg: #1c3528; --season-before-fg: #95d8b3; --season-during-bg: #383021; --season-during-fg: #f0cf86;
     --season-after-bg: #2a3146; --season-after-fg: #c3c9d8;
+    --notice-bg: #2c2820; --notice-fg: #f0cf86;
     --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29; --side-hover: #232b45; --side-line: #2f3855;
   }
 }
@@ -54,6 +56,7 @@
   --pin-lights: #b98522; --pin-music: #4f74a0; --pin-inflatable: #3c7a86; --pin-walkthrough: #3b7a50;
   --season-before-bg: #1c3528; --season-before-fg: #95d8b3; --season-during-bg: #383021; --season-during-fg: #f0cf86;
   --season-after-bg: #2a3146; --season-after-fg: #c3c9d8;
+  --notice-bg: #2c2820; --notice-fg: #f0cf86;
   --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29; --side-hover: #232b45; --side-line: #2f3855;
 }
 /* "More contrast" (system or Appearance) keeps winning over this type's tokens. */
