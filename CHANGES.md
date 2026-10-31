@@ -961,4 +961,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p1"
   author: "Lance Sandino"
   timestamp: "2026-10-31T07:10:00Z"
+- id: CU-20261031-06
+  type: feature
+  title: "Organizers see the event type: Community → Event lists the types this version offers; features and labels come from the type"
+  description: "GET /api/admin/community also returns event_types (the enabled types: key, name) and event_type (the current type's feature switches and console labels). The Community page shows an Event type select (Halloween only in this version), saves event.type, builds the Features panel from the type's switches plus the shared ones (zone filter, suggested stop order) and takes the reminders label and the gated-open access label from the type. A type this version does not enable is refused with the configuration error. The overview page is unchanged."
+  impact: low
+  affected_modules: ["src/Controller/Api/AdminApiController.php", "public/assets/js/admin/community.js"]
+  related_tests: ["tests/Integration/AdminConsoleTest.php: testTheConsoleShowsTheEventTypeAndOnlyOffersEnabledTypes", "tests/e2e/specs/admin.spec.mjs"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:15:00Z"
 ```
