@@ -51,7 +51,8 @@ final class EventsAdminApiController
         return new JsonResponse([
             'events' => array_map(fn (array $e) => $e + ['type_name' => $this->typeName($e['type']), 'type_offered' => $this->types->isEnabled($e['type'])], $this->occurrences->allWithCounts()),
             'types' => array_map(static fn (EventType $t) => ['key' => $t->key(), 'name' => $t->defaultName(), 'schedule_kind' => $t->scheduleKind(), 'max_days' => $t->maxDays(),
-                'route_profiles' => $t->routeProfiles(), 'settings' => $t instanceof EventSettingsType ? $t->settingKeys() : []], $this->types->enabled()),
+                'route_profiles' => $t->routeProfiles(), 'settings' => $t instanceof EventSettingsType ? $t->settingKeys() : [],
+                'setting_options' => $t instanceof EventSettingsType ? (object) $t->settingOptions() : (object) []], $this->types->enabled()),
             'active_id' => $active?->id,
         ], 200, ['Cache-Control' => 'no-store']);
     }
