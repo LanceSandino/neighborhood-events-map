@@ -1,42 +1,49 @@
 /**
  * @module assets/js/lib/filters
- * @description Conjunctive family filters shared by the map pins and the list (pure, testable).
- * @input home (public API shape), filter state, context {today, eventDate, nowMinutes, zoneLabels, saved, areas}
+ * @description Conjunctive family filters shared by the map pins and the list (pure, testable). The search, zone,
+ *     time and saved filters are shared; the toggles, their predicates and search words belong to the event type
+ *     (ctx.type, a module from events/index.js; Halloween when absent).
+ * @input home (public API shape), filter state, context {today, eventDate, nowMinutes, zoneLabels, saved, areas, type}
  *     zone filter: 'all', a zone key, or 'area:<n>' for walking area n (ctx.areas[n] = its zone keys)
+ * @dependencies lib/time.js, events/index.js
  */
 import { statusOf, toMinutes } from './time.js';
+import { eventType } from '../events/index.js';
 
-export const DEFAULT_FILTERS = {
-  q: '', zone: 'all', time: 'any', candy: false, lowSensory: false, noScares: false, noFlashing: false,
-  noLoud: false, nonfood: false, adult: false, stroller: false, saved: false,
-};
+export { isBigScare, isLowSensory } from '../events/halloween.js';
 
-/** Jump scares or an intense setup: one "big scares" idea for visitors. */
-export const isBigScare = (h) => h.jump_scares || h.scare_level === 'intense';
-export const isLowSensory = (h) => h.low_noise && !h.flashing_lights && !h.loud_audio && !isBigScare(h);
+/** The filter object of an event type: search, zone and time first, its toggles, then saved. */
+export function defaultFilters(type = eventType()) {
+  return { q: '', zone: 'all', time: 'any', ...Object.fromEntries(type.filters.map((f) => [f.key, false])), saved: false };
+}
+
+export const DEFAULT_FILTERS = defaultFilters();
+
+const typeOf = (ctx) => (ctx && ctx.type) || eventType();
 
 /** "Visit at" choices: any time, open now, or a clock time HH:MM. */
 const isTimeChoice = (v) => v === 'any' || v === 'now' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
 
 /**
- * Filters saved or shared by older versions (separate jump/intense filters) become the combined one. A share
- * link is untrusted input: only known filters of the right type are kept (a {"q":5} would break filtering and
- * be remembered on this device), checked as own keys so names like "constructor" never count. "Visit at" must
- * be any, now or HH:MM, and a zone key longer than 60 characters is dropped.
+ * A share link is untrusted input: only known filters of the right type are kept (a {"q":5} would break filtering and
+ * be remembered on this device), checked as own keys so names like "constructor" never count. "Visit at" must be
+ * any, now or HH:MM, and a zone key longer than 60 characters is dropped. The event type upgrades filters saved by
+ * older versions.
  */
-export function normalizeFilters(f) {
+export function normalizeFilters(f, type = eventType()) {
   if (!f || typeof f !== 'object' || Array.isArray(f)) return {};
+  const defaults = defaultFilters(type);
   const out = {};
   for (const [k, v] of Object.entries(f)) {
-    if (!Object.hasOwn(DEFAULT_FILTERS, k)) continue;
-    if (typeof DEFAULT_FILTERS[k] === 'boolean') {
+    if (!Object.hasOwn(defaults, k)) continue;
+    if (typeof defaults[k] === 'boolean') {
       if (typeof v === 'boolean') out[k] = v;
     } else if (typeof v === 'string') {
       if (k === 'q') out[k] = v.slice(0, 80);
       else if (k === 'time' ? isTimeChoice(v) : v.length <= 60) out[k] = v;
     }
   }
-  if (f.noJumps === true || f.noIntense === true) out.noScares = true;
+  type.upgradeFilters(f, out);
   return out;
 }
 
@@ -47,27 +54,20 @@ function inZone(h, zone, ctx) {
 }
 
 export function matches(h, f, ctx) {
+  const type = typeOf(ctx);
   if (!inZone(h, f.zone, ctx)) return false;
-  if (f.candy && !h.candy) return false;
-  if (f.lowSensory && !isLowSensory(h)) return false;
-  if (f.noScares && isBigScare(h)) return false;
-  if (f.noFlashing && h.flashing_lights) return false;
-  if (f.noLoud && h.loud_audio) return false;
-  if (f.nonfood && !h.nonfood) return false;
-  if (f.adult && !h.adult_drinks) return false;
-  if (f.stroller && !h.stroller_friendly) return false;
+  if (!type.matches(h, f)) return false;
   if (f.saved && !(ctx.saved || []).includes(h.id)) return false;
   if (f.time === 'now') {
     if (statusOf(h, ctx).key !== 'open') return false;
   } else if (f.time && f.time !== 'any') {
     const t = toMinutes(f.time);
-    if (h.status === 'done' || t < toMinutes(h.start) || t >= toMinutes(h.end)) return false;
+    if (type.offForTheDay(h) || t < toMinutes(h.start) || t >= toMinutes(h.end)) return false;
   }
   const q = (f.q || '').trim().toLowerCase();
   if (q) {
     const zoneLabel = (ctx.zoneLabels || {})[h.zone] || '';
-    const hay = [h.address, h.note, zoneLabel, h.candy ? 'candy' : '', h.nonfood ? 'non-food teal' : '', h.adult_drinks ? '21+ adult drinks' : '',
-      h.low_noise ? 'quiet low noise gentle sensory' : '', h.stroller_friendly ? 'kid friendly stroller' : '', isBigScare(h) ? 'big scares spooky' : '', h.scare_level].join(' ').toLowerCase();
+    const hay = [h.address, h.note, zoneLabel, ...type.searchWords(h)].join(' ').toLowerCase();
     if (!q.split(/\s+/).every((w) => hay.includes(w))) return false;
   }
   return true;

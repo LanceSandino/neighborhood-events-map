@@ -951,4 +951,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p1"
   author: "Lance Sandino"
   timestamp: "2026-10-31T07:00:00Z"
+- id: CU-20261031-05
+  type: refactor
+  title: "Browser event modules: filters, render, time, home, register, My house and the route panel ask the Halloween module"
+  description: "public/assets/js/events/index.js is the browser registry (eventType(key), unknown keys throw); events/halloween.js holds the filter toggles and predicates, search words, tags, pin symbol and class, statusOf, route notes, copy, hour choices and the form helpers (formDetails, fillForm, validateDetails). lib/filters.js keeps search, zone, time and saved and builds the filter object from the type (defaultFilters; DEFAULT_FILTERS is Halloween's, unchanged); lib/render.js draws the type's tags and symbols; lib/time.js asks the type for a status (clock helpers moved to lib/clock.js, re-exported). home.js, route-panel.js, register.js and me.js take the type from the page data or /api/me; the listing forms send the details as a `details` object. Escaping is unchanged (esc() on every value, now also on the type's tag words)."
+  impact: medium
+  affected_modules: ["public/assets/js/events/", "public/assets/js/lib/filters.js", "public/assets/js/lib/render.js", "public/assets/js/lib/time.js", "public/assets/js/lib/clock.js", "public/assets/js/home.js", "public/assets/js/register.js", "public/assets/js/me.js", "public/assets/js/route-panel.js"]
+  related_tests: ["tests/js/events.test.mjs (400 seeded homes, filters and moments against the frozen 0.9 libraries in tests/js/legacy)", "tests/js/lib.test.mjs (unchanged)", "tests/e2e full suite on both stacks"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:10:00Z"
 ```

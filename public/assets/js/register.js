@@ -2,16 +2,19 @@
  * @module assets/js/register
  * @description "List my house" bottom sheet (address → stop details → email + PoW → link sent) and the
  *     "already claimed → request a review" dispute sheet. The server is the eligibility authority;
- *     this file only collects input, solves PoW in a worker and shows friendly results.
- * @dependencies lib/api.js, lib/pow.js, lib/modal.js, Leaflet (optional, for the self-entry pin map)
+ *     this file only collects input, solves PoW in a worker and shows friendly results. The event type reads and
+ *     checks its own listing fields (events/index.js); the listing goes out with them as `details`.
+ * @dependencies lib/api.js, lib/pow.js, lib/modal.js, events/index.js, Leaflet (optional, for the self-entry pin map)
  */
 import { api, ApiError, friendlyError } from './lib/api.js';
 import { solvePow } from './lib/pow.js';
 import { openModal } from './lib/modal.js';
 import { esc } from './lib/render.js';
 import { houseNumberOf } from './lib/address.js';
+import { eventType } from './events/index.js';
 
 let C = null;
+let T = null; // the community's event type module
 let selected = null; // { address_id, address } | { house_number, street, unit, lat, lon, zone_key, address }
 let mode = 'registry';
 let pinMap = null;
@@ -32,6 +35,7 @@ function clearErrors(scope) {
 
 export function initRegistration({ community }) {
   C = community;
+  T = eventType(C.event.type);
   mode = C.registration.address_mode;
   const form = $('#registerForm');
   if (!form) return;
@@ -181,14 +185,11 @@ function validateAddress() {
   return true;
 }
 
+/** The listing: the shared fields and the event type's details. */
 function details() {
-  const f = $('#registerForm');
-  const checked = (n) => !!f.querySelector(`input[name="${n}"]`)?.checked;
   return {
-    start: $('#regStart').value, end: $('#regEnd').value, scare_level: $('#regScare').value, status: $('#regStatus').value,
-    candy: checked('candy'), nonfood: checked('nonfood'), adult_drinks: checked('adult_drinks'), low_noise: checked('low_noise'),
-    jump_scares: checked('jump_scares'), flashing_lights: checked('flashing_lights'), loud_audio: checked('loud_audio'),
-    stroller_friendly: checked('stroller_friendly'), note: $('#regNote').value.trim(),
+    start: $('#regStart').value, end: $('#regEnd').value, status: $('#regStatus')?.value || 'active',
+    note: $('#regNote').value.trim(), details: T.formDetails($('#registerForm')),
   };
 }
 
@@ -197,7 +198,7 @@ function validateDetails() {
   const d = details();
   let ok = true;
   if (d.end <= d.start) { setError(f, 'end', 'End time must be later than the start time.'); ok = false; }
-  if (!d.candy && !d.nonfood && !d.adult_drinks) { setError(f, 'offerings', 'Choose at least one: candy, non-food treats or adult refreshments.'); ok = false; }
+  for (const [field, message] of Object.entries(T.validateDetails(d.details))) { setError(f, field, message); ok = false; }
   if (d.note.length > 400) { setError(f, 'note', 'Keep the note to 400 characters.'); ok = false; }
   return ok;
 }

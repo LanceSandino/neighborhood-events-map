@@ -2,45 +2,23 @@
  * @module assets/js/lib/render
  * @description HTML fragments for house cards, tags, selected-home panel and pins. Every
  *     value from the page or API data (resident text and ids alike) goes through esc(). Mirrors templates/home/_card.html.twig.
+ *     The event type (ctx.type or the `type` argument; Halloween when absent) supplies the symbol, pin class and tags.
+ * @dependencies lib/time.js, events/index.js
  */
 import { statusOf, time12 } from './time.js';
-import { isBigScare, isLowSensory } from './filters.js';
+import { eventType } from '../events/index.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export const isScary = isBigScare;
-/**
- * One vocabulary everywhere (pins, legend, cards, filters): 👻 Spooky, 🧩 Sensory-friendly, 🍺 21+, 🍬 Treats, in that
- * order. With a quick filter on (focus: the filters object), the homes that match show that filter's symbol, so the
- * map shows what the visitor picked.
- */
-const KINDS = { spooky: ['👻', 'scary'], sensory: ['🧩', 'quiet'], adult: ['🍺', 'adult'], treats: ['🍬', ''] };
-function kindOf(h, focus = {}) {
-  if (focus.adult && h.adult_drinks) return 'adult';
-  if (focus.lowSensory && isLowSensory(h)) return 'sensory';
-  if (focus.candy && h.candy) return 'treats';
-  return isScary(h) ? 'spooky' : isLowSensory(h) ? 'sensory' : h.adult_drinks ? 'adult' : 'treats';
-}
-export const symbolOf = (h, focus) => KINDS[kindOf(h, focus)][0];
-export const pinClass = (h, focus) => KINDS[kindOf(h, focus)][1];
+const typeOf = (ctx) => (ctx && ctx.type) || eventType();
 
-export function tagsHtml(h) {
-  const t = [];
-  if (h.candy) t.push(['🍬 Candy', 'candy']);
-  if (isLowSensory(h)) t.push(['🧩 Sensory-friendly', 'quiet']);
-  if (h.nonfood) t.push(['🎃 Non-food', 'teal', 'teal-pumpkin']); // Teal Pumpkin Project: non-food treats
-  // Visitors see one "big scares" idea for jump scares or an intense setup.
-  if (isScary(h)) t.push(['😱 Big scares', 'spooky']);
-  else if (h.scare_level === 'mild') t.push(['🎃 Mild scares', 'spooky']);
-  if (h.flashing_lights) t.push(['🔦 Flashing lights', 'strobe']);
-  if (h.loud_audio) t.push(['🔊 Loud audio', 'strobe']);
-  if (h.adult_drinks) t.push(['🍺 21+', 'drinks']);
-  if (h.stroller_friendly) t.push(['👶 Kid-friendly', 'quiet']);
+/** The pin and card symbol; with a quick filter on (focus: the filters object), the homes that match show its symbol. */
+export const symbolOf = (h, focus, type = eventType()) => type.symbol(h, focus);
+export const pinClass = (h, focus, type = eventType()) => type.pinClass(h, focus);
+
+export function tagsHtml(h, type = eventType()) {
   // Icon and words are separate so the compact list can show icons only (the words stay for screen readers).
-  return t.map(([label, cls, iconCls]) => {
-    const [icon, ...words] = label.split(' ');
-    return `<span class="tag ${cls}" title="${words.join(' ')}"><span aria-hidden="true"${iconCls ? ` class="${iconCls}"` : ''}>${icon}</span><span class="tag-text"> ${words.join(' ')}</span></span>`;
-  }).join('');
+  return type.tags(h).map(({ icon, text, cls, iconCls }) => `<span class="tag ${esc(cls)}" title="${esc(text)}"><span aria-hidden="true"${iconCls ? ` class="${esc(iconCls)}"` : ''}>${esc(icon)}</span><span class="tag-text"> ${esc(text)}</span></span>`).join('');
 }
 
 export function metaLine(h, ctx) {
@@ -52,11 +30,11 @@ export function cardHtml(h, ctx, { saved, active, focus }) {
   const st = statusOf(h, ctx);
   const statusChip = st.key === 'later' && !st.label.startsWith('Starts') ? '' : `<span class="card-status ${st.key}">${esc(st.label)}</span>`;
   return `<li class="home-card${active ? ' active' : ''}" data-id="${esc(h.id)}" tabindex="0" aria-label="${esc(h.address)}">
-    <div class="card-symbol" aria-hidden="true">${symbolOf(h, focus)}</div>
+    <div class="card-symbol" aria-hidden="true">${symbolOf(h, focus, typeOf(ctx))}</div>
     <div class="card-main">
       <div class="card-line"><b>${esc(h.address)}</b><button type="button" class="save" data-save="${esc(h.id)}" aria-pressed="${saved}" aria-label="${saved ? 'Remove from' : 'Save to'} my stops: ${esc(h.address)}">${saved ? '♥' : '♡'}</button></div>
       <div class="card-meta">${metaLine(h, ctx)} ${statusChip}</div>
-      <div class="tags">${tagsHtml(h)}${h.note ? '<span class="tag note-icon" title="Has a note — open the home to read it"><span aria-hidden="true">📝</span><span class="tag-text"> Note</span></span>' : ''}</div>
+      <div class="tags">${tagsHtml(h, typeOf(ctx))}${h.note ? '<span class="tag note-icon" title="Has a note — open the home to read it"><span aria-hidden="true">📝</span><span class="tag-text"> Note</span></span>' : ''}</div>
       ${h.note ? `<p class="card-note">${esc(h.note)}</p>` : ''}
     </div>
   </li>`;
@@ -68,13 +46,13 @@ export function selectedHtml(h, ctx, saved) {
     <b>${esc(h.address)}</b>
     <p>${metaLine(h, ctx)}${st.key === 'later' && !st.label.startsWith('Starts') ? '' : ` · <span class="card-status ${st.key}">${esc(st.label)}</span>`}</p>
     ${h.note ? `<p>${esc(h.note)}</p>` : ''}
-    <div class="tags">${tagsHtml(h)}</div>
+    <div class="tags">${tagsHtml(h, typeOf(ctx))}</div>
     <button type="button" class="primary" data-save="${esc(h.id)}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save this stop'}</button>
     <p><button type="button" class="link-button" data-report="${esc(h.id)}">Report this listing</button></p>`;
 }
 
-export function pinHtml(h, { dim, number, focus }) {
-  return `<div class="pin ${pinClass(h, focus)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${symbolOf(h, focus)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
+export function pinHtml(h, { dim, number, focus, type = eventType() }) {
+  return `<div class="pin ${pinClass(h, focus, type)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${symbolOf(h, focus, type)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
 }
 
 /** Leaflet style for a zone outline; with a selected zone, it stands out and the others recede. */

@@ -3,22 +3,25 @@
  * @description "My route" on the map page: a suggested stop order (or the visitor's own order) from saved homes or
  *     every matching home, split into walkable trips, with a start point, skip/reorder, nearby suggestions, named
  *     saved routes (each keeps its own stops and filters; lib/store.js), Share and Show on map. The pin numbers come
- *     from here. It is never walking directions (ADR 0007).
- * @dependencies lib/route.js, lib/render.js, lib/time.js, lib/filters.js, lib/api.js, lib/modal.js
+ *     from here. It is never walking directions (ADR 0007). The event type (d.type) supplies its words and stop notes.
+ * @dependencies lib/route.js, lib/render.js, lib/time.js, lib/filters.js, lib/api.js, lib/modal.js, events/index.js
  */
 import { planStops, applyOrder, moveStop, suggestNearby } from './lib/route.js';
 import { esc } from './lib/render.js';
 import { time12 } from './lib/time.js';
-import { DEFAULT_FILTERS, isLowSensory } from './lib/filters.js';
+import { defaultFilters } from './lib/filters.js';
+import { eventType } from './events/index.js';
 import { api } from './lib/api.js';
 import { toast } from './lib/modal.js';
 
 /**
  * @param {object} d  page context: C (community), store, shared (link state), homes(), visible(), isOpen(home),
- *     filters(), map(), here(), setHere(pos), render() (whole page), applyStoredFilters(), reducedMotion()
+ *     filters(), map(), here(), setHere(pos), render() (whole page), applyStoredFilters(), reducedMotion(), type (event module)
  */
 export function createRoutePanel(d) {
   const { C, store, shared } = d;
+  const T = d.type || eventType();
+  const DEFAULTS = defaultFilters(T);
   const $ = (s) => document.querySelector(s);
   const pane = $('#route');
   let numbers = new Map();
@@ -31,7 +34,7 @@ export function createRoutePanel(d) {
   function shareLink() {
     const url = new URL('/', location.origin);
     const filters = d.filters();
-    const changed = Object.fromEntries(Object.entries(filters).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(DEFAULT_FILTERS[k])));
+    const changed = Object.fromEntries(Object.entries(filters).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(DEFAULTS[k])));
     if (Object.keys(changed).length) url.searchParams.set('f', btoa(JSON.stringify(changed)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
     if (plan.length) {
       url.searchParams.set('stops', plan.flatMap((g) => g.stops.map((h) => h.id)).join('.'));
@@ -66,7 +69,7 @@ export function createRoutePanel(d) {
     if (time && time.value !== 'any') chips.push(`🕐 ${time.selectedOptions[0]?.textContent || time.value}`);
     const q = (d.filters().q || '').trim();
     if (q) chips.push(`🔍 “${q}”`);
-    if (!chips.length) return '<p class="form-caption route-filters">Showing every home handing out. <button type="button" class="link-button" data-edit-filters>Add filters</button></p>';
+    if (!chips.length) return `<p class="form-caption route-filters">${esc(T.copy.routeShowingAll)} <button type="button" class="link-button" data-edit-filters>Add filters</button></p>`;
     const html = chips.map((c) => `<span class="route-chip">${typeof c === 'string' ? esc(c) : `${c.icon}${esc(c.words)}`}</span>`).join('');
     return `<div class="route-filters" aria-label="Filters used for these stops"><span class="label">Filtered by</span>${html}<button type="button" class="link-button" data-edit-filters>Change</button></div>`;
   }
@@ -114,7 +117,7 @@ export function createRoutePanel(d) {
       return;
     }
     const pool = linked ? fromLink : (useSaved ? homes.filter((h) => saved.includes(h.id)) : vis);
-    // Homes that are paused, out of candy or done for the night never go on a route; skipped ones neither.
+    // Homes that are not open (for Halloween: paused, out of candy or done for the night) never go on a route; skipped ones neither.
     const handingOut = pool.filter(d.isOpen);
     const chosen = handingOut.filter((h) => !skippedIds.has(h.id));
     const skipped = pool.length - handingOut.length;
@@ -134,7 +137,7 @@ export function createRoutePanel(d) {
       ? 'A stop list someone shared with you. Save it to keep it, or save the homes you like with ♡.'
       : useSaved
       ? `Your ${savedHere.length} saved ${savedHere.length === 1 ? 'home' : 'homes'}, in ${manualOrder ? 'your own' : 'a suggested'} order.`
-      : 'Every home handing out that matches your filters. Skip any with ✕.')
+      : T.copy.routeEvery)
       // "My current location" is remembered as a choice, but the position never is: asked for again, on a tap.
       + (pref === 'here' && !here ? (locating ? ' 📍 Finding your location…' : ' <button type="button" class="link-button" data-locate-start>📍 Use my location</button>') : '');
     let n = 0;
@@ -145,12 +148,12 @@ export function createRoutePanel(d) {
       : [];
     const extras = ideas.length ? `<div class="route-suggest"><h3 class="route-group-title">Nearby, not on your list</h3><ul>${ideas.map(({ home: h, meters }) => `<li><div class="route-text"><b>${esc(h.address)}</b><p>About ${Math.max(10, Math.round(meters / 10) * 10)} m from a stop · ${time12(h.start)}–${time12(h.end)}</p></div><button type="button" class="secondary add-stop" data-add-stop="${h.id}" aria-label="Add ${esc(h.address)} to my stops">+ Add</button></li>`).join('')}</ul></div>` : '';
     const stopCount = plan.reduce((t, g) => t + g.stops.length, 0);
-    const status = `<p class="route-status" role="status"><b>${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}</b>${plan.length > 1 ? ` in ${plan.length} trips` : ''}${start ? ` · from ${start.id ? esc(start.address) : 'your location'}` : ''}${skipped ? ` · ${skipped} not handing out now` : ''}${userSkipped ? ` · ${userSkipped} skipped <button type="button" class="link-button" data-unskip>Bring back</button>` : ''}</p>`;
+    const status = `<p class="route-status" role="status"><b>${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}</b>${plan.length > 1 ? ` in ${plan.length} trips` : ''}${start ? ` · from ${start.id ? esc(start.address) : 'your location'}` : ''}${skipped ? ` · ${skipped} ${esc(T.copy.routeNotOpen)}` : ''}${userSkipped ? ` · ${userSkipped} skipped <button type="button" class="link-button" data-unskip>Bring back</button>` : ''}</p>`;
     $('#routeItems').innerHTML = source + (!linked && !useSaved ? filterSummary() : '') + status + (plan.length ? (manualOrder ? '<p class="form-caption route-order">Your own order. <button type="button" class="link-button" id="btnResetOrder">Use the suggested order</button></p>' : '')
       + plan.map((g, gi) => {
         const label = tripLabel(g, gi);
         return `${label ? `<h3 class="route-group-title">${plan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
-        <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; numbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${isLowSensory(h) ? ' · 🧩 Sensory-friendly' : ''}${h.jump_scares || h.scare_level === 'intense' ? ' · 👻 Big scares' : ''}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
+        <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; numbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${esc(T.routeNote(h))}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
         ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
         ${C.routing.provider && g.stops.length > 1 ? `<button type="button" class="secondary" data-provider-path="${gi}">Show walking path for this trip</button>` : ''}`;
       }).join('') + (plan.length > 1 ? '<div class="notice">🚧 These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>' : '')
@@ -276,7 +279,7 @@ export function createRoutePanel(d) {
     $('#btnShareRoute').addEventListener('click', async () => {
       const url = shareLink();
       if (navigator.share) {
-        try { await navigator.share({ title: `${C.community.name} ${C.event.name} stops`, text: 'My trick-or-treat stops', url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+        try { await navigator.share({ title: `${C.community.name} ${C.event.name} stops`, text: T.copy.shareText, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
       }
       toast(await copyText(url) ? 'Link copied — anyone with it sees these stops.' : `Copy this link to share these stops: ${url}`, 8000);
     });

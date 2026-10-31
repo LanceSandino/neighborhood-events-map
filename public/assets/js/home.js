@@ -3,12 +3,14 @@
  * @description Public family page controller: filters (localStorage), synchronized list + Leaflet
  *     map kept on the neighborhood, favorites, selected-home panel, the inline "My route" panel
  *     (route-panel.js), Rules/house sheets, and the registration/dispute flows (register.js). Works
- *     without the map; the list is always usable.
- * @dependencies lib/*, route-panel.js, register.js, Leaflet (global L, optional)
+ *     without the map; the list is always usable. The community's event type (events/index.js) supplies the filter
+ *     toggles, symbols, tags, statuses and words.
+ * @dependencies lib/*, events/index.js, route-panel.js, register.js, Leaflet (global L, optional)
  */
 import { api } from './lib/api.js';
 import { createStore } from './lib/store.js';
-import { DEFAULT_FILTERS, matches, activeFilterCount, normalizeFilters, choiceCounts } from './lib/filters.js';
+import { defaultFilters, matches, activeFilterCount, normalizeFilters, choiceCounts } from './lib/filters.js';
+import { eventType } from './events/index.js';
 import { nowInZone } from './lib/time.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
 import { focusMap } from './lib/map-focus.js';
@@ -19,17 +21,19 @@ import { createRoutePanel } from './route-panel.js';
 
 const boot = JSON.parse(document.getElementById('boot').textContent);
 const C = boot.community;
+const T = eventType(C.event.type);
+const DEFAULT_FILTERS = defaultFilters(T);
 let homes = boot.homes;
 const zoneLabels = Object.fromEntries(C.zones.map((z) => [z.key, z.label]));
 const store = createStore(C.community.id, C.event.date.slice(0, 4));
-let filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
+let filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
 // A shared link (?f=<filters>&stops=<ids>&start=<id>) opens exactly that view, in the unsaved route so a saved one stays as it was.
 const shared = readSharedLink();
 if ((shared.filters || shared.stops) && store.get().activeRoute) {
   store.switchRoute(null);
-  filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
+  filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
 }
-if (shared.filters) { filters = { ...DEFAULT_FILTERS, ...normalizeFilters(shared.filters) }; store.set({ filters }); }
+if (shared.filters) { filters = { ...DEFAULT_FILTERS, ...normalizeFilters(shared.filters, T) }; store.set({ filters }); }
 let activeId = null;
 let here = null; // the visitor's location for "start from my location": memory only, never stored or sent
 let route = null; // the "My route" panel (route-panel.js)
@@ -37,11 +41,11 @@ let route = null; // the "My route" panel (route-panel.js)
 const $ = (sel) => document.querySelector(sel);
 const ctx = () => {
   const n = nowInZone(C.event.timezone);
-  return { today: n.date, eventDate: C.event.date, nowMinutes: n.minutes, zoneLabels, saved: store.get().saved, areas: C.routing.groups || [] };
+  return { today: n.date, eventDate: C.event.date, nowMinutes: n.minutes, zoneLabels, saved: store.get().saved, areas: C.routing.groups || [], type: T };
 };
 const visible = () => homes.filter((h) => matches(h, filters, ctx()));
-/** Handing out treats now or later tonight; paused, out of candy and done homes are not. */
-const isOpen = (h) => h.status === 'active';
+/** Open now or later today, as the event type says (Halloween: handing out; paused, out of candy and done homes are not). */
+const isOpen = (h) => T.isOpen(h);
 let showClosed = false;
 const zoneLayers = new Map();
 /** The device setting, or "Reduce motion" chosen in Appearance. */
@@ -125,7 +129,7 @@ function renderPins(visibleIds) {
   if (!map) return;
   for (const [id, m] of markers) if (!homes.some((h) => h.id === id)) { m.remove(); markers.delete(id); }
   for (const h of homes) {
-    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id), focus: filters }), iconSize: [37, 37], iconAnchor: [5, 36] });
+    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id), focus: filters, type: T }), iconSize: [37, 37], iconAnchor: [5, 36] });
     let m = markers.get(h.id);
     if (!m) {
       m = L.marker([h.lat, h.lon], { icon, keyboard: true, title: h.address, alt: h.address, riseOnHover: true });
@@ -150,10 +154,10 @@ function render() {
   const closed = vis.filter((h) => !isOpen(h));
   const card = (h) => cardHtml(h, c, { saved: saved.includes(h.id), active: activeId === h.id, focus: filters });
   const toggle = closed.length
-    ? `<li class="closed-toggle"><button type="button" class="link-button" id="btnShowClosed" aria-expanded="${showClosed}">${showClosed ? 'Hide' : 'Show'} ${closed.length} ${closed.length === 1 ? 'home' : 'homes'} not handing out right now</button></li>`
+    ? `<li class="closed-toggle"><button type="button" class="link-button" id="btnShowClosed" aria-expanded="${showClosed}">${showClosed ? 'Hide' : 'Show'} ${closed.length} ${closed.length === 1 ? 'home' : 'homes'} ${esc(T.copy.notOpen)}</button></li>`
     : '';
   $('#homeCards').innerHTML = open.length || closed.length
-    ? open.map(card).join('') + (open.length ? '' : '<li class="empty">No matching homes are handing out right now.</li>') + toggle + (showClosed ? closed.map(card).join('') : '')
+    ? open.map(card).join('') + (open.length ? '' : `<li class="empty">${esc(T.copy.noneOpen)}</li>`) + toggle + (showClosed ? closed.map(card).join('') : '')
     : `<li class="empty">${homes.length ? 'No homes match these filters. Try a different area or time.' : 'No homes are listed yet. Residents can add theirs with “List your home”.'}</li>`;
   $('#listCount').textContent = `${open.length} showing`;
   const view = store.get().view === 'compact' ? 'compact' : 'cards';
@@ -237,7 +241,7 @@ function readSharedLink() {
   try {
     if (q.get('f')) {
       const json = JSON.parse(atob(q.get('f').replace(/-/g, '+').replace(/_/g, '/')));
-      out.filters = normalizeFilters(json);
+      out.filters = normalizeFilters(json, T);
     }
   } catch { /* ignore a damaged link */ }
   const ids = (q.get('stops') || '').split('.').map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 60);
@@ -247,7 +251,7 @@ function readSharedLink() {
 
 /** A saved route was opened (or saved or deleted): its filters become the page's filters. */
 function applyStoredFilters() {
-  filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters) };
+  filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
   syncControls();
   highlightZone(filters.zone || 'all', { fit: false });
   render();
@@ -352,7 +356,8 @@ function bind() {
   $('#btnZoomIn').addEventListener('click', () => map && map.zoomIn());
   $('#btnZoomOut').addEventListener('click', () => map && map.zoomOut());
   $('#btnLocate').addEventListener('click', locate);
-  if (filters.noScares || filters.noFlashing || filters.noLoud || filters.nonfood || filters.stroller || filters.time !== 'any') {
+  // Filters behind the "Filters" button start open when one of them is on.
+  if (T.filters.some((f) => !f.quick && filters[f.key]) || filters.time !== 'any') {
     $('#moreFilters').classList.add('open');
     more.setAttribute('aria-expanded', 'true');
   }
@@ -382,7 +387,7 @@ if (!document.querySelector('link[href="/vendor/leaflet/leaflet.css"]')) {
   document.head.append(css);
 }
 
-route = createRoutePanel({ C, store, shared, homes: () => homes, visible, isOpen, filters: () => filters, map: () => map,
+route = createRoutePanel({ C, type: T, store, shared, homes: () => homes, visible, isOpen, filters: () => filters, map: () => map,
   here: () => here, setHere: (pos) => { here = pos; showMe(); }, render, applyStoredFilters, reducedMotion });
 bind();
 initRegistration({ community: C, onPublishedHint: () => {} });
