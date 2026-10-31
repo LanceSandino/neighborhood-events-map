@@ -6,6 +6,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Changed
+- The accessibility statement, the terms of use and the address example in "List your home" use the words of the event on the map (for example the lights' and the sale's own pin icons and labels) instead of Halloween's; between events they stay general. Halloween's pages read exactly as before. The organizer console's address example and the address error message use a neutral "123 Main St".
+
 ### Fixed
 - A long community or event name no longer fills the sidebar with three large lines: it is set a little smaller and wraps evenly, and the year line stays on one line (for every kind of event, also a Halloween community with a long name). A long name also wraps in the footer instead of widening a phone screen.
 - The route's notices on a Christmas lights or sale map use that map's colours instead of Halloween's peach.

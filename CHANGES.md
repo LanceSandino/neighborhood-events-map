@@ -1251,4 +1251,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-10-31T23:40:00Z"
+- id: CU-20261031-35
+  type: fix
+  title: "Event-neutral copy outside the type modules: the legal pages and the address example take the event type's words (page_* copy); a test keeps holiday words in the type modules"
+  description: "tests/Unit/Event/EventNeutralCopyTest scans every template outside templates/event/ (Twig comments and class names left out), every string literal of src/ outside src/Event/Type and every browser string outside events/ for holiday words; it found the accessibility statement's pin icons and sensory filters, the terms' \"treats and sensory details\" and \"Check treats\" lines, the register sheet's \"123 Pumpkin Ln\" example, the address error message and the organizer console's address placeholder. Each type's copy gains page_address_example, page_a11y_icons, page_a11y_filters, page_terms_details and page_terms_check (Halloween's hold exactly the old text); the accessibility and terms pages use them while an event is on the map and stay general between events; CommunityPresenter leaves page_* keys out of the public event like admin_* (GoldenApiParityTest unchanged). The address error and the console placeholder read \"123 Main St\". Allowed literals, each with its reason: the type keys, the legacy listings columns and their developer error, the name of settings saved before event.name existed, and filters.js re-exporting two Halloween helpers (D-20261031-35). Halloween's pages are byte-identical."
+  impact: low
+  affected_modules: ["src/Event/Type/HalloweenCopy.php", "src/Event/Type/HolidayLightsCopy.php", "src/Event/Type/GarageSaleCopy.php", "src/Event/EventType.php", "src/Community/CommunityPresenter.php", "src/Address/AddressNormalizer.php", "templates/legal/accessibility.html.twig", "templates/legal/terms.html.twig", "public/assets/js/admin/addresses.js"]
+  related_tests: ["tests/Unit/Event/EventNeutralCopyTest.php (failed before the change: 5 template lines, 1 server string, 1 console string)", "tests/Integration/LegalPagesTest.php: testTheLegalPagesUseTheWordsOfTheEventOnTheMap", "tests/Integration/GoldenApiParityTest.php (unchanged)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:50:00Z"
 ```

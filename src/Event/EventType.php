@@ -35,7 +35,9 @@ interface EventType
     public function defaultBranding(): array;
 
     /**
-     * Plain-text copy by purpose (reminders, headings, labels, captions); Twig and the console escape it.
+     * Plain-text copy by purpose (reminders, headings, labels, captions); Twig and the console escape it. Keys
+     * starting with admin_ (the organizer console) and page_ (server-rendered pages: the legal pages, the address
+     * example) are left out of the public event.
      *
      * @return array<string,mixed>
      */

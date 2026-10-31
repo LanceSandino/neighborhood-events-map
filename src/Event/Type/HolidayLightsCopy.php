@@ -86,6 +86,13 @@ final class HolidayLightsCopy
         'reminders_heading' => 'Viewing etiquette',
         // How visitors may reach the homes: the title of the "gated, open during the event" choice.
         'access_gated_open' => 'Gated — open for light viewing',
+        // Server-rendered pages only (page_* keys are not in the public event): the address example in "List your
+        // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
+        'page_address_example' => '123 Main St',
+        'page_a11y_icons' => '✨ lights, 🎵 music, ⛄ inflatables',
+        'page_a11y_filters' => 'Filters for drive-by homes and “No flashing reported” help plan a calm tour; nothing on the page flashes or moves.',
+        'page_terms_details' => 'display details and flashing reports',
+        'page_terms_check' => '“No flashing reported”, music and the other labels are only what residents tell us; it is not a safety promise.',
         // Organizer console
         'admin_access_gated_open' => 'Gated — gates open to visitors during viewing hours',
         'admin_reminders_label' => 'Viewing etiquette (one per line, up to 12)',

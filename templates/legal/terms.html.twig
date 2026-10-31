@@ -1,5 +1,8 @@
 {% extends 'base.html.twig' %}
 {% set nav = 'info' %}
+{# The self-reported details are the event type's (page_* copy); between events the terms stay general. #}
+{% set et = event_type(c.event.type ?? null) %}
+{% set event_on = c.event.active ?? true %}
 {% block title %}Terms of use · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block body %}
 <article class="page-card legal">
@@ -8,12 +11,12 @@
   <p class="legal-lead">{{ c.community.name }} {{ c.event.name }} is a free, volunteer-run community map. By using it you agree to these terms.</p>
 
   <h2>Listings are self-reported</h2>
-  <p>Homes, hours, treats and sensory details are entered by residents and can be wrong or change at any time. Nothing on this map is checked or guaranteed by the organizer.</p>
+  <p>Homes, hours{{ event_on ? ', ' ~ et.copy.page_terms_details : ' and other details' }} are entered by residents and can be wrong or change at any time. Nothing on this map is checked or guaranteed by the organizer.</p>
 
   <h2>Stay safe</h2>
   <ul>
     <li>Children should be supervised by a responsible adult.</li>
-    <li>Check treats and ingredients yourself, especially for allergies — “non-food” and other labels are only what residents tell us.</li>
+    {% if event_on %}<li>{{ et.copy.page_terms_check }}</li>{{ "\n" }}{% endif %}
     <li>The suggested stop order is <b>not walking directions</b>. Use sidewalks and marked crossings, follow traffic and gate rules, and respect private property and anyone who isn’t participating.</li>
     <li>{{ c.community.gate_notice ?: 'This site does not grant access to any gated or private area.' }}</li>
   </ul>

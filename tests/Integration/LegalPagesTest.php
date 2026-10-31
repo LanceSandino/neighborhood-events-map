@@ -31,6 +31,32 @@ final class LegalPagesTest extends AppTestCase
         }
     }
 
+    public function testTheLegalPagesUseTheWordsOfTheEventOnTheMap(): void
+    {
+        $events = [
+            'halloween' => [[], '🍬 treats, 🧩 sensory-friendly, 👻 spooky', 'treats and sensory details'],
+            'holiday_lights' => [['type' => 'holiday_lights', 'name' => 'Christmas Lights', 'date' => '2026-12-01', 'starts_on' => '2026-12-01', 'ends_on' => '2027-01-03', 'starts_at' => '18:00', 'ends_at' => '22:00'],
+                '✨ lights, 🎵 music, ⛄ inflatables', 'display details and flashing reports'],
+            'garage_sale' => [['type' => 'garage_sale', 'name' => 'Garage Sale', 'date' => '2027-04-10', 'starts_on' => '2027-04-10', 'ends_on' => '2027-04-11', 'starts_at' => '08:00', 'ends_at' => '14:00'],
+                '🧸 toys, 🪑 furniture, 🛠️ tools', 'categories, payment kinds and notes'],
+        ];
+        foreach ($events as $type => [$event, $icons, $details]) {
+            $this->db()->executeStatement('DELETE FROM event_occurrences'); // a fresh install of each type (an event's type never changes)
+            $this->configureCommunity(['event' => $event]);
+            $a11y = (string) $this->client->request('GET', '/accessibility')->html();
+            self::assertStringContainsString('pins carry icons ('.$icons.') and every tag has words', $a11y, $type);
+            $terms = (string) $this->client->request('GET', '/terms')->html();
+            self::assertStringContainsString('Homes, hours, '.$details.' are entered by residents', $terms, $type);
+            $register = (string) $this->client->request('GET', '/')->html();
+            self::assertStringContainsString('e.g. '.('halloween' === $type ? '123 Pumpkin Ln' : '123 Main St').'…', $register, $type.': the address example');
+            if ('halloween' !== $type) {
+                foreach (['spooky', 'treats and ingredients', 'jump scares', 'Pumpkin'] as $word) {
+                    self::assertStringNotContainsString($word, $a11y.$terms.$register, $type.' pages say nothing of Halloween: '.$word);
+                }
+            }
+        }
+    }
+
     public function testEveryPublicPageLinksThePoliciesAndSetsNoCookies(): void
     {
         $this->configureCommunity();

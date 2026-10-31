@@ -120,7 +120,7 @@ final class CommunityPresenter
             'filters' => null === $o ? [] : array_values(array_map(static fn (array $f) => ['key' => $f['key'], 'label' => $f['label'], 'icon' => $f['icon'], 'quick' => $f['quick']],
                 array_filter($type->filters(), static fn (array $f) => (null === $f['feature'] || ($features[$f['feature']] ?? false))
                     && (!$type instanceof EventSettingsType || $type->offersFilter($f['key'], $o->settings))))),
-            'copy' => null === $o ? (object) [] : array_filter($type->copy(), static fn ($v, string $k) => \is_string($v) && !str_starts_with($k, 'admin_'), \ARRAY_FILTER_USE_BOTH),
+            'copy' => null === $o ? (object) [] : array_filter($type->copy(), static fn ($v, string $k) => \is_string($v) && !str_starts_with($k, 'admin_') && !str_starts_with($k, 'page_'), \ARRAY_FILTER_USE_BOTH),
             'rules' => null === $o ? [] : array_values(array_filter((array) ($o->settings['rules'] ?? []), 'is_string')),
             'timezone' => $c->settings['community']['timezone'],
         ] + (null !== $o && $type instanceof EventSettingsType ? $type->publicSettings($o->settings) : [])
