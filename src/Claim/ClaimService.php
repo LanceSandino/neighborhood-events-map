@@ -8,6 +8,8 @@ use App\Address\AddressEligibility;
 use App\Address\AddressRegistry;
 use App\Audit\AuditLog;
 use App\Community\CommunityConfig;
+use App\Community\CommunityRepository;
+use App\Event\EventOccurrenceRepository;
 use App\Event\EventTypeRegistry;
 use App\Listing\ListingDraft;
 use App\Listing\ListingRepository;
@@ -22,9 +24,10 @@ use Symfony\Component\Uid\Uuid;
  *     completes claims atomically: the claims primary key is the single source of ownership truth,
  *     taken with INSERT … ON CONFLICT DO NOTHING inside one transaction, and the listing is
  *     published in that same transaction. A losing racer gets already_claimed; nothing is overwritten. The listing
- *     belongs to the active event; a request prepared for an event that is no longer active is refused.
+ *     belongs to the event the request named (the selected event, else the default; upcoming or open with dates); a
+ *     request confirmed after that event stopped taking listings is refused. The claim itself is address-scoped.
  *
- * @dependencies Address/*, Listing/*, Audit/AuditLog, Event/EventTypeRegistry, DBAL
+ * @dependencies Address/*, Listing/*, Audit/AuditLog, Event/EventTypeRegistry, Event/EventOccurrenceRepository, Community/CommunityRepository, DBAL
  */
 final class ClaimService
 {
@@ -36,6 +39,8 @@ final class ClaimService
         private readonly ListingRepository $listings,
         private readonly AuditLog $audit,
         private readonly EventTypeRegistry $types,
+        private readonly EventOccurrenceRepository $occurrences,
+        private readonly CommunityRepository $communities,
     ) {
     }
 
@@ -112,11 +117,17 @@ final class ClaimService
             if (false === $intent) {
                 return new ClaimOutcome('rejected', null, null, 'This listing request expired. Please start again.');
             }
-            // A request made before 0.10 stored only the flat Halloween fields; one made before 0.11 names no event.
-            $draft = ListingDraft::withDetails(json_decode((string) $intent['listing_draft'], true, 16, \JSON_THROW_ON_ERROR), $this->types->for($community));
-            if (\array_key_exists('event_id', $draft) && $draft['event_id'] !== $community->event?->id) {
-                return new ClaimOutcome('rejected', null, null, 'This listing request was for an event that is not on the map any more. Please start again.');
+            // A request made before 0.10 stored only the flat Halloween fields; one made before 0.11 names no event (the
+            // default event's then); since 0.15 several events take listings, so the request's own event decides.
+            $stored = json_decode((string) $intent['listing_draft'], true, 16, \JSON_THROW_ON_ERROR);
+            if (\array_key_exists('event_id', $stored)) {
+                $event = null === $stored['event_id'] ? null : $this->occurrences->find((int) $stored['event_id'], $db);
+                if (null === $event || !$event->acceptsListings() || !$this->types->isEnabled($event->type)) {
+                    return new ClaimOutcome('rejected', null, null, 'This listing request was for an event that is not on the map any more or not taking listings. Please start again.');
+                }
+                $community = $this->communities->forEvent($event);
             }
+            $draft = ListingDraft::withDetails($stored, $this->types->for($community));
             $input = null !== $intent['address_id']
                 ? ['address_id' => (int) $intent['address_id']]
                 : json_decode((string) $intent['candidate'], true, 16, \JSON_THROW_ON_ERROR);
@@ -215,7 +226,7 @@ final class ClaimService
             // The claim is ours now: an existing unreviewed self-entry (released earlier) takes this resident's pin.
             $this->registry->repinSelfEntry($addressId, $target['zone_key'], $target['lat'], $target['lon']);
         }
-        $event = $community->event ?? throw new \LogicException('Registration is open only while an event is active.');
+        $event = $community->event ?? throw new \LogicException('Registration is open only for an event that takes listings.');
         $type = $this->types->for($community);
         $this->listings->insert($db, $event, $addressId, $draft, ListingDraft::windowsFor($draft, $event, $type),
             ListingDraft::statusDate($draft, $type, $community, $this->clock->now()));

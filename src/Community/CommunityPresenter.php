@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventOccurrence;
 use App\Event\EventSettingsType;
 use App\Event\EventType;
 use App\Event\EventTypeRegistry;
+use App\Event\PublicEvents;
 use App\Routing\RoutingProviderInterface;
 use App\Shared\RuntimeConfig;
 
@@ -14,14 +16,15 @@ use App\Shared\RuntimeConfig;
  * @module Community/CommunityPresenter
  * @description Builds the PUBLIC community payload (branding, event, map extent, enabled zones,
  *     registration state, stats). Never includes addresses, emails, admin identity or session data.
- *     The boundary outline is published only after organizer approval. The event is the active occurrence (its
- *     id, type, dates, hours, the filters it offers and words); the type supplies the default reminders and its own
+ *     The boundary outline is published only after organizer approval. The event is the selected or default event (its
+ *     id, type, dates, hours, the filters it offers and words, then its state, whether its dates are tentative, whether
+ *     it is the default and, once closed, its thank-you text); the type supplies the default reminders and its own
  *     stats counts.
  *     A type with settings of its own adds their public part (the lights' best night and quiet hours) and, when it
  *     allows driving, the route modes visitors can use; Halloween's event keeps exactly its keys.
  *
- * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Event/EventSettingsType, Routing/RoutingProviderInterface,
- *     Shared/RuntimeConfig
+ * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Event/EventSettingsType, Event/PublicEvents,
+ *     Routing/RoutingProviderInterface, Shared/RuntimeConfig
  */
 final class CommunityPresenter
 {
@@ -31,6 +34,7 @@ final class CommunityPresenter
         private readonly string $appVersion,
         private readonly BrandingStore $branding,
         private readonly EventTypeRegistry $types,
+        private readonly PublicEvents $events,
     ) {
     }
 
@@ -124,7 +128,9 @@ final class CommunityPresenter
             'rules' => null === $o ? [] : array_values(array_filter((array) ($o->settings['rules'] ?? []), 'is_string')),
             'timezone' => $c->settings['community']['timezone'],
         ] + (null !== $o && $type instanceof EventSettingsType ? $type->publicSettings($o->settings) : [])
-          + (null !== $o && [] !== array_diff($type->routeProfiles(), ['walking']) ? ['route_modes' => $this->routeModes($c, $type)] : []);
+          + (null !== $o && [] !== array_diff($type->routeProfiles(), ['walking']) ? ['route_modes' => $this->routeModes($c, $type)] : [])
+          + ['state' => $o?->state, 'dates_tentative' => (bool) $o?->datesTentative, 'is_default' => (bool) $o?->isDefault]
+          + (EventOccurrence::CLOSED === $o?->state ? ['closing_message' => $this->events->closingMessage($o)] : []);
     }
 
     /**

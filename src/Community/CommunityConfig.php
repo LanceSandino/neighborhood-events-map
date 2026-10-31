@@ -13,9 +13,10 @@ use App\Geo\ZoneResolver;
  * @module Community/CommunityConfig
  * @description Read-only view of the active community: normalized settings plus the active
  *     boundary and zone polygons and the boundary approval state. Answers the questions the
- *     rest of the app asks ("is registration open?", "which zone contains this point?"). The active event
- *     occurrence (Event/EventOccurrence) comes with it: its settings `event` block is a view of that occurrence;
- *     without an active event of a type this release offers, nothing is listed and registration is closed.
+ *     rest of the app asks ("is registration open?", "which zone contains this point?"). The event the request is about
+ *     (the selected or the default one, Event/EventOccurrence) comes with it and its settings `event` block is a view of
+ *     that event: only an open event shows homes; residents may list for an upcoming or open event with dates; without a
+ *     public event of a type this release offers, nothing is listed and registration is closed.
  *
  * @input normalized settings (CommunitySchema) and geometry rows
  * @output typed getters
@@ -71,10 +72,16 @@ final class CommunityConfig
         return new \DateTimeZone($this->settings['community']['timezone']);
     }
 
-    /** The first day of the active event (the settings' event block mirrors it). */
+    /** The first day of the event (the settings' event block mirrors it; the block's last date while it is to be announced). */
     public function eventDate(): string
     {
-        return $this->settings['event']['date'];
+        return (string) ($this->settings['event']['date'] ?? '');
+    }
+
+    /** The public map shows homes only for an open event. */
+    public function showsHomes(): bool
+    {
+        return null !== $this->event && $this->event->isOpen();
     }
 
     /** The community-local date of a moment (default: now), e.g. for day-scoped statuses. */
@@ -160,6 +167,12 @@ final class CommunityConfig
         }
         if (null === $this->event) {
             return ['open' => false, 'reason' => 'There is no event on the map right now. House listings open when the organizer starts the next one.'];
+        }
+        if (EventOccurrence::CLOSED === $this->event->state) {
+            return ['open' => false, 'reason' => sprintf('%s is over — thank you! House listings open again when the organizer announces the next one.', $this->event->name)];
+        }
+        if (!$this->event->acceptsListings()) {
+            return ['open' => false, 'reason' => sprintf('The dates of %s are to be announced. House listings open once the organizer sets them.', $this->event->name)];
         }
 
         return ['open' => true, 'reason' => null];

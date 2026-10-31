@@ -11,17 +11,19 @@ use App\Shared\ValidationException;
 /**
  * @module Event/OccurrenceInput
  * @description Validates what an organizer sends for an event (Organizer → Events): name, first and last day (a
- *     one-day type has one day; others span at most 62 days), default hours, and the settings every type shares —
- *     rules (up to 8 short plain-text lines, shown with the event), route_modes (walking, plus the type's other
- *     profiles) and, for a type with several days, max_days (the organizer's cap of days per listing). A type with
- *     settings of its own (Event/EventSettingsType, e.g. the lights' best night, a sale's days) checks those against
- *     the event's dates and completes them as a whole. Unknown fields are refused.
+ *     one-day type has one day; others span at most 62 days) or no dates at all (both null: to be announced), whether
+ *     the dates are tentative, default hours, and the settings every type shares — rules (up to 8 short plain-text lines,
+ *     shown with the event), route_modes (walking, plus the type's other profiles), the closing message (the thank-you
+ *     text of a closed event, plain text up to 400 characters) and, for a type with several days, max_days (the
+ *     organizer's cap of days per listing). A type with settings of its own (Event/EventSettingsType, e.g. the lights'
+ *     best night, a sale's days) checks those against the event's dates and completes them as a whole; an event without
+ *     dates has none of the settings that depend on them. Unknown fields are refused.
  *
  * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Community/EventBlockSchema, Shared/TextInput, Shared/ValidationException
  */
 final class OccurrenceInput
 {
-    public const FIELDS = ['type', 'name', 'starts_on', 'ends_on', 'default_start', 'default_end', 'settings'];
+    public const FIELDS = ['type', 'name', 'starts_on', 'ends_on', 'dates_tentative', 'default_start', 'default_end', 'settings'];
     public const RULES_MAX = 8;
     public const RULE_LENGTH = 160;
 
@@ -29,7 +31,7 @@ final class OccurrenceInput
      * @param array<string,mixed> $in      the organizer's input
      * @param EventOccurrence|null $current the event being edited (its values fill what the input leaves out)
      *
-     * @return array{type:string,name:string,starts_on:string,ends_on:string,default_start:string,default_end:string,settings:array<string,mixed>}
+     * @return array{type:string,name:string,starts_on:?string,ends_on:?string,dates_tentative:bool,default_start:string,default_end:string,settings:array<string,mixed>}
      *
      * @throws ValidationException with field errors
      */
@@ -48,10 +50,19 @@ final class OccurrenceInput
         if ('' === $name) {
             $name = $type->defaultName();
         }
+        // Both dates null: to be announced (sent as null, or kept from an event without dates).
+        $tbd = \array_key_exists('starts_on', $in) ? null === $in['starts_on'] && null === ($in['ends_on'] ?? null) : (null !== $current && !$current->hasDates());
         $startsOn = \is_string($in['starts_on'] ?? null) ? $in['starts_on'] : ($current->startsOn ?? '');
         $oneDay = 'single_day' === $type->scheduleKind();
         $endsOn = $oneDay ? $startsOn : (\is_string($in['ends_on'] ?? null) ? $in['ends_on'] : ($current->endsOn ?? $startsOn));
-        if (!EventBlockSchema::isDate($startsOn)) {
+        $tentative = \array_key_exists('dates_tentative', $in) ? true === $in['dates_tentative'] : (bool) ($current?->datesTentative);
+        if (\array_key_exists('dates_tentative', $in) && !\is_bool($in['dates_tentative'])) {
+            $e['dates_tentative'] = 'Send true or false.';
+        }
+        if ($tbd) {
+            $startsOn = $endsOn = '';
+            $tentative = false;
+        } elseif (!EventBlockSchema::isDate($startsOn)) {
             $e['starts_on'] = 'Choose the first day (YYYY-MM-DD).';
         } elseif (!EventBlockSchema::isDate($endsOn) || $endsOn < $startsOn) {
             $e['ends_on'] = 'Choose a last day on or after the first day.';
@@ -66,10 +77,18 @@ final class OccurrenceInput
             $e['default_end'] = 'The end must be a time after the start, on the same day.';
         }
         $settings = \array_key_exists('settings', $in) ? self::settings($in['settings'], $type, $startsOn, $endsOn, $e) : ($current->settings ?? []);
-        if (!\array_key_exists('settings', $in) && $type instanceof EventSettingsType) {
+        if ($tbd && $type instanceof EventSettingsType) {
+            // Without dates there is nothing for a best night or sale days to lie in.
+            foreach ($type->dateBoundSettings() as $key) {
+                if (!self::isEmpty($settings[$key] ?? null) && \array_key_exists('settings', $in) && \array_key_exists($key, (array) $in['settings'])) {
+                    $e['settings.'.$key] = 'Set the event\'s dates first.';
+                }
+                unset($settings[$key]);
+            }
+        } elseif (!\array_key_exists('settings', $in) && $type instanceof EventSettingsType) {
             self::recheck($settings, $type, $startsOn, $endsOn, $e); // the type's settings still fit the event's new dates
         }
-        if ($type instanceof EventSettingsType && !isset($e['starts_on']) && !isset($e['ends_on'])) {
+        if (!$tbd && $type instanceof EventSettingsType && !isset($e['starts_on']) && !isset($e['ends_on'])) {
             [$settings, $whole] = $type->finishSettings($settings, $startsOn, $endsOn); // e.g. a sale's days, as a whole
             $e += $whole;
         }
@@ -77,8 +96,8 @@ final class OccurrenceInput
             throw new ValidationException($e);
         }
 
-        return ['type' => $type->key(), 'name' => $name, 'starts_on' => $startsOn, 'ends_on' => $endsOn, 'default_start' => (string) $start,
-            'default_end' => (string) $end, 'settings' => $settings];
+        return ['type' => $type->key(), 'name' => $name, 'starts_on' => $tbd ? null : $startsOn, 'ends_on' => $tbd ? null : $endsOn, 'dates_tentative' => $tentative,
+            'default_start' => (string) $start, 'default_end' => (string) $end, 'settings' => $settings];
     }
 
     /**
@@ -98,11 +117,16 @@ final class OccurrenceInput
         foreach ($raw as $k => $v) {
             $k = (string) $k;
             if ($type instanceof EventSettingsType && \in_array($k, $own, true)) {
+                if ('' === $startsOn && \in_array($k, $type->dateBoundSettings(), true)) {
+                    $out[$k] = $v; // checked with the event's dates (to be announced: refused unless empty)
+                    continue;
+                }
                 $out[$k] = self::own($type, $k, $v, $startsOn, $endsOn, $e);
                 continue;
             }
             match ($k) {
                 'rules' => $out['rules'] = self::rules($v, $e),
+                'closing_message' => $out['closing_message'] = self::closingMessage($v, $e),
                 'route_modes' => $out['route_modes'] = self::routeModes($v, $type, $e),
                 'max_days' => $out['max_days'] = self::maxDays($v, $type, $e),
                 default => $e['settings.'.$k] = 'Unknown field.',
@@ -134,6 +158,22 @@ final class OccurrenceInput
                 self::own($type, $key, $settings[$key], $startsOn, $endsOn, $e);
             }
         }
+    }
+
+    private static function isEmpty(mixed $v): bool
+    {
+        return null === $v || '' === $v || [] === $v;
+    }
+
+    /** @param array<string,string> $e */
+    private static function closingMessage(mixed $v, array &$e): string
+    {
+        $text = TextInput::line(\is_string($v) ? $v : '', 4 * EventOccurrence::CLOSING_MESSAGE_MAX);
+        if (mb_strlen($text) > EventOccurrence::CLOSING_MESSAGE_MAX) {
+            $e['settings.closing_message'] = sprintf('Keep the thank-you message to %d characters.', EventOccurrence::CLOSING_MESSAGE_MAX);
+        }
+
+        return $text;
     }
 
     /**

@@ -53,12 +53,18 @@ final class GarageSaleSeasonTest extends AppTestCase
         return $this->csrf();
     }
 
-    /** Activates a draft in place of the event on the map. */
+    /**
+     * Puts a draft on the map in place of the event there: the organizer archives the default event and opens the
+     * draft, which becomes the default (0.15: several events may be open; archiving keeps one season at a time here).
+     */
     private function switchTo(int $draft): void
     {
-        $active = $this->json('GET', '/api/admin/events')['active_id'];
-        $r = $this->json('POST', "/api/admin/events/$draft/activate", ['confirm' => true, 'replaces' => $active], $this->h());
+        $current = $this->json('GET', '/api/admin/events')['default_id'];
+        $r = $this->json('POST', "/api/admin/events/$current/archive", ['confirm' => true], $this->h());
         self::assertSame(200, $this->code(), json_encode($r));
+        $r = $this->json('POST', "/api/admin/events/$draft/open", ['confirm' => true], $this->h());
+        self::assertSame(200, $this->code(), json_encode($r));
+        self::assertTrue($r['event']['is_default']);
     }
 
     public function testAnOrganizerPreparesPreviewsAndSwitchesToARummageSale(): void

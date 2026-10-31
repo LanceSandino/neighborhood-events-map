@@ -65,16 +65,23 @@ final class EventTypesAcceptanceTest extends AppTestCase
         return $id;
     }
 
-    /** Prepares a Christmas lights season and puts it on the map in place of the current event. */
+    /**
+     * Prepares a Christmas lights season and puts it on the map in place of the current event: the organizer archives
+     * the event on the map and opens the lights, which become the default (0.15: several events may be open; archiving
+     * the old one keeps this test about one season at a time).
+     */
     private function switchToLights(array $settings = []): int
     {
         $this->organizer();
         $draft = $this->json('POST', '/api/admin/events', ['type' => 'holiday_lights', 'starts_on' => '2026-12-01', 'ends_on' => '2027-01-03',
             'default_start' => '18:00', 'default_end' => '22:00', 'settings' => $settings], $this->h())['event'];
         self::assertSame(201, $this->code(), json_encode($draft));
-        $active = $this->json('GET', '/api/admin/events')['active_id'];
-        $r = $this->json('POST', '/api/admin/events/'.$draft['id'].'/activate', ['confirm' => true, 'replaces' => $active], $this->h());
+        $current = $this->json('GET', '/api/admin/events')['default_id'];
+        $r = $this->json('POST', "/api/admin/events/$current/archive", ['confirm' => true], $this->h());
         self::assertSame(200, $this->code(), json_encode($r));
+        $r = $this->json('POST', '/api/admin/events/'.$draft['id'].'/open', ['confirm' => true], $this->h());
+        self::assertSame(200, $this->code(), json_encode($r));
+        self::assertTrue($r['event']['is_default'], 'the only public event is the default');
 
         return (int) $draft['id'];
     }
@@ -169,7 +176,7 @@ final class EventTypesAcceptanceTest extends AppTestCase
         self::assertSame('Changed for the lights', $this->json('GET', "/api/homes/$home")['home']['note']);
 
         // Ending the season hides its homes at once, by id too.
-        $lights = (int) $this->json('GET', '/api/admin/events')['active_id'];
+        $lights = (int) $this->json('GET', '/api/admin/events')['default_id'];
         $this->json('POST', "/api/admin/events/$lights/archive", ['confirm' => true], $this->h());
         self::assertSame(200, $this->code());
         $this->client->getCookieJar()->clear();
@@ -212,7 +219,7 @@ final class EventTypesAcceptanceTest extends AppTestCase
         $csrf = $this->resident('fay@example.test');
         $this->json('POST', "/api/me/homes/$home/listing", ['details' => ['styles' => ['classic']], 'windows' => [['date' => '2026-12-19', 'start' => '18:00', 'end' => '22:00']]]);
         self::assertSame(403, $this->code(), '"List for" needs the CSRF token');
-        self::assertSame(0, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id WHERE o.state = \'active\''));
+        self::assertSame(0, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id WHERE o.type = \'holiday_lights\''), 'nothing was listed for the lights');
         $this->listForLights('fay@example.test', $home);
         $csrf = $this->resident('fay@example.test');
         foreach (['out_of_candy', 'sold_out', 'done', 'bogus'] as $status) {
@@ -233,11 +240,15 @@ final class EventTypesAcceptanceTest extends AppTestCase
             'default_start' => '18:00', 'default_end' => '22:00', 'settings' => ['rules' => [$rule], 'quiet_hours' => '<b>Quiet</b> after 9']], $this->h())['event'];
         self::assertSame(201, $this->code(), json_encode($draft));
         $preview = (string) $this->client->request('GET', '/admin/events/'.$draft['id'].'/preview')->html();
-        $active = $this->json('GET', '/api/admin/events')['active_id'];
-        $this->json('POST', '/api/admin/events/'.$draft['id'].'/activate', ['confirm' => true, 'replaces' => $active], $this->h());
+        // The lights open next to Halloween and become the default: every page also has the event switcher (0.15).
+        $this->json('POST', '/api/admin/events/'.$draft['id'].'/open', ['confirm' => true], $this->h());
+        self::assertSame(200, $this->code());
+        $this->json('POST', '/api/admin/events/'.$draft['id'].'/default', [], $this->h());
         self::assertSame(200, $this->code());
         $this->client->getCookieJar()->clear();
         self::assertSame($name, $this->json('GET', '/api/event')['event']['name'], 'stored as typed');
+        self::assertSame($name, $this->json('GET', '/api/events')['events'][0]['name'], 'and in the public list of events');
+        self::assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt; Lights</span>', (string) $this->client->request('GET', '/?e=1')->html(), 'the switcher tab on another event\'s page, escaped');
         foreach (['/', '/about', '/privacy', '/terms', '/accessibility', '/login', 'preview'] as $path) {
             $html = 'preview' === $path ? $preview : (string) $this->client->request('GET', $path)->html();
             self::assertStringNotContainsString('<script>alert(1)', $html, $path);

@@ -7,6 +7,7 @@ namespace App\Listing;
 use App\Audit\AuditLog;
 use App\Event\EventOccurrence;
 use App\Security\User;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Psr\Clock\ClockInterface;
@@ -18,8 +19,10 @@ use Psr\Clock\ClockInterface;
  *     other condition, so a home outside the resident's own claims can never be read, changed or
  *     released, whatever id a caller passes. Resident-facing controllers reach their homes only
  *     through of($user); organizer remediation lives in Admin/ClaimAdministration. Claims are the
- *     resident's for good; listings belong to one event: a home shows its listing for the active event,
- *     and listing a home for a new event starts from an empty form, never from an earlier event's listing.
+ *     resident's for good; listings belong to one event: a home shows its listing for the event the resident
+ *     looks at and which other public events it is listed for, and listing a home for an event starts from an
+ *     empty form; the resident may copy their own listing of the same home from the previous event of the same
+ *     type into the form ("Use last year's details", D-20261031-42), never anyone else's.
  *     Writes keep the legacy row in step (Listing/LegacyListingBridge).
  *
  * @dependencies DBAL QueryBuilder, AuditLog, clock, Event/EventOccurrence, Listing/ListingRepository, Listing/LegacyListingBridge
@@ -65,6 +68,53 @@ final class ResidentHomes
             ->select('el.*', ListingRepository::WINDOWS_JSON.' AS windows')
             ->innerJoin('c', 'event_listings', 'el', 'el.address_id = c.address_id AND el.event_id = :event')->setParameter('event', $eventId)
             ->andWhere('c.address_id = :address')->setParameter('address', $addressId)
+            ->executeQuery()->fetchAssociative();
+
+        return false === $row ? null : $row;
+    }
+
+    /**
+     * Which of the given events each of the resident's homes is listed for.
+     *
+     * @param list<int> $eventIds
+     *
+     * @return array<int, array<int, array{published:bool, hidden:bool}>> address id => event id => listing flags
+     */
+    public function listedFor(array $eventIds): array
+    {
+        if ([] === $eventIds) {
+            return [];
+        }
+        $rows = $this->scoped()
+            ->select('el.address_id', 'el.event_id', 'el.published', 'el.moderation_hidden')
+            ->innerJoin('c', 'event_listings', 'el', 'el.address_id = c.address_id')
+            ->andWhere('el.event_id IN (:events)')->setParameter('events', $eventIds, ArrayParameterType::INTEGER)
+            ->executeQuery()->fetchAllAssociative();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['address_id']][(int) $r['event_id']] = ['published' => (bool) $r['published'], 'hidden' => (bool) $r['moderation_hidden']];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The resident's own listing of one of their homes for the most recent earlier event of the same type (by first
+     * day): what "Use last year's details" copies into the form. Never another address's or another type's.
+     *
+     * @return array<string,mixed>|null the listing row with its windows
+     */
+    public function previous(int $addressId, EventOccurrence $event): ?array
+    {
+        $row = $this->scoped()
+            ->select('el.*', ListingRepository::WINDOWS_JSON.' AS windows')
+            ->innerJoin('c', 'event_listings', 'el', 'el.address_id = c.address_id')
+            ->innerJoin('el', 'event_occurrences', 'o', 'o.id = el.event_id')
+            ->andWhere('c.address_id = :address')->setParameter('address', $addressId)
+            ->andWhere('o.type = :type')->setParameter('type', $event->type)
+            ->andWhere('o.id <> :event')->setParameter('event', $event->id)
+            ->andWhere('o.starts_on IS NOT NULL AND o.starts_on < COALESCE(CAST(:starts AS DATE), CAST(\'infinity\' AS DATE))')->setParameter('starts', $event->startsOn)
+            ->orderBy('o.starts_on', 'DESC')->addOrderBy('o.id', 'DESC')->setMaxResults(1)
             ->executeQuery()->fetchAssociative();
 
         return false === $row ? null : $row;

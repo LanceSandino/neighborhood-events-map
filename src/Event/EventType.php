@@ -12,7 +12,9 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * @description The contract of a code-defined event type (ADR 0010): its immutable key, default name, branding
  *     and copy, schedule kind, listing statuses, the strict validation and public projection of its listing
  *     details, its filters, legend, statistics and route profiles, and the whitelisted Twig fragments that
- *     present it, and how a listing's status shows. Core code asks the type instead of branching on a type key.
+ *     present it, and how a listing's status shows; the dates a new event of the type gets in the organizer console and
+ *     the tentative dates of the event that follows one when it closes (D-20261031-39). Core code asks the type instead
+ *     of branching on a type key.
  *
  * @dependencies Event/OccurrenceSettings, Shared/ValidationException
  */
@@ -150,4 +152,20 @@ interface EventType
      * @return array<string,string>
      */
     public function fragments(): array;
+
+    /**
+     * The dates a new event of this type gets in the organizer console, as of a community-local date (Y-m-d): its first
+     * and last day, or [null, null] for dates to be announced.
+     *
+     * @return array{0:?string, 1:?string}
+     */
+    public function newEventDates(string $today): array;
+
+    /**
+     * The tentative dates of next year's event, created when an event of this type closes: its first and last day, or
+     * [null, null] for dates to be announced.
+     *
+     * @return array{0:?string, 1:?string}
+     */
+    public function nextDates(EventOccurrence $closed): array;
 }

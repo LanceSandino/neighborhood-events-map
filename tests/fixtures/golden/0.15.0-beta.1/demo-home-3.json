@@ -1,0 +1,44 @@
+{
+    "home": {
+        "id": 3,
+        "address": "124 Cobweb Ct",
+        "zone": null,
+        "lat": 29.19986,
+        "lon": -81.686776,
+        "start": "16:30",
+        "end": "20:30",
+        "candy": true,
+        "nonfood": false,
+        "adult_drinks": false,
+        "low_noise": true,
+        "jump_scares": false,
+        "flashing_lights": false,
+        "loud_audio": false,
+        "scare_level": "gentle",
+        "stroller_friendly": true,
+        "note": "Quiet porch, lights on.",
+        "status": "active",
+        "updated_at": "2026-10-31T22:00:00+00:00",
+        "event_id": 1,
+        "event_type": "halloween",
+        "details": {
+            "candy": true,
+            "nonfood": false,
+            "adult_drinks": false,
+            "low_noise": true,
+            "jump_scares": false,
+            "flashing_lights": false,
+            "loud_audio": false,
+            "scare_level": "gentle",
+            "stroller_friendly": true
+        },
+        "windows": [
+            {
+                "date": "2026-10-30",
+                "start": "16:30",
+                "end": "20:30"
+            }
+        ],
+        "display_status": "later"
+    }
+}

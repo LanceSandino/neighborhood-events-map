@@ -6,7 +6,6 @@ namespace App\Event;
 
 use App\Audit\AuditLog;
 use App\Community\CommunityRepository;
-use App\Event\Type\HalloweenType;
 use App\Listing\LegacyListingBridge;
 use App\Shared\ValidationException;
 use Doctrine\DBAL\Connection;
@@ -14,14 +13,15 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 /**
  * @module Event/EventLifecycle
- * @description The organizer's events (Organizer → Events, D-20261031-05): prepare a draft of a type this release
- *     offers, edit a draft or the active event, activate a draft (archiving the active one) in one transaction under
- *     the occurrences lock — the caller names the event it replaces, so of two concurrent activations exactly one
- *     wins and the other is refused; the partial unique index is the last line of defense —, archive, and purge an
- *     archived event's listings (retention). Activating never republishes earlier listings: a new event starts empty.
- *     Moving the active event's dates while homes are listed needs the organizer's confirmation; a one-day event's
- *     listings move with its day. Every change is audited and mirrored for the previous release (settings block and
- *     legacy rows).
+ * @description The organizer's events (Organizer → Events, ADR 0011): prepare a draft of a type this release offers,
+ *     edit an event, announce a draft (upcoming: residents may list, visitors see its dates), open an event (the public
+ *     map with its homes; its dates are then confirmed), close an open event — in the same transaction next year's event
+ *     of the type is created as upcoming with tentative dates (or dates to be announced) —, make a public event the
+ *     default, archive (a default that is archived passes to the newest open event, else the newest public one) and
+ *     purge an archived event's listings (retention). At most one upcoming or open event per type, one default, a closed
+ *     event never reopens (D-20261031-37, -39). Every change runs under the occurrences lock (the partial unique indexes
+ *     are the last line of defense), is audited and is mirrored for the previous release (settings block and legacy
+ *     rows of the bridged Halloween, D-20261031-41). Nothing is copied from an earlier event's listings.
  *
  * @dependencies DBAL, Event/*, Community/CommunityRepository, Listing/LegacyListingBridge, Audit/AuditLog
  */
@@ -66,23 +66,26 @@ final class EventLifecycle
             $type = $this->types->get($current->type);
             $fields = OccurrenceInput::normalize($input, $type, $current);
             $moved = $fields['starts_on'] !== $current->startsOn || $fields['ends_on'] !== $current->endsOn;
+            if (EventOccurrence::CLOSED === $current->state && ($moved || $fields['default_start'] !== $current->defaultStart || $fields['default_end'] !== $current->defaultEnd)) {
+                throw new EventConflictException('closed', 'A closed event keeps its dates and hours; you can change its name and thank-you message.');
+            }
+            if (EventOccurrence::OPEN === $current->state && null === $fields['starts_on']) {
+                throw new EventConflictException('dates_needed', 'An open event keeps its dates. Close it when it is over.');
+            }
             $listed = $moved ? $this->occurrences->listingCount($id, $db) : 0;
             if ($listed > 0) {
-                if (!$moveListings) {
+                if (!$moveListings || null === $fields['starts_on']) {
                     throw new EventConflictException('listings_move', sprintf('%d home(s) are listed for this event. Confirm to move them to the new dates, or prepare a new event for the next season.', $listed));
                 }
                 $this->moveWindows($db, $current, $fields, $type);
             }
             $this->keepListedDays($db, $current, $fields, $type);
             $this->occurrences->updateFields($db, $id, $fields);
-            if ($current->isActive()) {
-                $updated = $this->occurrences->find($id, $db) ?? throw new \LogicException('The event vanished.');
-                $this->community->mirrorEvent($db, $updated);
-                if ($moved && $this->isBridged($updated)) {
-                    $this->bridge->unpublishDay($db, $current->startsOn);
-                    $this->bridge->mirror($db, $id);
-                }
+            $updated = $this->occurrences->find($id, $db) ?? throw new \LogicException('The event vanished.');
+            if ($moved && $this->isBridgedDay($current)) {
+                $this->bridge->unpublishDay($db, (string) $current->startsOn);
             }
+            $this->settle($db, $updated);
         });
         $this->audit->record($adminId, 'admin#'.$adminId, 'event.updated', 'event', (string) $id, ['moved_listings' => $moveListings], 'admin');
         $this->community->reset();
@@ -90,58 +93,137 @@ final class EventLifecycle
         return $this->get($id);
     }
 
-    /**
-     * Activates a draft and archives the event it replaces (null: none is active). Refused when another event became
-     * active meanwhile, so two concurrent activations never both win.
-     */
-    public function activate(int $id, ?int $replaces, int $adminId): EventOccurrence
+    /** A draft becomes upcoming: residents may list (once it has dates) and visitors see it with its dates. */
+    public function announce(int $id, ?int $adminId): EventOccurrence
     {
-        try {
-            $archived = $this->db->transactional(function (Connection $db) use ($id, $replaces): ?int {
-                OccurrenceSettingsSync::lock($db);
-                $target = $this->occurrences->find($id, $db, true) ?? throw new EventConflictException('not_found', 'Unknown event.');
-                if (EventOccurrence::DRAFT !== $target->state) {
-                    throw new EventConflictException('not_draft', 'Only a draft can be activated; this event is '.$target->state.'.');
-                }
-                if (!$this->types->isEnabled($target->type)) {
-                    throw new EventConflictException('type_unavailable', 'This version does not offer that event type.');
-                }
-                $current = $this->occurrences->active($db);
-                if ($current?->id !== $replaces) {
-                    throw new EventConflictException('changed', 'Another event became active meanwhile. Reload the page and check before you switch.');
-                }
-                if (null !== $current) {
-                    $this->retire($db, $current);
-                }
-                $this->occurrences->setState($db, $id, EventOccurrence::ACTIVE);
-                $this->community->mirrorEvent($db, $this->occurrences->find($id, $db) ?? throw new \LogicException('The event vanished.'));
+        return $this->change($id, $adminId, 'event.announced', function (Connection $db, EventOccurrence $e): array {
+            if (EventOccurrence::DRAFT !== $e->state) {
+                throw new EventConflictException('not_draft', 'Only a draft can be announced; this event is '.$e->state.'.');
+            }
+            $this->assertNoOtherCurrent($db, $e);
+            $this->occurrences->setState($db, $e->id, EventOccurrence::UPCOMING);
 
-                return $current?->id;
-            });
-        } catch (UniqueConstraintViolationException) {
-            throw new EventConflictException('changed', 'Another event became active meanwhile. Reload the page and check before you switch.');
+            return [];
+        });
+    }
+
+    /** A draft or an upcoming event opens: the public map shows its homes and its dates are confirmed. */
+    public function open(int $id, ?int $adminId): EventOccurrence
+    {
+        return $this->change($id, $adminId, 'event.opened', function (Connection $db, EventOccurrence $e): array {
+            if (!\in_array($e->state, [EventOccurrence::DRAFT, EventOccurrence::UPCOMING], true)) {
+                throw new EventConflictException('not_openable', EventOccurrence::CLOSED === $e->state
+                    ? 'A closed event stays closed. Next year\'s event was created when it closed; open that one.'
+                    : 'Only a draft or an upcoming event can be opened; this event is '.$e->state.'.');
+            }
+            if (!$e->hasDates()) {
+                throw new EventConflictException('dates_tbd', 'Set the event\'s dates before you open it.');
+            }
+            $type = $this->types->get($e->type);
+            if ($type instanceof EventSettingsType && [] === ($type->listingDates($e) ?? $e->dates())) {
+                throw new EventConflictException('no_days', 'Choose the event\'s days (for a sale: one to three sale days) before you open it.');
+            }
+            $this->assertNoOtherCurrent($db, $e);
+            $this->occurrences->setState($db, $e->id, EventOccurrence::OPEN);
+
+            return [];
+        });
+    }
+
+    /**
+     * Closes an open event and creates next year's event of the type (upcoming, tentative dates or dates to be
+     * announced) in the same transaction. The thank-you text may be set at the same time.
+     *
+     * @return array{closed: EventOccurrence, next: EventOccurrence}
+     */
+    public function close(int $id, ?string $message, ?int $adminId): array
+    {
+        $nextId = 0;
+        $closed = $this->change($id, $adminId, 'event.closed', function (Connection $db, EventOccurrence $e) use ($message, &$nextId): array {
+            if (EventOccurrence::OPEN !== $e->state) {
+                throw new EventConflictException('not_open', 'Only an open event can be closed; this event is '.$e->state.'.');
+            }
+            $type = $this->types->get($e->type);
+            $settings = $e->settings;
+            if (null !== $message) {
+                $settings = OccurrenceInput::normalize(['settings' => ['closing_message' => $message] + $settings], $type, $e)['settings'];
+                $this->occurrences->updateFields($db, $e->id, ['name' => $e->name, 'starts_on' => $e->startsOn, 'ends_on' => $e->endsOn,
+                    'default_start' => $e->defaultStart, 'default_end' => $e->defaultEnd, 'settings' => $settings]);
+            }
+            $this->occurrences->setState($db, $e->id, EventOccurrence::CLOSED);
+            $nextId = $this->occurrences->insert($db, $this->nextFields($e, $type), EventOccurrence::UPCOMING);
+
+            return ['next_id' => $nextId];
+        });
+
+        return ['closed' => $closed, 'next' => $this->get($nextId)];
+    }
+
+    /**
+     * Next year's event of a closed one, created again when its type has no current event (the fictional demo's seed
+     * after an organizer archived it); null when one exists.
+     */
+    public function ensureNext(EventOccurrence $closed, ?int $adminId): ?EventOccurrence
+    {
+        if (EventOccurrence::CLOSED !== $closed->state || null !== $this->occurrences->currentOfType($closed->type)) {
+            return null;
         }
-        $this->audit->record($adminId, 'admin#'.$adminId, 'event.activated', 'event', (string) $id, ['archived' => $archived], 'admin');
+        $fields = $this->nextFields($closed, $this->types->get($closed->type));
+        $id = $this->db->transactional(function (Connection $db) use ($fields): int {
+            OccurrenceSettingsSync::lock($db);
+
+            return $this->occurrences->insert($db, $fields, EventOccurrence::UPCOMING);
+        });
+        $this->audit->record($adminId, null === $adminId ? 'cli' : 'admin#'.$adminId, 'event.created', 'event', (string) $id, ['type' => $fields['type'], 'starts_on' => $fields['starts_on'], 'after' => $closed->id], null === $adminId ? 'cli' : 'admin');
         $this->community->reset();
 
         return $this->get($id);
     }
 
-    /** Archives a draft or the active event (any type, including one this version does not offer). */
-    public function archive(int $id, int $adminId): EventOccurrence
+    /**
+     * What closing an open event will do, for the organizer's confirmation: the thank-you text and next year's dates.
+     *
+     * @return array{message: string, next: array{name: string, starts_on: ?string, ends_on: ?string, dates_tentative: bool, words: string}}
+     */
+    public function closePreview(EventOccurrence $e): array
     {
-        $this->db->transactional(function (Connection $db) use ($id): void {
-            OccurrenceSettingsSync::lock($db);
-            $event = $this->occurrences->find($id, $db, true) ?? throw new EventConflictException('not_found', 'Unknown event.');
-            if (EventOccurrence::ARCHIVED === $event->state) {
+        $type = $this->types->get($e->type);
+        $next = $this->nextFields($e, $type);
+        $upcoming = new EventOccurrence(0, $e->type, $next['name'], $next['starts_on'], $next['ends_on'], $next['default_start'], $next['default_end'], [],
+            EventOccurrence::UPCOMING, datesTentative: $next['dates_tentative']);
+
+        return ['message' => ClosingMessage::text($e, $type, $upcoming),
+            'next' => ['name' => $next['name'], 'starts_on' => $next['starts_on'], 'ends_on' => $next['ends_on'], 'dates_tentative' => $next['dates_tentative'],
+                'words' => EventDates::words($upcoming)]];
+    }
+
+    /** A public event becomes the default: what "/" shows. */
+    public function makeDefault(int $id, ?int $adminId): EventOccurrence
+    {
+        return $this->change($id, $adminId, 'event.default', function (Connection $db, EventOccurrence $e): array {
+            if (!$e->isPublic()) {
+                throw new EventConflictException('not_public', 'Only an upcoming, open or closed event can be the default; this event is '.$e->state.'.');
+            }
+            $this->occurrences->setDefault($db, $e->id);
+
+            return [];
+        });
+    }
+
+    /** Archives any event that is not archived yet (including one of a type this version does not offer). */
+    public function archive(int $id, ?int $adminId): EventOccurrence
+    {
+        return $this->change($id, $adminId, 'event.archived', function (Connection $db, EventOccurrence $e): array {
+            if (EventOccurrence::ARCHIVED === $e->state) {
                 throw new EventConflictException('archived', 'This event is already archived.');
             }
-            $this->retire($db, $event);
-        });
-        $this->audit->record($adminId, 'admin#'.$adminId, 'event.archived', 'event', (string) $id, [], 'admin');
-        $this->community->reset();
+            $this->occurrences->setState($db, $e->id, EventOccurrence::ARCHIVED);
+            if ($this->isBridgedDay($e)) {
+                $this->bridge->unpublishDay($db, (string) $e->startsOn); // its day leaves the previous release's map
+            }
 
-        return $this->get($id);
+            return ['was_default' => $e->isDefault];
+        }, offeredOnly: false);
     }
 
     /** Retention: deletes an archived event's listings (and their legacy rows); claims stay. */
@@ -154,9 +236,8 @@ final class EventLifecycle
                 throw new EventConflictException('not_archived', 'Archive the event before deleting its listings.');
             }
             $n = $db->executeStatement('DELETE FROM event_listings WHERE event_id = ?', [$id]);
-            $active = $this->occurrences->active($db);
-            if ($this->isBridgedDay($event) && $active?->startsOn !== $event->startsOn) {
-                $this->bridge->deleteDay($db, $event->startsOn);
+            if ($this->isBridgedDay($event) && $this->occurrences->bridged($db)?->startsOn !== $event->startsOn) {
+                $this->bridge->deleteDay($db, (string) $event->startsOn);
             }
 
             return $n;
@@ -171,20 +252,88 @@ final class EventLifecycle
         return $this->occurrences->find($id) ?? throw new EventConflictException('not_found', 'Unknown event.');
     }
 
-    /** Archives an event inside the caller's transaction; its day leaves the previous release's map too. */
-    private function retire(Connection $db, EventOccurrence $event): void
+    /**
+     * Runs one life-cycle change under the occurrences lock: the event is locked, the change applied, a default ensured
+     * and the previous release's mirror brought up to date; a unique index that still refuses (a second current event of
+     * a type, a second default) answers 409.
+     *
+     * @param callable(Connection, EventOccurrence): array<string,mixed> $apply returns the audit details
+     */
+    private function change(int $id, ?int $adminId, string $action, callable $apply, bool $offeredOnly = true): EventOccurrence
     {
-        $this->occurrences->setState($db, $event->id, EventOccurrence::ARCHIVED);
-        if ($this->isBridgedDay($event)) {
-            $this->bridge->unpublishDay($db, $event->startsOn);
+        try {
+            $details = $this->db->transactional(function (Connection $db) use ($id, $apply, $offeredOnly): array {
+                OccurrenceSettingsSync::lock($db);
+                $event = $this->occurrences->find($id, $db, true) ?? throw new EventConflictException('not_found', 'Unknown event.');
+                if ($offeredOnly && !$this->types->isEnabled($event->type)) {
+                    throw new EventConflictException('type_unavailable', 'This version does not offer that event type; you can only archive this event.');
+                }
+                $details = $apply($db, $event);
+                $this->settle($db, $this->occurrences->find($id, $db) ?? throw new \LogicException('The event vanished.'));
+
+                return $details;
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw new EventConflictException('changed', 'Another change to the events happened meanwhile. Reload the page and check before you try again.');
         }
+        // A command-line step (the fictional demo's seed) has no organizer account.
+        $this->audit->record($adminId, null === $adminId ? 'cli' : 'admin#'.$adminId, $action, 'event', (string) $id, $details, null === $adminId ? 'cli' : 'admin');
+        $this->community->reset();
+
+        return $this->get($id);
+    }
+
+    /** After a change: a default exists while any event is public, the bridged Halloween's legacy rows and the settings block follow. */
+    private function settle(Connection $db, EventOccurrence $changed): void
+    {
+        $this->occurrences->ensureDefault($db);
+        $bridged = $this->occurrences->bridged($db);
+        if (null !== $bridged && ($this->isBridgedDay($changed) || $bridged->id === $changed->id)) {
+            $this->bridge->mirror($db, $bridged->id);
+        }
+        $this->community->mirrorLegacy($db);
+    }
+
+    private function assertNoOtherCurrent(Connection $db, EventOccurrence $e): void
+    {
+        $current = $this->occurrences->currentOfType($e->type, $db);
+        if (null !== $current && $current->id !== $e->id) {
+            throw new EventConflictException('type_current', sprintf('“%s” is already the current event of this kind (%s). Close or archive it first; closing creates next year\'s event.', $current->name, $current->state));
+        }
+    }
+
+    /**
+     * Next year's event of a closed one: the same type, name (its year moved on), default hours and lasting settings;
+     * the type's tentative dates (or none); no settings tied to the old dates and no thank-you text.
+     *
+     * @return array{type:string,name:string,starts_on:?string,ends_on:?string,dates_tentative:bool,default_start:string,default_end:string,settings:array<string,mixed>}
+     */
+    private function nextFields(EventOccurrence $closed, EventType $type): array
+    {
+        [$first, $last] = $type->nextDates($closed);
+        $settings = $closed->settings;
+        unset($settings['closing_message']);
+        if ($type instanceof EventSettingsType) {
+            foreach ($type->dateBoundSettings() as $key) {
+                unset($settings[$key]);
+            }
+            if (null !== $first && null !== $last) {
+                $settings = $type->finishSettings($settings, $first, $last)[0];
+            }
+        }
+        $year = EventDates::year($closed);
+        $nextYear = null !== $first ? substr($first, 0, 4) : (string) ((int) $year + 1);
+        $name = '' !== $year && str_contains($closed->name, $year) ? str_replace($year, $nextYear, $closed->name) : $closed->name;
+
+        return ['type' => $closed->type, 'name' => mb_substr($name, 0, 60), 'starts_on' => $first, 'ends_on' => $last, 'dates_tentative' => null !== $first,
+            'default_start' => $closed->defaultStart, 'default_end' => $closed->defaultEnd, 'settings' => $settings];
     }
 
     /**
      * Moves the listings' windows with the event's new dates: a one-day event's to its new day; for other kinds the
      * windows must still fit.
      *
-     * @param array{starts_on:string,ends_on:string} $fields
+     * @param array{starts_on:?string,ends_on:?string} $fields
      */
     private function moveWindows(Connection $db, EventOccurrence $current, array $fields, EventType $type): void
     {
@@ -205,11 +354,11 @@ final class EventLifecycle
      * A type that narrows a listing's days (a sale's days) keeps every day homes already chose: removing a sale day
      * that has listings is refused.
      *
-     * @param array{name:string,starts_on:string,ends_on:string,default_start:string,default_end:string,settings:array<string,mixed>} $fields
+     * @param array{name:string,starts_on:?string,ends_on:?string,default_start:string,default_end:string,settings:array<string,mixed>} $fields
      */
     private function keepListedDays(Connection $db, EventOccurrence $current, array $fields, EventType $type): void
     {
-        if (!$type instanceof EventSettingsType) {
+        if (!$type instanceof EventSettingsType || null === $fields['starts_on']) {
             return;
         }
         $next = new EventOccurrence($current->id, $current->type, $fields['name'], $fields['starts_on'], $fields['ends_on'], $fields['default_start'],
@@ -226,14 +375,9 @@ final class EventLifecycle
         }
     }
 
-    /** The legacy table mirrors this event (active, Halloween, one day). */
-    private function isBridged(EventOccurrence $e): bool
-    {
-        return $e->isActive() && $this->isBridgedDay($e);
-    }
-
+    /** A one-day Halloween event: the kind the legacy table can mirror. */
     private function isBridgedDay(EventOccurrence $e): bool
     {
-        return HalloweenType::KEY === $e->type && $e->startsOn === $e->endsOn;
+        return Type\HalloweenType::KEY === $e->type && null !== $e->startsOn && $e->startsOn === $e->endsOn;
     }
 }

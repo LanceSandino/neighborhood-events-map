@@ -1,6 +1,6 @@
 {
  "fictional": true,
- "notice": "Invented Christmas lights demo homes for development, tests and screenshots only. Nights: \"all\", a list of dates, or {from, to}; status_date names a fictional \"off tonight\".",
+ "notice": "Invented Christmas lights demo homes for development, tests and screenshots only. Nights: \"all\", a list of dates, or {from, to}; status_date names a fictional \"off tonight\". \"events\": the demo's other events (D-20261031-44) — a Halloween that has ended (with next year's upcoming event created when it closed) and a rummage sale whose dates are to be announced; their homes are demo homes by address.",
  "homes": [
   {
    "house_number": "12",
@@ -204,6 +204,73 @@
     "viewing_mode": "walk_up_welcome",
     "music_enabled": true
    }
+  }
+ ],
+ "events": [
+  {
+   "type": "halloween",
+   "name": "Halloween",
+   "starts_on": "2026-10-31",
+   "ends_on": "2026-10-31",
+   "default_start": "17:00",
+   "default_end": "21:00",
+   "then": "close",
+   "homes": [
+    {
+     "house_number": "12",
+     "street": "Evergreen Ct",
+     "start": "17:00",
+     "end": "20:30",
+     "note": "Glow-stick path to the porch and a friendly scarecrow.",
+     "details": {
+      "candy": true,
+      "nonfood": true,
+      "low_noise": true,
+      "scare_level": "gentle",
+      "stroller_friendly": true
+     }
+    },
+    {
+     "house_number": "24",
+     "street": "Tinsel Ln",
+     "start": "18:00",
+     "end": "21:00",
+     "note": "Fog machine in the driveway after dark.",
+     "details": {
+      "candy": true,
+      "jump_scares": true,
+      "scare_level": "mild"
+     }
+    },
+    {
+     "house_number": "36",
+     "street": "Starlight Way",
+     "start": "17:30",
+     "end": "20:00",
+     "note": "Allergy-friendly treats in the teal bucket.",
+     "details": {
+      "nonfood": true,
+      "low_noise": true,
+      "scare_level": "gentle"
+     }
+    }
+   ]
+  },
+  {
+   "type": "garage_sale",
+   "name": "Community Rummage Sale",
+   "starts_on": null,
+   "ends_on": null,
+   "default_start": "08:00",
+   "default_end": "14:00",
+   "settings": {
+    "early_bird_time": "07:30",
+    "rules": [
+     "Park on one side of the street only"
+    ]
+   },
+   "then": "announce",
+   "homes": []
   }
  ]
 }

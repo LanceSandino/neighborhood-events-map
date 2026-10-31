@@ -20,10 +20,12 @@ use Psr\Clock\ClockInterface;
  * @description Persists the single community's settings and versioned boundary/zone geometry
  *     (PostgreSQL JSONB), tracks boundary approval, and imports/exports the canonical
  *     GeoJSON FeatureCollection (features tagged kind=boundary|zone). Every geometry change
- *     creates a new version, resets approval and recomputes address boundary membership. The settings' `event`
- *     block is a view of the active event occurrence: loading puts the occurrence's values there, saving writes
- *     them to the occurrence first (Event/OccurrenceSettingsSync), and the stored block mirrors it for the
- *     previous release. Branding still at a type's built-in default follows the event's type (Community/TypeDefaults).
+ *     creates a new version, resets approval and recomputes address boundary membership. Several events may be public
+ *     at once (ADR 0011): a request selects one (`?e=<id>`, Event/EventSelection) or gets the default event, and the
+ *     settings' `event` block is a view of that event: loading puts its values there; saving the settings writes them
+ *     to the default event first (Event/OccurrenceSettingsSync); the stored block mirrors the event the previous
+ *     release shows after an image-only rollback (the bridged Halloween, else the default; D-20261031-41). Branding
+ *     still at a type's built-in default follows the selected event's type (Community/TypeDefaults).
  *
  * @input DBAL connection, clock, parser, schema
  * @output CommunityConfig snapshots, export documents, change summaries
@@ -32,7 +34,10 @@ use Psr\Clock\ClockInterface;
  */
 final class CommunityRepository
 {
-    private ?CommunityConfig $cached = null;
+    /** @var array<int, CommunityConfig> configurations by event id (0: no public event) */
+    private array $cached = [];
+    /** The event this request selected (null: the default event). */
+    private ?EventOccurrence $selected = null;
 
     public function __construct(
         private readonly Connection $db,
@@ -45,14 +50,53 @@ final class CommunityRepository
     ) {
     }
 
+    /** The community as the selected event (else the default event) shows it. */
     public function current(): CommunityConfig
     {
-        return $this->cached ??= $this->load();
+        return $this->forEvent($this->selected ?? $this->usableDefault());
+    }
+
+    /** The community as one event shows it (null: no event, the neutral page between events). */
+    public function forEvent(?EventOccurrence $event): CommunityConfig
+    {
+        return $this->cached[$event->id ?? 0] ??= $this->load($event);
+    }
+
+    /** Selects the event this request is about; null selects the default event again. */
+    public function select(?EventOccurrence $event): void
+    {
+        $this->selected = $event;
+    }
+
+    public function selected(): ?EventOccurrence
+    {
+        return $this->selected;
+    }
+
+    /** A public event (upcoming, open or closed) of a type this release offers, by id; null for anything else. */
+    public function publicEvent(int $id): ?EventOccurrence
+    {
+        $e = $this->occurrences->find($id);
+
+        return null !== $e && $e->isPublic() && $this->types->isEnabled($e->type) ? $e : null;
+    }
+
+    /**
+     * The public events of types this release offers, the default first (the event switcher, /api/events).
+     *
+     * @return list<EventOccurrence>
+     */
+    public function publicEvents(): array
+    {
+        return array_values(array_filter($this->occurrences->publicEvents(), fn (EventOccurrence $e) => $this->types->isEnabled($e->type)));
     }
 
     public function reset(): void
     {
-        $this->cached = null;
+        $this->cached = [];
+        if (null !== $this->selected) {
+            $this->selected = $this->occurrences->find($this->selected->id);
+        }
     }
 
     public function isConfigured(): bool
@@ -72,9 +116,9 @@ final class CommunityRepository
         // The event block goes to the active occurrence first; the stored block then mirrors the occurrence.
         $settings = $this->db->transactional(function (Connection $db) use ($settings, $now, $actorId): array {
             $this->sync->apply($settings['event']);
-            $active = $this->usableActive();
-            if (null !== $active) {
-                $settings['event'] = self::eventBlock($active) + $settings['event'];
+            $legacy = $this->legacyEvent($db);
+            if (null !== $legacy) {
+                $settings['event'] = self::eventBlock($legacy, (string) ($settings['event']['date'] ?? '')) + $settings['event'];
             }
             $db->executeStatement(
                 'INSERT INTO community_settings (id, deployment_id, settings, created_at, updated_at, updated_by)
@@ -267,7 +311,7 @@ final class CommunityRepository
         return $changed;
     }
 
-    private function load(): CommunityConfig
+    private function load(?EventOccurrence $event): CommunityConfig
     {
         $settings = $this->settings();
         if (null === $settings) {
@@ -290,9 +334,11 @@ final class CommunityRepository
 
         // Settings saved before event.name or event.type existed keep the event they were made for (Halloween).
         $settings['event'] = (array) ($settings['event'] ?? []) + ['name' => CommunitySchema::DEFAULT_EVENT_NAME, 'type' => EventTypeRegistry::DEFAULT];
-        $event = $this->usableActive();
+        if (null !== $event && !$this->types->isEnabled($event->type)) {
+            $event = null;
+        }
         if (null !== $event) {
-            $settings['event'] = self::eventBlock($event) + $settings['event'];
+            $settings['event'] = self::eventBlock($event, (string) ($settings['event']['date'] ?? '')) + $settings['event'];
         } elseif (!$this->types->isEnabled((string) $settings['event']['type'])) {
             // The last event was of a type this release does not offer (a newer release ran): the page chrome
             // between events uses the default type's words; nothing is listed.
@@ -305,28 +351,45 @@ final class CommunityRepository
     }
 
     /**
-     * Writes the active occurrence into the stored settings' event block (after an organizer switched or edited
-     * events), so the previous release, which reads only the settings, shows the same event.
+     * Writes the event the previous release shows into the stored settings' event block (after an organizer changed
+     * events): the bridged Halloween — the event whose homes the legacy table holds —, else the default event; the
+     * previous release reads only the settings and the legacy table (D-20261031-41).
      */
-    public function mirrorEvent(Connection $db, EventOccurrence $event): void
+    public function mirrorLegacy(Connection $db): void
     {
+        $event = $this->legacyEvent($db);
+        if (null === $event) {
+            return;
+        }
+        $stored = (string) ($db->fetchOne("SELECT settings->'event'->>'date' FROM community_settings WHERE id = 1") ?: '');
         $db->executeStatement("UPDATE community_settings SET settings = jsonb_set(settings, '{event}', COALESCE(settings->'event', '{}'::jsonb) || CAST(:e AS JSONB)) WHERE id = 1",
-            ['e' => json_encode(self::eventBlock($event), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE)]);
+            ['e' => json_encode(self::eventBlock($event, $stored), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE)]);
         $this->reset();
     }
 
-    /** The active occurrence when this release offers its type; otherwise there is no event on the map. */
-    private function usableActive(): ?EventOccurrence
+    /** The default event when this release offers its type; otherwise there is no event to show. */
+    private function usableDefault(): ?EventOccurrence
     {
-        $active = $this->occurrences->active();
+        $default = $this->occurrences->defaultEvent();
 
-        return null !== $active && $this->types->isEnabled($active->type) ? $active : null;
+        return null !== $default && $this->types->isEnabled($default->type) ? $default : null;
     }
 
-    /** @return array{name:string,date:string,starts_at:string,ends_at:string,type:string,starts_on:string,ends_on:string} */
-    private static function eventBlock(EventOccurrence $o): array
+    /** The event the stored settings block mirrors for the previous release: the bridged Halloween, else the default. */
+    private function legacyEvent(Connection $db): ?EventOccurrence
     {
-        return ['name' => $o->name, 'date' => $o->startsOn, 'starts_at' => $o->defaultStart, 'ends_at' => $o->defaultEnd, 'type' => $o->type,
+        return $this->occurrences->bridged($db) ?? $this->occurrences->defaultEvent($db);
+    }
+
+    /**
+     * An event as the settings' event block. An event whose dates are to be announced keeps the block's last date
+     * (the block always has one) and names no first or last day.
+     *
+     * @return array{name:string,date:string,starts_at:string,ends_at:string,type:string,starts_on:?string,ends_on:?string}
+     */
+    private static function eventBlock(EventOccurrence $o, string $fallbackDate): array
+    {
+        return ['name' => $o->name, 'date' => $o->startsOn ?? $fallbackDate, 'starts_at' => $o->defaultStart, 'ends_at' => $o->defaultEnd, 'type' => $o->type,
             'starts_on' => $o->startsOn, 'ends_on' => $o->endsOn];
     }
 

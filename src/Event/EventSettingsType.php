@@ -68,4 +68,12 @@ interface EventSettingsType
      * @return array<string,mixed>
      */
     public function publicSettings(array $settings): array;
+
+    /**
+     * The type's settings that depend on the event's dates (the lights' best night, a sale's days): an event whose dates
+     * are to be announced has none of them (D-20261031-39).
+     *
+     * @return list<string>
+     */
+    public function dateBoundSettings(): array;
 }

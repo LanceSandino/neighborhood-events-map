@@ -89,6 +89,9 @@ final class HolidayLightsCopy
         // Server-rendered pages only (page_* keys are not in the public event): the address example in "List your
         // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
         'page_address_example' => '123 Main St',
+        // The thank-you text of a closed season (D-20261031-39): {event} is its name with the year, {next} next season's dates.
+        'page_closing_message' => '{event} was a success — thank you! Come back next season ({next}). Residents: sign in to get your display ready for next season.',
+        'page_coming_soon' => 'The lights season is coming.',
         'page_a11y_icons' => '✨ lights, 🎵 music, ⛄ inflatables',
         'page_a11y_filters' => 'Filters for drive-by homes and “No flashing reported” help plan a calm tour; nothing on the page flashes or moves.',
         'page_terms_details' => 'display details and flashing reports',

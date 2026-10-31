@@ -346,4 +346,22 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
 
         return [] === $words ? (string) $last : implode(', ', $words).' and '.$last;
     }
+
+    /** A sale's dates are announced later (it happens once or twice a year). */
+    public function newEventDates(string $today): array
+    {
+        return [null, null];
+    }
+
+    /** The next sale's dates are to be announced. */
+    public function nextDates(EventOccurrence $closed): array
+    {
+        return [null, null];
+    }
+
+    /** @return list<string> the sale days lie inside the event's dates */
+    public function dateBoundSettings(): array
+    {
+        return ['days'];
+    }
 }

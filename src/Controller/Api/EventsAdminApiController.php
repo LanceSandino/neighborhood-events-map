@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Audit\AuditLog;
+use App\Community\CommunityRepository;
+use App\Event\EventOccurrence;
 use App\Event\EventConflictException;
 use App\Event\EventLifecycle;
 use App\Event\EventListingExport;
@@ -15,6 +17,7 @@ use App\Event\EventTypeRegistry;
 use App\Security\User;
 use App\Shared\ApiError;
 use App\Shared\JsonBody;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,12 +27,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
  * @module Controller/Api/EventsAdminApiController
- * @description Organizer API for events (ROLE_ADMIN, CSRF and idle timeout enforced first): list events with their
- *     opted-in and public counts, prepare a draft of an offered type, edit a draft or the active event, activate a
- *     draft (naming the event it replaces), archive, export one event's listings (a CSRF-checked form POST, like the
- *     claims export) and delete an archived event's listings. Every change is audited (Event/EventLifecycle).
+ * @description Organizer API for events (ROLE_ADMIN, CSRF and idle timeout enforced first; ADR 0011): list events with
+ *     their opted-in and public counts (an open event also with what closing it will do: the thank-you text and next
+ *     year's dates), the types with the dates a new event gets, prepare a draft of an offered type, edit an event,
+ *     announce a draft (upcoming), open, close (confirmed; creates next year's event), make an event the default,
+ *     archive, export one event's listings (a CSRF-checked form POST, like the claims export) and delete an archived
+ *     event's listings. Every change is audited (Event/EventLifecycle).
  *
- * @dependencies Event/*, Audit/AuditLog, Shared/*
+ * @dependencies Event/*, Community/CommunityRepository (the community's local date), Audit/AuditLog, Shared/*, clock
  */
 #[Route('/api/admin/events')]
 #[IsGranted('ROLE_ADMIN')] // also enforced by access_control; declared here so a route rule is never the only lock
@@ -40,20 +45,32 @@ final class EventsAdminApiController
         private readonly EventOccurrenceRepository $occurrences,
         private readonly EventTypeRegistry $types,
         private readonly AuditLog $audit,
+        private readonly CommunityRepository $community,
+        private readonly ClockInterface $clock,
     ) {
     }
 
     #[Route('', methods: ['GET'], name: 'admin_events')]
     public function list(): JsonResponse
     {
-        $active = $this->occurrences->active();
+        $today = $this->community->current()->localDate($this->clock->now());
+        $events = array_map(function (array $e): array {
+            $view = $e + ['type_name' => $this->typeName($e['type']), 'type_offered' => $this->types->isEnabled($e['type'])];
+            if (EventOccurrence::OPEN === $e['state'] && $view['type_offered']) {
+                $view['close_preview'] = $this->lifecycle->closePreview($this->lifecycle->get((int) $e['id']));
+            }
+
+            return $view;
+        }, $this->occurrences->allWithCounts());
+        $default = array_values(array_filter($events, static fn (array $e) => true === $e['is_default']))[0]['id'] ?? null;
 
         return new JsonResponse([
-            'events' => array_map(fn (array $e) => $e + ['type_name' => $this->typeName($e['type']), 'type_offered' => $this->types->isEnabled($e['type'])], $this->occurrences->allWithCounts()),
+            'events' => $events,
             'types' => array_map(static fn (EventType $t) => ['key' => $t->key(), 'name' => $t->defaultName(), 'schedule_kind' => $t->scheduleKind(), 'max_days' => $t->maxDays(),
                 'route_profiles' => $t->routeProfiles(), 'settings' => $t instanceof EventSettingsType ? $t->settingKeys() : [],
-                'setting_options' => $t instanceof EventSettingsType ? (object) $t->settingOptions() : (object) []], $this->types->enabled()),
-            'active_id' => $active?->id,
+                'setting_options' => $t instanceof EventSettingsType ? (object) $t->settingOptions() : (object) [],
+                'new_dates' => $t->newEventDates($today), 'closing_template' => (string) ($t->copy()['page_closing_message'] ?? '')], $this->types->enabled()),
+            'default_id' => $default,
         ], 200, ['Cache-Control' => 'no-store']);
     }
 
@@ -73,22 +90,54 @@ final class EventsAdminApiController
         return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->update($id, $body, $admin->id, $move)->toArray()]));
     }
 
-    #[Route('/{id}/activate', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_activate')]
-    public function activate(#[CurrentUser] User $admin, Request $request, int $id): Response
+    #[Route('/{id}/announce', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_announce')]
+    public function announce(#[CurrentUser] User $admin, Request $request, int $id): Response
     {
-        $body = JsonBody::decode($request);
-        if (true !== ($body['confirm'] ?? false) || !\array_key_exists('replaces', $body) || !(null === $body['replaces'] || \is_int($body['replaces']))) {
-            return ApiError::response(422, 'confirmation_required', 'Confirm the switch and name the event it replaces (replaces: its id, or null when none is active).');
+        if (true !== (JsonBody::decode($request)['confirm'] ?? false)) {
+            return ApiError::response(422, 'confirmation_required', 'Confirm the announcement: visitors see the event and its dates, and residents may list.');
         }
 
-        return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->activate($id, $body['replaces'], $admin->id)->toArray()]));
+        return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->announce($id, $admin->id)->toArray()]));
+    }
+
+    #[Route('/{id}/open', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_open')]
+    public function open(#[CurrentUser] User $admin, Request $request, int $id): Response
+    {
+        if (true !== (JsonBody::decode($request)['confirm'] ?? false)) {
+            return ApiError::response(422, 'confirmation_required', 'Confirm that the event opens: its homes appear on the map and its dates are confirmed.');
+        }
+
+        return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->open($id, $admin->id)->toArray()]));
+    }
+
+    /** Closes an open event; next year's event of its type is created at the same time (upcoming). */
+    #[Route('/{id}/close', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_close')]
+    public function close(#[CurrentUser] User $admin, Request $request, int $id): Response
+    {
+        $body = JsonBody::decode($request);
+        if (true !== ($body['confirm'] ?? false)) {
+            return ApiError::response(422, 'confirmation_required', 'Confirm that the event closes: its homes leave the map, visitors see the thank-you message and next year\'s event is created.');
+        }
+        $message = \array_key_exists('closing_message', $body) ? (\is_string($body['closing_message']) ? $body['closing_message'] : '') : null;
+
+        return $this->conflicts(function () use ($admin, $id, $message): Response {
+            $r = $this->lifecycle->close($id, $message, $admin->id);
+
+            return new JsonResponse(['event' => $r['closed']->toArray(), 'next' => $r['next']->toArray()]);
+        });
+    }
+
+    #[Route('/{id}/default', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_default')]
+    public function makeDefault(#[CurrentUser] User $admin, int $id): Response
+    {
+        return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->makeDefault($id, $admin->id)->toArray()]));
     }
 
     #[Route('/{id}/archive', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_archive')]
     public function archive(#[CurrentUser] User $admin, Request $request, int $id): Response
     {
         if (true !== (JsonBody::decode($request)['confirm'] ?? false)) {
-            return ApiError::response(422, 'confirmation_required', 'Confirm that the event ends: its homes leave the map.');
+            return ApiError::response(422, 'confirmation_required', 'Confirm the archive: the event and its homes leave the public site for good.');
         }
 
         return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->archive($id, $admin->id)->toArray()]));
@@ -113,7 +162,7 @@ final class EventsAdminApiController
             $this->audit->record($admin->id, 'admin#'.$admin->id, 'event.exported', 'event', (string) $id, [], 'admin');
 
             return new Response($export->csv($event), 200, ['Content-Type' => 'text/csv; charset=utf-8',
-                'Content-Disposition' => sprintf('attachment; filename="event-%d-%s.csv"', $event->id, $event->startsOn), 'Cache-Control' => 'no-store']);
+                'Content-Disposition' => sprintf('attachment; filename="event-%d-%s.csv"', $event->id, $event->startsOn ?? 'tbd'), 'Cache-Control' => 'no-store']);
         });
     }
 

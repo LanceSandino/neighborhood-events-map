@@ -21,9 +21,11 @@ use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * @module Controller/PageController
- * @description Server-rendered pages: public map shell (with a no-JS readable list of homes) or, with no active
- *     event, a neutral "no event right now" page; sign-in page, owner dashboard shell, theme CSS from config,
- *     uploaded logo, health check.
+ * @description Server-rendered pages: for the selected event (`?e=<id>`) or the default one, the public map shell
+ *     with a no-JS readable list of homes (open), the event's dates and a way to list a home (upcoming) or its
+ *     thank-you message (closed), each with the event switcher; with no public event a neutral "no event right now"
+ *     page; sign-in page, owner dashboard shell, theme CSS from config (the selected event's type), uploaded logo,
+ *     health check.
  *
  * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, About/ChangelogReader
  */
@@ -44,6 +46,12 @@ final class PageController extends AbstractController
         if (null === $c->event) {
             // Between events (or an event this release does not offer): a neutral page, no listings, no map scripts.
             return $this->render('home/no_event.html.twig', ['c' => $this->presenter->publicPayload($c, [])]);
+        }
+        if (!$c->showsHomes()) {
+            // Upcoming (its dates, residents may list) or closed (the thank-you message): no homes, no map.
+            $payload = $this->presenter->publicPayload($c, []);
+
+            return $this->render('home/event_status.html.twig', ['c' => $payload, 'boot' => ['community' => $payload, 'homes' => []]]);
         }
         $homes = $this->listings->publicHomes($c, $this->types->for($c));
         $payload = $this->presenter->publicPayload($c, $homes);

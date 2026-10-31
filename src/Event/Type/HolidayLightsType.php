@@ -301,4 +301,36 @@ final class HolidayLightsType implements EventType, EventSettingsType
 
         return [sprintf('%.1f', $mhz), true];
     }
+
+    /** November 1 to January 1: the season of this year (still the past year's on January 1). */
+    public function newEventDates(string $today): array
+    {
+        $year = (int) substr($today, 0, 4) - (str_ends_with($today, '-01-01') ? 1 : 0);
+
+        return [sprintf('%04d-11-01', $year), sprintf('%04d-01-01', $year + 1)];
+    }
+
+    /** The closed season's first and last nights one year later (tentative); November 1 to January 1 without dates. */
+    public function nextDates(EventOccurrence $closed): array
+    {
+        if (!$closed->hasDates()) {
+            return $this->newEventDates((string) ($closed->createdAt ?? date('Y-m-d')));
+        }
+
+        return [self::nextYear($closed->firstDay()), self::nextYear($closed->lastDay())];
+    }
+
+    /** @return list<string> the best night lies inside the event's dates */
+    public function dateBoundSettings(): array
+    {
+        return ['best_night'];
+    }
+
+    /** The same month and day one year later (February 29 becomes February 28). */
+    private static function nextYear(string $date): string
+    {
+        [$y, $m, $d] = array_map('intval', explode('-', $date));
+
+        return sprintf('%04d-%02d-%02d', $y + 1, $m, min($d, (int) (new \DateTimeImmutable(sprintf('%04d-%02d-01', $y + 1, $m)))->format('t')));
+    }
 }

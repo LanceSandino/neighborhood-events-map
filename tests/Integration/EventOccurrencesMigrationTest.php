@@ -13,9 +13,10 @@ use App\Tests\Support\RunsMigrations;
  * @description Migration fidelity for event-scoped listings (ROADMAP Stage 2, migrations/Version20261031000002):
  *   on a database seeded the 0.10 way (one `listings` row per address, several past seasons, a future date, hidden,
  *   pending-review, unpublished and out-of-boundary listings, an address under a moderation hold), the backfill makes
- *   one occurrence per event date (the configured one active, older ones archived, a later one a draft), copies every
- *   listing with its window losslessly, and the public projection is exactly what 0.10 showed. Down drops only the
- *   new tables and leaves the legacy rows as they were; up again gives the same result.
+ *   one occurrence per event date (the configured one active — open and the default since 0.15's
+ *   Version20261031000003 runs after it —, older ones archived, a later one a draft), copies every listing with its
+ *   window losslessly, and the public projection is exactly what 0.10 showed. Down drops only the new tables and
+ *   leaves the legacy rows as they were; up again gives the same result.
  * @dependencies tests/Support/AppTestCase, tests/Support/RunsMigrations
  */
 final class EventOccurrencesMigrationTest extends AppTestCase
@@ -62,7 +63,7 @@ final class EventOccurrencesMigrationTest extends AppTestCase
         }
         $rows = $this->db()->fetchAllAssociative('SELECT type, name, starts_on, ends_on, default_start_local, default_end_local, state, settings FROM event_occurrences');
         self::assertSame([['type' => 'halloween', 'name' => 'Harvest Night', 'starts_on' => '2026-10-31', 'ends_on' => '2026-10-31',
-            'default_start_local' => '16:00:00', 'default_end_local' => '19:30:00', 'state' => 'active', 'settings' => '{}']], $rows);
+            'default_start_local' => '16:00:00', 'default_end_local' => '19:30:00', 'state' => 'open', 'settings' => '{}']], $rows);
     }
 
     public function testAnInstallThatIsNotSetUpYetGetsNoEvent(): void
@@ -87,10 +88,12 @@ final class EventOccurrencesMigrationTest extends AppTestCase
         self::assertSame([
             ['starts_on' => '2024-10-31', 'ends_on' => '2024-10-31', 'state' => 'archived', 'type' => 'halloween', 'name' => 'Halloween', 'default_start_local' => '17:00:00', 'default_end_local' => '21:00:00'],
             ['starts_on' => '2025-10-31', 'ends_on' => '2025-10-31', 'state' => 'archived', 'type' => 'halloween', 'name' => 'Halloween', 'default_start_local' => '17:00:00', 'default_end_local' => '21:00:00'],
-            ['starts_on' => '2026-10-31', 'ends_on' => '2026-10-31', 'state' => 'active', 'type' => 'halloween', 'name' => 'Halloween', 'default_start_local' => '17:00:00', 'default_end_local' => '21:00:00'],
+            ['starts_on' => '2026-10-31', 'ends_on' => '2026-10-31', 'state' => 'open', 'type' => 'halloween', 'name' => 'Halloween', 'default_start_local' => '17:00:00', 'default_end_local' => '21:00:00'],
             ['starts_on' => '2027-10-31', 'ends_on' => '2027-10-31', 'state' => 'draft', 'type' => 'halloween', 'name' => 'Halloween', 'default_start_local' => '17:00:00', 'default_end_local' => '21:00:00'],
         ], $db->fetchAllAssociative('SELECT starts_on, ends_on, state, type, name, default_start_local, default_end_local FROM event_occurrences ORDER BY starts_on'));
-        self::assertSame(0, (int) $db->fetchOne("SELECT COUNT(*) FROM event_occurrences WHERE (state = 'active') <> (activated_at IS NOT NULL) OR (state = 'archived') <> (archived_at IS NOT NULL)"));
+        self::assertSame(0, (int) $db->fetchOne("SELECT COUNT(*) FROM event_occurrences WHERE (state = 'open') <> (activated_at IS NOT NULL) OR (state = 'archived') <> (archived_at IS NOT NULL)"));
+        self::assertSame(['2026-10-31'], $db->fetchFirstColumn('SELECT starts_on FROM event_occurrences WHERE is_default'), 'the open event is the default');
+        self::assertSame(0, (int) $db->fetchOne('SELECT COUNT(*) FROM event_occurrences WHERE dates_tentative OR starts_on IS NULL'), 'migrated dates are neither tentative nor to be announced');
 
         self::assertSame(\count($legacy), (int) $db->fetchOne('SELECT COUNT(*) FROM event_listings'), 'every listing is copied');
         self::assertSame(\count($legacy), (int) $db->fetchOne('SELECT COUNT(*) FROM event_listing_windows'), 'with exactly one window each');

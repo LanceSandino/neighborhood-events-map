@@ -56,7 +56,7 @@ final class AdminPageController extends AbstractController
         }
         $c = $community->current();
         $settings = $c->settings;
-        $settings['event'] = ['name' => $draft->name, 'date' => $draft->startsOn, 'starts_at' => $draft->defaultStart, 'ends_at' => $draft->defaultEnd,
+        $settings['event'] = ['name' => $draft->name, 'date' => $draft->startsOn ?? $c->eventDate(), 'starts_at' => $draft->defaultStart, 'ends_at' => $draft->defaultEnd,
             'type' => $draft->type, 'starts_on' => $draft->startsOn, 'ends_on' => $draft->endsOn];
         // The draft's type decides the theme, words, filters and feature switches, as it will once it is on the map.
         $settings = TypeDefaults::apply($settings, $types->get($draft->type), $types);

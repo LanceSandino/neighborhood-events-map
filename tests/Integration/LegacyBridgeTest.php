@@ -14,7 +14,9 @@ use Symfony\Component\Console\Tester\CommandTester;
  *   `listings` table equals the event tables for it after every flow — claim by email link, owner edit, status,
  *   organizer hide/unhide, pending review and its approval, release, account erasure — so the 0.9 image shows the
  *   same homes. In the other direction, rows the 0.9 image writes (insert, update, a move to another day, a delete)
- *   reach the active event's listings, and the app's own mirror writes are not copied back.
+ *   reach the active event's listings, and the app's own mirror writes are not copied back. With several events (0.15,
+ *   D-20261031-41) the table mirrors one Halloween: the newest open or closed one, never an upcoming one whose rows would
+ *   overwrite this year's in the address-keyed table; opening next year's moves the mirror, archiving it moves it back.
  * @dependencies tests/Support/AppTestCase
  */
 final class LegacyBridgeTest extends AppTestCase
@@ -22,11 +24,11 @@ final class LegacyBridgeTest extends AppTestCase
     /** The active event's listings in the legacy row's terms. */
     private const EVENT_SIDE = 'SELECT el.address_id, w.local_date AS event_date, w.start_local, w.end_local, el.details, el.note, el.status, el.published,
             el.moderation_hidden, el.moderation_reason, el.published_at, el.updated_at
-        FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id AND o.state = \'active\'
+        FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id AND o.state = \'open\'
         JOIN event_listing_windows w ON w.listing_id = el.id ORDER BY el.address_id';
     private const LEGACY_SIDE = 'SELECT l.address_id, l.event_date, l.start_local, l.end_local, l.details, l.note, l.status, l.published,
             l.moderation_hidden, l.moderation_reason, l.published_at, l.updated_at
-        FROM listings l JOIN event_occurrences o ON o.state = \'active\' AND o.starts_on = l.event_date ORDER BY l.address_id';
+        FROM listings l JOIN event_occurrences o ON o.state = \'open\' AND o.starts_on = l.event_date ORDER BY l.address_id';
     private const FROM_COLUMNS = "jsonb_build_object('candy', candy, 'nonfood', nonfood, 'adult_drinks', adult_drinks, 'low_noise', low_noise,
         'jump_scares', jump_scares, 'flashing_lights', flashing_lights, 'loud_audio', loud_audio, 'scare_level', scare_level, 'stroller_friendly', stroller_friendly)";
 
@@ -129,12 +131,42 @@ final class LegacyBridgeTest extends AppTestCase
         self::assertSame('Next year', $this->db()->fetchOne('SELECT note FROM event_listings WHERE address_id = ?', [$a]), 'the guarded write is not copied back');
     }
 
+    public function testTheLegacyTableMirrorsTheNewestOpenOrClosedHalloweenNeverAnUpcomingOne(): void
+    {
+        $this->configureCommunity();
+        $a = $this->listHome('41', 'erin@example.test', self::listing(['note' => 'This year']));
+        $this->db()->executeStatement("INSERT INTO users (email_normalized, is_admin, created_at) VALUES ('org@example.test', TRUE, now())");
+        $this->signIn('org@example.test');
+        $org = ['X-CSRF-Token' => $this->csrf()];
+        $next = $this->json('POST', '/api/admin/events/1/close', ['confirm' => true], $org)['next']['id'];
+        self::assertSame(200, $this->code());
+        $this->client->getCookieJar()->clear();
+        $this->signIn('erin@example.test');
+        $r = $this->json('POST', "/api/me/homes/$a/listing?e=$next", ['details' => ['candy' => true], 'note' => 'Next year'], ['X-CSRF-Token' => $this->csrf()]);
+        self::assertSame(201, $this->code(), json_encode($r));
+        self::assertSame(['2026-10-31', 'This year', true], array_values($this->db()->fetchAssociative('SELECT event_date, note, published FROM listings WHERE address_id = ?', [$a]) ?: []),
+            'the upcoming event\'s listing never reaches the legacy row; the closed Halloween stays mirrored');
+        // A write the 0.9 image makes after a rollback reaches the mirrored (closed) Halloween, not next year's.
+        $this->db()->executeStatement("UPDATE listings SET note = 'Edited on 0.9', updated_at = NOW() WHERE address_id = ?", [$a]);
+        self::assertSame([['1', 'Edited on 0.9'], [(string) $next, 'Next year']], $this->db()->fetchAllNumeric('SELECT event_id::text, note FROM event_listings WHERE address_id = ? ORDER BY event_id', [$a]));
+
+        $this->client->getCookieJar()->clear();
+        $this->signIn('org@example.test');
+        $org = ['X-CSRF-Token' => $this->csrf()];
+        $this->json('POST', "/api/admin/events/$next/open", ['confirm' => true], $org);
+        self::assertSame(['2027-10-31', 'Next year'], array_values($this->db()->fetchAssociative('SELECT event_date, note FROM listings WHERE address_id = ?', [$a]) ?: []), 'opening next year\'s moves the mirror');
+        self::assertSame('2027-10-31', json_decode((string) $this->db()->fetchOne('SELECT settings FROM community_settings'), true)['event']['date'], 'and the settings block the previous release reads');
+        $this->json('POST', "/api/admin/events/$next/archive", ['confirm' => true], $org);
+        self::assertSame(['2026-10-31', 'Edited on 0.9', true], array_values($this->db()->fetchAssociative('SELECT event_date, note, published FROM listings WHERE address_id = ?', [$a]) ?: []), 'archiving it moves the mirror back');
+        self::assertSame('2026-10-31', json_decode((string) $this->db()->fetchOne('SELECT settings FROM community_settings'), true)['event']['date']);
+    }
+
     private function assertBridged(string $step): void
     {
         self::assertEquals($this->db()->fetchAllAssociative(self::EVENT_SIDE), $this->db()->fetchAllAssociative(self::LEGACY_SIDE), "$step: the legacy rows equal the active event's listings");
         self::assertSame(
-            (int) $this->db()->fetchOne("SELECT COUNT(*) FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id AND o.state = 'active'"),
-            (int) $this->db()->fetchOne("SELECT COUNT(*) FROM listings l JOIN event_occurrences o ON o.state = 'active' AND o.starts_on = l.event_date"),
+            (int) $this->db()->fetchOne("SELECT COUNT(*) FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id AND o.state = 'open'"),
+            (int) $this->db()->fetchOne("SELECT COUNT(*) FROM listings l JOIN event_occurrences o ON o.state = 'open' AND o.starts_on = l.event_date"),
             "$step: one legacy row per listing",
         );
     }

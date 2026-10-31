@@ -85,7 +85,7 @@ final class HolidayLightsTest extends AppTestCase
         $c = $this->json('GET', '/api/community');
         self::assertSame(['Holiday nights.', 'Bright lights.', '#38597F', '#CE9D3D'], [$c['branding']['headline'], $c['branding']['headline_accent'], $c['branding']['primary_color'], $c['branding']['accent_color']]);
         self::assertSame(['homes' => 1, 'music' => 1, 'drive_by' => 0, 'no_flashing' => 1], array_intersect_key($c['stats'], ['homes' => 1, 'music' => 1, 'drive_by' => 1, 'no_flashing' => 1]));
-        self::assertSame('1', (string) $this->db()->fetchOne("SELECT COUNT(*) FROM event_occurrences WHERE type = 'holiday_lights' AND state = 'active'"));
+        self::assertSame('1', (string) $this->db()->fetchOne("SELECT COUNT(*) FROM event_occurrences WHERE type = 'holiday_lights' AND state = 'open'"));
         self::assertSame(0, (int) $this->db()->fetchOne('SELECT COUNT(*) FROM listings'), 'lights listings live only in the event tables (no legacy row)');
 
         $html = $this->page('/');
@@ -235,8 +235,12 @@ final class HolidayLightsTest extends AppTestCase
         self::assertStringContainsString('Best night for a neighborhood walk: Dec 19, 2026', $html);
         self::assertStringNotContainsString('11 Pumpkin Ln', $html);
 
-        $active = $this->json('GET', '/api/admin/events')['active_id'];
-        $this->json('POST', '/api/admin/events/'.$draft['id'].'/activate', ['confirm' => true, 'replaces' => $active], $h);
+        // Halloween is archived and the lights open in its place (0.15: an organizer archives the old event and opens
+        // the new one, which becomes the default as the only public event).
+        $current = $this->json('GET', '/api/admin/events')['default_id'];
+        $this->json('POST', "/api/admin/events/$current/archive", ['confirm' => true], $h);
+        self::assertSame(200, $this->code());
+        $this->json('POST', '/api/admin/events/'.$draft['id'].'/open', ['confirm' => true], $h);
         self::assertSame(200, $this->code());
         self::assertSame([], $this->json('GET', '/api/homes')['homes'], 'the Halloween homes are archived and invisible');
         $this->json('GET', "/api/homes/$halloween");
