@@ -164,7 +164,7 @@ final class AppExtension extends AbstractExtension
         return ($this->clock?->now() ?? new \DateTimeImmutable())->setTimezone(new \DateTimeZone($timezone))->format('Y-m-d');
     }
 
-    /** "OCT 31, 2026" for a one-day event; "DEC 1 – JAN 3" for an event of several days. */
+    /** "OCT 31, 2026" for a one-day event; "Apr 10–11" or "Dec 1 – Jan 3" for an event of several days. */
     public function eventBadge(string $date, ?string $endsOn = null): string
     {
         $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
@@ -172,11 +172,14 @@ final class AppExtension extends AbstractExtension
         if (false === $d) {
             return $date;
         }
+        if (false === $e) {
+            return strtoupper($d->format('M j, Y'));
+        }
 
-        return strtoupper(false === $e ? $d->format('M j, Y') : $d->format('M j').' – '.$e->format('M j'));
+        return $d->format('Y-m') === $e->format('Y-m') ? $d->format('M j').'–'.$e->format('j') : $d->format('M j').' – '.$e->format('M j');
     }
 
-    /** "Dec 1, 2026 – Jan 3, 2027", "Dec 1 – 24, 2026" or one day "Oct 31, 2026" (plain text; Twig escapes it). */
+    /** "Dec 1, 2026 – Jan 3, 2027", "Dec 1–24, 2026" or one day "Oct 31, 2026" (plain text; Twig escapes it). */
     public function dateRange(string $from, ?string $to = null): string
     {
         $a = \DateTimeImmutable::createFromFormat('!Y-m-d', $from);
@@ -191,7 +194,7 @@ final class AppExtension extends AbstractExtension
             return $a->format('M j, Y').' – '.$b->format('M j, Y');
         }
 
-        return $a->format('M') === $b->format('M') ? $a->format('M j').' – '.$b->format('j, Y') : $a->format('M j').' – '.$b->format('M j, Y');
+        return $a->format('M') === $b->format('M') ? $a->format('M j').'–'.$b->format('j, Y') : $a->format('M j').' – '.$b->format('M j, Y');
     }
 
     /**

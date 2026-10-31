@@ -27,9 +27,12 @@ final class AppExtensionTest extends TestCase
         $x = new AppExtension();
         self::assertSame('OCT 31, 2026', $x->eventBadge('2026-10-31'));
         self::assertSame('OCT 31, 2026', $x->eventBadge('2026-10-31', '2026-10-31'), 'a one-day event keeps its badge');
-        self::assertSame('DEC 1 – JAN 3', $x->eventBadge('2026-12-01', '2027-01-03'));
+        // Ranges are compact and written alike everywhere: a closed dash inside one month, a spaced one between months.
+        self::assertSame('Dec 1 – Jan 3', $x->eventBadge('2026-12-01', '2027-01-03'));
+        self::assertSame('Apr 10–11', $x->eventBadge('2027-04-10', '2027-04-11'), 'one month: the month once');
+        self::assertSame('Nov 28 – Dec 31', $x->eventBadge('2026-11-28', '2026-12-31'));
         self::assertSame('Dec 1, 2026 – Jan 3, 2027', $x->dateRange('2026-12-01', '2027-01-03'), 'across the year end');
-        self::assertSame('Dec 1 – 24, 2026', $x->dateRange('2026-12-01', '2026-12-24'));
+        self::assertSame('Dec 1–24, 2026', $x->dateRange('2026-12-01', '2026-12-24'));
         self::assertSame('Nov 28 – Dec 31, 2026', $x->dateRange('2026-11-28', '2026-12-31'));
         self::assertSame('Oct 31, 2026', $x->dateRange('2026-10-31', '2026-10-31'));
         self::assertSame('not-a-date', $x->dateRange('not-a-date'));

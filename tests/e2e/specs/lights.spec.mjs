@@ -34,7 +34,7 @@ test('the lights theme, hero, season row and words; no safety promise', async ({
   await expect(page.locator('.schedule-row')).toContainText('Dec 1, 2026 – Jan 3, 2027');
   await expect(page.locator('.schedule-row')).toContainText('Most homes: 6–10 PM · Times vary by house');
   await expect(page.locator('#seasonPill')).toHaveText('Tonight');
-  await expect(page.locator('.event-pill')).toContainText('DEC 1 – JAN 3');
+  await expect(page.locator('.event-pill')).toHaveText('✨ Dec 1 – Jan 3');
   await expect(page.locator('.side-panel b')).toHaveText('Putting up lights?');
   await expect(page.locator('#routeTitle')).toHaveText('✨ Your lights tour');
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(247, 245, 239)'); // calm cream

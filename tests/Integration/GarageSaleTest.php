@@ -86,7 +86,7 @@ final class GarageSaleTest extends AppTestCase
         self::assertStringContainsString('Most homes: 8 AM–2 PM · Individual hours vary', $html);
         self::assertStringContainsString('>Today</span>', $html, 'the pill on a sale day');
         self::assertStringContainsString('data-before="Coming this spring"', $html);
-        self::assertStringContainsString('APR 10 – APR 11', $html, 'the top bar badge');
+        self::assertStringContainsString('🏷️ Apr 10–11</a>', $html, 'the top bar badge');
         self::assertStringContainsString('Having a sale?', $html);
         self::assertStringContainsString('Good finds. <span>Close to home.</span>', $html);
         self::assertStringContainsString('data-filter="day1"', $html);

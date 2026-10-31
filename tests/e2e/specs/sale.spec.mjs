@@ -36,7 +36,7 @@ test('the sale theme, hero, sale row and words', async ({ page, request }) => {
   await expect(page.locator('.schedule-row')).toContainText('Sat–Sun, April 10–11, 2027');
   await expect(page.locator('.schedule-row')).toContainText('Most homes: 8 AM–2 PM · Individual hours vary · Early birds: not before 7:30 AM');
   await expect(page.locator('#seasonPill')).toHaveText('Today');
-  await expect(page.locator('.event-pill')).toContainText('APR 10 – APR 11');
+  await expect(page.locator('.event-pill')).toHaveText('🏷️ Apr 10–11');
   await expect(page.locator('.side-panel b')).toHaveText('Having a sale?');
   await expect(page.locator('#routeTitle')).toHaveText('🏷️ Your sale stops');
   await expect(page.locator('.list-head h2')).toHaveText('🏷️ Sales around you');

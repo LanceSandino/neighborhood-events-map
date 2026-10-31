@@ -1231,4 +1231,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-10-31T23:20:00Z"
+- id: CU-20261031-33
+  type: fix
+  title: "Compact date ranges: the top-bar badge reads \"Apr 10–11\" or \"Dec 1 – Jan 3\"; date_range writes a range inside one month with a closed dash"
+  description: "Twig event_badge wrote an event of several days in capitals with the month twice (\"APR 10 – APR 11\"). It now writes the month once inside one month (\"Apr 10–11\") and a spaced dash between months (\"Dec 1 – Jan 3\"), in the mockups' case; a one-day event keeps \"OCT 31, 2026\", so Halloween's badge is unchanged. date_range follows the same rule (\"Dec 1–24, 2026\", as the sale's day list already wrote \"April 10–11, 2027\")."
+  impact: low
+  affected_modules: ["src/Twig/AppExtension.php"]
+  related_tests: ["tests/Unit/Twig/AppExtensionTest.php: testFormatting (the new badge cases failed before the change)", "tests/Integration/HolidayLightsTest.php, tests/Integration/GarageSaleTest.php (the badge in the page)", "tests/e2e/specs/lights.spec.mjs, tests/e2e/specs/sale.spec.mjs (the badge text)"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:30:00Z"
 ```
