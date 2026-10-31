@@ -1,8 +1,11 @@
 /**
  * @module assets/js/admin/community
- * @description Community, event, branding, features, zones, registration and routing settings
- *     (PUT /api/admin/community; the server validates everything) plus logo upload. The event type comes with the
- *     settings: the types this version offers, and the current type's feature switches and console labels.
+ * @description The community's own settings — name, place, access, contact, its branding for every event (logo, the
+ *     city under the name) and an optional general About text —, features, zones, registration and routing
+ *     (PUT /api/admin/community; the server validates everything) plus logo upload. Each event's name, dates, hours
+ *     and branding (emoji, headline, intro, colours, its About text) are edited under Organizer → Events (ADR 0012), so
+ *     this page only names the default event and sends no event block. The default event's type comes with the
+ *     settings for its feature switches and console labels.
  * @dependencies admin/common.js
  */
 import { $, $$, call, esc, flash } from './common.js';
@@ -61,31 +64,19 @@ function render() {
       ${area('cGate', 'Access notes (gates, entrances, parking)', s.community.gate_notice, 'Shown on the map and the About page. The site never grants gate access.')}
       ${field('cContact', 'Organizer contact (mailto: or https://) *', s.community.contact_url, 'placeholder="mailto:organizer@example.org"')}
     </div></div>
-    <div class="panel"><h2>About page</h2><div class="form-grid">
-      ${area('cAbout', 'About the neighborhood and the event', s.community.about, 'Shown on the public About page. Blank lines start a new paragraph. Plain text only.')}
-      ${area('cReminders', esc(type.copy.reminders_label), (s.community.reminders || []).join('\n'), esc(type.copy.reminders_help))}
+    <div class="panel"><h2>About the neighborhood (all events)</h2><div class="form-grid">
+      ${area('cAbout', 'About the neighborhood (optional)', s.community.general_about, 'Shown on the About page of every event that has no About text of its own (set an event’s own under <a href="/admin/events">Organizer → Events</a>). Blank lines start a new paragraph. Plain text only.')}
+      ${area('cReminders', esc(type.copy.reminders_label), (s.community.reminders || []).join('\n'), `${esc(type.copy.reminders_help)} A list of your own shows for every event; leave it empty and each kind of event shows its own.`)}
       <div class="field full"><span class="label">Links (e.g. Facebook group, HOA website, event flyer)</span><div id="linkRows">${(s.community.links || []).map(linkRow).join('')}</div>
         <button type="button" class="secondary" id="btnAddLink">+ Add link</button></div>
     </div></div>
-    <div class="panel"><h2>Event</h2><div class="form-grid">
-      <div class="field"><label for="eType">Event type</label><select id="eType" aria-describedby="eTypeHelp" disabled>${types.map((t) => `<option value="${esc(t.key)}" ${t.key === type.key ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
-        <span class="form-caption" id="eTypeHelp">The type of the event on the map stays as it is. To run another kind of event (this version offers ${esc(types.map((t) => t.name).join(', '))}), prepare it under <a href="/admin/events">Organizer → Events</a>.</span></div>
-      ${field('eDate', type.schedule_kind === 'single_day' ? 'Date *' : 'First day *', s.event.date, 'type="date"')}
-      ${type.schedule_kind === 'single_day' ? '' : field('eEndsOn', 'Last day *', s.event.ends_on || s.event.date, 'type="date"')}
-      ${field('eName', 'Event name', s.event.name, `maxlength="40" placeholder="${esc(type.name)}"`)}
-      ${field('eStart', 'Suggested start', s.event.starts_at, 'type="time"')}
-      ${field('eEnd', 'Suggested end', s.event.ends_at, 'type="time"')}
-    </div><p class="form-caption">This is the event on the map now (<a href="/admin/events">Organizer → Events</a>). Its name and hours change here, its date only while no home is listed. For next season, prepare a new event under Events: each season's listings stay with their season.</p></div>
-    <div class="panel"><h2>Branding</h2><div class="form-grid">
-      ${field('bEmoji', 'Brand emoji', s.branding.brand_emoji, 'maxlength="8"')}
+    <div class="panel"><h2>Community branding (all events)</h2><div class="form-grid">
       <div class="field"><span class="label">Name</span><label class="check-chip"><input type="checkbox" id="bPlace" ${s.branding.show_locality ? 'checked' : ''}> Show city under the name</label></div>
       <div class="field"><span class="label">Logo</span><input type="file" id="bLogo" accept=".svg,.png,.jpg,.jpeg,.webp"> ${s.branding.logo ? `<span class="form-caption">Current: ${esc(s.branding.logo)} <button type="button" class="link-button" id="bLogoRemove">Remove</button></span>` : ''}</div>
-      ${field('bPrimary', 'Primary colour', s.branding.primary_color, 'type="color"')}
-      ${field('bAccent', 'Accent colour', s.branding.accent_color, 'type="color"')}
-      ${field('bHeadline', 'Headline', s.branding.headline, 'maxlength="40"')}
-      ${field('bHeadlineAccent', 'Headline (accent part)', s.branding.headline_accent, 'maxlength="40"')}
-      ${area('bIntro', 'Intro text', s.branding.intro)}
-    </div></div>
+    </div><p class="form-caption">The name, subtitle, city, logo, contact and links above show for every event. Each event’s emoji, headline, intro, colours and About text are its own: set them in its Branding section under <a href="/admin/events">Organizer → Events</a>.</p></div>
+    <div class="panel"><h2>Events</h2><div class="form-grid">
+      <div class="field"><label for="eType">Event type</label><select id="eType" aria-describedby="eDefault" disabled>${types.map((t) => `<option value="${esc(t.key)}" ${t.key === type.key ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>
+    </div><p class="form-caption" id="eDefault">The front page shows <b>${esc(s.event.name)}</b>${s.event.name === type.name ? '' : ` (${esc(type.name)})`}: ${s.event.starts_on === null ? 'dates to be announced' : `${esc(s.event.starts_on || s.event.date)}${s.event.ends_on && s.event.ends_on !== (s.event.starts_on || s.event.date) ? ` – ${esc(s.event.ends_on)}` : ''}`}, ${esc(s.event.starts_at)}–${esc(s.event.ends_at)}. Change its name, dates, hours and branding, and prepare, open, close or choose the default event, under <a href="/admin/events">Organizer → Events</a>; this version offers ${esc(types.map((t) => t.name).join(', '))}.</p></div>
     <div class="panel"><h2>Features</h2><div class="checks">
       ${type.features.map((f) => check(`feature-${esc(f.key)}`, esc(f.label), s.features[f.key] ?? true)).join('')}
       ${SHARED_FEATURES.map(([k, label, id]) => check(id, label, s.features[k])).join('')}
@@ -144,13 +135,11 @@ async function save(e) {
   const s = structuredClone(settings);
   Object.assign(s.community, { name: $('#cName').value, subtitle: $('#cSubtitle').value, locality: $('#cLocality').value, region: $('#cRegion').value,
     postal_code: $('#cPostal').value, timezone: $('#cTz').value, gate_notice: $('#cGate').value, contact_url: $('#cContact').value || null,
-    access: $('#cAccess').value, about: $('#cAbout').value, reminders: lines('#cReminders'),
+    access: $('#cAccess').value, general_about: $('#cAbout').value, reminders: lines('#cReminders'),
     links: $$('#linkRows .link-row').map((r) => ({ label: $('[data-l=label]', r).value.trim(), url: $('[data-l=url]', r).value.trim() })).filter((l) => l.label || l.url) });
-  Object.assign(s.event, { type: $('#eType').value, name: $('#eName').value, date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
-  // An event of several days (Christmas lights) has a first and a last day; a one-day event keeps only its date.
-  if ($('#eEndsOn')) Object.assign(s.event, { starts_on: $('#eDate').value, ends_on: $('#eEndsOn').value });
-  Object.assign(s.branding, { brand_emoji: $('#bEmoji').value, primary_color: $('#bPrimary').value, accent_color: $('#bAccent').value,
-    headline: $('#bHeadline').value, headline_accent: $('#bHeadlineAccent').value, intro: $('#bIntro').value, show_locality: $('#bPlace').checked });
+  // No event block: the default event keeps its own values (Organizer → Events edits them).
+  delete s.event;
+  Object.assign(s.branding, { show_locality: $('#bPlace').checked });
   for (const f of type.features) s.features[f.key] = $(`#feature-${f.key}`).checked;
   for (const [k, , id] of SHARED_FEATURES) s.features[k] = $(`#${id}`).checked;
   // Fields this table does not show (description, the name's spot on the map) are kept from the saved zone.
@@ -175,10 +164,9 @@ async function save(e) {
   s.routing.groups = groupLines.map(([, keys]) => keys.split(',').map((k) => k.trim()).filter(Boolean));
   s.routing.group_labels = groupLines.map(([name]) => name);
   s.routing.crossings_verified = $('#rVerified').checked;
-  const res = await call('/api/admin/community', { method: 'PUT', body: { settings: s } });
-  settings = res.settings;
+  await call('/api/admin/community', { method: 'PUT', body: { settings: s } });
   flash('Settings saved.');
-  if (settings.event.type !== type.key) load(); // another type: its features and labels
+  load(); // the server's view again (community fields only)
 }
 
 async function uploadLogo(e) {

@@ -65,3 +65,8 @@ pre.json { background: var(--surface-3); border: 1px solid var(--border); border
 /* Organizer → Events: the default event's mark and the list of public events (ADR 0011). */
 .badge { display: inline-block; padding: 1px 8px; border: 1px solid var(--warm-border); border-radius: 999px; background: var(--warm-soft); color: var(--warm-text); font-size: 11px; font-weight: 900; letter-spacing: .3px; vertical-align: 1px; }
 .event-summary { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 4px; }
+/* Organizer → Events: an event's own branding (ADR 0012); a colour is a text field (empty: the type's default) and a picker. */
+.brand-fields { border-top: 1px solid var(--border-soft); padding-top: 12px; margin-top: 4px; }
+.brand-fields > legend.label { font-size: 14px; padding-right: 8px; margin-bottom: 0; }
+.color-row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.field .color-row input[type=color] { width: 44px; height: 44px; min-height: 44px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; }

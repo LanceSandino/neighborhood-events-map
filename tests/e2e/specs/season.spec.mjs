@@ -3,8 +3,9 @@
 // the thank-you message (a stop list shared for it opens without its stops), next year's Halloween is created as
 // upcoming, and a resident lists their home for it in My house from an empty form (or from their own details of last
 // time). Next year's opens and becomes the default. Christmas lights and a rummage sale are prepared, previewed and
-// opened next to it: the same resident lists the same home for each, independent listings, and an ended season's
-// listing is never public again. The demo then gets a Halloween event on October 31 back, as it started.
+// opened next to it — each with its own look, not the demo's Halloween branding —: the same resident lists the same home
+// for each, independent listings, and an ended season's listing is never public again. The demo then gets a Halloween
+// event on October 31 back, as it started, with its branding entered in the event's Branding section.
 import { test, expect } from '@playwright/test';
 import { DEMO, watchConsole, politeTiles } from './helpers.mjs';
 
@@ -160,6 +161,9 @@ test('an organizer closes the season; last season disappears, next year is creat
   await politeTiles(view);
   await view.goto(DEMO + '/');
   await expect(view.locator('html')).toHaveAttribute('data-event-type', 'holiday_lights');
+  // Its own look, not the demo's Halloween branding (ADR 0012).
+  await expect(view.locator('section.intro h1')).toHaveText('Holiday nights. Bright lights.');
+  await expect(view.locator('.brand-icon')).toHaveText('✨');
   await expect(view.locator('#listCount')).toHaveText('0 showing');
   await expect(view.getByRole('navigation', { name: 'Events' }).getByRole('link')).toHaveCount(3);
   await view.context().close();
@@ -198,7 +202,8 @@ test('an organizer closes the season; last season disappears, next year is creat
     .toEqual(['Community Rummage Sale', ['2027-04-10', '2027-04-11'], false, '07:30']);
   await row(sale.id).getByRole('link', { name: 'Preview' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-event-type', 'garage_sale');
-  await expect(page.locator('.side-panel b')).toHaveText('Having a sale?'); // the demo keeps its own headline (D-20261031-16)
+  await expect(page.locator('.side-panel b')).toHaveText('Having a sale?');
+  await expect(page.locator('section.intro h1'), 'the sale\'s own look, not the demo\'s Halloween branding (ADR 0012)').toHaveText('Good finds. Close to home.');
   await expect(page.locator('.schedule-row')).toContainText('Sat–Sun, April 10–11, 2027');
   await expect(page.locator('.schedule-row')).toContainText('Early birds: not before 7:30 AM');
   await expect(page.getByRole('button', { name: 'Kids & toys', exact: true })).toBeVisible();
@@ -236,7 +241,9 @@ test('an organizer closes the season; last season disappears, next year is creat
   await res.context().close();
 
   // Back to a Halloween on the demo's date for the next runs: every event of this run is archived and a Halloween draft
-  // opens (bin/e2e.sh lists the fictional homes for it again).
+  // with the demo's Halloween branding opens (bin/e2e.sh lists the fictional homes for it again).
+  const branding = (await (await page.request.get(DEMO + '/api/admin/events')).json()).events.find((e) => e.id === before.id).settings.branding;
+  expect(branding.headline, 'the demo\'s Halloween has its own branding (examples/demo/community.yaml)').toBe('Spooky streets.');
   for (const id of [sale.id, lights.id, next.id, before.id]) {
     page.once('dialog', (d) => d.accept());
     await row(id).getByRole('button', { name: 'Archive' }).click();
@@ -247,6 +254,10 @@ test('an organizer closes the season; last season disappears, next year is creat
   await page.locator('#evStart').fill(before.date);
   await page.locator('#evFrom').fill(before.starts_at);
   await page.locator('#evTo').fill(before.ends_at);
+  // The Branding section shows Halloween's defaults as placeholders; the demo's own values go in.
+  await expect(page.locator('#evHeadline')).toHaveAttribute('placeholder', 'Little ghosts.');
+  for (const [id, key] of [['#evEmoji', 'brand_emoji'], ['#evHeadline', 'headline'], ['#evHeadlineAccent', 'headline_accent'], ['#evPrimary', 'primary_color'],
+    ['#evAccent', 'accent_color'], ['#evIntro', 'intro'], ['#evAbout', 'about']]) await page.locator(id).fill(branding[key] || '');
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(page.locator('#flash')).toContainText('Draft saved');
   const back = (await (await page.request.get(DEMO + '/api/admin/events')).json()).events.find((e) => e.state === 'draft' && e.type === 'halloween');
@@ -255,5 +266,7 @@ test('an organizer closes the season; last season disappears, next year is creat
   await expect(page.locator('#flash')).toContainText(`“${name}” is open`);
   const restored = (await (await request.get(DEMO + '/api/event')).json()).event;
   expect([restored.type, restored.date, restored.is_default]).toEqual(['halloween', before.date, true]);
+  const look = (await (await request.get(DEMO + '/api/community')).json()).branding;
+  expect([look.brand_emoji, look.headline, look.primary_color], 'the demo\'s Halloween branding is back').toEqual([branding.brand_emoji, branding.headline, branding.primary_color]);
   guard.assertClean();
 });

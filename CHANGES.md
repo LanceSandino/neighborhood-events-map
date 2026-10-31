@@ -1481,4 +1481,24 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-branding"
   author: "Lance Sandino"
   timestamp: "2026-10-31T19:30:00Z"
+- id: CU-20261031-58
+  type: feat
+  title: "Organizer console: Branding for each event under Events; Community & branding keeps the community's fields"
+  description: "admin/events.js: every event's form has a Branding section (emoji, headline, accent part, main and accent colour — a #RRGGBB text field with a picker kept in step —, intro, About this event), each empty by default with the type's default as its placeholder (types[].branding from the API; a new draft's placeholders follow the chosen type), sent as settings.branding without empty fields, and a link to see it (a draft's preview, a public event's page). admin/community.js: the Branding panel becomes Community branding (all events) with the logo and the city line only, the About panel About the neighborhood (all events) with community.general_about, the event fields give way to an Events panel naming the default event (its type read-only, as D-20261031-01 wants it seen) with a link to Events, the save sends no event block, and the reminders' help says a list of one's own shows for every event (D-20261031-48)."
+  impact: medium
+  affected_modules: ["public/assets/js/admin/events.js", "public/assets/js/admin/community.js", "public/assets/css/admin.css"]
+  related_tests: ["tests/e2e/specs/season.spec.mjs (the restored Halloween's branding entered in the Branding section)", "tests/e2e/specs/admin.spec.mjs: organizer reviews the real-plat example, draws, saves, re-imports and exports identically", "tests/Integration/PerEventBrandingTest.php: testTheCommunityConsoleKeepsOnlyTheCommunitysOwnFields"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:40:00Z"
+- id: CU-20261031-59
+  type: test
+  title: "The fictional lights demo's Halloween has its own branding; e2e checks each event's look"
+  description: "examples/demo-lights/homes.json gives its Halloween (closed by the seed; next year's copies it) a fictional custom branding like a real community's (pumpkin emoji, a ghost headline, a candy intro, orange and purple, an About text). events.spec.mjs adds 'each event has its own branding': both Halloween tabs show it at 390 and 1440 px, the lights and the sale show their own headline and brand colour and no Halloween word on their map and About pages (outside the switcher), and takes events-sale-{1440,390}.png; season.spec.mjs checks the demo's Halloween branding stays off the lights and the sale it opens and puts it back through the Branding section when it restores the demo's Halloween."
+  impact: none
+  affected_modules: ["examples/demo-lights/homes.json", "tests/e2e/specs/events.spec.mjs", "tests/e2e/specs/season.spec.mjs"]
+  related_tests: ["tests/e2e/specs/events.spec.mjs: each event has its own branding", "tests/e2e/specs/season.spec.mjs", "tests/Integration/MultiEventTest.php: testTheFictionalDemoSeedsEveryPublicState"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:50:00Z"
 ```

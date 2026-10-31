@@ -1,7 +1,8 @@
 // Several events at once on the fictional lights demo stack (examples/demo-lights, ADR 0011): Christmas lights open and
 // the default, a Halloween that has ended with its thank-you message, next year's Halloween (upcoming, tentative) and a
 // rummage sale whose dates are to be announced. Runs in the "season" project, after the other lights tests: visitors
-// switch events with the switcher (mouse and keyboard), each tab has its own theme and saved stops; a resident lists
+// switch events with the switcher (mouse and keyboard), each tab has its own theme, branding (the demo's Halloween has
+// its own, ADR 0012) and saved stops; a resident lists
 // next year's Halloween with "Use last year's details"; an organizer closes an event (next year's is created) and
 // changes the default. It gives everything back (archiving what it added); bin/e2e.sh's demo seed brings next year's
 // Halloween back for the next run. Browser clocks are pinned to a night of the lights season.
@@ -86,6 +87,46 @@ test('the switcher: the default event at "/", every public event by mouse and ke
   await expect(page).toHaveURL(`${LIGHTS}/`);
   await expect(page.locator('html')).toHaveAttribute('data-event-type', 'holiday_lights');
   guard.assertClean();
+});
+
+// Words of Halloween (the owner's list) that must not show on another event's page (ADR 0012); the switcher's tab labels
+// and a closed event's thank-you message name other events on purpose, and the residents' listings (cards, pins, the
+// selected home, the route) are their own words — a lights home may offer treats or a "candy cane lane".
+const HALLOWEEN = /ghost|trick[- ]?or[- ]?treat|\btreats?\b|candy|candies|scare|pumpkin|🎃|👻/giu;
+const visibleWords = (page) => page.evaluate((src) => {
+  const doc = document.documentElement.cloneNode(true);
+  doc.querySelectorAll('script, style, .event-switch, .event-status-message, #homeCards, #map, #mapSelected, #routeItems').forEach((n) => n.remove());
+  const attrs = [...doc.querySelectorAll('[title], [aria-label], [placeholder], [alt]')].map((n) => ['title', 'aria-label', 'placeholder', 'alt'].map((a) => n.getAttribute(a) || '').join(' '));
+  const text = `${doc.textContent} ${attrs.join(' ')}`.replace(/🍬\s*Treats|Music, flashing and treats/g, ''); // the lights' own listing option
+  return [...new Set(text.match(new RegExp(src, 'giu')) || [])];
+}, HALLOWEEN.source);
+
+test('each event has its own branding: the Halloween look stays on Halloween\'s tabs, the lights and the sale show their own and no Halloween word', async ({ page, request }) => {
+  const e = await events(request);
+  await page.clock.install({ time: NIGHT });
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const halloween of [e.closed, e.next]) {
+      await page.goto(`${LIGHTS}/?e=${halloween.id}`);
+      await expect(page.locator('.intro h1')).toHaveText('👻 Hollow haunts. Big adventures.');
+      await expect(page.locator('.brand-icon')).toHaveText('🎃');
+      expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toUpperCase())).toBe('#E0702B');
+    }
+    for (const [path, headline, color] of [['/', 'Holiday nights. Bright lights.', '#38597F'], [`/?e=${e.sale.id}`, 'Good finds. Close to home.', '#178D80']]) {
+      await page.goto(LIGHTS + path);
+      await expect(page.locator('.intro h1')).toHaveText(headline);
+      expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toUpperCase())).toBe(color);
+      expect(await visibleWords(page), `${path} at ${width}px`).toEqual([]);
+      await page.goto(LIGHTS + '/about' + path.slice(1));
+      expect(await visibleWords(page), `About ${path} at ${width}px`).toEqual([]);
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${LIGHTS}/?e=${e.sale.id}`);
+  await page.screenshot({ path: `${SHOTS}/events-sale-1440.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${LIGHTS}/?e=${e.sale.id}`);
+  await page.screenshot({ path: `${SHOTS}/events-sale-390.png` });
 });
 
 test('each event keeps its own saved stops; a shared link keeps its event', async ({ page, request }) => {
