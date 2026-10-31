@@ -971,4 +971,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p1"
   author: "Lance Sandino"
   timestamp: "2026-10-31T07:15:00Z"
+- id: CU-20261031-07
+  type: chore
+  title: "0.10.0-beta.1: release notes, decisions D-20261031-01 to -04, ROADMAP Stage 1 done, event-type architecture note, rollback note, test report"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.10.0-beta.1. docs/architecture/event-types.md explains the module contract (PHP type, registry, Twig fragments, browser module), the listing data (details object, strict keys, compatibility window, trigger) and how a later type is added; the overview, AGENTS.md structure table, setup runbook and upgrade/rollback runbook (image-only rollback to 0.9 is enough) follow. Gates on the final tree are in docs/quality/test-report.md."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "ROADMAP.md", "AGENTS.md", "docs/architecture/", "docs/runbooks/setup.md", "docs/runbooks/upgrade-rollback.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/About/ReleaseConsistencyTest.php", "PHPUnit 308 tests (lines 94.79 %)", "tests/e2e: 78 passed, 2 skipped", "scripts/smoke_session.py 13/13", "bin/smoke-prod-image.sh 7/7"]
+  commit_ref: "feature/event-types-p1"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T07:40:00Z"
 ```

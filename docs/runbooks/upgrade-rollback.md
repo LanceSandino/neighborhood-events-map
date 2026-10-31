@@ -30,5 +30,6 @@ The old data stays untouched in the `pgdata` volume. To roll back, check out the
 
 - Code-only change (no new migration): `git checkout <previous tag>`, set `APP_IMAGE_TAG` back to that version, then `docker compose pull && docker compose up -d --force-recreate --wait`. Older images stay in the registry, so a rollback never needs a build.
 - With a schema migration: either run the down migration before switching code (`docker compose exec app php bin/console doctrine:migrations:migrate prev`) or restore the pre-upgrade backup with `bin/restore.sh`, then deploy the previous tag.
+- 0.10.0-beta.1 → 0.9.0-beta.1 needs only the image: its migration is additive (`listings.details` plus a trigger that fills it from the old columns, D-20261031-03). The 0.9 image starts with a warning about one newer executed migration ("Already at the latest version") and reads and writes the old columns, which 0.10 keeps up to date; when 0.10 runs again, the trigger has kept `details` in step with whatever 0.9 wrote. Running the down migration as well is possible but not needed.
 
 CI verifies every migration on a blank database up → down to zero → up again.

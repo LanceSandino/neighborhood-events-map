@@ -68,14 +68,15 @@ Organizers choose the type and edit its settings and copy in the console. They c
 
 Each stage reuses the existing claim, listing, sign-in, moderation and route machinery and keeps every current test passing.
 
-1. **Stage 0 — neutral naming (done in this release).**
+1. **Stage 0 — neutral naming (done in 0.7.0-beta.1).**
    The product is “neighborhood events map” and the community's event is the `event.name` setting. Persisted identifiers are unchanged ([D-20261021-18](DECISIONS.md)).
-2. **Stage 1 — event-type abstraction, Halloween only.**
+2. **Stage 1 — event-type abstraction, Halloween only (done in 0.10.0-beta.1).**
    - Add `event.type` (default `halloween`).
    - Move the Halloween fields, filters, statuses, copy and icons into a `halloween` event-type module on both the PHP and JavaScript sides.
    - Store type-specific listing fields in a validated `details` JSONB column next to the core columns ([D-20261021-21](DECISIONS.md)).
    - A migration copies today's Halloween columns into `details`; the old columns stay until the following minor release, so a rollback keeps working.
    - Done when the full suite and the e2e flows pass unchanged with Halloween expressed as the first event type.
+   - Status: the registry, the Halloween module (PHP, browser, Twig fragments) and `listings.details` with its rollback trigger shipped in 0.10.0-beta.1; the public API answers, pages and screenshots are the 0.9 ones plus `event.type` ([D-20261031-01](DECISIONS.md) to [-04](DECISIONS.md), [event types](docs/architecture/event-types.md)).
 3. **Stage 2 — multi-day events.**
    - Add date ranges and daily hours to the event ([D-20261021-22](DECISIONS.md)).
    - A listing's own subset of days and hours.

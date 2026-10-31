@@ -1,6 +1,29 @@
 # Test and verification report
 
-## Latest run — 2026-10-30, release 0.9.0-beta.1
+## Latest run — 2026-10-31, release 0.10.0-beta.1
+
+Event types, Halloween first (ROADMAP Stage 1; CU-20261031-01 to -06), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10.
+The acceptance bar was Halloween parity with 0.9.0-beta.1, measured against a baseline taken first on fresh dev stacks.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.9.0-beta.1 (fresh stacks, before any change) | PHPUnit 280 passing (the new README test was the 281st, red) · lines 93.96 % · PHPStan and `composer audit` clean · node:test 30/30 · Python 45/45 · Playwright **78 passed, 2 skipped** · session smoke 13/13 |
+| PHPUnit 13.4.5 | **OK — 308 tests, 10970 assertions** (27 new; 20 of them — registry, Halloween type, parity, migration, schema and golden tests — were run red before the code) |
+| Coverage (pcov) | Lines **94.79 %** ✓ ≥ 85 · Methods 81.64 % · Branches n/a · new `src/Event` classes and ListingDraft/ListingRepository/ResidentHomes 100 % lines |
+| Golden API parity (`GoldenApiParityTest`, and live on both rebuilt stacks) | `/api/event`, `/api/community`, `/api/homes`, `/api/homes/{id}` of the demo and Ventura stacks: every 0.9 key with the same value in the same order; the only new key is `event.type` |
+| Normalization parity | 600 seeded listing inputs: same drafts and same field errors as the frozen 0.9 ListingDraft · 400 seeded homes: same filters, statuses, symbols, tags, pins, cards and panels as the frozen 0.9 browser libraries |
+| Server-rendered pages (7 per stack) | identical to 0.9 apart from whitespace between flex items and `event.type` in the page data |
+| E2E screenshots, tiles blocked, fresh stacks | **16 of 17 pixel-identical** to the 0.9 baseline; `ventura-admin-overview` differs only in the geometry version's creation time (the stack was created later) |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` · `lint:container` | No errors · no advisories · 35 files OK · 15 files OK · OK |
+| Migrations up / down to zero / up (test database) | OK; the migration test also goes down and up with listings in place and backfills every row |
+| 0.9.0-beta.1 image against the migrated database | start-up migration step warns about one newer executed migration, "Already at the latest version", exit 0; `app:db:ping` ok |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **37/37** · **45/45** |
+| Playwright E2E on both dev stacks (chromium + webkit-iphone) | **78 passed, 2 skipped** on the new code before the version bump (fresh stacks) and again on the final tree |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (0.10.0-beta.1) |
+| Trivy | not run locally (CI scans the images) |
+
+## Run — 2026-10-30, release 0.9.0-beta.1
 
 Symfony 8.1 (CU-20261030-03), on PHP 8.5.12 + PostgreSQL 18.6:
 

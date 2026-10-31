@@ -3,7 +3,7 @@
 1. **Install** (see README → Quick start). Grant yourself the organizer role:
    `docker compose exec app php bin/console app:admin:grant you@example.org`
 2. **Sign in** at `/login` with that email (one-time link; in development it arrives in Mailpit at http://localhost:8025).
-3. **Community & branding** (`/admin/community`): name, subtitle, city/state, time zone, event name (shown as "<community> <event name>", default Halloween), event date and suggested hours, emoji or logo (SVG/PNG/JPEG/WebP ≤ 512 KB), colours, headline, features, optional zones (any names — phases, sections, "Lakefront" — or none), crossing/safety notes.
+3. **Community & branding** (`/admin/community`): name, subtitle, city/state, time zone, event type (Halloween is the one this version offers), event name (shown as "<community> <event name>", default: the type's name), event date and suggested hours, emoji or logo (SVG/PNG/JPEG/WebP ≤ 512 KB), colours, headline, features, optional zones (any names — phases, sections, "Lakefront" — or none), crossing/safety notes.
 4. **Boundary & zones** (`/admin/community/map`):
    - Import a reviewed GeoJSON file (official GIS, or drawn at https://geojson.io on a real map), or draw polygons directly (choose "Neighborhood boundary" or a zone before drawing).
    - Separate areas stay separate; never bridge lakes or major roads.
