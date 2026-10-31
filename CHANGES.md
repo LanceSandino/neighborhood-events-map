@@ -1281,4 +1281,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T00:10:00Z"
+- id: CU-20261031-38
+  type: refactor
+  title: "home.js split: the family page's Leaflet map moves to home-map.js (home.js 428 → 324 lines, home-map.js 137)"
+  description: "createHomeMap({C, T, homes, filters, activeId, numbers, ctx, selectHome, reducedMotion, onReady}) owns the tiles, the outline, the zone shapes and their spaced names, the dimmed outside, fitting the neighborhood or a zone, the pins (with the keyboard selection of CU-20261031-36) and the location dot; home.js keeps the page state, list, filters, selected home, route wiring and refresh and reaches the map through view.map. No behaviour change: public.spec and types.spec (124 tests on chromium) pass on the split code."
+  impact: none
+  affected_modules: ["public/assets/js/home.js", "public/assets/js/home-map.js"]
+  related_tests: ["tests/e2e/specs/public.spec.mjs", "tests/e2e/specs/types.spec.mjs", "tests/e2e/specs/lights.spec.mjs", "tests/e2e/specs/sale.spec.mjs"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:20:00Z"
 ```

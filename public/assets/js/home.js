@@ -1,11 +1,11 @@
 /**
  * @module assets/js/home
- * @description Public family page controller: filters (localStorage), synchronized list + Leaflet
- *     map kept on the neighborhood, favorites, selected-home panel, the inline "My route" panel
+ * @description Public family page controller: filters (localStorage), the list kept in step with the Leaflet
+ *     map (home-map.js), favorites, selected-home panel, the inline "My route" panel
  *     (route-panel.js), Rules/house sheets, and the registration/dispute flows (register.js). Works
  *     without the map; the list is always usable. The community's event type (events/index.js) supplies the filter
  *     toggles, symbols, tags, statuses and words.
- * @dependencies lib/*, events/index.js, route-panel.js, register.js, Leaflet (global L, optional)
+ * @dependencies lib/*, events/index.js, home-map.js, route-panel.js, register.js
  */
 import { api } from './lib/api.js';
 import { createStore, migrateYearStore } from './lib/store.js';
@@ -13,13 +13,12 @@ import { defaultFilters, matches, activeFilterCount, normalizeFilters, choiceCou
 import { eventType } from './events/index.js';
 import { nowInZone } from './lib/time.js';
 import { seasonOf } from './lib/schedule.js';
-import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
+import { cardHtml, selectedHtml, esc } from './lib/render.js';
 import { readSharedLink } from './lib/share.js';
-import { focusMap } from './lib/map-focus.js';
-import { labelPoint, resolveOverlaps } from './lib/zone-labels.js';
 import { initModals, openModal, closeModal, toast } from './lib/modal.js';
 import { initRegistration, openRegistration, openDispute } from './register.js';
 import { createRoutePanel } from './route-panel.js';
+import { createHomeMap } from './home-map.js';
 
 const boot = JSON.parse(document.getElementById('boot').textContent);
 const C = boot.community;
@@ -60,110 +59,13 @@ const isOpen = (h) => T.isOpen(h, ctx());
 /** The type's filter choices besides its toggles (a night, a style): the controls marked data-choice. */
 const choiceDefault = (k) => ((T.choices || []).find((c) => c.key === k) || { default: '' }).default;
 let showClosed = false;
-const zoneLayers = new Map();
 /** The device setting, or "Reduce motion" chosen in Appearance. */
 const reducedMotion = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* ---------------- Map ---------------- */
-let map = null;
-const markers = new Map();
-
-function initMap() {
-  if (!window.L) return;
-  try {
-    map = L.map('map', { zoomControl: false, scrollWheelZoom: false, tap: true, zoomSnap: 0.25 });
-    L.tileLayer(C.map.tiles.url, { maxZoom: C.map.tiles.max_zoom, attribution: esc(C.map.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(map);
-    if (C.map.boundary) {
-      const line = T.mapColor || '#f07936'; // the event type's outline colour (Halloween: orange)
-      L.geoJSON(C.map.boundary, { style: { color: line, weight: 2, fillColor: line, fillOpacity: 0.05 }, interactive: false }).addTo(map);
-    }
-    for (const z of C.zones) {
-      if (!z.geometry) continue;
-      const layer = L.geoJSON(z.geometry, { style: zoneStyle(z, null), interactive: false }).addTo(map);
-      // The name sits where the organizer put it, else deepest inside the zone (not mid bounding box), as its own label.
-      const tip = L.tooltip({ permanent: true, direction: 'center', className: 'boundary-label', interactive: false })
-        .setLatLng(z.label_at ? [z.label_at[1], z.label_at[0]] : labelPoint(z.geometry) || layer.getBounds().getCenter())
-        .setContent(esc(z.label) + (z.status === 'coming_soon' ? ' · coming soon' : ''));
-      map.openTooltip(tip);
-      zoneLayers.set(z.key, { zone: z, layer, tip });
-    }
-    fitAll();
-    focusMap(L, map, { boundary: C.map.boundary, bbox: C.map.bbox }); // dim outside the neighborhood; stay near it
-    spaceLabels();
-    map.on('zoomend resize', spaceLabels);
-    if (filters.zone && filters.zone !== 'all') highlightZone(filters.zone, { fit: false });
-    if (activeFilterCount(filters, T)) fitToResults(); // remembered filters: start on the homes that match
-    map.on('click', () => selectHome(null));
-    $('#mapFallback').hidden = true;
-  } catch (e) {
-    map = null;
-    $('#mapFallback').textContent = 'The map could not load. Use the list of homes instead.';
-  }
-}
-
-/**
- * Zone names never cover each other: names placed by an organizer and phases that take listings keep their place, then other residential zones,
- * and names of common areas move below whatever they would cover. Runs again after every zoom and resize.
- */
-function spaceLabels() {
-  const items = [...zoneLayers.values()].filter((x) => x.tip && x.tip.getElement());
-  for (const { tip } of items) { tip.options.offset = L.point(0, 0); tip.update(); }
-  const boxes = items.map(({ zone, tip }) => {
-    const r = tip.getElement().getBoundingClientRect();
-    // Names an organizer placed never move; the others make room around them.
-    return { x: r.left, y: r.top, w: r.width, h: r.height, priority: zone.label_at ? 10 : (zone.claimable ? 2 : 0) + (zone.residential ? 1 : 0) };
-  });
-  resolveOverlaps(boxes).forEach((dy, i) => { if (dy) { items[i].tip.options.offset = L.point(0, dy); items[i].tip.update(); } });
-}
-
-/** Selecting a phase/zone or a walking area outlines it, shades the rest and zooms to it; "all" restores the overview. */
-function highlightZone(key, { fit = true } = {}) {
-  if (!map || !zoneLayers.size) return;
-  const keys = key && key.startsWith('area:') ? (C.routing.groups[Number(key.slice(5))] || []) : (key && key !== 'all' ? [key] : []);
-  const selected = new Set(keys.filter((k) => zoneLayers.has(k)));
-  for (const { zone, layer } of zoneLayers.values()) layer.setStyle(zoneStyle(zone, selected));
-  if (!fit) return;
-  if (selected.size) {
-    const bounds = L.latLngBounds([]);
-    for (const k of selected) bounds.extend(zoneLayers.get(k).layer.getBounds());
-    map.fitBounds(bounds, { padding: [30, 30], animate: !reducedMotion() });
-  } else fitAll();
-}
-
-function fitAll() {
-  if (!map) return;
-  const b = C.map.bbox;
-  if (b) map.fitBounds([[b.minLat, b.minLon], [b.maxLat, b.maxLon]], { padding: [24, 24] });
-  else if (homes.length) map.fitBounds(homes.map((h) => [h.lat, h.lon]), { padding: [40, 40], maxZoom: 17 });
-  else if (C.map.center) map.setView([C.map.center.lat, C.map.center.lon], C.map.zoom);
-  else map.setView([39.5, -98.35], 4);
-}
-
-function renderPins(visibleIds) {
-  if (!map) return;
-  const c = ctx();
-  for (const [id, m] of markers) if (!homes.some((h) => h.id === id)) { m.remove(); markers.delete(id); }
-  for (const h of homes) {
-    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id), focus: filters, type: T, ctx: c }), iconSize: [37, 37], iconAnchor: [5, 36] });
-    let m = markers.get(h.id);
-    if (!m) {
-      m = L.marker([h.lat, h.lon], { icon, keyboard: true, title: h.address, alt: h.address, riseOnHover: true });
-      m.on('click', (e) => { L.DomEvent.stopPropagation(e); selectHome(h.id); });
-      // A focused pin is a button (Leaflet gives it role="button"): Enter or Space selects its home, as a click does.
-      m.on('keydown', (e) => {
-        if (e.originalEvent.key !== 'Enter' && e.originalEvent.key !== ' ') return;
-        e.originalEvent.preventDefault();
-        selectHome(h.id);
-      });
-      m.addTo(map);
-      markers.set(h.id, m);
-    } else {
-      m.setIcon(icon);
-      m.setLatLng([h.lat, h.lon]);
-    }
-    m.setZIndexOffset(visibleIds.has(h.id) ? (activeId === h.id ? 1000 : 100) : 0);
-  }
-}
+/* ---------------- Map (home-map.js) ---------------- */
+const view = createHomeMap({ C, T, homes: () => homes, filters: () => filters, activeId: () => activeId, numbers: () => route.numbers(), ctx, selectHome: (id) => selectHome(id),
+  reducedMotion, onReady: () => { if (activeFilterCount(filters, T)) fitToResults(); } });
+const { highlightZone, fitAll, renderPins } = view;
 
 /* ---------------- List + stats ---------------- */
 function render() {
@@ -234,6 +136,7 @@ let fitTimer = null;
 function fitToResults({ delay = 0 } = {}) {
   clearTimeout(fitTimer);
   fitTimer = setTimeout(() => {
+    const map = view.map;
     if (!map) return;
     if (activeFilterCount(filters, T) === 0) { fitAll(); return; }
     const shown = visible().filter(isOpen);
@@ -252,7 +155,7 @@ function selectHome(id, { pan = true } = {}) {
   } else {
     panel.innerHTML = selectedHtml(h, ctx(), store.get().saved.includes(h.id));
     panel.classList.add('open');
-    if (map && pan) map.panTo([h.lat, h.lon], { animate: !reducedMotion() });
+    if (view.map && pan) view.map.panTo([h.lat, h.lon], { animate: !reducedMotion() });
     const card = document.querySelector(`.home-card[data-id="${h.id}"]`);
     if (card && card.scrollIntoView && innerWidth > 660) card.scrollIntoView({ block: 'nearest' });
     // Phones show the map above the list: bring the map (and the preview on it) into view.
@@ -283,18 +186,12 @@ function syncControls() {
 }
 
 /* ---------------- Location (stays on this device) ---------------- */
-let meMarker = null;
-function showMe() {
-  if (!map || !here) return;
-  const ll = [here.lat, here.lon];
-  if (meMarker) meMarker.setLatLng(ll); else meMarker = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 3, fillColor: '#3b82f6', fillOpacity: 1 }).addTo(map).bindTooltip('You are here (not shared)');
-}
 function locate() {
   if (!navigator.geolocation) { toast('Location is not available in this browser.'); return; }
   navigator.geolocation.getCurrentPosition((pos) => {
     here = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-    showMe();
-    if (map) map.setView([here.lat, here.lon], Math.max(map.getZoom(), 17));
+    view.showMe(here);
+    if (view.map) view.map.setView([here.lat, here.lon], Math.max(view.map.getZoom(), 17));
   }, () => toast('Could not get your location. The map works without it.'), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
 
@@ -374,8 +271,8 @@ function bind() {
     fitToResults(); // no filters: the whole neighborhood (also where there are no phases)
   });
   $('#btnFit').addEventListener('click', () => { selectHome(null); fitAll(); });
-  $('#btnZoomIn').addEventListener('click', () => map && map.zoomIn());
-  $('#btnZoomOut').addEventListener('click', () => map && map.zoomOut());
+  $('#btnZoomIn').addEventListener('click', () => view.map && view.map.zoomIn());
+  $('#btnZoomOut').addEventListener('click', () => view.map && view.map.zoomOut());
   $('#btnLocate').addEventListener('click', locate);
   // Filters behind the "Filters" button start open when one of them is on.
   if (T.filters.some((f) => !f.quick && filters[f.key]) || filters.time !== 'any' || (T.choices || []).some((c) => filters[c.key] !== c.default)) {
@@ -408,13 +305,13 @@ if (!document.querySelector('link[href="/vendor/leaflet/leaflet.css"]')) {
   document.head.append(css);
 }
 
-route = createRoutePanel({ C, type: T, store, shared, homes: () => homes, visible, isOpen, filters: () => filters, map: () => map,
-  here: () => here, setHere: (pos) => { here = pos; showMe(); }, render, applyStoredFilters, reducedMotion });
+route = createRoutePanel({ C, type: T, store, shared, homes: () => homes, visible, isOpen, filters: () => filters, map: () => view.map,
+  here: () => here, setHere: (pos) => { here = pos; view.showMe(here); }, render, applyStoredFilters, reducedMotion });
 bind();
 initRegistration({ community: C, onPublishedHint: () => {} });
 render();
-if (document.readyState === 'complete') initMap(); else addEventListener('load', initMap);
-addEventListener('load', () => { if (map) { render(); map.invalidateSize(); } });
+if (document.readyState === 'complete') view.init(); else addEventListener('load', view.init);
+addEventListener('load', () => { if (view.map) { render(); view.map.invalidateSize(); } });
 setInterval(refresh, 60000); // public data only; never touches a signed-in session
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 addEventListener('hashchange', routeFromHash);
