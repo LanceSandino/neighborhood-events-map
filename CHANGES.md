@@ -1341,4 +1341,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T01:10:00Z"
+- id: CU-20261031-44
+  type: chore
+  title: "0.14.0-beta.1 screenshots with OpenStreetMap tiles for every event type and Organizer → Events, and the test report's latest run"
+  description: "One local e2e run with tiles (E2E_BLOCK_TILES unset, fresh stacks) refreshed the lights and sale captures (desktop 1440 and phone 390, light and dark, the listing form, My house), Halloween's under their existing names plus demo-390 and demo-dark-390, and the Ventura map pages (which now show the compact brand); admin-events-1440.png was retaken after the CU-20261031-43 fix with season alone (that page has no map). The organizer overview and boundary captures stay as committed. docs/quality/test-report.md records every gate of the final tree; the event-types migration runbook (committed separately) covers the direct upgrade from 0.9, erasure and date boundaries."
+  impact: none
+  affected_modules: ["docs/design/screenshots/", "docs/quality/test-report.md", "docs/runbooks/event-types-migration.md"]
+  related_tests: ["tests/e2e (225 passed, 2 skipped, with tiles)", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T01:20:00Z"
 ```
