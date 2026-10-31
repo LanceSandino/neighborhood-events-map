@@ -62,8 +62,8 @@ function homeCard(home, ev) {
   warn.classList.toggle('hide', warnings.length === 0);
   const form = $('[data-f="form"]', node);
   // A home without a listing for this event lists from an empty form: nothing comes from an earlier event.
-  timeOptions(form.start, ...T.hours.start, l ? l.start : ev.start);
-  timeOptions(form.end, ...T.hours.end, l ? l.end : ev.end);
+  if (form.start) timeOptions(form.start, ...T.hours.start, l ? l.start : ev.start); // a sale's hours are per day (its own fields)
+  if (form.end) timeOptions(form.end, ...T.hours.end, l ? l.end : ev.end);
   T.initForm(form, ev); // e.g. the season's nights to pick from
   if (l) {
     T.fillForm(form, l.details, l, ev);
@@ -91,7 +91,13 @@ function homeCard(home, ev) {
     }
   }
   node.querySelectorAll('[data-status]').forEach((b) => b.setAttribute('aria-pressed', String(l?.status === b.dataset.status)));
-  const showError = (e) => { const el = $('[data-f="error"]', node); el.textContent = friendlyError(e); el.classList.remove('hide'); };
+  // A refused field (e.g. a note with contact details) is named in the message, not only "the highlighted fields".
+  const showError = (e) => {
+    const el = $('[data-f="error"]', node);
+    const fields = e instanceof ApiError ? Object.values(e.fields || {}) : [];
+    el.textContent = fields.length ? fields.join(' ') : friendlyError(e);
+    el.classList.remove('hide');
+  };
   const send = async (method, url, body, msg) => {
     $('[data-f="error"]', node).classList.add('hide');
     try {
@@ -106,9 +112,12 @@ function homeCard(home, ev) {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     // Options the organizer turned off are not offered; they read as off.
-    const body = { start: form.start.value, end: form.end.value, published: form.published.value === 'true', note: form.note.value, details: T.formDetails(form),
-      ...T.formExtras(form, { start: form.start.value, end: form.end.value, event: ev }) };
-    const errors = { ...T.validateDetails(body.details), ...(Array.isArray(body.windows) && !body.windows.length ? { windows: T.copy.noDays } : {}) };
+    const start = form.start ? form.start.value : (l ? l.start : ev.start);
+    const end = form.end ? form.end.value : (l ? l.end : ev.end);
+    const body = { start, end, published: form.published.value === 'true', note: form.note.value, details: T.formDetails(form),
+      ...T.formExtras(form, { start, end, event: ev }) };
+    const errors = { ...T.validateDetails(body.details), ...(Array.isArray(body.windows) && !body.windows.length ? { windows: T.copy.noDays } : {}),
+      ...(Array.isArray(body.windows) && body.windows.some((w) => w.end <= w.start) ? { hours: 'End time must be later than the start time.' } : {}) };
     if (l) {
       if (body.windows && Object.keys(errors).length) { showError(new Error(Object.values(errors).join(' '))); return; }
       patch(body, 'Saved. The public map updates right away.');

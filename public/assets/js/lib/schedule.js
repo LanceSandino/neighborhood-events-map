@@ -5,7 +5,8 @@
  *     and "active" shows today's window phase in the community's time zone (inside, later today, ended today, no window
  *     today) — never "open" outside a window. The event type module supplies the rules (displayRules). Tested on the
  *     shared fixtures in tests/fixtures/schedule/display-status.json. Also the dates of an event and where a season
- *     stands on a given day (before, during, after).
+ *     stands on a given day (before, during, after; an event with its own days, a sale's, is "between" on a day of its
+ *     span that is not one of them).
  * @dependencies lib/clock.js
  */
 import { nowInZone } from './clock.js';
@@ -39,10 +40,15 @@ export function displayStatus(rules, listing, now, timeZone) {
   return rules.phases[phase(listing.windows, n.date, hm(n.minutes))];
 }
 
-/** Where an event's season stands on `today`: before its first day, during it, or after its last day. */
+/**
+ * Where an event's season stands on `today`: before its first day, during it, or after its last day. An event that
+ * names its days (a sale's `days`) is "during" only on those days and "between" on the other days of its span.
+ */
 export function seasonOf(event, today) {
-  if (today < event.starts_on) return 'before';
-  return today > event.ends_on ? 'after' : 'during';
+  const days = Array.isArray(event.days) && event.days.length ? event.days : null;
+  if (today < (days ? days[0] : event.starts_on)) return 'before';
+  if (today > (days ? days[days.length - 1] : event.ends_on)) return 'after';
+  return !days || days.includes(today) ? 'during' : 'between';
 }
 
 /** Every local date of an event, first to last (dates as YYYY-MM-DD; calendar arithmetic in UTC, no time zone). */

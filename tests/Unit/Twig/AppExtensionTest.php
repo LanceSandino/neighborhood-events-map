@@ -43,6 +43,23 @@ final class AppExtensionTest extends TestCase
         self::assertSame(['a' => '</script>'], json_decode($json, true));
     }
 
+    public function testSaleDaysAsWordsAndTheSeasonOfADate(): void
+    {
+        $x = new AppExtension();
+        self::assertSame('Saturday, April 10, 2027', $x->dayList(['2027-04-10']));
+        self::assertSame('Sat–Sun, April 10–11, 2027', $x->dayList(['2027-04-10', '2027-04-11']), 'a weekend');
+        self::assertSame('Fri–Sun, April 9–11, 2027', $x->dayList(['2027-04-09', '2027-04-10', '2027-04-11']));
+        self::assertSame('Fri–Sun, April 30 – May 2, 2027', $x->dayList(['2027-04-30', '2027-05-01', '2027-05-02']), 'across a month end');
+        self::assertSame('Thu–Fri, December 31, 2026 – January 1, 2027', $x->dayList(['2026-12-31', '2027-01-01']), 'across the year end');
+        self::assertSame('Sat, April 10 and Sat, April 17, 2027', $x->dayList(['2027-04-10', '2027-04-17']), 'two Saturdays');
+        self::assertSame('Sat, April 10, Sun, April 11 and Sat, April 17, 2027', $x->dayList(['2027-04-10', '2027-04-11', '2027-04-17']));
+        self::assertSame('', $x->dayList([]));
+        self::assertSame(['Saturday', 'Sunday'], $x->dayNames(['2027-04-10', '2027-04-11']));
+        self::assertSame(['Saturday, Apr 10', 'Saturday, Apr 17'], $x->dayNames(['2027-04-10', '2027-04-17']), 'the same weekday twice names the dates');
+        self::assertSame(['spring', 'summer', 'fall', 'winter', 'winter'], array_map(static fn (string $d) => $x->seasonOf($d, 40.0), ['2027-04-10', '2027-07-04', '2027-10-02', '2027-12-11', '2027-02-06']));
+        self::assertSame(['fall', 'spring', 'spring'], [$x->seasonOf('2027-04-10', -33.9), $x->seasonOf('2027-10-02', -33.9), $x->seasonOf('2027-04-10', null)], 'the southern half the other way round');
+    }
+
     public function testWalkingAreasForTheZoneFilter(): void
     {
         $x = new AppExtension();

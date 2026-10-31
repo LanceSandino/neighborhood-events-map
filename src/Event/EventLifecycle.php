@@ -42,7 +42,7 @@ final class EventLifecycle
     {
         $key = \is_string($input['type'] ?? null) ? $input['type'] : '';
         if (!$this->types->isEnabled($key)) {
-            throw new ValidationException(['type' => sprintf('Choose one of the event types this version offers: %s.', implode(', ', EventTypeRegistry::ENABLED))]);
+            throw new ValidationException(['type' => sprintf('Choose one of the event types this version offers: %s.', implode(', ', array_map(static fn (EventType $t) => $t->key(), $this->types->enabled())))]);
         }
         $fields = OccurrenceInput::normalize($input, $this->types->get($key));
         $id = $this->db->transactional(fn (Connection $db) => $this->occurrences->insert($db, $fields, EventOccurrence::DRAFT));
@@ -73,6 +73,7 @@ final class EventLifecycle
                 }
                 $this->moveWindows($db, $current, $fields, $type);
             }
+            $this->keepListedDays($db, $current, $fields, $type);
             $this->occurrences->updateFields($db, $id, $fields);
             if ($current->isActive()) {
                 $updated = $this->occurrences->find($id, $db) ?? throw new \LogicException('The event vanished.');
@@ -197,6 +198,31 @@ final class EventLifecycle
             WHERE el.event_id = :event AND (w.local_date < :from OR w.local_date > :to)', ['event' => $current->id, 'from' => $fields['starts_on'], 'to' => $fields['ends_on']]);
         if ($outside > 0) {
             throw new EventConflictException('listings_outside', sprintf('%d listing day(s) fall outside the new dates. Keep the dates that homes chose.', $outside));
+        }
+    }
+
+    /**
+     * A type that narrows a listing's days (a sale's days) keeps every day homes already chose: removing a sale day
+     * that has listings is refused.
+     *
+     * @param array{name:string,starts_on:string,ends_on:string,default_start:string,default_end:string,settings:array<string,mixed>} $fields
+     */
+    private function keepListedDays(Connection $db, EventOccurrence $current, array $fields, EventType $type): void
+    {
+        if (!$type instanceof EventSettingsType) {
+            return;
+        }
+        $next = new EventOccurrence($current->id, $current->type, $fields['name'], $fields['starts_on'], $fields['ends_on'], $fields['default_start'],
+            $fields['default_end'], $fields['settings'], $current->state);
+        $dates = $type->listingDates($next);
+        if (null === $dates) {
+            return;
+        }
+        $off = (int) $db->fetchOne('SELECT COUNT(*) FROM event_listing_windows w JOIN event_listings el ON el.id = w.listing_id
+            WHERE el.event_id = :event AND NOT (to_char(w.local_date, \'YYYY-MM-DD\') = ANY(string_to_array(:dates, \',\')))',
+            ['event' => $current->id, 'dates' => implode(',', $dates)]);
+        if ($off > 0) {
+            throw new EventConflictException('listings_days', sprintf('%d listing day(s) fall on a day that is no longer one of the event\'s days. Keep the days that homes chose.', $off));
         }
     }
 

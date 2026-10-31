@@ -17,7 +17,7 @@ use Doctrine\DBAL\Connection;
  *     explicit step under Organizer → Events, and the next season is a new event). An occurrence's type never changes.
  *     Takes the same lock as activation, so a save never interleaves with a switch of events.
  *
- * @dependencies DBAL, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Community/EventBlockSchema, Community/ConfigException
+ * @dependencies DBAL, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Event/EventSettingsType, Community/EventBlockSchema, Community/ConfigException
  */
 final class OccurrenceSettingsSync
 {
@@ -46,7 +46,10 @@ final class OccurrenceSettingsSync
                 'ends_on' => $last, 'default_start' => (string) $event['starts_at'], 'default_end' => (string) $event['ends_at']];
             if (null === $active) {
                 if (false === $db->fetchOne('SELECT 1 FROM event_occurrences LIMIT 1')) {
-                    $this->occurrences->insert($db, $fields + ['settings' => []], EventOccurrence::ACTIVE); // the install's first event
+                    // The install's first event; a type's settings are completed (e.g. a weekend sale takes its days).
+                    $type = $this->types->isEnabled($fields['type']) ? $this->types->get($fields['type']) : null;
+                    $settings = $type instanceof EventSettingsType ? $type->finishSettings([], $first, $last)[0] : [];
+                    $this->occurrences->insert($db, $fields + ['settings' => $settings], EventOccurrence::ACTIVE);
                 }
 
                 return; // between events the block is only the last event's view; Organizer → Events starts the next one
@@ -62,7 +65,15 @@ final class OccurrenceSettingsSync
             if ($listed > 0) {
                 throw new ConfigException([sprintf('event.date: %d home(s) are listed for this event. To start the next season, prepare a new event under Organizer → Events (this season\'s listings stay with this season); to move this event and its homes to other dates, edit it there.', $listed)]);
             }
-            $this->occurrences->updateFields($db, $active->id, $fields + ['settings' => $active->settings]);
+            $settings = $active->settings;
+            $type = $this->types->get($active->type);
+            if ($moved && $type instanceof EventSettingsType) {
+                [$settings, $errors] = $type->finishSettings($settings, $fields['starts_on'], $fields['ends_on']); // e.g. a sale's days must stay inside
+                if ([] !== $errors) {
+                    throw new ConfigException(array_values(array_map(static fn (string $msg) => 'event.date: '.$msg.' Change the event under Organizer → Events.', $errors)));
+                }
+            }
+            $this->occurrences->updateFields($db, $active->id, $fields + ['settings' => $settings]);
         });
     }
 

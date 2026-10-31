@@ -1,0 +1,56 @@
+/*
+ * @module assets/css/events/common.css
+ * @description Components every event type with several days shares, loaded by those types' head fragments before
+ *     their own stylesheet (Christmas lights, the garage sale; Halloween loads none, so its pages are untouched): the
+ *     season row under the hero and its pill (before, during, between, after), the route's mode switch and the rules
+ *     next to it, fieldset legends, and 44 px touch targets for the filters, cards, the selected home, the map tools
+ *     and form chips. Colours come from each type's tokens (--season-*-bg/-fg, --warm-text …); nothing animates.
+ * @dependencies assets/css/app.css (tokens and layout), the type's stylesheet (its tokens)
+ */
+
+/* ---- The season row under the hero ---- */
+.schedule-row { display: flex; align-items: center; gap: 14px; margin-top: 20px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 15px; }
+.schedule-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.schedule-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.schedule-text b { font-size: 14px; font-weight: 900; color: var(--text-strong); }
+.schedule-text span { font-size: 12px; color: var(--muted); }
+.season-pill { flex-shrink: 0; font-size: 12px; font-weight: 900; border-radius: 30px; padding: 6px 12px; white-space: nowrap; }
+.season-pill.before { background: var(--season-before-bg); color: var(--season-before-fg); }
+.season-pill.during { background: var(--season-during-bg); color: var(--season-during-fg); }
+.season-pill.after { background: var(--season-after-bg); color: var(--season-after-fg); }
+.season-pill.between { background: var(--season-before-bg); color: var(--season-before-fg); }
+[data-event-type] #explore { margin-top: 16px; }
+
+/* ---- 44 px targets: filters, cards, the selected home, map tools, form chips ---- */
+[data-event-type] .mini-filter { height: 44px; }
+[data-event-type] .time-filter select, [data-event-type] .time-filter input { height: 44px; border: 1px solid var(--border); border-radius: 30px; padding: 0 12px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 800; }
+[data-event-type] .time-filter input { min-width: 150px; }
+[data-event-type] .save { width: 44px; height: 44px; top: 2px; right: 2px; }
+[data-event-type] .card-line { padding-right: 38px; }
+[data-event-type] .map-selected .x { min-width: 44px; min-height: 44px; }
+[data-event-type] .map-selected .primary { min-height: 44px; width: 100%; }
+[data-event-type] .view-toggle button { width: 44px; height: 40px; }
+[data-event-type] .map-tools button { width: 44px; height: 44px; }
+[data-event-type] .filter-more .link-button { min-height: 44px; }
+[data-event-type] .check-chip { min-height: 44px; }
+fieldset.field > legend.label { padding: 0; }
+
+/* ---- Route: the mode switch and the rules next to it ---- */
+.route-mode { display: inline-flex; gap: 2px; padding: 3px; margin-top: 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-3); }
+.route-mode button { min-height: 40px; padding: 0 14px; border-radius: 999px; background: transparent; color: var(--text-2); font-size: 12px; font-weight: 800; }
+.route-mode button[aria-pressed="true"] { background: var(--surface); color: var(--warm-text); box-shadow: var(--shadow-sm); }
+.route-rules { padding: 0 12px; }
+.route-rules summary { min-height: 44px; display: flex; align-items: center; gap: 6px; font-weight: 900; cursor: pointer; }
+.route-rules summary::-webkit-details-marker { display: none; }
+.route-rules summary::after { content: '▾'; margin-left: auto; font-size: 14px; }
+.route-rules[open] summary::after { content: '▴'; }
+.route-rules[open] { padding-bottom: 12px; }
+.route-rules ul { margin: 2px 0 8px; padding-left: 18px; display: grid; gap: 3px; }
+.route-rules a { font-weight: 800; }
+
+/* ---- Phones: the season row stacked ---- */
+@media (max-width: 660px) {
+  .schedule-row { margin-top: 14px; padding: 12px 13px; gap: 10px; align-items: flex-start; }
+  .schedule-icon { font-size: 22px; }
+  .season-pill { white-space: normal; text-align: center; max-width: 92px; }
+}
