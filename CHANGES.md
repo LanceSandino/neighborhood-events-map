@@ -1201,4 +1201,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p4"
   author: "Lance Sandino"
   timestamp: "2026-10-31T22:00:00Z"
+- id: CU-20261031-30
+  type: chore
+  title: "0.13.0-beta.1: release notes, decisions D-20261031-24 to -32, ROADMAP Stage 4, event-types architecture, the garage sale organizer checklist with a sale community.yaml, sale screenshots, test report"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.13.0-beta.1; the release notes say organizers run garage or rummage sales, residents list their days with their own hours, categories and payment kinds, notes never carry contact details, and older versions show no sale. docs/architecture/event-types.md describes the sale type, the new settings hooks and fragments and common.css; docs/runbooks/garage-sale.md is the organizer's checklist with a sale community.yaml using event.settings; docs/design/README.md records what the sale mockups gave and what the app kept; ROADMAP marks Stage 4 shipped; AGENTS.md and README name the fourth dev stack and the sale demo. docs/design/screenshots/sale-*.png show the sale demo (desktop and phone, light and dark, the listing form and My house; taken with tiles blocked). Gates on the final tree are in docs/quality/test-report.md."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "ROADMAP.md", "AGENTS.md", "DECISIONS.md", "docs/"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  commit_ref: "feature/event-types-p4"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T23:00:00Z"
 ```

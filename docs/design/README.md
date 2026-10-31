@@ -31,3 +31,25 @@ for the `holiday_lights` type; the repository's UX decisions win (D-20261031-21)
 Screenshots (fictional lights demo, browser clock pinned to Dec 12, 2026, 7:30 PM; tiles blocked until the polish
 stage): `screenshots/lights-{390,1440}.png`, `screenshots/lights-dark-{390,1440}.png`, `screenshots/lights-register-390.png`
 (the listing form's nights and details), `screenshots/lights-me-390.png` (My house after "Done for the season").
+
+## Garage sale (0.13)
+
+The sale mockups (desktop 1440, phone 390; fictional concept art, not part of this repository) are the style guide for
+the `garage_sale` type; the repository's UX decisions win (D-20261031-27):
+
+- Taken from the mockups: teal `#178D80`, coral `#E77C5D`, soft mint and off-white (and a slate-teal dark mode); the
+  hero "Good finds. **Close to home.**" with a moving box and a plant (also beside the headline on phones); the sale row
+  under the hero ("Sat–Sun, April 10–11, 2027", "Most homes: 8 AM–2 PM · Individual hours vary", a Coming this spring /
+  Today / Sale over pill); category icons with their words on cards and pins, Multi-family, the selected-home panel with
+  "Save this stop", a mint highlight for the selected card; "Your sale stops"; the coral "Having a sale?" call to
+  action; one card per row on phones.
+- Kept from the app: quick filters as icon + count buttons (Kids & toys, Furniture, Tools, Saved) with the rest under
+  Filters (Household, Electronics, Free items, Open now, Open <weekday> per sale day, Multi-family, Early birds); the
+  zone select in the controls row; status chips; the real Leaflet map; the route inline under the map with the rules
+  folded next to it. Teal buttons carry near-black text instead of the mockups' white, which would miss AA
+  (D-20261031-32). Not built: the mockups' public Christmas/Rummage switcher (one active event per install), their
+  invented streets and numbered zone names.
+
+Screenshots (fictional sale demo, browser clock pinned to Sat, April 10, 2027, 9:30 AM; tiles blocked until the polish
+stage): `screenshots/sale-{390,1440}.png`, `screenshots/sale-dark-{390,1440}.png`, `screenshots/sale-register-390.png`
+(the listing form's days with their own hours and details), `screenshots/sale-me-390.png` (My house after "Closed").

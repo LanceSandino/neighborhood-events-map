@@ -37,7 +37,7 @@ This file is self-contained: anyone (or any agent such as Codex or Claude Code) 
 | `src/Controller`, `templates/`, `public/assets/` | HTTP, Twig, CSS/JS |
 | `migrations/` | Doctrine migrations (SQL) |
 | `tests/Unit`, `tests/Integration`, `tests/js`, `tests/e2e`, `scripts/tests` | PHPUnit, node:test, Playwright, Python importer tests |
-| `examples/` | fictional Maple Hollow demos (Halloween and Christmas lights) and the Ventura Reserve real-plat example (official Orange County open data) |
+| `examples/` | fictional Maple Hollow demos (Halloween, Christmas lights and a rummage sale) and the Ventura Reserve real-plat example (official Orange County open data) |
 | `docs/` | architecture, ADRs, runbooks, design, quality |
 
 Every source file starts with a header block (`@module`, `@description`, dependencies). Keep modules single-purpose and under ~400 lines.
@@ -59,7 +59,7 @@ docker compose exec app vendor/bin/phpstan analyse                  # level 6, m
 docker compose exec app composer audit --locked
 docker run --rm -v "$PWD":/w -w /w node:24-alpine node --test tests/js/*.test.mjs
 docker run --rm -v "$PWD":/w -w /w python:3.14-slim sh -c "pip install -q shapely==2.2.0 && python -I -m unittest discover -s scripts/tests"
-./bin/e2e.sh                                                        # Playwright, needs the three dev stacks running (.env, .env.demo, .env.lights)
+./bin/e2e.sh                                                        # Playwright, needs the four dev stacks running (.env, .env.demo, .env.lights, .env.sale)
 python3 scripts/smoke_session.py                                    # session lifecycle smoke test
 bin/smoke-prod-image.sh nhm-app nhm-nginx smoke                     # the production images (after docker build --target prod/nginx)
 ```

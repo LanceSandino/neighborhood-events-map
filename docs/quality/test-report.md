@@ -1,6 +1,28 @@
 # Test and verification report
 
-## Latest run — 2026-10-31, release 0.12.0-beta.1
+## Latest run — 2026-10-31, release 0.13.0-beta.1
+
+The garage sale, the third event type (ROADMAP Stage 4; CU-20261031-25 to -30), on PHP 8.5.12 + PostgreSQL 18.6,
+Symfony 8.1.10. The bar was Halloween and Christmas lights parity first (every earlier test, API answer and page
+unchanged), then the sale end to end with the browser clock pinned to moments of the sale, and a note with contact
+details never stored.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.12.0-beta.1 (branch start, dev stacks) | PHPUnit **OK — 422 tests, 13654 assertions** |
+| PHPUnit 13.4.5 | **OK — 558 tests, 14176 assertions** (136 new: 102 contact-detail cases, 24 GarageSaleType tests, 8 sale integration tests, the YAML settings and Twig day helpers; tests that pinned "Halloween and Christmas lights are enabled" now pin all three keys, and their "not offered" cases use a narrower registry or a newer release's type with a widened check) |
+| Coverage (pcov) | Lines **95.24 %** ✓ ≥ 85 · Methods 83.17 % · Branches n/a · GarageSaleType 100 %, EventTypeRegistry 100 %, ListingDraft 99 %, ContactDetails 98 %, ScheduleWindows 98 %, AppExtension 96 %, EventLifecycle 91 %, OccurrenceInput 91 %, CommunityBootstrapper 87 %, OccurrenceSettingsSync 87 % |
+| Halloween and Christmas parity | GoldenApiParityTest, PublicPrivacyTest and HolidayLightsTest unchanged and green; 9 pages of the Ventura, Halloween demo and lights stacks (`/`, `/about`, `/privacy`) byte-identical with and without the moved fragments (asset fingerprints aside); computed styles of the lights pages identical before and after moving their shared CSS to common.css (3,450 elements × 23 properties, 390 and 1440 px, light and dark, map, About and the listing sheet); the tiles-blocked lights screenshots of this run equal the committed ones (4 byte-identical, lights-1440 differs in 12 pixels by one colour level, lights-me only in its random house number); the Halloween screenshots differ only where the committed ones have real map tiles and in the footer's version text |
+| Display status | 48 shared cases (14 garage_sale, written with the event core and now run through the sale type and module: DST in Chicago and New York, month end, paused and sold out today vs another day, closed, no window, no windows at all) green in PHPUnit and node:test |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` · `lint:container` | No errors · no advisories · 79 files OK · 19 files OK (config and examples) · OK |
+| Migrations up / down to zero / up (test database) | OK (no new migration in this release) |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **66/66** (10 new for the sale) · **47/47** |
+| Playwright E2E on the four dev stacks (chromium, webkit-iphone, then `season`) | **125 passed, 2 skipped** on the final tree (the same 2 skipped as before): 22 new sale tests (theme, sale row and pill, every filter with its count and search over categories and notes, open now vs opens at, sold out today vs tomorrow, paused for one day, closed, never "Open now" outside a home's hours, cards/pins/panel agree, saved stops per event, the route without a provider and its rules, axe light and dark on 4 pages, 7 widths without overflow and with 44 px targets, reduced motion, the map blocked, the listing form refusing a note with a phone number — no email, nothing stored — then listed, a payment handle refused in My house, paused, sold out and closed); the season test lists one demo home for Halloween, Christmas lights and the rummage sale in turn (three independent listings, only the current one public) and returns the demo to Halloween |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (0.13.0-beta.1: /healthz, the map page, 6 versioned assets, multipart rules, the upload endpoint, all FPM pools, the console); the sale's templates, stylesheets, module and demo are in the images |
+| Trivy | not run locally (CI scans the images) |
+
+## Run — 2026-10-31, release 0.12.0-beta.1
 
 Christmas lights, the second event type (ROADMAP Stage 3; CU-20261031-18 to -24), on PHP 8.5.12 + PostgreSQL 18.6,
 Symfony 8.1.10. The bar was Halloween parity first (every earlier test, API answer and page unchanged), then the lights
