@@ -1,0 +1,7 @@
+{# Garage sale rules next to the route, folded to one line: the organizer's event rules and early-bird time, then the
+   first sale etiquette lines; the full list is on the About page. Expects `c` and `et`. #}
+<details class="notice route-rules">
+  <summary>{{ et.copy.route_rules_title }}: rules and sale etiquette</summary>
+  <ul>{% for r in c.event.rules ?? [] %}<li>{{ r }}</li>{% endfor %}{% include event_fragment(c.event.type, 'rule_lines') %}{% for r in c.community.reminders|slice(0, 3) %}<li>{{ r }}</li>{% endfor %}</ul>
+  <a href="/about">All sale etiquette</a>
+</details>

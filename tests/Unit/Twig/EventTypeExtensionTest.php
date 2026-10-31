@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Twig;
 
 use App\Event\EventType;
 use App\Event\EventTypeRegistry;
+use App\Event\Type\HalloweenType;
 use App\Twig\EventTypeExtension;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -29,8 +30,15 @@ final class EventTypeExtensionTest extends TestCase
         self::assertSame('Find treat stops', $view['copy']['explore_label']);
         self::assertSame($view, $x->eventType(null), 'no key means the default type');
         self::assertSame('event/halloween/_card_tags.html.twig', $x->fragment('halloween', 'card_tags'));
+        self::assertSame('event/garage_sale/_card_tags.html.twig', $x->fragment('garage_sale', 'card_tags'));
+        try {
+            (new EventTypeExtension(new EventTypeRegistry([new HalloweenType()], ['halloween'])))->fragment('garage_sale', 'card_tags');
+            self::fail('a type without an implementation has no fragments');
+        } catch (\InvalidArgumentException $e) {
+            self::assertStringContainsString('Unknown event type "garage_sale"', $e->getMessage());
+        }
         $this->expectException(\InvalidArgumentException::class);
-        $x->fragment('garage_sale', 'card_tags');
+        $x->fragment('garage_sale', 'photo_gallery');
     }
 
     public function testAFragmentOutsideTheTypesFolderIsRefused(): void

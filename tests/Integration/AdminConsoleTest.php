@@ -144,19 +144,22 @@ final class AdminConsoleTest extends AppTestCase
     {
         $r = $this->json('GET', '/api/admin/community');
         self::assertSame('halloween', $r['settings']['event']['type']);
-        self::assertSame([['key' => 'halloween', 'name' => 'Halloween'], ['key' => 'holiday_lights', 'name' => 'Christmas Lights']], array_map(static fn (array $t) => ['key' => $t['key'], 'name' => $t['name']], $r['event_types']));
+        self::assertSame([['key' => 'halloween', 'name' => 'Halloween'], ['key' => 'holiday_lights', 'name' => 'Christmas Lights'], ['key' => 'garage_sale', 'name' => 'Garage Sale']],
+            array_map(static fn (array $t) => ['key' => $t['key'], 'name' => $t['name']], $r['event_types']));
         self::assertSame('halloween', $r['event_type']['key']);
         self::assertSame(['candy', 'nonfood_treats', 'adult_refreshments', 'sensory_filters'], array_column($r['event_type']['features'], 'key'));
         self::assertSame('Trick-or-treat reminders (one per line, up to 12)', $r['event_type']['copy']['reminders_label']);
         $s = $r['settings'];
-        $s['event']['type'] = 'garage_sale';
+        $s['event']['type'] = 'fireworks';
         $refused = $this->json('PUT', '/api/admin/community', ['settings' => $s], ['X-CSRF-Token' => $this->csrf]);
         self::assertSame(422, $this->code(), json_encode($refused));
-        self::assertSame(['event.type "garage_sale" is not available in this version; choose halloween or holiday_lights.'], $refused['error']['problems']);
-        $s['event']['type'] = 'holiday_lights';
-        $refused = $this->json('PUT', '/api/admin/community', ['settings' => $s], ['X-CSRF-Token' => $this->csrf]);
-        self::assertSame(422, $this->code(), 'the current event\'s type never changes here: '.json_encode($refused));
-        self::assertStringContainsString('event.type cannot change for the current event', $refused['error']['problems'][0]);
+        self::assertSame(['event.type "fireworks" is not a known event type (halloween, holiday_lights, garage_sale).'], $refused['error']['problems']);
+        foreach (['holiday_lights', 'garage_sale'] as $other) {
+            $s['event']['type'] = $other;
+            $refused = $this->json('PUT', '/api/admin/community', ['settings' => $s], ['X-CSRF-Token' => $this->csrf]);
+            self::assertSame(422, $this->code(), 'the current event\'s type never changes here: '.json_encode($refused));
+            self::assertStringContainsString('event.type cannot change for the current event', $refused['error']['problems'][0]);
+        }
         self::assertSame('halloween', $this->json('GET', '/api/event')['event']['type'], 'nothing was saved');
     }
 }

@@ -6,6 +6,14 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Added
+- **Garage and rummage sales.** Organizers can run a sale under Organizer → Events: its name (for example "Community Rummage Sale"), one to three sale days, the hours most homes keep, the item categories residents may list, an early-bird time, rules and, with a routing provider, a driving tour. The preview shows the sale's look before it goes on the map.
+- Residents list their sale with the days they take part in and their own hours on each day (Saturday and Sunday may differ), item categories, multi-family, early birds welcome and the payment kinds they take (cash, card or payment apps — the kind only). In My house they mark "Paused today", "Sold out today" or "Closed".
+- Sale notes are public, so a note with a phone number, email address, payment username or web address is refused with a message asking to remove it; nothing of it is saved.
+- Visitors get a teal and coral map with the sale days and hours, quick filters for kids & toys, furniture and tools, more filters for household, electronics, free items, homes open now, open on each sale day, multi-family sales and early birds, search over streets, categories and notes, and each home's status on their own clock ("Open now" only during that home's hours; "Sold out today" never shows as open). Saved stops become "Your sale stops", with the sale etiquette next to it.
+- A fictional rummage sale demo (`examples/demo-sale/`) for trying it out.
+- `community.yaml` can set the first event's settings (`event.settings`), for example a sale's days, categories and rules.
+
 ## [0.12.0-beta.1] - 2026-10-31
 
 Update by pulling `0.12.0-beta.1` and recreating the stack. No database migration: Halloween maps look and work exactly as before. Going back to 0.11.0-beta.1 needs only the older image while a Halloween event is on the map; a Christmas lights season is not shown by older versions (they show "No event on the map right now").

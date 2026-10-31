@@ -1,0 +1,54 @@
+# FICTIONAL DEMO community — a two-day rummage sale on the same invented Maple Hollow outline as examples/demo.
+# Every home, street and note here is invented; the outline sits inside an uninhabited forest so it can never be
+# mistaken for real homes. Demo homes are created only with APP_DEMO=1 (bin/console app:demo:seed, which reads
+# homes.json next to this file). Fixed dates (Sat–Sun, April 10–11, 2027) keep the demo the same whenever it runs.
+schema_version: 1
+community:
+  id: maple-hollow-sale-demo
+  name: "Maple Hollow"
+  subtitle: "A fictional demo neighborhood"
+  locality: "Demo Town"
+  region: "FL"
+  country: "US"
+  timezone: "America/Chicago"
+  gate_notice: "Fictional demo data — these homes do not exist."
+  contact_url: "mailto:organizer@example.org"
+  access: public
+  about: |
+    Maple Hollow is a FICTIONAL neighborhood used to demonstrate the garage sale map. Every home, street and note here is invented.
+
+    Anyone can browse the sales by category and day, see who is open now and plan a shopping route; residents list their own homes with a one-time email link. No prices, photos or payments.
+  links:
+    - { label: "Project on GitHub", url: "https://github.com/" }
+event:
+  type: garage_sale
+  name: "Community Rummage Sale"
+  date: "2027-04-10"
+  starts_on: "2027-04-10"
+  ends_on: "2027-04-11"
+  starts_at: "08:00"
+  ends_at: "14:00"
+  # The event's own settings, applied when this file creates the install's first event (Organizer → Events later).
+  settings:
+    days: ["2027-04-10", "2027-04-11"]
+    early_bird_time: "07:30"
+    rules:
+      - "Park on one side of the street so traffic can pass."
+      - "Please keep driveways and mailboxes clear."
+    route_modes: [walking, driving]
+# No branding block: the garage sale defaults (teal and coral, "Good finds. Close to home.").
+map:
+  boundary_file: boundary.geojson
+  zoom: 16
+  tiles:
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    attribution: "© OpenStreetMap contributors"
+zones: []
+features:
+  optional_zones: false
+registration:
+  enabled: true
+  address_mode: both
+  street_allowlist: ["Juniper Ct", "Cedar Way", "Birch Ln", "Willow Bend"]
+routing:
+  groups: []

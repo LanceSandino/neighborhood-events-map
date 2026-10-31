@@ -1,0 +1,6 @@
+{# Garage sale controls behind "Filters", after the toggles: "Open <day>" for each sale day (day1…day3; home.js binds
+   every [data-filter] control and counts it; events/garage_sale.js filters by the event's days). Expects `c`. #}
+{%- set days = c.event.days ?? [] -%}
+{%- set names = day_names(days) -%}
+    {% for day in days %}<button type="button" class="mini-filter" data-filter="day{{ loop.index }}" aria-pressed="false" title="Homes open on {{ day_list([day]) }}"><span class="fi" aria-hidden="true">📅</span>Open {{ names[loop.index0] }}</button>
+    {% endfor %}

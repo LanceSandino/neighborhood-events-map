@@ -1,0 +1,31 @@
+{# Garage sale listing details for "List my house" and "My house" (events/garage_sale.js reads them by name): the
+   categories this sale allows (c.event.categories), multi-family and early birds, and the payment kinds (the kind
+   only, never a username or phone number). The words mirror the map's filters and tags. Groups are fieldsets (no
+   ids: My house repeats the form per home). Expects `c` and `et`. #}
+{%- set cats = {kids_baby: ['🍼', 'Kids & baby'], toys: ['🧸', 'Toys'], furniture: ['🪑', 'Furniture'], clothing: ['👕', 'Clothing'], tools: ['🛠️', 'Tools'], books_media: ['📚', 'Books & media'], electronics: ['🔌', 'Electronics'], sports: ['⚽', 'Sports'], household: ['🧺', 'Household'], free: ['🆓', 'Free items']} -%}
+<fieldset class="field full">
+  <legend class="label">{{ et.copy.categories_label }} *</legend>
+  <div class="checks">
+    {% for key in c.event.categories ?? cats|keys %}{% if cats[key] is defined %}<label class="check-chip"><input type="checkbox" name="categories" value="{{ key }}"> {{ cats[key][0] }} {{ cats[key][1] }}</label>
+    {% endif %}{% endfor %}
+  </div>
+  <span class="error" data-error="categories"></span>
+</fieldset>
+<fieldset class="field full">
+  <legend class="label">Your sale</legend>
+  <div class="checks">
+    <label class="check-chip"><input type="checkbox" name="multi_family"> 🏘️ Multi-family sale</label>
+    <label class="check-chip"><input type="checkbox" name="early_birds_allowed"> 🐦 Early birds welcome</label>
+  </div>
+  <span class="form-caption">{{ et.copy.early_birds_help }}{% if c.event.early_bird_time ?? null %} {{ et.copy.early_bird_rule }} {{ c.event.early_bird_time|time12 }} (the organizer’s rule).{% endif %}</span>
+</fieldset>
+<fieldset class="field full">
+  <legend class="label">Payment kinds</legend>
+  <div class="checks">
+    <label class="check-chip"><input type="checkbox" name="payment_types" value="cash"> 💵 Cash</label>
+    <label class="check-chip"><input type="checkbox" name="payment_types" value="card"> 💳 Card</label>
+    <label class="check-chip"><input type="checkbox" name="payment_types" value="apps"> 📱 Payment apps</label>
+  </div>
+  <span class="form-caption">{{ et.copy.payment_help }}</span>
+  <span class="error" data-error="payment_types"></span>
+</fieldset>

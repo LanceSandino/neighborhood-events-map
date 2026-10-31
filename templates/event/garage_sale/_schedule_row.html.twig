@@ -1,0 +1,15 @@
+{# The sale under the hero: its days, most homes' hours, the early-bird rule and where the sale stands ("Coming this
+   spring", "Today", "More sale days ahead", "Sale over"; home.js keeps the pill current on the visitor's clock with
+   lib/schedule.js seasonOf). Expects `c` and `et`. #}
+{%- set today = local_today(c.event.timezone) -%}
+{%- set days = c.event.days ?? [] ?: [c.event.starts_on] -%}
+{%- set season = today < days|first ? 'before' : (today > days|last ? 'after' : (today in days ? 'during' : 'between')) -%}
+{%- set before = et.copy.season_before|format(season_of(days|first, c.map.center.lat ?? null)) -%}
+<section class="schedule-row" aria-label="Sale days and hours">
+  <span class="schedule-icon" aria-hidden="true">{{ et.copy.event_icon }}</span>
+  <div class="schedule-text">
+    <b>{{ day_list(days) }}</b>
+    <span>{{ et.copy.most_homes }}: {{ c.event.starts_at|time_span(c.event.ends_at) }} · {{ et.copy.times_vary }}{% if c.event.early_bird_time ?? null %} · {{ et.copy.early_bird_rule }} {{ c.event.early_bird_time|time12 }}{% endif %}</span>
+  </div>
+  <span class="season-pill {{ season }}" id="seasonPill" data-before="{{ before }}" data-during="{{ et.copy.season_during }}" data-between="{{ et.copy.season_between }}" data-after="{{ et.copy.season_after }}">{{ season == 'before' ? before : et.copy['season_' ~ season] }}</span>
+</section>

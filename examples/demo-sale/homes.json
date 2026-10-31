@@ -1,0 +1,273 @@
+{
+ "fictional": true,
+ "notice": "Invented garage sale demo homes for development, tests and screenshots only. Each home names its sale days and hours as windows; status_date names a fictional day for \"sold out today\" or \"paused today\".",
+ "homes": [
+  {
+   "house_number": "14",
+   "street": "Juniper Ct",
+   "lat": 29.19986,
+   "lon": -81.687345,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "08:00",
+     "end": "14:00"
+    },
+    {
+     "date": "2027-04-11",
+     "start": "08:00",
+     "end": "14:00"
+    }
+   ],
+   "note": "Two families: baby gear, toys and kids' clothes sorted by size.",
+   "details": {
+    "categories": [
+     "kids_baby",
+     "toys",
+     "clothing"
+    ],
+    "multi_family": true,
+    "payment_types": [
+     "cash",
+     "apps"
+    ]
+   }
+  },
+  {
+   "house_number": "27",
+   "street": "Cedar Way",
+   "lat": 29.201688,
+   "lon": -81.685632,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "08:00",
+     "end": "13:00"
+    }
+   ],
+   "note": "Oak dresser, two lamps and a kitchen table in the garage.",
+   "details": {
+    "categories": [
+     "furniture",
+     "household"
+    ],
+    "payment_types": [
+     "cash",
+     "card"
+    ]
+   }
+  },
+  {
+   "house_number": "33",
+   "street": "Juniper Ct",
+   "lat": 29.19986,
+   "lon": -81.686776,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "07:00",
+     "end": "12:00"
+    },
+    {
+     "date": "2027-04-11",
+     "start": "09:00",
+     "end": "13:00"
+    }
+   ],
+   "note": "Drills, a mitre saw, a bike rack and an old stereo. Different hours on Sunday.",
+   "details": {
+    "categories": [
+     "tools",
+     "electronics",
+     "sports"
+    ],
+    "early_birds_allowed": true,
+    "payment_types": [
+     "cash"
+    ]
+   }
+  },
+  {
+   "house_number": "41",
+   "street": "Birch Ln",
+   "lat": 29.201924,
+   "lon": -81.686357,
+   "windows": [
+    {
+     "date": "2027-04-11",
+     "start": "09:00",
+     "end": "14:00"
+    }
+   ],
+   "note": "Paperbacks, board games and DVDs; a free box at the curb.",
+   "details": {
+    "categories": [
+     "books_media",
+     "free"
+    ]
+   }
+  },
+  {
+   "house_number": "52",
+   "street": "Cedar Way",
+   "lat": 29.20187,
+   "lon": -81.686737,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "08:00",
+     "end": "14:00"
+    },
+    {
+     "date": "2027-04-11",
+     "start": "08:00",
+     "end": "12:00"
+    }
+   ],
+   "status": "sold_out",
+   "status_date": "2027-04-10",
+   "note": "Clothes and kitchenware. Restocking for Sunday.",
+   "details": {
+    "categories": [
+     "clothing",
+     "household"
+    ],
+    "payment_types": [
+     "cash",
+     "card",
+     "apps"
+    ]
+   }
+  },
+  {
+   "house_number": "66",
+   "street": "Birch Ln",
+   "lat": 29.199937,
+   "lon": -81.68442,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "08:00",
+     "end": "14:00"
+    },
+    {
+     "date": "2027-04-11",
+     "start": "08:00",
+     "end": "14:00"
+    }
+   ],
+   "status": "paused",
+   "status_date": "2027-04-11",
+   "note": "Patio chairs, a workbench and garden tools.",
+   "details": {
+    "categories": [
+     "furniture",
+     "tools"
+    ],
+    "multi_family": true,
+    "payment_types": [
+     "cash"
+    ]
+   }
+  },
+  {
+   "house_number": "78",
+   "street": "Juniper Ct",
+   "lat": 29.200933,
+   "lon": -81.68499,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "09:00",
+     "end": "13:00"
+    }
+   ],
+   "status": "closed",
+   "note": "Closed this year, sorry!",
+   "details": {
+    "categories": [
+     "toys"
+    ]
+   }
+  },
+  {
+   "house_number": "85",
+   "street": "Cedar Way",
+   "lat": 29.202688,
+   "lon": -81.685543,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "10:00",
+     "end": "16:00"
+    }
+   ],
+   "note": "Game consoles, cables and a box of LEGO.",
+   "details": {
+    "categories": [
+     "electronics",
+     "toys"
+    ],
+    "multi_family": true,
+    "payment_types": [
+     "cash",
+     "apps"
+    ]
+   }
+  },
+  {
+   "house_number": "93",
+   "street": "Birch Ln",
+   "lat": 29.199565,
+   "lon": -81.686981,
+   "windows": [
+    {
+     "date": "2027-04-10",
+     "start": "08:00",
+     "end": "12:00"
+    },
+    {
+     "date": "2027-04-11",
+     "start": "08:00",
+     "end": "12:00"
+    }
+   ],
+   "note": "Stroller, crib sheets, toddler clothes; free hangers.",
+   "details": {
+    "categories": [
+     "kids_baby",
+     "clothing",
+     "free"
+    ],
+    "early_birds_allowed": true,
+    "payment_types": [
+     "cash"
+    ]
+   }
+  },
+  {
+   "house_number": "104",
+   "street": "Cedar Way",
+   "lat": 29.200789,
+   "lon": -81.683171,
+   "windows": [
+    {
+     "date": "2027-04-11",
+     "start": "08:00",
+     "end": "11:00"
+    }
+   ],
+   "note": "Golf clubs, a rowing machine and camping gear.",
+   "details": {
+    "categories": [
+     "sports",
+     "tools",
+     "household"
+    ],
+    "payment_types": [
+     "card"
+    ]
+   }
+  }
+ ]
+}

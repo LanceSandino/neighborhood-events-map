@@ -1,0 +1,2 @@
+{#- The sale's own rule lines after the organizer's rules (About, the route's rules): the early-bird time. Expects `c` and `et`. -#}
+{%- if c.event.early_bird_time ?? null %}<li>🐦 {{ et.copy.early_bird_rule }} {{ c.event.early_bird_time|time12 }}</li>{% endif -%}

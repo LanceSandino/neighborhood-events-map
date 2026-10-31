@@ -6,6 +6,9 @@ namespace App\Tests\Unit\Community;
 
 use App\Community\CommunitySchema;
 use App\Community\ConfigException;
+use App\Event\EventTypeRegistry;
+use App\Event\Type\HalloweenType;
+use App\Event\Type\HolidayLightsType;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -164,14 +167,31 @@ final class CommunitySchemaTest extends TestCase
         foreach (['config/community.example.yaml', 'examples/demo/community.yaml', 'examples/ventura-reserve/community.yaml'] as $file) {
             self::assertSame('halloween', $schema->normalize(Yaml::parseFile(self::root().'/'.$file))['event']['type'], $file);
         }
-        foreach (['christmas' => 'is not a known event type', 'garage_sale' => 'is not available in this version', 'HALLOWEEN' => 'is not a known event type'] as $type => $why) {
+        foreach (['christmas' => 'is not a known event type', 'HALLOWEEN' => 'is not a known event type', 'rummage' => 'is not a known event type'] as $type => $why) {
             try {
                 $schema->normalize(array_replace_recursive($base, ['event' => ['type' => $type]]));
                 self::fail("expected ConfigException for $type");
             } catch (ConfigException $e) {
-                self::assertSame([sprintf('event.type "%s" %s', $type, $why).('is not a known event type' === $why ? ' (halloween, holiday_lights, garage_sale).' : '; choose halloween or holiday_lights.')], $e->errors);
+                self::assertSame([sprintf('event.type "%s" %s', $type, $why).' (halloween, holiday_lights, garage_sale).'], $e->errors);
             }
         }
+        // A version that does not offer a type refuses it by name (0.12 and the garage sale).
+        $older = new CommunitySchema(types: new EventTypeRegistry([new HalloweenType(), new HolidayLightsType()], ['halloween', 'holiday_lights']));
+        try {
+            $older->normalize(array_replace_recursive($base, ['event' => ['type' => 'garage_sale']]));
+            self::fail('expected ConfigException for garage_sale in a version without it');
+        } catch (ConfigException $e) {
+            self::assertSame(['event.type "garage_sale" is not available in this version; choose halloween or holiday_lights.'], $e->errors);
+        }
+        // 0.13 offers the garage sale: its defaults ("Garage Sale", teal and coral), sale days and none of Halloween's switches.
+        $sale = $schema->normalize(['community' => ['id' => 'x2', 'name' => 'X'], 'event' => ['type' => 'garage_sale', 'date' => '2027-04-10', 'ends_on' => '2027-04-11', 'starts_at' => '08:00', 'ends_at' => '14:00']]);
+        self::assertSame(['Garage Sale', 'Good finds.', 'Close to home.', '#178D80', '#E77C5D', '2027-04-10', '2027-04-11'],
+            [$sale['event']['name'], $sale['branding']['headline'], $sale['branding']['headline_accent'], $sale['branding']['primary_color'], $sale['branding']['accent_color'],
+                $sale['event']['starts_on'], $sale['event']['ends_on']]);
+        self::assertSame(['optional_zones', 'walking_routes'], array_keys($sale['features']));
+        $rummage = $schema->normalize(Yaml::parseFile(self::root().'/examples/demo-sale/community.yaml'));
+        self::assertSame(['garage_sale', 'Community Rummage Sale', '2027-04-10', '2027-04-11', 'maple-hollow-sale-demo'],
+            [$rummage['event']['type'], $rummage['event']['name'], $rummage['event']['starts_on'], $rummage['event']['ends_on'], $rummage['community']['id']]);
         // 0.12 offers Christmas lights: its defaults, a date range and none of Halloween's switches.
         $lights = $schema->normalize(['community' => ['id' => 'x1', 'name' => 'X'], 'event' => ['type' => 'holiday_lights', 'date' => '2026-12-01', 'ends_on' => '2027-01-03']]);
         self::assertSame(['Christmas Lights', 'Holiday nights.', 'Bright lights.', '#38597F', '#CE9D3D', '2026-12-01', '2027-01-03'],
