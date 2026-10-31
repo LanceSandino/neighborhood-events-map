@@ -1,6 +1,39 @@
 # Test and verification report
 
-## Latest run — 2026-10-31, release 0.14.0-beta.1
+## Latest run — 2026-10-31, release 0.15.0-beta.1
+
+Several published events per community (ADR 0011; CU-20261031-45 to -53), on PHP 8.5.12 + PostgreSQL 18.6, Symfony
+8.1.10. The bar: the owner's decisions of 2026-10-31 (several events, default event, close → next year, residents per
+event) with Halloween, Christmas lights and the garage sale unchanged inside an event, the acceptance audit kept true
+for the new model, and the upgrade production takes — 0.9.0-beta.1 straight to this release, every migration in
+order — run on the built images.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.14.0-beta.1 (branch start, dev stack) | PHPUnit **OK — 587 tests, 14553 assertions** |
+| PHPUnit 13.4.5 (with pcov) | **OK — 616 tests, 16678 assertions** (new: NextEventTest 16, MultiEventTest 7, MultiEventMigrationTest 2, the bridge rule, the 0.15 golden answers; EventLifecycleRaceTest's 5 replace EventActivationRaceTest's 3; tests of the one-active switch rewritten for the new flows, CU-20261031-51) |
+| Coverage (pcov) | Lines **95.33 %** ✓ ≥ 85 · Methods 83.68 % · Branches n/a |
+| Halloween parity | GoldenApiParityTest: the 0.9 and 0.11 answers kept key by key; the 0.15 fixtures add exactly `state`, `dates_tentative`, `is_default` at the end of the event; homes unchanged. PublicPrivacyTest unchanged and green. A one-event install shows no switcher (season.spec checks it on the demo). No page-by-page HTML diff was made this time |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` · `lint:container` | No errors · no advisories · 80 files OK · 21 files OK · OK |
+| Migrations up / down to zero / up (test database) | OK (6 migrations, Version20261031000003 new) |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **68/68** (1 new: every request names its event) · **47/47** |
+| Playwright E2E on the four dev stacks, tiles blocked (fresh stacks) | **230 passed, 2 skipped** (17.1 min; the same 2 skipped as before). New: events.spec.mjs (5 tests on the lights demo: the switcher by mouse and keyboard, "/" = the default, closed message, upcoming cards, theme per tab, saved stops per tab, axe light and dark, no overflow 375–1440 px, My house with "Use last year's details", organizer open/close/default); season.spec.mjs rewritten (close → next year → open, lights and sale next to it). A first run on stacks started before the migration existed failed the 3 Ventura tests with a database error (the dev database had not run the new migration); the run above is on fresh stacks |
+| Re-run of the season project (events + season, after bin/e2e.sh's demo seed) with OpenStreetMap tiles | **6 passed** (1.4 min): both specs run again on the state the first run left; refreshes the screenshots below. lights.spec with tiles: **22 passed** (1.6 min) |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (0.15.0-beta.1) |
+| `bin/drill-event-upgrade.sh nhm-app nhm-nginx smoke` | **all steps passed** (121 s): published 0.9.0-beta.1 with 14 fictional homes → backup → upgrade (3 migrations at start; same 14 homes, keys and values; 1 occurrence, open and the default, 14 event listings) → edit + new self-entered home → (4b) an organizer closes the Halloween of 2026-10-30, next year's is created upcoming on 2027-10-31 (tentative), a resident lists for it, the legacy row keeps the closed Halloween's listing, no homes on the map → images back to 0.9.0-beta.1 ("You have 3 previously executed migrations", "Already at the latest version"; the same 15 homes) → edit on 0.9 → forward again (the 0.9 edit is in the closed Halloween; next year's listing untouched; /api/events closed, upcoming) → 0.9 + `bin/restore.sh` of the pre-upgrade dump (exactly the 14 homes, no event tables, 3 migrations) → upgraded again (same 14 homes) |
+| Trivy | not run locally (CI scans the images) |
+
+Found and fixed on the way, each with a test: the claim confirmation page rendered another event's tags (500) when the
+request named a non-default event; the upcoming card's date lost its capital (Twig `capitalize`); same-named events
+("Halloween") were ambiguous in My house; a draft's preview showed the public switcher.
+
+Screenshots (`docs/design/screenshots/`, with OpenStreetMap tiles, fictional lights demo, browser clock pinned to a night
+of the season): new `events-switcher-{1440,390}.png`, `events-switcher-dark-{1440,390}.png`, `events-closed-{1440,390}.png`;
+refreshed `lights-{1440,390}.png`, `lights-dark-{1440,390}.png`, `lights-register-390.png`, `lights-me-390.png` (the lights
+demo now shows the switcher) and `admin-events-1440.png` (the new console). The others were left as committed.
+
+## Run — 2026-10-31, release 0.14.0-beta.1
 
 The finishing release of the event-types roadmap (CU-20261031-31 to -44), on PHP 8.5.12 + PostgreSQL 18.6, Symfony
 8.1.10. No schema change. The bar: the release-blocking acceptance audit ([event-types-acceptance.md](event-types-acceptance.md))

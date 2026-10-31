@@ -4,7 +4,11 @@ The owner's plan for the event-types roadmap (Halloween, Christmas lights, garag
 release-blocking acceptance items and nine risks. This page maps each one to the tests that prove it, as
 `file::test` (PHPUnit method, or the node:test / Playwright title as written). Paths are relative to `tests/`.
 It was written for 0.14.0-beta.1 by reading every test cited; where an item had no real test, the test was written
-then (they are marked **new**). The results of each run are in [test-report.md](test-report.md).
+then (they are marked **new**). 0.15.0-beta.1 changed one product decision — several events may be published at once
+([ADR 0011](../adr/0011-several-published-events.md)) — so every item that said "one active event" now reads "one
+default event, at most one current event per type, and the state rules", and the tests that proved it were rewritten
+for the new flows (marked **0.15**; the section [Several events](#several-events-015) adds the new items). The results
+of each run are in [test-report.md](test-report.md).
 
 Short forms: `I/` = `Integration/`, `U/` = `Unit/`, `J/` = `js/`, `E/` = `e2e/specs/`.
 
@@ -29,7 +33,7 @@ stay as they were.
 ## 2. One address, distinct Halloween, Christmas and rummage listings; the past never public
 
 - `I/GarageSaleSeasonTest.php::testOneAddressListsForHalloweenChristmasAndTheRummageSaleIndependently` — three rows for one address, each with its own note; only the sale is public; last seasons' notes nowhere on the page.
-- `E/season.spec.mjs` "an organizer switches the map to the next event; last season disappears and residents list again from an empty form".
+- **0.15** `E/season.spec.mjs` "an organizer closes the season; last season disappears, next year is created and residents list again from an empty form" (then Christmas lights and a rummage sale open next to it: three independent listings).
 - `I/PublicPrivacyTest.php::testNoDraftOrArchivedEventIsEverPublic` — draft and archived names, notes and dates absent from five public URIs.
 - `I/EventOccurrencesMigrationTest.php::testTheBackfillKeepsEverySeasonApartAndThePublicMapExactlyAsItWas` — past and future seasons of a 0.10 database stay apart.
 - **new** `I/EventTypesAcceptanceTest.php::testChangesToTheActiveListingAndTheRetentionPurgeNeverTouchAnotherEventsListing` — a resident's edit, status and visibility, an organizer's hide and unhide on this season leave last season's row byte-identical; purging the archived season leaves this one alone.
@@ -37,15 +41,19 @@ stay as they were.
 ## 3. No unverified ownership; an owner lists for a new event without claiming again
 
 - `I/AuthAndClaimFlowTest.php::testVerifiedClaimPublishesImmediatelyAndPublicApiLeaksNothing`, `::testSecondClaimantLosingAtConfirmationKeepsFirstOwner`; `I/ClaimRaceTest.php::testParallelProcessesProduceExactlyOneOwner`.
-- `I/EventsConsoleTest.php::testAnOrganizerPreparesPreviewsAndSwitchesToTheNextEventWithoutCarryingAnythingOver` — the claim stays, "List for" starts empty (no note, no non-food, the new hours), the client cannot name an event, an old listing cannot be revived.
+- **0.15** `I/EventsConsoleTest.php::testAnOrganizerClosesTheSeasonNextYearIsCreatedAndNothingCarriesOver` — the claim stays, "List for" next year starts empty (no note, no non-food, the event's hours), the event is named only by `e=` (an `event_id` field is refused), a closed event takes no listing and its listing is read-only, an old listing cannot be revived.
 - `I/EventsConsoleTest.php::testAClaimRequestMadeForAnEventThatEndedMeanwhileIsRefused`.
 - **new** `I/EventTypesAcceptanceTest.php::testAnotherTypesStatusAndAListForWithoutTheCsrfTokenAreRefused` — "List for" without the CSRF token is refused and stores nothing.
 
-## 4. One active event under concurrency; the preview is not public; archiving hides at once
+## 4. One default event, at most one current event per type, the state rules under concurrency; the preview is not public; closing and archiving hide at once
 
-- `I/EventActivationRaceTest.php::testConcurrentSwitchesToDifferentDraftsHaveExactlyOneWinner`, `::testTheSameDraftActivatedTwiceAtOnceIsActivatedOnce`, `::testTheDatabaseRefusesASecondActiveEvent` (forked processes).
-- `I/EventsConsoleTest.php::testOnlyOrganizersReachEventsAndThePreview` — visitors are sent to sign in, residents get 403.
-- `I/EventsConsoleTest.php::testEndingTheEventLeavesANeutralMapAndRetentionDeletesItsListings` — after archiving, `/api/homes` is empty and the page is neutral.
+(0.11–0.14 read "one active event under concurrency"; superseded by D-20261031-37.)
+
+- **0.15** `I/EventLifecycleRaceTest.php::testConcurrentOpensOfEventsOfOneTypeHaveExactlyOneWinner`, `::testTheSameEventClosedThreeTimesAtOnceIsClosedOnceWithOneNextYear`, `::testConcurrentDefaultChangesLeaveExactlyOneDefault`, `::testTheDatabaseRefusesASecondCurrentEventOfAType`, `::testTheDatabaseRefusesASecondDefaultAndADefaultThatIsNotPublic` (forked processes; replaces `EventActivationRaceTest`).
+- `I/EventsConsoleTest.php::testOnlyOrganizersReachEventsAndThePreview` — visitors are sent to sign in, residents get 403 (announce, open, default, close), organizers need the CSRF token.
+- `I/EventsConsoleTest.php::testEndingTheEventLeavesANeutralMapAndRetentionDeletesItsListings` — after archiving the only event, `/api/homes` is empty and the page is neutral.
+- **0.15** `I/EventsConsoleTest.php::testAnOrganizerClosesTheSeasonNextYearIsCreatedAndNothingCarriesOver` — closing hides the homes at once (by id too), shows the thank-you message, creates next year's upcoming event once; a closed event never reopens; a draft of a kind that is current cannot open.
+- **0.15** `I/MultiEventTest.php::testTheDefaultEventIsWhatSlashShowsAndPassesOnWhenArchived` — a draft is never the default; an archived default passes to the newest open event, else the newest public one.
 - **new** `I/EventTypesAcceptanceTest.php::testChangesToTheActiveListingAndTheRetentionPurgeNeverTouchAnotherEventsListing` — an ended event's home is not readable by id either.
 
 ## 5. Christmas lights
@@ -99,8 +107,9 @@ the API take different hours per night (windows), so a later form can offer them
 ## 10. Migration, rollback, date boundaries and erasure on a disposable database; images and gates
 
 - `I/EventOccurrencesMigrationTest.php` (all three tests: lossless backfill, down and up, an install without listings); `I/ListingDetailsMigrationTest.php::testTheMigrationGoesDownAndUpAgainAndBackfillsEveryRow`.
-- `I/LegacyBridgeTest.php::testEveryFlowKeepsTheLegacyTableEqualToTheActiveEvent` (claim, edit, status, visibility, review, hide, release, erasure), `::testRowsThe09ImageWritesReachTheActiveEvent`.
-- `bin/drill-event-upgrade.sh` on the built images: published 0.9.0-beta.1 → backup → this release → image rollback → forward → restore of the pre-upgrade dump (the upgrade production takes: every migration in sequence); `U/Deploy/RollbackDrillTest.php` pins the script. The runbook: [event-types-migration.md](../runbooks/event-types-migration.md).
+- `I/LegacyBridgeTest.php::testEveryFlowKeepsTheLegacyTableEqualToTheActiveEvent` (claim, edit, status, visibility, review, hide, release, erasure), `::testRowsThe09ImageWritesReachTheActiveEvent`; **0.15** `::testTheLegacyTableMirrorsTheNewestOpenOrClosedHalloweenNeverAnUpcomingOne`.
+- **0.15** `I/MultiEventMigrationTest.php::testA014DatabaseKeepsEveryEventAndListingAndItsOpenEventBecomesTheDefault` (down and up again), `::testA09DatabaseUpgradesThroughEveryMigrationLosslessly` (production's path: 0.9 keys and values kept).
+- `bin/drill-event-upgrade.sh` on the built images: published 0.9.0-beta.1 → backup → this release → (0.15) close the Halloween, list for next year → image rollback → forward → restore of the pre-upgrade dump (the upgrade production takes: every migration in sequence); `U/Deploy/RollbackDrillTest.php` pins the script. The runbook: [event-types-migration.md](../runbooks/event-types-migration.md).
 - Date boundaries: `U/Event/Schedule/DisplayStatusTest.php::testTheSharedCase` and `J/schedule.test.mjs` "every shared display-status case" (48 cases: DST days, Dec 31 → Jan 1, month ends).
 - **new** `I/EventTypesAcceptanceTest.php::testReleaseUnclaimAndErasureRemoveEveryEventsListingsWhileATransferKeepsThem`.
 - Images, `composer audit`, Playwright: the gates in [test-report.md](test-report.md); Trivy runs in CI on the built images (`U/Deploy/ContainerConfigTest.php::testRuntimeImagesTakeAlpineSecurityFixesAndAreScanned`).
@@ -109,20 +118,36 @@ the API take different hours per night (windows), so a later form can offer them
 
 | Risk | What guards it |
 |---|---|
-| Historic overwrite (a season's listing replaced by the next) | listings belong to one event (`UNIQUE (event_id, address_id)`); `I/EventsConsoleTest.php::testAnOrganizerPreparesPreviewsAndSwitchesToTheNextEventWithoutCarryingAnythingOver`, `I/GarageSaleSeasonTest.php::testOneAddressListsForHalloweenChristmasAndTheRummageSaleIndependently`, **new** `I/EventTypesAcceptanceTest.php::testChangesToTheActiveListingAndTheRetentionPurgeNeverTouchAnotherEventsListing` |
-| Activation race | advisory lock, the switch names the event it replaces, the partial unique index: `I/EventActivationRaceTest.php` (3 tests) |
-| Stale listing revival | an old listing cannot be edited back (`I/EventsConsoleTest.php` first test: PATCH 404), `::testAHomeHiddenLastSeasonStartsHiddenForTheNextEvent`, `I/LegacyBridgeTest.php::testTheAppsOwnMirrorIsNotCopiedBackAndAnotherDaysRowsStayOut`; archived is final (D-20261031-12) |
+| Historic overwrite (a season's listing replaced by the next) | listings belong to one event (`UNIQUE (event_id, address_id)`); `I/EventsConsoleTest.php::testAnOrganizerClosesTheSeasonNextYearIsCreatedAndNothingCarriesOver`, `I/GarageSaleSeasonTest.php::testOneAddressListsForHalloweenChristmasAndTheRummageSaleIndependently`, **new** `I/EventTypesAcceptanceTest.php::testChangesToTheActiveListingAndTheRetentionPurgeNeverTouchAnotherEventsListing` |
+| Activation race (0.15: open, close and default races) | the occurrences lock, the partial unique indexes (one current per type, one default) and the check: `I/EventLifecycleRaceTest.php` (5 tests) |
+| Stale listing revival | an old listing cannot be edited back (`I/EventsConsoleTest.php` first test: PATCH 404; a closed event's listing is read-only, 403), `::testAHomeHiddenLastSeasonStartsHiddenForTheNextEvent`, `I/LegacyBridgeTest.php::testTheAppsOwnMirrorIsNotCopiedBackAndAnotherDaysRowsStayOut`; closed never reopens, archived is final (D-20261031-37); "Use last year's details" only fills the form (`I/MultiEventTest.php::testUseLastYearsDetailsCopiesOnlyTheResidentsOwnPreviousListingOfTheSameHomeAndType`) |
 | Detail JSON leaks | strict projections (`U/Event/*TypeTest.php::testThePublicProjectionIsStrictAndTyped`), exact key lists (`I/HolidayLightsTest.php`, `I/GarageSaleTest.php` first tests, `I/PublicPrivacyTest.php`) |
 | Time zones and DST | the shared display-status fixture in PHP and the browser (48 cases); `U/Listing/ListingDraftWindowsTest.php::testADayScopedStatusCarriesTheLocalDate` |
 | Release and erasure vs history | `claims` cascade to every event's listings; **new** `I/EventTypesAcceptanceTest.php::testReleaseUnclaimAndErasureRemoveEveryEventsListingsWhileATransferKeepsThem`; the account ledger re-applies erasures after a restore (`I/AccountLedgerTest.php`) |
 | Route profile | `I/RouteProfileTest.php` (3 tests), the switch tests in `I/HolidayLightsTest.php` and `I/GarageSaleSeasonTest.php` |
-| Rollback from the new schema | `I/LegacyBridgeTest.php`, `I/EventsConsoleTest.php::testAnEventOfATypeThisVersionDoesNotOfferBreaksNothingAndCanBeArchived`, the drill. The previous release sees only a one-day Halloween event; lights and sale listings live only in the event tables (documented) |
+| Rollback from the new schema | `I/LegacyBridgeTest.php`, `I/EventsConsoleTest.php::testAnEventOfATypeThisVersionDoesNotOfferBreaksNothingAndCanBeArchived`, `I/MultiEventMigrationTest.php`, the drill. The 0.9 release sees only the newest open or closed one-day Halloween; upcoming events, lights and sale listings live only in the event tables; the 0.10–0.14 images are reached by restore (documented, D-20261031-41) |
 | Stale favorites | per-event stores and shared links with `e=`: `J/event-storage.test.mjs` (4 tests), `E/season.spec.mjs` (a link for the ended event shows no stops), the lights and sale saved-stops tests |
 
-## Known limitations at 0.14.0-beta.1
+## Several events (0.15)
+
+- One default event, at most one current event per type, the state rules: item 4 above.
+- Close → next year's dates for each type (October 31 rollover, November 1 – January 1 across the year, a sale to be announced): `U/Event/NextEventTest.php::testClosingGivesNextYearsTentativeDates`, `::testANewEventStartsOnItsTypesUsualDates`, `::testTheThankYouTextIsTheOrganizersOrTheTypesDefaultWithTheYearAndNextYearsDates`; `I/MultiEventTest.php::testClosingEachTypeCreatesNextYearsEventWithWhatLasts` (what carries over; a sale to be announced cannot open).
+- Public visibility per state (no homes for upcoming, closed, draft, archived; no draft or archived in `/api/events`; `e=` naming one is 404 for the API and the default event for a page): `I/MultiEventTest.php::testEachStateShowsVisitorsOnlyWhatItMay`; `E/events.spec.mjs` "the switcher: the default event at "/", every public event by mouse and keyboard, its own theme, the closed message and the upcoming cards".
+- Listing creation only for upcoming or open events with dates; the event of another type or a draft refused (IDOR): `I/MultiEventTest.php::testListingsGoToTheNamedUpcomingOrOpenEventOnly`.
+- "Use last year's details" only from the resident's own previous listing of the same home and type: `I/MultiEventTest.php::testUseLastYearsDetailsCopiesOnlyTheResidentsOwnPreviousListingOfTheSameHomeAndType`; `E/events.spec.mjs` "a resident switches events in My house and lists next year's Halloween with "Use last year's details"".
+- The bridge rule: `I/LegacyBridgeTest.php::testTheLegacyTableMirrorsTheNewestOpenOrClosedHalloweenNeverAnUpcomingOne`; the drill (step 4b).
+- Migration from the 0.9 schema and from 0.14 data: `I/MultiEventMigrationTest.php` (2 tests); `I/EventOccurrencesMigrationTest.php` (the 0.10 → latest chain, the default set).
+- Organizer close → next year created → default change: `E/events.spec.mjs` "an organizer opens and closes an event (next year's is created) and changes the default", `E/season.spec.mjs`.
+- Saved stops per event, the switcher at 375–1440 px, axe in light and dark: `E/events.spec.mjs` "each event keeps its own saved stops; a shared link keeps its event", "the switcher and the event pages: no overflow from 375 to 1440 px, axe in light and dark".
+- The fictional demo with every public state: `I/MultiEventTest.php::testTheFictionalDemoSeedsEveryPublicState`.
+- Halloween parity with several events possible: a one-event install shows no switcher and keeps its answers (`I/GoldenApiParityTest.php::testTheAnswersAreThe015Ones`: the 0.11 answers plus exactly `state`, `dates_tentative`, `is_default` at the end of the event; homes unchanged).
+
+## Known limitations at 0.15.0-beta.1
 
 - Halloween's filter chips, time picker and card hearts are 40 px high (44 px on the other types), kept for parity.
 - A lights home has one set of hours for all its nights in the forms (the data model takes hours per night).
 - The contact check does not read numbers written as words; a range starting at 200 or more ("500-1000") is still refused as a phone number.
 - Screenshots are compared by hand, not by a test.
 - Emailing residents about a new event, and retiring the legacy `listings` table and its triggers, are later work (ROADMAP).
+- After an image-only rollback the 0.9 release shows one Halloween (the newest open or closed); the 0.10–0.14 images are reached by restore, not by image rollback (D-20261031-41).
+- Events are ordered default first, then by date; there is no organizer-chosen order of the switcher's tabs.

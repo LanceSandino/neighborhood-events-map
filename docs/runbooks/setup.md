@@ -12,6 +12,6 @@
 5. **Addresses** (`/admin/addresses`): import a CSV with `address,latitude,longitude,zone_key` (dry run first), or add addresses one by one. Coordinates must come from a verified source; nothing is geocoded. Alternatively allow resident self-entry with a street allow-list in settings (residents place a pin; the server checks street, boundary, zone and collisions).
 6. **Email**: set `MAILER_DSN`/`MAIL_FROM` to an authenticated relay and `ADMIN_EMAIL` to the inbox that receives review requests. Send yourself a sign-in link to test deliverability.
 7. **Open listings**: Overview → "Allow house listings" (also requires the approved boundary).
-8. **After the event**: prepare the next one under **Organizer → Events** (a draft you preview, then put on the map in one step; last event's homes leave the map and residents list again from an empty form), or end the event there. Export, retention and the command-line tasks: [organizer-events.md](organizer-events.md).
+8. **After the event**: **Close** it under **Organizer → Events** (its homes leave the map, visitors see a thank-you message and next year's event is created for residents to list early), open other events next to it and choose the default event. Export, retention and the command-line tasks: [organizer-events.md](organizer-events.md).
 
 Exporting the current configuration for backup or redeploy: `docker compose exec app php bin/console app:community:export /app/var/export` (writes `community.yaml` + `geometry.geojson`, re-importable with `app:community:bootstrap --force`).

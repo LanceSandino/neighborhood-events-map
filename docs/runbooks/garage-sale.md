@@ -1,9 +1,10 @@
 # Running a garage or rummage sale (organizers)
 
 Since 0.13 the map offers a third event type: the **Garage Sale** (`garage_sale`, ROADMAP Stage 4). Call it what your
-neighborhood calls it — "Community Rummage Sale", "Spring Yard Sale" — the event's name is the public name. One install
-still runs one event at a time ([D-20261021-20](../../DECISIONS.md)); residents keep their claimed homes and list them
-for the sale from an empty form. This page is the organizer's checklist; the design is in
+neighborhood calls it — "Community Rummage Sale", "Spring Yard Sale" — the event's name is the public name. Since 0.15 a sale
+can be announced months ahead next to other events, with its dates "to be announced" until you set them
+([D-20261031-37](../../DECISIONS.md)); residents keep their claimed homes and list them for the sale from an empty form,
+or from their own details of the last sale. This page is the organizer's checklist; the design is in
 [event types](../architecture/event-types.md).
 
 ## What visitors get
@@ -38,8 +39,9 @@ for the sale from an empty form. This page is the organizer's checklist; the des
    - **Early birds not before** (optional) — shown with the sale and next to the stops.
    - **Offer a driving tour** — directions need a routing provider (below).
 2. **Preview** the draft: it shows the sale theme, words, days and filters (and no homes).
-3. **Put on the map** when you are ready. The current event ends at that moment: its homes leave the map and stay with
-   their season; nothing is copied. Residents see "List for Community Rummage Sale" in My house.
+3. **Announce** it (residents can list once it has dates), then **Open** it (it needs its dates and days) and **Make
+   default** if the front page should show it. Residents see "List for Community Rummage Sale" in My house. When the
+   sale is over, **Close** it: the next sale is created with its dates to be announced.
 4. Optional: under **Community & branding**, adjust the words or colours. Branding you never changed already follows the
    sale (teal and coral, "Good finds. Close to home."); anything you changed stays as you set it
    ([D-20261031-16](../../DECISIONS.md)). Teal buttons carry dark text so they stay readable

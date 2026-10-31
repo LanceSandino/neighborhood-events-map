@@ -6,6 +6,31 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.15.0-beta.1] - 2026-10-31
+
+Several events at once. Update by pulling `0.15.0-beta.1` and recreating the stack; back up first. The app runs one new database migration when it starts (an install still on 0.9 runs the migrations of 0.10, 0.11 and this release in order): the event on the map stays on the map and becomes the default event, so visitors see exactly what they saw before until you change something. `docs/runbooks/event-types-migration.md` has the checks and both ways back; after this release the image-only way back is to 0.9.0-beta.1.
+
+### New: several events at once
+- A neighborhood can show **several events at the same time**, for example Halloween's thank-you, the Christmas lights and a rummage sale announced for the spring. Visitors switch between them with the **tabs at the top of the page**; each tab is the event's own page with its own look, filters, homes and saved stops, and a shared link keeps its event. A neighborhood with one event sees no tabs: the map looks exactly as before.
+- **The default event** is what the front page shows; organizers choose it under Organizer → Events.
+- **Close an event when it is over.** Its homes leave the map and its tab shows a thank-you message instead, for example "Halloween 2026 was a success — thank you! Come back next year (Oct 31, 2027, tentative). Residents: sign in to get your house ready for next year." Write your own message or keep the default.
+- **Next year is ready right away.** Closing creates next year's event of the same kind: Halloween on October 31, the Christmas lights on the same nights a year later, a garage sale with its dates "to be announced". Visitors see it as "coming soon" with its tentative dates; homes appear when you open it.
+- **Upcoming events and dates to be announced.** Announce an event before it opens so residents can list their homes early; mark dates as tentative, or leave them to be announced (a sale opens once it has its days). New events start on the usual dates: Halloween October 31, Christmas lights November 1 to January 1, a sale to be announced.
+
+### New for residents
+- **One sign-in for every event.** My house has the same tabs: for each event you see your homes and their listings, and which other events each home is listed for. A closed event's listings stay as they were.
+- **Get your house ready for next year** while this year's event is still showing: "List for <event>" starts from an empty form, and **"Use last year's details"** fills it with your own listing of last time (your details, note and hours — never last year's days). Nothing is shown until you save, and nothing appears on the map until the event opens.
+
+### Changed
+- Organizer → Events: Announce, Open, Close (the confirmation shows the thank-you text and next year's dates), Make default and Archive replace "Put on the map" and "End event". Only one event of each kind can be upcoming or open at a time.
+- Hiding or unhiding a listing applies to the home's listings of every upcoming or open event; the organizer's hold stays on the address as before.
+- The public event description (`/api/event`, `/api/community`) adds the event's state, whether its dates are tentative, whether it is the default and, once closed, its thank-you message; `/api/events` lists the public events. Public homes keep exactly their fields.
+
+### Known limitations
+- After an image-only rollback the 0.9 release shows one Halloween (the newest open or closed one); going back to 0.10–0.14 needs the backup taken before the upgrade.
+- The tabs are ordered default first, then by date; organizers cannot reorder them.
+- Inviting residents by email to list for an event is still not built.
+
 ## [0.14.0-beta.1] - 2026-10-31
 
 The finishing release of the event-types work. Update by pulling `0.14.0-beta.1` and recreating the stack. This release adds no database migration; an install still on 0.9 or 0.10 runs the event migrations of 0.10 and 0.11 in order when it starts (back up first: `docs/runbooks/event-types-migration.md` has the checks and both ways back). Halloween maps work as before; the fixes below that say "also on Halloween maps" are the only visible changes there.
