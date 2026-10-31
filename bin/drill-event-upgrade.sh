@@ -1,16 +1,18 @@
 #!/bin/bash
 # @module bin/drill-event-upgrade
-# @description Rollback drill for the event migrations (0.10, 0.11 and 0.15; docs/runbooks/event-types-migration.md) on
-#   a disposable Compose project and port, with the fictional Maple Hollow demo. Starts the PUBLISHED 0.9.0-beta.1
-#   images, takes a backup (bin/backup-now.sh), upgrades to the given images (every startup migration runs in order)
-#   and checks that /api/homes shows the same homes and the Halloween became the open default event, edits and creates
-#   a listing on the new release, then (several events) an organizer closes the Halloween — next year's is created —
-#   and a resident lists for next year, which the legacy table must not take; rolls the IMAGES back to 0.9.0-beta.1
-#   keeping the database (path a) and checks that the old release starts and shows the bridged data (the closed
-#   Halloween's homes), makes a write on 0.9 and upgrades again to check it reached the closed Halloween and left next
-#   year's listing alone, then restores the pre-upgrade backup with bin/restore.sh on 0.9.0-beta.1 (path b) and checks
-#   the homes are exactly the pre-upgrade ones, and finally upgrades the restored database once more. Always tears the
-#   project and its volumes down (down -v).
+# @description Rollback drill for the event migrations (0.10, 0.11, 0.15 and 0.16; docs/runbooks/event-types-migration.md)
+#   on a disposable Compose project and port, with the fictional Maple Hollow demo (its Halloween has its own branding,
+#   "Spooky streets."). Starts the PUBLISHED 0.9.0-beta.1 images, takes a backup (bin/backup-now.sh), upgrades to the
+#   given images (every startup migration runs in order) and checks that /api/homes shows the same homes, the Halloween
+#   became the open default event and keeps its custom branding (now its own), edits and creates a listing on the new
+#   release, opens Christmas lights next to it (their own look, not Halloween's) and changes the Halloween's headline,
+#   then (several events) an organizer closes the Halloween — next year's is created — and a resident lists for next
+#   year, which the legacy table must not take; rolls the IMAGES back to 0.9.0-beta.1 keeping the database (path a) and
+#   checks that the old release starts and shows the bridged data (the closed Halloween's homes) and its custom headline,
+#   makes a write on 0.9 and upgrades again to check it reached the closed Halloween and left next year's listing alone,
+#   then restores the pre-upgrade backup with bin/restore.sh on 0.9.0-beta.1 (path b) and checks the homes are exactly
+#   the pre-upgrade ones, and finally upgrades the restored database once more (the branding moves again). Always tears
+#   the project and its volumes down (down -v).
 # @dependencies bash, docker compose, curl, openssl, python3 (scripts/drill_listing.py), bin/backup-now.sh, bin/restore.sh
 # Usage: bin/drill-event-upgrade.sh <new-app-image> <new-nginx-image> <tag> [port, default 8198]
 #   e.g. docker build --target prod -t nhm-app:drill . && docker build --target nginx -t nhm-nginx:drill . \
@@ -92,6 +94,9 @@ note_of() { python3 -c "import json,sys; print(next(h['note'] for h in json.load
 count() { python3 -c 'import json,sys; print(len(json.load(sys.stdin)["homes"]))'; }
 sql() { "${compose[@]}" exec -T postgres psql -U halloween -d halloween -At -c "$1"; }
 applog() { "${compose[@]}" logs --no-color app 2>/dev/null || true; } # read whole: grep -q would cut the pipe (pipefail)
+# The text of the hero headline of a page (the community's or event's branding), e.g. "Spooky streets. Sweet treats.".
+headline() { curl -fsS "$base$1" | python3 -c 'import re,sys,html; m=re.search(r"<h1>(.*?)</h1>", sys.stdin.read(), re.S); print(html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip() if m else "")'; }
+custom="Spooky streets. Sweet treats." # the demo's own Halloween headline (examples/demo/community.yaml)
 
 step "1. published $old_tag with the fictional demo"
 images "$old_app" "$old_nginx" "$old_tag"
@@ -100,6 +105,7 @@ before=$(homes | view09)
 n=$(printf '%s' "$before" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
 [ "$n" -ge 14 ] || fail "the demo has $n homes on $old_tag"
 pass "$old_tag serves $n fictional homes; version $(curl -fsS "$base/healthz")"
+[ "$(headline /)" = "$custom" ] || fail "$old_tag does not show the demo's custom headline"
 home=$(printf '%s' "$before" | python3 -c 'import json,sys; print(next(h["id"] for h in json.load(sys.stdin) if h["address"] == "100 Pumpkin Patch Ln"))')
 
 step "2. backup before the upgrade"
@@ -111,11 +117,14 @@ step "3. upgrade to $new_app:$new_tag (startup migrations)"
 images "$new_app" "$new_nginx" "$new_tag"
 up
 log=$(applog)
-grep -q 'Migrating up to DoctrineMigrations\\Version20261031000003' <<<"$log" || fail "the event migrations did not run at start"
+grep -q 'Migrating up to DoctrineMigrations\\Version20261031000004' <<<"$log" || fail "the event migrations did not run at start"
 after=$(homes | view09)
 [ "$after" = "$before" ] || fail "/api/homes changed across the upgrade"
 [ "$(sql "SELECT state || '/' || is_default FROM event_occurrences")" = "open/true" ] || fail "the Halloween is not the open default event"
 pass "same $n homes, keys and values after the upgrade; $(sql "SELECT COUNT(*) || ' occurrence(s) (open, default), ' || (SELECT COUNT(*) FROM event_listings) || ' event listing(s)' FROM event_occurrences")"
+[ "$(sql "SELECT settings->'branding'->>'headline' FROM event_occurrences")" = "Spooky streets." ] || fail "the Halloween did not take the community's custom branding"
+[ "$(headline /)" = "$custom" ] || fail "the Halloween page lost its custom headline across the upgrade"
+pass "the Halloween keeps its custom branding, now its own: \"$(headline /)\""
 
 step "4. edit and create a listing on the new release"
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" edit --home-id "$home" --note "Edited on $new_tag" || fail "edit"
@@ -126,10 +135,21 @@ created=$(printf '%s' "$upgraded" | python3 -c 'import json,sys; print(next(h["i
 bridged=$(printf '%s' "$upgraded" | view09)
 pass "listing $home edited, home $created listed ($((n + 1)) homes)"
 
-step "4b. several events: the Halloween closes, next year's is created, a resident lists for it"
+step "4a. per-event branding: Christmas lights open next to the Halloween with their own look; the Halloween's headline changes"
 organizer=drill-organizer@example.invalid
 "${compose[@]}" exec -T app php bin/console app:admin:grant "$organizer" >/dev/null
 closed_id=$(sql "SELECT id FROM event_occurrences WHERE state = 'open'")
+lights=$(python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" open-event --type holiday_lights --name "Christmas Lights" \
+  --starts-on 2026-11-27 --ends-on 2027-01-01) || fail "open the lights"
+lights_id=$(printf '%s' "$lights" | python3 -c 'import json,sys; print(json.load(sys.stdin)["event_id"])')
+[ "$(headline "/?e=$lights_id")" = "Holiday nights. Bright lights." ] || fail "the lights show Halloween's branding: $(headline "/?e=$lights_id")"
+python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" brand --event-id "$closed_id" --headline "Drill streets." >/dev/null || fail "brand"
+custom="Drill streets. Sweet treats."
+[ "$(headline /)" = "$custom" ] || fail "the Halloween's new headline is not shown"
+[ "$(sql "SELECT settings->'branding'->>'headline' FROM community_settings")" = "Drill streets." ] || fail "the 0.9 keys did not follow the Halloween's branding"
+pass "lights $lights_id: \"$(headline "/?e=$lights_id")\"; Halloween: \"$(headline /)\" (and in the keys the 0.9 image reads)"
+
+step "4b. several events: the Halloween closes, next year's is created, a resident lists for it"
 closed_day=$(sql "SELECT starts_on FROM event_occurrences WHERE id = $closed_id")
 closing=$(python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" close --event-id "$closed_id") || fail "close"
 next_id=$(printf '%s' "$closing" | python3 -c 'import json,sys; print(json.load(sys.stdin)["next_id"])')
@@ -150,6 +170,8 @@ pass "$old_tag starts on the newer schema: \"$notice\"; $(grep -E -o -m1 'Alread
 rolled=$(homes | view09)
 [ "$rolled" = "$bridged" ] || fail "$old_tag does not show the bridged data"
 pass "$old_tag shows the same $((n + 1)) homes, the edit and the new home (bridged legacy rows)"
+[ "$(headline /)" = "$custom" ] || fail "$old_tag does not show the Halloween's custom headline after the image rollback: $(headline /)"
+pass "$old_tag shows the Halloween's custom headline: \"$(headline /)\""
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" edit --home-id "$home" --note "Edited on $old_tag" || fail "edit on $old_tag"
 pass "a resident edits on $old_tag"
 
@@ -158,8 +180,10 @@ images "$new_app" "$new_nginx" "$new_tag"
 up
 [ "$(sql "SELECT note FROM event_listings WHERE event_id = $closed_id AND address_id = $home")" = "Edited on $old_tag" ] || fail "the write made on $old_tag was lost"
 [ "$(sql "SELECT note FROM event_listings WHERE event_id = $next_id AND address_id = $home")" = "Next year on $new_tag" ] || fail "next year's listing changed"
-[ "$(curl -fsS "$base/api/events" | python3 -c 'import json,sys; print(",".join(e["state"] for e in json.load(sys.stdin)["events"]))')" = "closed,upcoming" ] || fail "/api/events"
-pass "$new_tag keeps the note written on $old_tag in the closed Halloween (bridge trigger); next year's listing is untouched"
+[ "$(curl -fsS "$base/api/events" | python3 -c 'import json,sys; print(",".join(e["state"] for e in json.load(sys.stdin)["events"]))')" = "closed,open,upcoming" ] || fail "/api/events"
+[ "$(headline /)" = "$custom" ] || fail "the closed Halloween lost its headline"
+[ "$(headline "/?e=$lights_id")" = "Holiday nights. Bright lights." ] || fail "the lights changed their look"
+pass "$new_tag keeps the note written on $old_tag in the closed Halloween (bridge trigger); next year's listing is untouched; each event keeps its look"
 
 step "7. path (b): $old_tag images and the pre-upgrade backup (bin/restore.sh)"
 images "$old_app" "$old_nginx" "$old_tag"
@@ -175,5 +199,6 @@ step "8. the restored database upgrades again"
 images "$new_app" "$new_nginx" "$new_tag"
 up
 [ "$(homes | view09)" = "$before" ] || fail "upgrading the restored database changed /api/homes"
-pass "upgraded again: same $n homes"
+[ "$(headline /)" = "Spooky streets. Sweet treats." ] || fail "the restored Halloween lost its custom headline on the upgrade"
+pass "upgraded again: same $n homes; the Halloween's custom headline moved again: \"$(headline /)\""
 echo "event-types upgrade and rollback drill passed: $old_tag ⇄ $new_app:$new_tag"

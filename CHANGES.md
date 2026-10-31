@@ -1501,4 +1501,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-branding"
   author: "Lance Sandino"
   timestamp: "2026-10-31T19:50:00Z"
+- id: CU-20261031-60
+  type: test
+  title: "The rollback drill checks the Halloween's custom branding on both sides of the image rollback"
+  description: "bin/drill-event-upgrade.sh: the demo's custom headline on 0.9 before the upgrade; after it (Version20261031000004 at start) the Halloween owns it and still shows it; (4a) an organizer opens Christmas lights, which show their own headline, and changes the Halloween's, which reaches the keys the 0.9 image reads; (5) the 0.9 page shows that headline after the image rollback; (6) each event keeps its look forward again; (8) the restored database's upgrade moves the branding again. scripts/drill_listing.py gains open-event and brand (every other setting kept, with_headline)."
+  impact: none
+  affected_modules: ["bin/drill-event-upgrade.sh", "scripts/drill_listing.py", "docs/runbooks/event-types-migration.md"]
+  related_tests: ["tests/Unit/Deploy/RollbackDrillTest.php: testTheDrillChecksTheCustomHalloweenBrandingAcrossTheRollback", "scripts/tests/test_drill_listing.py: test_a_new_headline_keeps_every_other_setting", "bin/drill-event-upgrade.sh (run on the built images, docs/quality/test-report.md)"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T20:00:00Z"
 ```
