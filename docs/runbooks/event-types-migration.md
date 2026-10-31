@@ -5,6 +5,12 @@
 image only (the database is kept) or with the backup taken before the upgrade. The drill script runs all of it on a
 throwaway stack; run it before upgrading a real installation.
 
+0.12, 0.13 and 0.14 add no migration. An installation still on 0.9.0-beta.1 that upgrades straight to the latest
+release runs `Version20261031000001` (0.10, `listings.details`) and `Version20261031000002` (0.11, event-scoped
+listings) in that order when the app starts; everything below applies unchanged, and the drill starts from the
+published 0.9.0-beta.1 images for exactly that path. Set `APP_IMAGE_TAG` to the release you deploy wherever this page
+says 0.11.0-beta.1.
+
 ## What the upgrade changes
 
 The app runs `doctrine:migrations:migrate` when it starts. 0.11 adds one migration, `Version20261031000002`. It is
@@ -94,6 +100,19 @@ curl -s http://127.0.0.1:${HTTP_PORT:-8087}/healthz
 trigger and anything else a newer release added go with it, and a restore that fails half-way changes nothing.
 Restoring a pre-upgrade backup while 0.11 is still the configured image also works: the app runs the migrations again
 on start and the result is the same as the first upgrade.
+
+## Erasure, release and date boundaries
+
+- **Erasure and release.** `event_listings.address_id` references `claims` with `ON DELETE CASCADE`: a resident giving a
+  home up, an organizer's unclaim and `app:user:delete` remove that address's listings of every event, archived ones
+  included, and the legacy row; a transfer keeps them with the address
+  (`tests/Integration/EventTypesAcceptanceTest.php`). The same holds after an image-only rollback, because the older
+  image deletes from `claims` too. After a restore (path b), `bin/restore.sh` re-applies account deletions from the
+  ledger, so an erased account and its listings do not come back.
+- **Date boundaries.** A listing's windows are local days in the community's time zone and end on the day they start
+  (no window past midnight). The display status is derived from them on the server and in the browser by the same
+  rules, tested on one fixture (48 cases: daylight-saving days, December 31 into January 1, month ends). The backfill
+  keeps each `listings.event_date` as one event, so seasons of earlier years stay apart.
 
 ## The drill
 
