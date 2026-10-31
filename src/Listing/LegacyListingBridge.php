@@ -9,20 +9,25 @@ use Doctrine\DBAL\Connection;
 
 /**
  * @module Listing/LegacyListingBridge
- * @description Rollback safety for event-scoped listings (D-20261031-06). The event tables are the source of truth;
- *     while the ACTIVE occurrence is a one-day Halloween event, every write to its listings is mirrored into the
- *     legacy `listings` row of the address (event_date = the event's day, the window's hours, details and their
- *     Halloween columns, status, note, publication and moderation), exactly the row 0.10 would have written, so the
- *     0.9/0.10 images still show the right homes after an image-only rollback. Mirror writes set nhm.bridge_writer
- *     for their transaction, which the reverse trigger (listings_bridge_to_events) skips. Archiving an event
- *     unpublishes its day's legacy rows and purging its listings deletes them. Listings of other types live only in
- *     the event tables (the previous release does not know them).
+ * @description Rollback safety for event-scoped listings (D-20261031-06, -41). The event tables are the source of
+ *     truth; the legacy `listings` table mirrors ONE event: the newest open or closed one-day Halloween (never an
+ *     upcoming one, whose rows would overwrite this year's in the address-keyed table). Every write to that event's
+ *     listings is mirrored into the legacy row of the address (event_date = the event's day, the window's hours,
+ *     details and their Halloween columns, status, note, publication and moderation), exactly the row 0.10 would have
+ *     written, so the 0.9 image still shows that Halloween's homes after an image-only rollback. Mirror writes set
+ *     nhm.bridge_writer for their transaction, which the reverse trigger (listings_bridge_to_events) skips. Archiving an
+ *     event unpublishes its day's legacy rows and purging its listings deletes them. Listings of other events live only
+ *     in the event tables (the previous release does not know them).
  *
  * @dependencies DBAL, Listing/LegacyListingColumns, Event/Type/HalloweenType
  */
 final class LegacyListingBridge
 {
-    /** Upserts the legacy row of each bridged listing of the active one-day Halloween event (all, or one address). */
+    /** The event the legacy table mirrors (Event/EventOccurrenceRepository::bridged, the same rule as the reverse trigger). */
+    public const MIRRORED = "SELECT id FROM event_occurrences WHERE state IN ('open', 'closed') AND type = :type AND starts_on = ends_on
+        ORDER BY starts_on DESC NULLS LAST, id DESC LIMIT 1";
+
+    /** Upserts the legacy row of each listing of the mirrored Halloween event (all, or one address); other events are left out. */
     public function mirror(Connection $db, int $eventId, ?int $addressId = null): int
     {
         self::claimWrites($db);
@@ -36,7 +41,7 @@ final class LegacyListingBridge
              FROM event_listings el
              JOIN event_occurrences o ON o.id = el.event_id
              JOIN event_listing_windows w ON w.listing_id = el.id AND w.local_date = o.starts_on
-             WHERE el.event_id = :event AND o.state = \'active\' AND o.type = :type AND o.starts_on = o.ends_on
+             WHERE el.event_id = :event AND o.id = ('.self::MIRRORED.')
                AND (CAST(:address AS BIGINT) IS NULL OR el.address_id = CAST(:address AS BIGINT))
              ON CONFLICT (address_id) DO UPDATE SET event_date = EXCLUDED.event_date, start_local = EXCLUDED.start_local, end_local = EXCLUDED.end_local,
                 details = EXCLUDED.details, '.LegacyListingColumns::upsertAssignments().', note = EXCLUDED.note, status = EXCLUDED.status,

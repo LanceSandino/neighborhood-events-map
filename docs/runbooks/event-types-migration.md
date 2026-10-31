@@ -1,17 +1,47 @@
-# Event-scoped listings: upgrade to 0.11 and both rollback paths
+# Event migrations: upgrade to 0.11 and 0.15 and both rollback paths
 
 0.11.0-beta.1 gives every event its own listings (ROADMAP Stage 2, [DECISIONS](../../DECISIONS.md) D-20261031-05 to
 -14). This runbook says what the upgrade changes in the database, how to check it, and how to go back — with the
 image only (the database is kept) or with the backup taken before the upgrade. The drill script runs all of it on a
 throwaway stack; run it before upgrading a real installation.
 
-0.12, 0.13 and 0.14 add no migration. An installation still on 0.9.0-beta.1 that upgrades straight to the latest
-release runs `Version20261031000001` (0.10, `listings.details`) and `Version20261031000002` (0.11, event-scoped
-listings) in that order when the app starts; everything below applies unchanged, and the drill starts from the
-published 0.9.0-beta.1 images for exactly that path. Set `APP_IMAGE_TAG` to the release you deploy wherever this page
-says 0.11.0-beta.1.
+0.12, 0.13 and 0.14 add no migration; 0.15 adds one (several published events, below). An installation still on
+0.9.0-beta.1 that upgrades straight to the latest release runs `Version20261031000001` (0.10, `listings.details`),
+`Version20261031000002` (0.11, event-scoped listings) and `Version20261031000003` (0.15, several events) in that order
+when the app starts; everything below applies, and the drill starts from the published 0.9.0-beta.1 images for exactly
+that path. Set `APP_IMAGE_TAG` to the release you deploy wherever this page says 0.11.0-beta.1.
 
-## What the upgrade changes
+## 0.15: several published events
+
+0.15.0-beta.1 adds `Version20261031000003` ([ADR 0011](../adr/0011-several-published-events.md), D-20261031-37 to -45).
+An installation on 0.9.0-beta.1 that upgrades straight to 0.15 runs `Version20261031000001` (0.10),
+`Version20261031000002` (0.11) and `Version20261031000003` (0.15) in that order when the app starts. The 0.15 step is
+additive and lossless: no row is deleted and every listing stays with its event.
+
+- **States.** The `active` event becomes `open`; drafts and archived events stay as they are. The one-active index
+  goes; `uniq_current_event_per_type` allows one upcoming or open event per type and `uniq_default_event` one default.
+- **Default.** The open event becomes the default (`is_default`), so "/" shows exactly what it showed before.
+- **Dates.** `dates_tentative` (false for every migrated event) and dates to be announced (both dates null; none after
+  the migration); `closed_at`.
+- **Bridge.** The reverse trigger now writes to the newest open or closed one-day Halloween (right after the upgrade:
+  the same event as before). The stored settings block mirrors that Halloween.
+
+Check after the upgrade:
+
+```bash
+docker compose exec postgres psql -U halloween -d halloween -c \
+  "SELECT id, type, name, starts_on, state, is_default FROM event_occurrences ORDER BY starts_on"
+curl -s https://<host>/api/events | python3 -m json.tool
+```
+
+The open Halloween is `open` and the default; `/api/homes` shows the same homes as before.
+
+**Rollback targets after 0.15.** Path (a) below works with the **0.9.0-beta.1** images (what production runs before
+this upgrade): 0.9 reads only the settings block and the legacy table. The 0.10–0.14 images read `event_occurrences`
+but not the new states — they find no `active` event and show "No event on the map right now" — so to return to one of
+them use path (b), the restore of the backup taken before the upgrade (D-20261031-41).
+
+## What the 0.11 upgrade changes
 
 The app runs `doctrine:migrations:migrate` when it starts. 0.11 adds one migration, `Version20261031000002`. It is
 additive: nothing is dropped or rewritten, and the legacy `listings` table stays.
@@ -58,7 +88,7 @@ The two counts are equal right after the upgrade, and the public homes are the o
 Use it when 0.11 misbehaves and you want the previous release back with everything residents did since the upgrade.
 
 ```bash
-# in .env: APP_IMAGE_TAG=0.10.0-beta.1   (or 0.9.0-beta.1)
+# in .env: APP_IMAGE_TAG=0.9.0-beta.1   (after 0.15 the only image-rollback target; before 0.15 also 0.10.0-beta.1)
 docker compose pull && docker compose up -d --force-recreate --wait
 ```
 
@@ -69,8 +99,11 @@ the trigger, so going forward again (`APP_IMAGE_TAG=0.11.0-beta.1`, the same two
 
 Limits of path (a):
 
-- Only the active one-day Halloween event is visible to the older image. Drafts, archived events and events of other
-  types are not; nothing about them changes while it runs.
+- Only one Halloween is visible to the older image: since 0.15 the newest open or closed one-day Halloween (before
+  0.15, the active one). Upcoming events (next year's Halloween with residents' listings for it), drafts, archived
+  events and events of other types are not; nothing about them changes while it runs, and a resident's listing for an
+  upcoming Halloween never reaches the legacy table (it would overwrite this year's row of the same address).
+- After 0.15, use the 0.9.0-beta.1 images for path (a); the 0.10–0.14 images show no event (see above), use path (b).
 - Organizer → Events does not exist there. Do not start the next season the 0.9 way (changing the date under
   Community → Event): when 0.11 runs again the active event is still the one 0.11 knew, and listings the older image
   saved for the other date stay only in the legacy table. Go forward first, then use Organizer → Events.
@@ -126,13 +159,16 @@ bin/drill-event-upgrade.sh nhm-app nhm-nginx drill
 
 1. starts the **published** `0.9.0-beta.1` images and checks the demo's homes;
 2. takes a backup with `bin/backup-now.sh`;
-3. upgrades to the given images (the startup migrations run) and checks that `/api/homes` shows the same homes, keys
-   and values;
+3. upgrades to the given images (every startup migration runs, up to `Version20261031000003`) and checks that
+   `/api/homes` shows the same homes, keys and values and that the Halloween is the open default event;
 4. signs a fictional resident in (real proof-of-work, link from the drill's Mailpit), edits a listing and lists a new
    self-entered home (`scripts/drill_listing.py`);
+   4b. (several events) an organizer closes the Halloween — next year's is created as upcoming on October 31 —, the
+   resident lists the home for next year, and the legacy row keeps the closed Halloween's listing;
 5. path (a): rolls the images back to `0.9.0-beta.1`, checks it starts, reports the newer migrations and shows the
-   bridged homes (the edit and the new home); a resident edits on 0.9;
-6. goes forward again and checks the edit made on 0.9 reached the event tables;
+   bridged homes (the closed Halloween's, with the edit and the new home); a resident edits on 0.9;
+6. goes forward again and checks the edit made on 0.9 reached the closed Halloween and next year's listing is
+   untouched;
 7. path (b): restores the pre-upgrade backup with `bin/restore.sh` on `0.9.0-beta.1` and checks the homes are exactly
    the pre-upgrade ones and the event tables are gone;
 8. upgrades the restored database once more and checks the homes again.

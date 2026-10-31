@@ -13,7 +13,7 @@ import { esc } from './lib/render.js';
 import { time12 } from './lib/time.js';
 import { defaultFilters } from './lib/filters.js';
 import { eventType } from './events/index.js';
-import { api } from './lib/api.js';
+import { api, withEvent } from './lib/api.js';
 import { toast } from './lib/modal.js';
 
 /**
@@ -212,7 +212,7 @@ export function createRoutePanel(d) {
     const g = plan[gi];
     const map = d.map();
     try {
-      const { route } = await api('/api/routes/plan', { method: 'POST', body: { stops: g.stops.map((h) => h.id), ...(mode === 'driving' ? { profile: 'driving' } : {}) } });
+      const { route } = await api(withEvent('/api/routes/plan', C.event.id), { method: 'POST', body: { stops: g.stops.map((h) => h.id), ...(mode === 'driving' ? { profile: 'driving' } : {}) } });
       if (map) {
         if (pathLayer) pathLayer.remove();
         pathLayer = L.geoJSON(route.geometry, { style: { color: '#302a40', weight: 4, opacity: 0.75 } }).addTo(map);

@@ -1,13 +1,16 @@
 #!/bin/bash
 # @module bin/drill-event-upgrade
-# @description Rollback drill for the event-scoped listings migration (0.11, docs/runbooks/event-types-migration.md) on
+# @description Rollback drill for the event migrations (0.10, 0.11 and 0.15; docs/runbooks/event-types-migration.md) on
 #   a disposable Compose project and port, with the fictional Maple Hollow demo. Starts the PUBLISHED 0.9.0-beta.1
-#   images, takes a backup (bin/backup-now.sh), upgrades to the given images (the startup migrations run) and checks
-#   that /api/homes shows the same homes, edits and creates a listing on the new release, rolls the IMAGES back to
-#   0.9.0-beta.1 keeping the database (path a) and checks that the old release starts and shows the bridged data,
-#   makes a write on 0.9 and upgrades again to check it carried forward, then restores the pre-upgrade backup with
-#   bin/restore.sh on 0.9.0-beta.1 (path b) and checks the homes are exactly the pre-upgrade ones, and finally
-#   upgrades the restored database once more. Always tears the project and its volumes down (down -v).
+#   images, takes a backup (bin/backup-now.sh), upgrades to the given images (every startup migration runs in order)
+#   and checks that /api/homes shows the same homes and the Halloween became the open default event, edits and creates
+#   a listing on the new release, then (several events) an organizer closes the Halloween — next year's is created —
+#   and a resident lists for next year, which the legacy table must not take; rolls the IMAGES back to 0.9.0-beta.1
+#   keeping the database (path a) and checks that the old release starts and shows the bridged data (the closed
+#   Halloween's homes), makes a write on 0.9 and upgrades again to check it reached the closed Halloween and left next
+#   year's listing alone, then restores the pre-upgrade backup with bin/restore.sh on 0.9.0-beta.1 (path b) and checks
+#   the homes are exactly the pre-upgrade ones, and finally upgrades the restored database once more. Always tears the
+#   project and its volumes down (down -v).
 # @dependencies bash, docker compose, curl, openssl, python3 (scripts/drill_listing.py), bin/backup-now.sh, bin/restore.sh
 # Usage: bin/drill-event-upgrade.sh <new-app-image> <new-nginx-image> <tag> [port, default 8198]
 #   e.g. docker build --target prod -t nhm-app:drill . && docker build --target nginx -t nhm-nginx:drill . \
@@ -108,10 +111,11 @@ step "3. upgrade to $new_app:$new_tag (startup migrations)"
 images "$new_app" "$new_nginx" "$new_tag"
 up
 log=$(applog)
-grep -q 'Migrating up to DoctrineMigrations\\Version20261031000002' <<<"$log" || fail "the event-types migration did not run at start"
+grep -q 'Migrating up to DoctrineMigrations\\Version20261031000003' <<<"$log" || fail "the event migrations did not run at start"
 after=$(homes | view09)
 [ "$after" = "$before" ] || fail "/api/homes changed across the upgrade"
-pass "same $n homes, keys and values after the upgrade; $(sql "SELECT COUNT(*) || ' occurrence(s), ' || (SELECT COUNT(*) FROM event_listings) || ' event listing(s)' FROM event_occurrences")"
+[ "$(sql "SELECT state || '/' || is_default FROM event_occurrences")" = "open/true" ] || fail "the Halloween is not the open default event"
+pass "same $n homes, keys and values after the upgrade; $(sql "SELECT COUNT(*) || ' occurrence(s) (open, default), ' || (SELECT COUNT(*) FROM event_listings) || ' event listing(s)' FROM event_occurrences")"
 
 step "4. edit and create a listing on the new release"
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" edit --home-id "$home" --note "Edited on $new_tag" || fail "edit"
@@ -121,6 +125,19 @@ upgraded=$(homes)
 created=$(printf '%s' "$upgraded" | python3 -c 'import json,sys; print(next(h["id"] for h in json.load(sys.stdin)["homes"] if h["address"] == "901 Moonbeam Dr"))')
 bridged=$(printf '%s' "$upgraded" | view09)
 pass "listing $home edited, home $created listed ($((n + 1)) homes)"
+
+step "4b. several events: the Halloween closes, next year's is created, a resident lists for it"
+organizer=drill-organizer@example.invalid
+"${compose[@]}" exec -T app php bin/console app:admin:grant "$organizer" >/dev/null
+closed_id=$(sql "SELECT id FROM event_occurrences WHERE state = 'open'")
+closed_day=$(sql "SELECT starts_on FROM event_occurrences WHERE id = $closed_id")
+closing=$(python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" close --event-id "$closed_id") || fail "close"
+next_id=$(printf '%s' "$closing" | python3 -c 'import json,sys; print(json.load(sys.stdin)["next_id"])')
+[ "$(sql "SELECT state || ' ' || starts_on || ' ' || dates_tentative FROM event_occurrences WHERE id = $next_id")" = "upcoming 2027-10-31 true" ] || fail "next year's Halloween"
+python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" list-for --home-id "$home" --event-id "$next_id" --note "Next year on $new_tag" || fail "list for next year"
+[ "$(sql "SELECT event_date || ' ' || note FROM listings WHERE address_id = $home")" = "$closed_day Edited on $new_tag" ] || fail "next year's listing reached the legacy table"
+[ "$(homes | count)" = 0 ] || fail "a closed event shows homes"
+pass "closed event $closed_id of $closed_day (no homes on the map), next year's $next_id upcoming on 2027-10-31 (tentative); the legacy row keeps the closed Halloween's listing"
 
 step "5. path (a): images back to $old_tag, database kept"
 images "$old_app" "$old_nginx" "$old_tag"
@@ -139,9 +156,10 @@ pass "a resident edits on $old_tag"
 step "6. forward again to $new_tag: the $old_tag write is kept"
 images "$new_app" "$new_nginx" "$new_tag"
 up
-[ "$(homes | note_of "$home")" = "Edited on $old_tag" ] || fail "the write made on $old_tag was lost"
-[ "$(sql "SELECT note FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id AND o.state = 'active' WHERE el.address_id = $home")" = "Edited on $old_tag" ] || fail "event_listings"
-pass "$new_tag shows the note written on $old_tag (event tables updated by the bridge trigger)"
+[ "$(sql "SELECT note FROM event_listings WHERE event_id = $closed_id AND address_id = $home")" = "Edited on $old_tag" ] || fail "the write made on $old_tag was lost"
+[ "$(sql "SELECT note FROM event_listings WHERE event_id = $next_id AND address_id = $home")" = "Next year on $new_tag" ] || fail "next year's listing changed"
+[ "$(curl -fsS "$base/api/events" | python3 -c 'import json,sys; print(",".join(e["state"] for e in json.load(sys.stdin)["events"]))')" = "closed,upcoming" ] || fail "/api/events"
+pass "$new_tag keeps the note written on $old_tag in the closed Halloween (bridge trigger); next year's listing is untouched"
 
 step "7. path (b): $old_tag images and the pre-upgrade backup (bin/restore.sh)"
 images "$old_app" "$old_nginx" "$old_tag"

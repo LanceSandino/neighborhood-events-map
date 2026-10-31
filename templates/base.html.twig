@@ -1,10 +1,15 @@
-{# Shared shell: dark navigation rail (desktop), top bar, mobile bottom navigation. Between events (no active
-   event) the shell names only the community and offers no listing action. A long community or event name gets the
-   compact brand, and a long name wraps in the footer instead of widening a phone page. <html data-event-type> names the event
-   type, whose head fragment may add its theme tokens (organizer colours from /theme.css still win). #}
+{# Shared shell: dark navigation rail (desktop), top bar, mobile bottom navigation. Between events (no public
+   event) the shell names only the community and offers no listing action; a closed event offers none either. A long
+   community or event name gets the compact brand, and a long name wraps in the footer instead of widening a phone page.
+   <html data-event-type> names the type of the event the page shows (the selected or the default one), whose head
+   fragment may add its theme tokens (organizer colours from /theme.css still win). A page that sets switch_path ('/' or
+   '/me') shows the event switcher while several events are public (ADR 0011); links keep the page's event (event_query). #}
 {%- set community = c.community -%}
 {%- set branding = c.branding -%}
 {%- set event_on = c.event.active ?? true -%}
+{%- set listing_on = event_on and (c.event.state ?? 'open') != 'closed' -%}
+{%- set q = event_query() -%}
+{%- set tabs = (switch_path ?? '') ? event_tabs(switch_path) : [] -%}
 {%- set year = c.event.date|slice(0, 4) -%}
 {%- set event_name = event_on ? c.event.name : '' -%}
 {%- set et = event_type(c.event.type ?? null) -%}
@@ -31,13 +36,13 @@
   <link rel="stylesheet" href="{{ asset_path('css/app.css') }}">
   {%- include event_fragment(et.key, 'head') %}
 
-  <link rel="stylesheet" href="/theme.css?v={{ app_version }}">
+  <link rel="stylesheet" href="/theme.css?v={{ app_version }}{{ q ? '&' ~ q|slice(1) }}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="app">
   <aside class="sidebar" aria-label="Site">
-    <a class="brand{{ brand_long ? ' long' }}" href="/">
+    <a class="brand{{ brand_long ? ' long' }}" href="/{{ q }}">
       <div class="brand-icon{{ branding.logo_url ? ' has-logo' }}" aria-hidden="true">{% if branding.logo_url %}<img src="{{ branding.logo_url }}" alt="">{% else %}{{ branding.brand_emoji }}{% endif %}</div>
       <div><div class="brand-name">{{ community.name }}{% if event_name %}<br>{{ event_name }}{% endif %}</div><div class="brand-sub">{{ show_place ? place ~ ' · ' ~ year : 'Community ' ~ year }}</div></div>
     </a>
@@ -46,41 +51,44 @@
       <nav class="nav" aria-labelledby="nav-title">
         {% set nav = nav ?? 'map' %}
         {# The same three places as the phone tabs (Map · Rules · My house); My route lives on the map page. #}
-        <a href="/#explore" class="{{ nav == 'map' ? 'active' }}" data-action="explore" {% if nav == 'map' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🗺️</span> Map</a>
-        <a href="/#info" class="{{ nav == 'about' ? 'active' }}" data-action="info" {% if nav == 'about' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">📋</span> Rules</a>
-        <a href="/#my-house" class="{{ nav == 'me' ? 'active' }}" data-action="house" {% if nav == 'me' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🏠</span> My house</a>
+        <a href="/{{ q }}#explore" class="{{ nav == 'map' ? 'active' }}" data-action="explore" {% if nav == 'map' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🗺️</span> Map</a>
+        <a href="/{{ q }}#info" class="{{ nav == 'about' ? 'active' }}" data-action="info" {% if nav == 'about' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">📋</span> Rules</a>
+        <a href="/{{ q }}#my-house" class="{{ nav == 'me' ? 'active' }}" data-action="house" {% if nav == 'me' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">🏠</span> My house</a>
       </nav>
     </div>
     <div class="side-bottom">
-      {% if event_on %}<div class="side-panel">
+      {% if listing_on %}<div class="side-panel">
         <div class="ghost" aria-hidden="true">{{ et.copy.cta_icon }}</div>
         <b>{{ et.copy.cta_title }}</b>
         <p>{{ et.copy.cta_text }}</p>
-        <a class="side-action secondary" href="/#list-my-house" data-action="register">+ Add your house</a>
+        <a class="side-action secondary" href="/{{ q }}#list-my-house" data-action="register">+ Add your house</a>
       </div>{% endif %}
       <p class="side-fine">Made for {{ community.name }} neighbors&nbsp;♥{% if c.demo %}<br>Fictional demo data{% endif %}</p>
     </div>
   </aside>
   <div class="main">
-    <header class="topline">
-      <a class="crumb" href="/">{% if branding.logo_url %}<img class="crumb-logo" src="{{ branding.logo_url }}" alt="">{% else %}📍{% endif %} {% if place and not show_place %}<span class="crumb-loc">{{ place }} <span class="sep">/</span> </span>{% endif %}<span class="crumb-name"><strong>{{ community.name }} Community</strong>{% if show_place %}<small class="crumb-sub">{{ place }}</small>{% endif %}</span></a>
+    <header class="topline{{ tabs ? ' has-switch' }}">
+      <a class="crumb" href="/{{ q }}">{% if branding.logo_url %}<img class="crumb-logo" src="{{ branding.logo_url }}" alt="">{% else %}📍{% endif %} {% if place and not show_place %}<span class="crumb-loc">{{ place }} <span class="sep">/</span> </span>{% endif %}<span class="crumb-name"><strong>{{ community.name }} Community</strong>{% if show_place %}<small class="crumb-sub">{{ place }}</small>{% endif %}</span></a>
       <div class="topright">
         {% if c.demo %}<span class="demo-pill">FICTIONAL DEMO</span>{% elseif c.map.boundary_status == 'pending_review' %}<span class="demo-pill warn" title="House listings open after the organizer approves the boundary">SETUP IN REVIEW</span>{% endif %}
-        {% if event_on %}<a class="event-pill" href="/about" title="Event date, hours and reminders">{{ et.copy.event_icon }} {{ event_badge(c.event.date, c.event.ends_on ?? null) }}</a>{% endif %}
+        {% if event_on %}<a class="event-pill" href="/about{{ q }}" title="Event date, hours and reminders">{{ et.copy.event_icon }} {{ c.event.starts_on is defined and c.event.starts_on is null ? 'Dates TBA' : event_badge(c.event.date, c.event.ends_on ?? null) }}</a>{% endif %}
         <button type="button" class="top-icon" data-appearance aria-haspopup="dialog" aria-controls="appearanceDialog" aria-label="Appearance and accessibility" title="Appearance and accessibility"><span aria-hidden="true">🎨</span></button>
-        {% if event_on %}<a class="top-add" href="/#list-my-house" data-action="register">+ List your home</a>{% endif %}
+        {% if listing_on %}<a class="top-add" href="/{{ q }}#list-my-house" data-action="register">+ List your home</a>{% endif %}
       </div>
     </header>
+    {% if tabs %}<div class="event-switch-bar"><nav class="event-switch" aria-label="Events">
+      {%- for t in tabs %}<a href="{{ t.href }}" class="event-tab{{ t.current ? ' current' }}"{% if t.current %} aria-current="page"{% endif %}><span class="event-tab-icon" aria-hidden="true">{{ t.icon }}</span><span class="event-tab-name">{{ t.label }}</span>{% if t.state_words %}<span class="event-tab-state">{{ t.state_words }}</span>{% endif %}</a>{% endfor -%}
+    </nav></div>{% endif %}
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>{{ cloudflare_web_analytics ? 'No ads · Cookie-free visit statistics' : 'No ads · No tracking' }}</span><span class="footer-id">{{ (community.name ~ ' ' ~ event_name)|trim }} · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
+    <footer class="site-footer"><a href="/about{{ q }}">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>{{ cloudflare_web_analytics ? 'No ads · Cookie-free visit statistics' : 'No ads · No tracking' }}</span><span class="footer-id">{{ (community.name ~ ' ' ~ event_name)|trim }} · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">
-  <a href="/#explore" class="{{ (nav ?? 'map') == 'map' ? 'active' }}" data-action="explore"><span aria-hidden="true">🗺️</span>Map</a>
-  <a href="/#info" data-action="info"><span aria-hidden="true">📋</span>Rules</a>
-  <a href="/#my-house" data-action="house" class="{{ (nav ?? '') == 'me' ? 'active' }}"><span aria-hidden="true">🏠</span>My house</a>
+  <a href="/{{ q }}#explore" class="{{ (nav ?? 'map') == 'map' ? 'active' }}" data-action="explore"><span aria-hidden="true">🗺️</span>Map</a>
+  <a href="/{{ q }}#info" data-action="info"><span aria-hidden="true">📋</span>Rules</a>
+  <a href="/{{ q }}#my-house" data-action="house" class="{{ (nav ?? '') == 'me' ? 'active' }}"><span aria-hidden="true">🏠</span>My house</a>
 </nav>
 {% block modals %}{% endblock %}
 <dialog class="whats-new" id="whatsNew" aria-labelledby="whatsNewTitle">
@@ -108,6 +116,7 @@
 <button type="button" class="to-top" id="toTop" aria-label="Back to top" title="Back to top" hidden><span aria-hidden="true">↑</span></button>
 <script type="module" src="{{ asset_path('js/appearance.js') }}"></script>
 <script type="module" src="{{ asset_path('js/to-top.js') }}"></script>
+{% if tabs %}<script type="module" src="{{ asset_path('js/event-switch.js') }}"></script>{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

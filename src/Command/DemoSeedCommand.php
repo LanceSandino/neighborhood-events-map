@@ -7,8 +7,11 @@ namespace App\Command;
 use App\Address\AddressNormalizer;
 use App\Address\AddressRegistry;
 use App\Community\CommunityRepository;
+use App\Event\EventLifecycle;
 use App\Event\EventOccurrence;
+use App\Event\EventOccurrenceRepository;
 use App\Event\EventTypeRegistry;
+use App\Event\OccurrenceInput;
 use App\Listing\ListingDraft;
 use App\Listing\ListingRepository;
 use App\Shared\RuntimeConfig;
@@ -28,10 +31,14 @@ use Symfony\Component\Console\Output\OutputInterface;
  *     never show invented homes. A home's nights ("all", dates or a range) become its windows and a fictional
  *     "off tonight" may name its night (status_date), so the demo never depends on the day it is seeded. Each home's
  *     listing fields (everything but its address and position) go through ListingDraft and are listed for the
- *     active event. When the demo homes exist, those not listed for the active event (a new one an organizer started
- *     on the demo stack) are listed for it again, from the file, never from an earlier event.
+ *     default event. When the demo homes exist, those not listed for the default event (a new one an organizer started
+ *     on the demo stack) are listed for it again, from the file, never from an earlier event. A demo with several events
+ *     (homes.json "events", D-20261031-44) also gets those once, in order, each with its own homes (demo homes by
+ *     address), then the step it names: "close" (the thank-you message and next year's upcoming event, as an organizer's
+ *     Close does) or "announce" (upcoming, its dates possibly to be announced).
  *
- * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Event/EventOccurrence, Security/UserRepository
+ * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Event/EventOccurrence, Event/EventLifecycle,
+ *     Event/EventOccurrenceRepository, Event/OccurrenceInput, Security/UserRepository
  */
 #[AsCommand('app:demo:seed', 'Load fictional demo homes (APP_DEMO=1 only)')]
 final class DemoSeedCommand extends Command
@@ -46,6 +53,8 @@ final class DemoSeedCommand extends Command
         private readonly Connection $db,
         private readonly ClockInterface $clock,
         private readonly EventTypeRegistry $types,
+        private readonly EventOccurrenceRepository $occurrences,
+        private readonly EventLifecycle $lifecycle,
     ) {
         parent::__construct();
     }
@@ -133,7 +142,53 @@ final class DemoSeedCommand extends Command
         }
         $output->writeln($relist && 0 === $n ? 'Demo homes already present; nothing to do.'
             : sprintf($relist ? 'Listed %d FICTIONAL demo homes for the current event.' : 'Seeded %d FICTIONAL demo homes.', $n));
+        foreach (\is_array($doc['events'] ?? null) ? $doc['events'] : [] as $spec) {
+            $this->seedEvent($spec, $output);
+        }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * One more event of a demo with several events: created once (an event of that type and name with these dates
+     * already exists: nothing to do), with its demo homes listed, then closed or announced.
+     *
+     * @param array<string,mixed> $spec {type, name, starts_on, ends_on, default_start, default_end, settings, homes, then}
+     */
+    private function seedEvent(array $spec, OutputInterface $output): void
+    {
+        $type = $this->types->get((string) $spec['type']);
+        $then = (string) ($spec['then'] ?? '');
+        $fields = OccurrenceInput::normalize(array_intersect_key($spec, array_flip(OccurrenceInput::FIELDS)), $type);
+        $exists = $this->db->fetchOne('SELECT id FROM event_occurrences WHERE type = ? AND name = ? AND starts_on IS NOT DISTINCT FROM ? ORDER BY id LIMIT 1', [$fields['type'], $fields['name'], $fields['starts_on']]);
+        if (false !== $exists) {
+            // Already there; a closed one gets its next year's event back if an organizer archived it on the demo stack.
+            $seeded = $this->occurrences->find((int) $exists);
+            if ('close' === $then && null !== $seeded && null !== $this->lifecycle->ensureNext($seeded, null)) {
+                $output->writeln(sprintf('Added next year\'s FICTIONAL demo event after "%s".', $seeded->name));
+            }
+
+            return;
+        }
+        $id = $this->db->transactional(fn (Connection $db) => $this->occurrences->insert($db, $fields, 'announce' === $then ? EventOccurrence::DRAFT : EventOccurrence::OPEN));
+        $event = $this->occurrences->find($id) ?? throw new \LogicException('The demo event vanished.');
+        $c = $this->community->forEvent($event);
+        $listed = 0;
+        foreach (\is_array($spec['homes'] ?? null) ? $spec['homes'] : [] as $h) {
+            $address = (int) ($this->addresses->findByNormalized($this->normalizer->fromParts($h['house_number'], $h['street'])['normalized'])['id'] ?? 0);
+            if (0 === $address || false === $this->db->fetchOne('SELECT 1 FROM claims WHERE address_id = ?', [$address])) {
+                continue; // only the demo's own claimed homes
+            }
+            $draft = ListingDraft::fromInput(self::listingInput($h, $event), $c, false, null, $this->types);
+            $this->listings->insert($this->db, $event, $address, $draft, ListingDraft::windowsFor($draft, $event, $type), null);
+            ++$listed;
+        }
+        match ($then) {
+            'close' => $this->lifecycle->close($id, \is_string($spec['closing_message'] ?? null) ? $spec['closing_message'] : null, null),
+            'announce' => $this->lifecycle->announce($id, null),
+            default => null,
+        };
+        $this->community->reset();
+        $output->writeln(sprintf('Added the FICTIONAL demo event "%s" (%d homes%s).', $fields['name'], $listed, '' !== $then ? ', '.$then.'d' : ''));
     }
 }

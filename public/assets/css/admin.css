@@ -62,3 +62,6 @@ pre.json { background: var(--surface-3); border: 1px solid var(--border); border
 
 /* A form that only wraps one button (the CSV export is a POST) lays out like the button itself. */
 .inline-form { display: contents; }
+/* Organizer → Events: the default event's mark and the list of public events (ADR 0011). */
+.badge { display: inline-block; padding: 1px 8px; border: 1px solid var(--warm-border); border-radius: 999px; background: var(--warm-soft); color: var(--warm-text); font-size: 11px; font-weight: 900; letter-spacing: .3px; vertical-align: 1px; }
+.event-summary { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 4px; }

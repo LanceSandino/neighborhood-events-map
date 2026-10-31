@@ -71,7 +71,7 @@ final class GarageSaleTest extends AppTestCase
         self::assertSame(['garage_sale', 'Community Rummage Sale', 'sale_days', '2027-04-10', '2027-04-11', ['start' => '08:00', 'end' => '14:00']],
             [$event['type'], $event['name'], $event['schedule_kind'], $event['starts_on'], $event['ends_on'], $event['default_hours']]);
         self::assertSame(['kidsToys', 'furniture', 'tools', 'household', 'electronics', 'free', 'openNow', 'multiFamily', 'earlyBirds'], array_column($event['filters'], 'key'));
-        self::assertSame(['timezone', 'days', 'categories', 'early_bird_time', 'route_modes'], \array_slice(array_keys($event), 14), 'the shared keys keep their order; the type\'s keys follow');
+        self::assertSame(['timezone', 'days', 'categories', 'early_bird_time', 'route_modes', 'state', 'dates_tentative', 'is_default'], \array_slice(array_keys($event), 14), 'the shared keys keep their order; the type\'s keys follow, then the event\'s state (0.15)');
         self::assertSame([['2027-04-10', '2027-04-11'], 10, null, ['walking']], [$event['days'], \count($event['categories']), $event['early_bird_time'], $event['route_modes']], 'a weekend sale takes its days');
         self::assertSame('🏷️ Your sale stops', $event['copy']['route_title']);
         $c = $this->json('GET', '/api/community');

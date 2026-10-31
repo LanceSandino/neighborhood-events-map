@@ -15,8 +15,9 @@ use Psr\Clock\ClockInterface;
 /**
  * @module Listing/ListingRepository
  * @description Event-scoped listing persistence (event_listings + event_listing_windows) plus the PUBLIC projection
- *     used by the family map. Public queries return only the ACTIVE occurrence's opted-in, unmoderated, in-boundary
- *     listings and never select owner/user columns; drafts and archived events are never public. A public home keeps
+ *     used by the family map. Public queries return only an OPEN event's opted-in, unmoderated, in-boundary listings
+ *     (the selected or default event) and never select owner/user columns; upcoming, closed, draft and archived events
+ *     show no homes (ADR 0011). A public home keeps
  *     the 0.9 keys (the Halloween details flat) and adds event_id, event_type, details (the type's strict
  *     projection), windows and display_status (D-20261031-09); a type with day-scoped statuses also names status_date
  *     (D-20261031-17). Every write is mirrored to the legacy `listings` row
@@ -70,13 +71,13 @@ final class ListingRepository
     }
 
     /**
-     * The active event's public homes.
+     * The event's public homes (none unless it is open).
      *
      * @return list<array<string,mixed>>
      */
     public function publicHomes(CommunityConfig $c, EventType $type): array
     {
-        if (null === $c->event) {
+        if (null === $c->event || !$c->showsHomes()) {
             return [];
         }
         $hidden = $c->hiddenZoneKeys();
@@ -91,13 +92,13 @@ final class ListingRepository
 
     /**
      * One public home by address id: the same rules as publicHomes(), hidden zones included. The address id
-     * resolves only within the active event.
+     * resolves only within the event (and only while it is open).
      *
      * @return array<string,mixed>|null
      */
     public function publicHome(int $addressId, CommunityConfig $c, EventType $type): ?array
     {
-        if (null === $c->event) {
+        if (null === $c->event || !$c->showsHomes()) {
             return null;
         }
         $row = $this->db->fetchAssociative(
@@ -113,25 +114,32 @@ final class ListingRepository
     }
 
     /**
-     * Hides/unhides an address's listing for the event. The decision is also kept on the address (moderation_hold),
-     * so a new listing for the same address — a later event, or after release and re-claim — starts hidden.
+     * Hides/unhides an address's listings of every current (upcoming or open) event (D-20261031-43). The decision is
+     * also kept on the address (moderation_hold), so a new listing for the same address — a later event, or after
+     * release and re-claim — starts hidden.
+     *
+     * @return list<int> the events whose listing changed (none: the address has no listing for a current event)
      */
-    public function setModeration(int $eventId, int $addressId, bool $hidden, ?string $reason): bool
+    public function setModeration(int $addressId, bool $hidden, ?string $reason): array
     {
-        return $this->db->transactional(function (Connection $db) use ($eventId, $addressId, $hidden, $reason): bool {
-            $n = $db->executeStatement(
-                'UPDATE event_listings SET moderation_hidden = :h, moderation_reason = :r, updated_at = :now WHERE event_id = :event AND address_id = :id',
-                ['h' => $hidden, 'r' => $hidden ? $reason : null, 'now' => $this->now(), 'event' => $eventId, 'id' => $addressId],
+        return $this->db->transactional(function (Connection $db) use ($addressId, $hidden, $reason): array {
+            $events = array_map('intval', $db->fetchFirstColumn(
+                "UPDATE event_listings el SET moderation_hidden = :h, moderation_reason = :r, updated_at = :now FROM event_occurrences o
+                 WHERE o.id = el.event_id AND o.state IN ('upcoming', 'open') AND el.address_id = :id RETURNING el.event_id",
+                ['h' => $hidden, 'r' => $hidden ? $reason : null, 'now' => $this->now(), 'id' => $addressId],
                 ['h' => 'boolean'],
-            );
-            if (1 === $n) {
+            ));
+            if ([] !== $events) {
                 // Unhiding is also the approval of a self-entered address that was waiting for review.
                 $db->executeStatement('UPDATE eligible_addresses SET moderation_hold = :h, reviewed_at = CASE WHEN :h THEN reviewed_at ELSE COALESCE(reviewed_at, :now) END WHERE id = :id',
                     ['h' => $hidden, 'now' => $this->now(), 'id' => $addressId], ['h' => 'boolean']);
-                $this->bridge->mirror($db, $eventId, $addressId);
+                foreach ($events as $eventId) {
+                    $this->bridge->mirror($db, $eventId, $addressId);
+                }
             }
+            sort($events);
 
-            return 1 === $n;
+            return $events;
         });
     }
 
@@ -161,13 +169,15 @@ final class ListingRepository
         return ['public' => (int) ($r['public'] ?? 0), 'hidden' => (int) ($r['hidden'] ?? 0), 'pending_review' => (int) ($r['pending_review'] ?? 0)];
     }
 
-    /** @return list<array{id:int|string, address:string}> new addresses waiting for review in the event (oldest first) */
-    public function pendingAddresses(?int $eventId, int $limit = 20): array
+    /** @return list<array{id:int|string, address:string}> new addresses waiting for review in any current (upcoming or open) event (oldest first) */
+    public function pendingAddresses(int $limit = 20): array
     {
-        return null === $eventId ? [] : $this->db->fetchAllAssociative(
-            'SELECT a.id, a.display_address AS address FROM event_listings el JOIN eligible_addresses a ON a.id = el.address_id
-             WHERE el.event_id = :event AND el.moderation_hidden AND el.moderation_reason = :p ORDER BY a.created_at LIMIT '.max(1, $limit),
-            ['event' => $eventId, 'p' => self::PENDING_REVIEW],
+        return $this->db->fetchAllAssociative(
+            "SELECT a.id, a.display_address AS address FROM eligible_addresses a
+             WHERE EXISTS (SELECT 1 FROM event_listings el JOIN event_occurrences o ON o.id = el.event_id AND o.state IN ('upcoming', 'open')
+                           WHERE el.address_id = a.id AND el.moderation_hidden AND el.moderation_reason = :p)
+             ORDER BY a.created_at LIMIT ".max(1, $limit),
+            ['p' => self::PENDING_REVIEW],
         );
     }
 

@@ -80,7 +80,7 @@ final class AdminApiController
                 'open_disputes' => $count("SELECT COUNT(*) FROM disputes WHERE status = 'open'"),
             ],
             'versions' => $this->community->geometryVersions(),
-            'pending_addresses' => $this->listings->pendingAddresses($c->event?->id),
+            'pending_addresses' => $this->listings->pendingAddresses(),
             'event' => null === $c->event ? null : ['id' => $c->event->id, 'name' => $c->event->name, 'type' => $c->event->type, 'starts_on' => $c->event->startsOn, 'ends_on' => $c->event->endsOn],
         ]);
     }

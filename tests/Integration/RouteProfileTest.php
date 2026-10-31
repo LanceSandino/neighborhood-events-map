@@ -50,7 +50,7 @@ final class RouteProfileTest extends AppTestCase
     {
         FixtureRoutingProvider::$calls = 0;
         $this->configureCommunity(['routing' => ['groups' => [['west', 'east']], 'provider_enabled' => true, 'crossings_verified' => true]]);
-        $this->db()->executeStatement("UPDATE event_occurrences SET settings = '{\"route_modes\": [\"walking\", \"driving\"]}' WHERE state = 'active'");
+        $this->db()->executeStatement("UPDATE event_occurrences SET settings = '{\"route_modes\": [\"walking\", \"driving\"]}' WHERE state = 'open'");
         [$a, $b] = $this->homes();
         $r = $this->json('POST', '/api/routes/plan', ['stops' => [$a, $b], 'profile' => 'driving']);
         self::assertSame(409, $this->code());
@@ -111,7 +111,7 @@ final class RouteProfileTest extends AppTestCase
         $e = $c->event;
         \assert(null !== $e);
         $settings = array_replace_recursive($c->settings, ['event' => ['type' => 'holiday_lights'], 'routing' => ['provider_enabled' => $providerEnabled]]);
-        $event = new EventOccurrence($e->id, 'holiday_lights', $e->name, $e->startsOn, $e->endsOn, $e->defaultStart, $e->defaultEnd, ['route_modes' => $routeModes], 'active');
+        $event = new EventOccurrence($e->id, 'holiday_lights', $e->name, $e->startsOn, $e->endsOn, $e->defaultStart, $e->defaultEnd, ['route_modes' => $routeModes], EventOccurrence::OPEN);
 
         return new CommunityConfig($settings, $c->boundary, $c->boundaryApproved, $c->boundaryVersion, $c->zoneShapes, true, $event);
     }

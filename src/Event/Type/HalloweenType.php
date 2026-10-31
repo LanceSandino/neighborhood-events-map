@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Event\Type;
 
+use App\Event\EventOccurrence;
 use App\Event\EventType;
 use App\Event\OccurrenceSettings;
 use App\Shared\ValidationException;
@@ -204,5 +205,22 @@ final class HalloweenType implements EventType
             'manage_half', 'manage_full', 'listing_checks', 'route_rules', 'rule_lines'];
 
         return array_combine($names, array_map(static fn (string $n) => 'event/'.self::KEY.'/_'.$n.'.html.twig', $names));
+    }
+
+    /** October 31 of this year, or of next year once this year's has passed. */
+    public function newEventDates(string $today): array
+    {
+        $year = (int) substr($today, 0, 4);
+        $day = sprintf('%04d-10-31', $today > sprintf('%04d-10-31', $year) ? $year + 1 : $year);
+
+        return [$day, $day];
+    }
+
+    /** October 31 of the year after the closed event (tentative). */
+    public function nextDates(EventOccurrence $closed): array
+    {
+        $day = sprintf('%04d-10-31', (int) substr($closed->startsOn ?? $closed->createdAt ?? date('Y'), 0, 4) + 1);
+
+        return [$day, $day];
     }
 }

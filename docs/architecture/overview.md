@@ -21,14 +21,14 @@
 
 ## Request lifecycle highlights
 
-- **Public pages/APIs** (`/`, `/api/community`, `/api/homes`) are stateless reads of the active event's opted-in listings; they never start or touch a session. Between events `/` is a neutral "no event right now" page.
+- **Public pages/APIs** (`/`, `/api/events`, `/api/community`, `/api/homes`) are stateless reads of the selected (`?e=`) or default event's opted-in listings (homes only while it is open); they never start or touch a session. With no public event `/` is a neutral "no event right now" page.
 - **Listing a home:** `GET /api/pow` → browser worker → `POST /api/auth/request-link` (PoW, throttles, eligibility, claim intent, email) → email → `GET /auth/confirm` (read-only page) → `POST /auth/confirm` (consume token, upsert user, atomic claim + listing, rotate session) → `/me`.
 - **Protected requests** (`/me`, `/admin`, `/api/me/*`, `/api/admin/*`): firewall loads the session user → `IdleSessionSubscriber` (expire or extend) → CSRF check for writes → controller.
 - **Paths are canonical:** a percent-encoded path is refused before anything runs (nginx with 400, `CanonicalPathSubscriber` with 404), because Symfony routes on the decoded path while some guards read the raw one.
 
 ## Data model
 
-`community_settings` (single row JSONB; its `event` block mirrors the active event), `community_geometries` (versioned boundary/zone FeatureCollections, approval), `eligible_addresses` (private registry, `inside_boundary` flag, the moderation hold), `users`, `claims` (PK = address), `claim_intents`, `event_occurrences` (one active), `event_listings` (one per event and address; type fields in `details` JSONB; `published`, `moderation_hidden`) with `event_listing_windows`, the legacy `listings` (one row per address, kept equal to the active Halloween event's listings for rollbacks), `auth_link_tokens` (hashes), `pow_challenges`, `throttle_events`, `disputes`, `audit_events`, `sessions`, `route_cache`. See `migrations/Version20261018000001.php` and later migrations.
+`community_settings` (single row JSONB; its `event` block mirrors the Halloween the legacy table mirrors, else the default event), `community_geometries` (versioned boundary/zone FeatureCollections, approval), `eligible_addresses` (private registry, `inside_boundary` flag, the moderation hold), `users`, `claims` (PK = address), `claim_intents`, `event_occurrences` (draft, upcoming, open, closed, archived; one current per type, one default), `event_listings` (one per event and address; type fields in `details` JSONB; `published`, `moderation_hidden`) with `event_listing_windows`, the legacy `listings` (one row per address, kept equal to the newest open or closed Halloween's listings for rollbacks), `auth_link_tokens` (hashes), `pow_challenges`, `throttle_events`, `disputes`, `audit_events`, `sessions`, `route_cache`. See `migrations/Version20261018000001.php` and later migrations.
 
 ## Event types
 

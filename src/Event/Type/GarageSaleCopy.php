@@ -106,6 +106,9 @@ final class GarageSaleCopy
         // Server-rendered pages only (page_* keys are not in the public event): the address example in "List your
         // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
         'page_address_example' => '123 Main St',
+        // The thank-you text of a closed sale (D-20261031-39): {event} is its name with the year, {next} the next sale's dates.
+        'page_closing_message' => '{event} was a success — thank you! The next sale: {next}. Residents: sign in to get your sale ready for the next one.',
+        'page_coming_soon' => 'The sale is coming.',
         'page_a11y_icons' => '🧸 toys, 🪑 furniture, 🛠️ tools',
         'page_a11y_filters' => 'Filters by category, sale day and opening hours help plan a short route.',
         'page_terms_details' => 'categories, payment kinds and notes',

@@ -10,6 +10,7 @@ use App\Address\InvalidAddressException;
 use App\Community\CommunityPresenter;
 use App\Community\CommunityRepository;
 use App\Event\EventTypeRegistry;
+use App\Event\PublicEvents;
 use App\Listing\ListingRepository;
 use App\Security\ClientIdentity;
 use App\Security\ProofOfWork;
@@ -23,10 +24,12 @@ use Symfony\Component\Routing\Attribute\Route;
  * @module Controller/Api/PublicApiController
  * @description Anonymous, read-mostly family endpoints: community metadata, published homes,
  *     narrow address lookup / claim status for the listing form, and PoW challenges.
- *     Never returns emails, owner ids or the unclaimed address inventory. Homes are the ACTIVE event's
- *     public listings, projected by its event type; drafts and archived events are never public.
+ *     Never returns emails, owner ids or the unclaimed address inventory. GET /api/events lists the public events
+ *     (the switcher's); the other endpoints answer for the event `?e=<id>` selects (Event/EventSelection: an unknown,
+ *     draft or archived id is 404) or the default event. Homes are an OPEN event's public listings, projected by its
+ *     event type; upcoming and closed events show none; drafts and archived events are never public.
  *
- * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, Address/*, Security/*
+ * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, Event/PublicEvents, Address/*, Security/*
  */
 final class PublicApiController
 {
@@ -40,7 +43,15 @@ final class PublicApiController
         private readonly Throttle $throttle,
         private readonly ClientIdentity $client,
         private readonly EventTypeRegistry $types,
+        private readonly PublicEvents $events,
     ) {
+    }
+
+    /** The public events (upcoming, open, closed), the default first. */
+    #[Route('/api/events', name: 'api_events', methods: ['GET'])]
+    public function events(): JsonResponse
+    {
+        return self::fresh(new JsonResponse(['events' => $this->events->list()]));
     }
 
     #[Route('/api/community', name: 'api_community', methods: ['GET'])]

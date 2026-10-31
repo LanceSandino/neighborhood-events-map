@@ -1,8 +1,9 @@
 # Running a Christmas lights season (organizers)
 
-Since 0.12 the map offers a second event type: **Christmas Lights** (`holiday_lights`, ROADMAP Stage 3). One install
-still runs one event at a time ([D-20261021-20](../../DECISIONS.md)); residents keep their claimed homes and list them
-for the lights season from an empty form. This page is the organizer's checklist; the design is in
+Since 0.12 the map offers a second event type: **Christmas Lights** (`holiday_lights`, ROADMAP Stage 3). Since 0.15 it
+can run next to other events (for example Halloween's thank-you and a sale announced for the spring;
+[D-20261031-37](../../DECISIONS.md)); residents keep their claimed homes and list them for the lights season from an
+empty form, or from their own details of last season. This page is the organizer's checklist; the design is in
 [event types](../architecture/event-types.md).
 
 ## What visitors get
@@ -28,8 +29,10 @@ for the lights season from an empty form. This page is the organizer's checklist
    keep, up to eight short rules (parking, one-way streets…), the **best night** for a neighborhood walk (optional),
    **quiet hours** (optional) and whether to **offer a drive-by tour**.
 2. **Preview** the draft: it shows the lights theme, words and filters (and no homes).
-3. **Put on the map** when you are ready. The current event (for example Halloween) ends at that moment: its homes leave
-   the map and stay with their season; nothing is copied. Residents see "List for Christmas Lights" in My house.
+3. **Announce** it so residents can list early, then **Open** it when the season starts (opening confirms tentative
+   dates) and **Make default** so the front page shows it. Close Halloween first if it is over: closing shows its
+   thank-you message and creates next year's. Residents see "List for Christmas Lights" in My house.
+   When the season is over, **Close** it: next season's event is created with the same nights a year later.
 4. Optional: under **Community & branding**, adjust the words or colours. Branding you never changed already follows the
    lights type (midnight blue and gold, "Holiday nights. Bright lights."); anything you changed stays as you set it
    ([D-20261031-16](../../DECISIONS.md)).

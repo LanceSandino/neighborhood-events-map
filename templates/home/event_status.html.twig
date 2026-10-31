@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+{# An event that is public but shows no homes (ADR 0011): an upcoming one — its dates (tentative, or to be announced);
+   residents may list their home once it has dates — or a closed one — its thank-you message, and a way for residents to
+   get ready for the next one. No map scripts; the switcher above leads to the other public events. #}
+{% set nav = 'map' %}
+{% set switch_path = '/' %}
+{% set et = event_type(c.event.type) %}
+{% set closed = c.event.state == 'closed' %}
+{% set next = closed ? event_tabs('/me')|filter(t => t.type == c.event.type and t.state == 'upcoming')|first : null %}
+{% block body %}
+<section class="intro">
+  <div>
+    <div class="eyebrow">✦ {{ c.community.subtitle }}</div>
+    <h1>{{ c.branding.headline }} <span>{{ c.branding.headline_accent }}</span></h1>
+    <p>{{ c.branding.intro }}{% if c.community.name %} All across {{ c.community.name }}.{% endif %}</p>
+  </div>
+  <div class="hero-illustration" aria-hidden="true">{% include event_fragment(c.event.type, 'hero_art') %}</div>
+</section>
+
+<section class="event-status{{ closed ? ' is-closed' : ' is-upcoming' }}" aria-labelledby="eventStatusTitle">
+  <span class="event-status-icon" aria-hidden="true">{{ closed ? '🎉' : et.copy.event_icon }}</span>
+  <div class="event-status-body">
+    {% if closed %}
+    <div class="eyebrow">{{ c.event.name }} · Ended</div>
+    <h2 id="eventStatusTitle">Thank you, neighbors!</h2>
+    <p class="event-status-message">{{ c.event.closing_message }}</p>
+    <div class="event-status-actions">
+      <a class="primary" href="/me{{ next ? '?e=' ~ next.id }}">Get my house ready</a>
+      {% if next %}<a class="secondary" href="/?e={{ next.id }}">See {{ next.label }}</a>{% endif %}
+    </div>
+    {% else %}
+    <div class="eyebrow">{{ c.event.name }} · Coming soon</div>
+    <h2 id="eventStatusTitle">{{ c.event.starts_on ? event_dates(c.event) : 'Dates to be announced' }}</h2>
+    <p class="event-status-message">{% if c.event.starts_on %}Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}{{ c.event.dates_tentative ? ' · the dates are tentative' }}. Homes appear on the map when the event opens.{% else %}The organizer sets the dates soon. Homes appear on the map when the event opens.{% endif %}</p>
+    <div class="event-status-actions">
+      {% if c.registration.open %}<a class="primary" href="/{{ event_query() }}#list-my-house" data-action="register">+ List your home</a>{% else %}<p class="form-caption">{{ c.registration.reason }}</p>{% endif %}
+      <a class="secondary" href="/me{{ event_query() }}">My house</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% if c.event.rules|length > 0 %}
+<section class="event-status-rules" aria-labelledby="eventRulesTitle">
+  <h2 id="eventRulesTitle">Event rules</h2>
+  <ul class="reminders compact">{% for r in c.event.rules %}<li>{{ r }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+<script type="application/json" id="boot">{{ boot|boot_json }}</script>
+{% endblock %}
+
+{% block modals %}
+{% include 'home/_modals.html.twig' %}
+{% endblock %}
+
+{% block scripts %}
+{% if not closed and c.registration.open %}<script src="/vendor/leaflet/leaflet.js" defer></script>{% endif %}
+<script type="module" src="{{ asset_path('js/event-status.js') }}"></script>
+{% endblock %}

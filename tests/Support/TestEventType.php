@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Event\EventOccurrence;
 use App\Event\EventType;
 use App\Event\OccurrenceSettings;
 use App\Event\Type\HalloweenType;
@@ -118,5 +119,15 @@ final class TestEventType implements EventType
     public function fragments(): array
     {
         return [];
+    }
+
+    public function newEventDates(string $today): array
+    {
+        return $this->halloween->newEventDates($today);
+    }
+
+    public function nextDates(EventOccurrence $closed): array
+    {
+        return $this->halloween->nextDates($closed);
     }
 }

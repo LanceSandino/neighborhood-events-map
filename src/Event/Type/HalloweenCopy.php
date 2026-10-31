@@ -60,6 +60,9 @@ final class HalloweenCopy
         // Server-rendered pages only (page_* keys are not in the public event): the address example in "List your
         // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
         'page_address_example' => '123 Pumpkin Ln',
+        // The thank-you text of a closed event (D-20261031-39): {event} is its name with the year, {next} next year's dates.
+        'page_closing_message' => '{event} was a success — thank you! Come back next year ({next}). Residents: sign in to get your house ready for next year.',
+        'page_coming_soon' => 'Trick-or-treating is coming.',
         'page_a11y_icons' => '🍬 treats, 🧩 sensory-friendly, 👻 spooky',
         'page_a11y_filters' => 'Sensory filters (no jump scares, no flashing lights, no loud audio) help plan a calm route.',
         'page_terms_details' => 'treats and sensory details',

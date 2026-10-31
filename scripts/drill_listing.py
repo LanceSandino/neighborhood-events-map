@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
 @module scripts/drill_listing
-@description Resident steps of the rollback drill (bin/drill-event-upgrade.sh) against a disposable stack: sign in
-    with a real proof-of-work and the one-time link from the stack's Mailpit, then edit a listing (PATCH) or list a
-    new self-entered home (POST /api/me/homes) with a pin placed inside the approved boundary, away from every other
-    home. Works against the 0.9 and the 0.11 API (the same endpoints). Prints one JSON line with the outcome.
+@description Resident and organizer steps of the rollback drill (bin/drill-event-upgrade.sh) against a disposable
+    stack: sign in with a real proof-of-work and the one-time link from the stack's Mailpit, then edit a listing (PATCH),
+    list a new self-entered home (POST /api/me/homes) with a pin placed inside the approved boundary, away from every
+    other home, list a claimed home for another event (POST /api/me/homes/{id}/listing?e=<event>, 0.15) or, as an
+    organizer, close an event (POST /api/admin/events/{id}/close, 0.15: next year's event is created). edit and claim
+    work against the 0.9 and later APIs (the same endpoints). Prints one JSON line with the outcome.
 @dependencies Python 3 standard library only
 Usage:
   python3 scripts/drill_listing.py --base http://localhost:8198 --mailpit http://localhost:8197 --email demo-resident-01@example.invalid edit --home-id 1 --note "Drill edit"
   python3 scripts/drill_listing.py ... claim --house 901 --street "Moonbeam Dr" --note "Listed in the drill"
+  python3 scripts/drill_listing.py ... list-for --home-id 1 --event-id 2 --note "Next year"
+  python3 scripts/drill_listing.py ... close --event-id 1
 """
 import argparse
 import hashlib
@@ -143,6 +147,12 @@ def main() -> int:
     c.add_argument("--house", required=True)
     c.add_argument("--street", required=True)
     c.add_argument("--note", required=True)
+    f = sub.add_parser("list-for")
+    f.add_argument("--home-id", type=int, required=True)
+    f.add_argument("--event-id", type=int, required=True)
+    f.add_argument("--note", required=True)
+    x = sub.add_parser("close")
+    x.add_argument("--event-id", type=int, required=True)
     a = ap.parse_args()
 
     client = Client(a.base)
@@ -150,6 +160,15 @@ def main() -> int:
     if a.cmd == "edit":
         st, body = client.req("PATCH", f"/api/me/homes/{a.home_id}", {"note": a.note})
         print(json.dumps({"step": "edit", "status": st, "note": (body.get("home") or {}).get("listing", {}).get("note") if isinstance(body, dict) else None}))
+        return 0 if st == 200 else 1
+    if a.cmd == "list-for":
+        st, body = client.req("POST", f"/api/me/homes/{a.home_id}/listing?e={a.event_id}", {"details": {"candy": True}, "start": "17:00", "end": "20:00", "note": a.note})
+        print(json.dumps({"step": "list-for", "status": st, "event_id": a.event_id}))
+        return 0 if st == 201 else 1
+    if a.cmd == "close":
+        st, body = client.req("POST", f"/api/admin/events/{a.event_id}/close", {"confirm": True})
+        nxt = body.get("next", {}) if isinstance(body, dict) else {}
+        print(json.dumps({"step": "close", "status": st, "next_id": nxt.get("id"), "next_starts_on": nxt.get("starts_on"), "next_state": nxt.get("state")}))
         return 0 if st == 200 else 1
     _, community = client.req("GET", "/api/community")
     _, homes = client.req("GET", "/api/homes")

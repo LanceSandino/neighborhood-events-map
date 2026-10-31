@@ -25,16 +25,16 @@ final class EventBootstrapTest extends AppTestCase
         $file = $this->yaml("event:\n  type: halloween\n  name: Porch Light Night\n  starts_on: '2027-10-30'\n  ends_on: '2027-11-02'\n  starts_at: '16:00'\n  ends_at: '19:30'\n");
         $bootstrapper = static::getContainer()->get(CommunityBootstrapper::class);
         self::assertSame('imported', $bootstrapper->bootstrap($file)['status']);
-        $rows = $this->db()->fetchAllAssociative('SELECT type, name, starts_on, ends_on, default_start_local, default_end_local, state FROM event_occurrences');
+        $rows = $this->db()->fetchAllAssociative('SELECT type, name, starts_on, ends_on, default_start_local, default_end_local, state, is_default FROM event_occurrences');
         self::assertSame([['type' => 'halloween', 'name' => 'Porch Light Night', 'starts_on' => '2027-10-30', 'ends_on' => '2027-10-30',
-            'default_start_local' => '16:00:00', 'default_end_local' => '19:30:00', 'state' => 'active']], $rows, 'a Halloween is one day');
+            'default_start_local' => '16:00:00', 'default_end_local' => '19:30:00', 'state' => 'open', 'is_default' => true]], $rows, 'a Halloween is one day; the first event is open and the default');
         $this->repo()->reset();
         self::assertSame(['2027-10-30', 'Porch Light Night', 'halloween'], [$this->json('GET', '/api/event')['event']['date'], $this->json('GET', '/api/event')['event']['name'], $this->json('GET', '/api/event')['event']['type']]);
 
         self::assertSame('already-configured', $bootstrapper->bootstrap($file)['status']);
         $again = $this->yaml("event:\n  date: '2027-10-31'\n  name: Halloween Night\n");
         self::assertSame('imported', $bootstrapper->bootstrap($again, true)['status']);
-        self::assertSame([['name' => 'Halloween Night', 'starts_on' => '2027-10-31', 'state' => 'active']], $this->db()->fetchAllAssociative('SELECT name, starts_on, state FROM event_occurrences'), 'the same event, updated (nobody is listed yet)');
+        self::assertSame([['name' => 'Halloween Night', 'starts_on' => '2027-10-31', 'state' => 'open']], $this->db()->fetchAllAssociative('SELECT name, starts_on, state FROM event_occurrences'), 'the same event, updated (nobody is listed yet)');
         unlink($file);
         unlink($again);
     }
@@ -54,7 +54,7 @@ final class EventBootstrapTest extends AppTestCase
             $row = $this->db()->fetchAssociative('SELECT type, name, starts_on, ends_on, settings, state FROM event_occurrences');
             $stored = array_keys(json_decode((string) $row['settings'], true));
             sort($stored);
-            self::assertSame([$type, $name, $from, $to, $settings, 'active'], [$row['type'], $row['name'], $row['starts_on'], $row['ends_on'], $stored, $row['state']], $file);
+            self::assertSame([$type, $name, $from, $to, $settings, 'open'], [$row['type'], $row['name'], $row['starts_on'], $row['ends_on'], $stored, $row['state']], $file);
         }
     }
 

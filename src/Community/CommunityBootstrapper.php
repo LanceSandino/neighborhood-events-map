@@ -66,7 +66,7 @@ final class CommunityBootstrapper
             $raw['branding']['logo'] = $logo;
         }
         $settings = $this->repo->saveSettings($raw, null);
-        $first = null !== $eventSettings ? $this->occurrences->active() : null;
+        $first = null !== $eventSettings ? $this->occurrences->defaultEvent() : null;
         if (null !== $first) {
             $this->db->transactional(fn (Connection $db) => $this->occurrences->updateFields($db, $first->id, ['name' => $first->name, 'starts_on' => $first->startsOn,
                 'ends_on' => $first->endsOn, 'default_start' => $first->defaultStart, 'default_end' => $first->defaultEnd, 'settings' => $eventSettings]));

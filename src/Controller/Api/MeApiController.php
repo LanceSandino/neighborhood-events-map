@@ -7,7 +7,9 @@ namespace App\Controller\Api;
 use App\Audit\AuditLog;
 use App\Claim\ClaimService;
 use App\Community\CommunityRepository;
+use App\Event\EventOccurrence;
 use App\Event\EventTypeRegistry;
+use App\Event\PublicEvents;
 use App\Listing\ListingDraft;
 use App\Listing\ListingRepository;
 use App\Listing\ResidentHomes;
@@ -31,11 +33,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @description Owner-only API (ROLE_USER, declared here and in access_control; CSRF on writes; idle
  *     timeout enforced before this runs). A resident's own homes are reached only through the
  *     owner-scoped ResidentHomes, so no query here can touch another resident's home. Listing details are
- *     validated by the community's event type (ListingDraft). Claims stay with the resident across events; each
- *     home shows its listing for the ACTIVE event, or can be listed for it from an empty form. The client never
- *     names an event: the server always uses the active one.
+ *     validated by the event's type (ListingDraft). Claims stay with the resident across events. Several events may be
+ *     public (ADR 0011): the request names one with `?e=<id>` (Event/EventSelection; else the default event). Each home
+ *     shows its listing for that event and which public events it is listed for, and can be listed for an upcoming or
+ *     open event from an empty form — optionally filled with the resident's own listing of the same home from the
+ *     previous event of the same type ("Use last year's details"; nothing is saved until they save). A closed event's
+ *     listings are read-only.
  *
- * @dependencies Listing/*, Claim/ClaimService, Community/CommunityRepository, Event/EventTypeRegistry, Security/*, Audit/AuditLog
+ * @dependencies Listing/*, Claim/ClaimService, Community/CommunityRepository, Event/EventTypeRegistry, Event/PublicEvents, Security/*, Audit/AuditLog
  */
 #[IsGranted('ROLE_USER')]
 final class MeApiController
@@ -50,6 +55,7 @@ final class MeApiController
         private readonly Throttle $throttle,
         private readonly UserRepository $users,
         private readonly EventTypeRegistry $types,
+        private readonly PublicEvents $events,
     ) {
     }
 
@@ -68,6 +74,7 @@ final class MeApiController
             'event_type' => $this->community->current()->eventTypeKey(),
             'homes' => $this->homes($user),
             'event' => $this->eventView(),
+            'events' => $this->events->list(),
         ]);
     }
 
@@ -124,6 +131,9 @@ final class MeApiController
         $homes = $this->residentHomes->of($user);
         $c = $this->community->current();
         $event = $c->event;
+        if (null !== $event && EventOccurrence::CLOSED === $event->state) {
+            return ApiError::response(403, 'closed', sprintf('%s is closed; its listings are kept as they were.', $c->eventName()));
+        }
         $row = null === $event ? null : $homes->find($id, $event->id);
         if (null === $row) {
             return null !== $event && $homes->owns($id)
@@ -174,6 +184,26 @@ final class MeApiController
         return new JsonResponse(['ok' => true, 'home' => $this->homeFor($user, $id)], 201);
     }
 
+    /**
+     * "Use last year's details": the resident's own listing of this home for the previous event of the same type, as
+     * form values (details, note, hours) for the event the request names. Nothing is saved or published by this.
+     */
+    #[Route('/api/me/homes/{id}/previous', name: 'api_me_home_previous', requirements: ['id' => '\d{1,12}'], methods: ['GET'])]
+    public function previous(#[CurrentUser] User $user, int $id): JsonResponse
+    {
+        $c = $this->community->current();
+        $event = $c->event;
+        $homes = $this->residentHomes->of($user);
+        $row = null === $event ? null : $homes->previous($id, $event);
+        if (null === $row) {
+            return ApiError::response(404, 'not_found', 'There is no earlier listing of this home to copy.');
+        }
+        $stored = ListingRepository::toDraft($row, $this->types->for($c));
+
+        return new JsonResponse(['listing' => ['details' => $stored['details'], 'note' => $stored['note'], 'start' => $stored['start'], 'end' => $stored['end'],
+            'from_event_id' => (int) $row['event_id']]], 200, ['Cache-Control' => 'no-store']);
+    }
+
     #[Route('/api/me/homes/{id}', name: 'api_me_home_release', requirements: ['id' => '\d{1,12}'], methods: ['DELETE'])]
     public function release(#[CurrentUser] User $user, Request $request, int $id): JsonResponse
     {
@@ -192,35 +222,46 @@ final class MeApiController
         $c = $this->community->current();
         $type = $this->types->for($c);
         $canList = null !== $c->event && $c->registrationState()['open'];
+        $homes = $this->residentHomes->of($user);
+        $public = $this->community->publicEvents();
+        $listed = $homes->listedFor(array_map(static fn (EventOccurrence $e) => $e->id, $public));
+        $labels = PublicEvents::labels($public);
 
-        return array_map(static function (array $r) use ($c, $type, $canList): array {
+        return array_map(static function (array $r) use ($c, $type, $canList, $homes, $public, $listed, $labels): array {
             $listing = null === ($r['listing_id'] ?? null) ? null : ListingRepository::toDraft($r, $type);
+            $id = (int) $r['id'];
 
             return [
-                'id' => (int) $r['id'],
+                'id' => $id,
                 'address' => (string) $r['display_address'],
                 'zone' => $r['zone_key'],
                 'zone_label' => $c->zone($r['zone_key'])['label'] ?? null,
                 'inside_boundary' => (bool) $r['inside_boundary'],
                 'listing' => null === $listing ? null : $listing + [
                     'event_date' => $listing['windows'][0]['date'] ?? $c->event?->startsOn,
-                    'current_season' => true, // only the active event's listing is shown
+                    'current_season' => true, // the listing of the event this page is about
                     'moderation_hidden' => (bool) $r['moderation_hidden'],
                     'pending_review' => (bool) $r['moderation_hidden'] && ListingRepository::PENDING_REVIEW === $r['moderation_reason'],
                 ],
                 'can_list' => null === $listing && $canList,
+                // "Use last year's details": the resident's own listing of this home for an earlier event of this type.
+                'can_copy_previous' => null === $listing && $canList && null !== $c->event && null !== $homes->previous($id, $c->event),
+                'events' => array_map(static fn (EventOccurrence $e) => ['event_id' => $e->id, 'name' => $labels[$e->id], 'state' => $e->state,
+                    'listed' => isset($listed[$id][$e->id]), 'published' => $listed[$id][$e->id]['published'] ?? false], $public),
             ];
-        }, $this->residentHomes->of($user)->all($c->event?->id));
+        }, $homes->all($c->event?->id));
     }
 
-    /** @return array{id:?int, name:string, type:string, active:bool, starts_on:?string, ends_on:?string, start:string, end:string} the active event, for the forms */
+    /** @return array<string,mixed> the event this page is about, for the forms: also its state, whether it takes listings and its days */
     private function eventView(): array
     {
         $c = $this->community->current();
         $e = $c->event;
 
         return ['id' => $e?->id, 'name' => $c->eventName(), 'type' => $c->eventTypeKey(), 'active' => null !== $e, 'starts_on' => $e?->startsOn, 'ends_on' => $e?->endsOn,
-            'start' => (string) $c->settings['event']['starts_at'], 'end' => (string) $c->settings['event']['ends_at']];
+            'start' => (string) $c->settings['event']['starts_at'], 'end' => (string) $c->settings['event']['ends_at'],
+            'state' => $e?->state, 'dates_tentative' => (bool) $e?->datesTentative, 'is_default' => (bool) $e?->isDefault, 'accepts_listings' => (bool) $e?->acceptsListings()]
+            + (null !== $e && \is_array($e->settings['days'] ?? null) ? ['days' => $e->settings['days']] : []);
     }
 
     /** @return array<string,mixed>|null */

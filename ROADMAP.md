@@ -1,6 +1,6 @@
 # Roadmap
 
-Neighborhood events map started as a Halloween trick-or-treat map. The next two event types are a **Christmas lights map** and a **garage sale map**. Both are *generic* event types: any neighborhood can pick one in its settings, and nothing about a particular neighborhood goes into code ([D-20261018-01](DECISIONS.md)).
+Neighborhood events map started as a Halloween trick-or-treat map. The next two event types are a **Christmas lights map** and a **garage sale map**, and since 0.15 several events can be shown at once. Both are *generic* event types: any neighborhood can pick one in its settings, and nothing about a particular neighborhood goes into code ([D-20261018-01](DECISIONS.md)).
 
 This is a plan, not a promise of dates. Each stage ships as its own minor pre-release once it passes every quality gate ([D-20261019-18](DECISIONS.md)). The architectural choices below are recorded in [DECISIONS.md](DECISIONS.md) as D-20261021-19 to D-20261021-23 and in [ADR 0010](docs/adr/0010-generic-event-types.md).
 
@@ -8,7 +8,7 @@ This is a plan, not a promise of dates. Each stage ships as its own minor pre-re
 
 The parts that make the Halloween map safe are shared by every event type, unchanged:
 
-- **One community per install, one active event at a time.** A neighborhood that runs a lights map in December and a garage sale in May switches the event between seasons.
+- **One community per install; several events at once since 0.15** ([ADR 0011](docs/adr/0011-several-published-events.md)). A neighborhood that runs a lights map in December and a garage sale in May shows both side by side (one current event of each kind), visitors switch with tabs and the organizer picks the default. (Until 0.14: one active event at a time, switched between seasons.)
 - **Homes are claimed, not events.** A claim is ownership of an address (first verified email wins, enforced by the `claims` primary key). It survives switching events, so a resident who listed their home for Halloween manages it for the lights map with the same sign-in.
 - **Listings belong to one event.** Each season's listing is separate. Last season's details are never shown again by accident.
 - **Passwordless sign-in, proof-of-work, rate limits, honeypots and the response floor** on every email-sending endpoint.
@@ -97,21 +97,30 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - Claims are kept; residents are invited, not re-registered.
    - A per-event export and retention clean-up of old listings.
    - Status: shipped in 0.11.0-beta.1 except inviting residents — Organizer → Events prepares a draft, previews it, puts it on the map in one step (the current event is archived; nothing carries over), ends an event, exports one event's listings and deletes an archived event's listings; residents keep their claims and list each home for the new event from an empty form ([D-20261031-12](DECISIONS.md), [-13](DECISIONS.md)). Emailing residents about a new event is not built yet.
+   - 0.15.0-beta.1 replaced the switch by the life cycle of Stage 6 below (close an event, next year's is created).
    - 0.14.0-beta.1 finished the roadmap's polish: a release-blocking acceptance audit ([event-types-acceptance.md](docs/quality/event-types-acceptance.md)), every type checked at 375–1440 px in light and dark with larger text, more contrast and reduced motion, axe on every public page, keyboard-only use end to end, event-neutral copy outside the type modules, the organizer runbook ([organizer-events.md](docs/runbooks/organizer-events.md)) and commented reference configurations per type.
+
+7. **Stage 6 — several events at once (done in 0.15.0-beta.1; the owner's decision of 2026-10-31).**
+   - Events are draft, upcoming, open, closed or archived; at most one upcoming or open event per kind; one default event that "/" shows.
+   - A switcher (tabs) between the public events; an upcoming event shows its dates (tentative, or to be announced), a closed one its thank-you message.
+   - Closing an event creates next year's of the same kind (Halloween October 31, Christmas lights the same nights a year later, a sale to be announced).
+   - Residents switch events in My house and may start next year's listing from their own details of last time.
+   - Status: shipped in 0.15.0-beta.1 ([D-20261031-37](DECISIONS.md) to [-45](DECISIONS.md), [ADR 0011](docs/adr/0011-several-published-events.md), [event types](docs/architecture/event-types.md#several-events-at-once-015), [organizer guide](docs/runbooks/organizer-events.md)).
 
 ## What remains
 
 These are known, deliberate gaps, each tracked here (there are no TODO notes in the code):
 
 - **Inviting residents to a new event.** Organizer → Events switches the map; residents keep their claims and list again from an empty form, but they are told by hand (newsletter, group chat). An opt-in email through the existing mailer, with consent and the same limits as sign-in links, is the next step.
-- **Retiring the legacy `listings` table.** It and its two triggers keep an image-only rollback to 0.9/0.10 working while a one-day Halloween event is on the map (D-20261031-03, -06). A later release drops them once no install needs that rollback; the drill (`bin/drill-event-upgrade.sh`) proves the path until then.
+- **Retiring the legacy `listings` table.** It and its two triggers keep an image-only rollback to 0.9 working for one Halloween — the newest open or closed one (D-20261031-03, -06, -41). A later release drops them once no install needs that rollback; the drill (`bin/drill-event-upgrade.sh`) proves the path until then.
+- **Ordering the switcher's tabs.** Tabs are the default first, then by date; an organizer-chosen order is not built.
 - **Per-night hours in the lights forms.** A lights home has one start and end time for all its nights in the forms; the server and the API already take hours per night.
 - **44 px targets on Halloween.** Halloween's filter chips, time picker and card hearts stay 40 px high so its pages stay as they were; the other types have 44 px.
 - **Contact check limits.** Numbers written as words are not caught, and a range starting at 200 or more ("500-1000") is refused as a phone number (D-20261031-33).
 
 ## Not planned
 
-- Several communities in one install, or several events running at once ([D-20261021-20](DECISIONS.md)).
+- Several communities in one install ([D-20261021-20](DECISIONS.md)); several events at once are built since 0.15 ([D-20261031-37](DECISIONS.md)), one current event of each kind.
 - Organizer-defined custom form fields: they could not be validated or labelled accessibly.
 - Photo uploads, comments, messaging between neighbors, payments or ticketing ([D-20261021-23](DECISIONS.md)).
 - A native app: the site already works as a phone web app.

@@ -18,7 +18,7 @@ use Symfony\Component\Console\Tester\CommandTester;
  *   (no residents, boundary not approved). This test rebuilds the same communities the same way (bootstrap
  *   command, demo seed) and requires every key of the baseline, with the same value and in the same relative
  *   order; keys may only be added (event.type in 0.10, the event-scoped keys in 0.11, which the 0.11 fixtures pin in
- *   full). Environment values are
+ *   full; the event's state, tentative and default flags in 0.15, which the 0.15 fixtures pin in full). Environment values are
  *   compared by kind only: the app version, the APP_DEMO switch and each home's updated_at (seed time).
  * @dependencies tests/Support/AppTestCase, Community/CommunityBootstrapper, Command/DemoSeedCommand
  */
@@ -26,6 +26,7 @@ final class GoldenApiParityTest extends AppTestCase
 {
     private const GOLDEN = __DIR__.'/../fixtures/golden/0.9.0-beta.1';
     private const GOLDEN_011 = __DIR__.'/../fixtures/golden/0.11.0-beta.1';
+    private const GOLDEN_015 = __DIR__.'/../fixtures/golden/0.15.0-beta.1';
 
     public function testTheDemoCommunityAnswersExactlyLikeTheBaseline(): void
     {
@@ -62,8 +63,10 @@ final class GoldenApiParityTest extends AppTestCase
         $event = $this->json('GET', '/api/event')['event'];
         self::assertSame('halloween', $event['type']);
         self::assertSame(array_keys(self::golden('demo-event')['event']),
-            array_values(array_diff(array_keys($event), ['type', 'id', 'active', 'starts_on', 'ends_on', 'default_hours', 'schedule_kind', 'filters', 'copy', 'rules'])),
-            'the 0.10 event keys and the occurrence ones are the only new event keys');
+            array_values(array_diff(array_keys($event), ['type', 'id', 'active', 'starts_on', 'ends_on', 'default_hours', 'schedule_kind', 'filters', 'copy', 'rules',
+                'state', 'dates_tentative', 'is_default'])),
+            'the 0.10 event keys, the occurrence ones and (0.15) the event\'s state are the only new event keys');
+        self::assertSame(['open', false, true], [$event['state'], $event['dates_tentative'], $event['is_default']]);
         $baseline = array_keys(self::golden('demo-homes')['homes'][0]);
         foreach ($this->json('GET', '/api/homes')['homes'] as $h) {
             self::assertSame([...$baseline, 'event_id', 'event_type', 'details', 'windows', 'display_status'], array_keys($h), "home {$h['id']}: the 0.9 keys in their order, then the event-scoped ones");
@@ -85,15 +88,36 @@ final class GoldenApiParityTest extends AppTestCase
         foreach (['event' => '/api/event', 'homes' => '/api/homes', 'home-3' => '/api/homes/3'] as $name => $uri) {
             $actual = $this->json('GET', $uri);
             self::assertSame(200, $this->code(), $uri);
-            $file = self::GOLDEN_011.'/demo-'.$name.'.json';
+            $expected = json_decode((string) file_get_contents(self::GOLDEN_011.'/demo-'.$name.'.json'), true, 64, \JSON_THROW_ON_ERROR);
+            self::assertParity($expected, $actual, $uri);
+            if ('event' !== $name) {
+                self::assertSame(self::keysDeep($expected), self::keysDeep($actual), "$uri has exactly the 0.11 keys (homes are unchanged since)");
+            }
+        }
+    }
+
+    /**
+     * The 0.15 answers in full (tests/fixtures/golden/0.15.0-beta.1): the 0.11 ones, the event adding exactly its state,
+     * tentative flag and default flag at its end (ADR 0011). NHM_WRITE_GOLDEN=1 rewrites them after a deliberate change.
+     */
+    public function testTheAnswersAreThe015Ones(): void
+    {
+        $this->bootstrap('examples/demo/community.yaml', true);
+        $this->seedDemoHomes();
+        foreach (['event' => '/api/event', 'homes' => '/api/homes', 'home-3' => '/api/homes/3'] as $name => $uri) {
+            $actual = $this->json('GET', $uri);
+            self::assertSame(200, $this->code(), $uri);
+            $file = self::GOLDEN_015.'/demo-'.$name.'.json';
             if ('1' === getenv('NHM_WRITE_GOLDEN')) {
-                @mkdir(self::GOLDEN_011, 0o755, true);
+                @mkdir(self::GOLDEN_015, 0o755, true);
                 file_put_contents($file, json_encode($actual, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE)."\n");
             }
             $expected = json_decode((string) file_get_contents($file), true, 64, \JSON_THROW_ON_ERROR);
             self::assertParity($expected, $actual, $uri);
-            self::assertSame(self::keysDeep($expected), self::keysDeep($actual), "$uri has exactly the 0.11 keys");
+            self::assertSame(self::keysDeep($expected), self::keysDeep($actual), "$uri has exactly the 0.15 keys");
         }
+        $event011 = array_keys(json_decode((string) file_get_contents(self::GOLDEN_011.'/demo-event.json'), true, 64, \JSON_THROW_ON_ERROR)['event']);
+        self::assertSame([...$event011, 'state', 'dates_tentative', 'is_default'], array_keys($this->json('GET', '/api/event')['event']), 'the event adds exactly these keys at its end');
     }
 
     /**

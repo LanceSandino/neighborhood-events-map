@@ -1,21 +1,27 @@
 /**
  * @module assets/js/me
- * @description Resident dashboard: lists only the signed-in user's homes with their listing for the event on the
- *     map; status buttons and the edit form PATCH /api/me/homes/{id} (CSRF header); a home not listed for the event
- *     offers "List for <event>" (POST /api/me/homes/{id}/listing) from an empty form, never from an earlier event.
+ * @description Resident dashboard: lists only the signed-in user's homes with their listing for the event the page is
+ *     about (?e=<id>, the switcher; sent with every request) and which other public events each home is listed for;
+ *     status buttons and the edit form PATCH /api/me/homes/{id} (CSRF header); a home not listed for an upcoming or open
+ *     event offers "List for <event>" (POST /api/me/homes/{id}/listing) from an empty form, which "Use last year’s
+ *     details" may fill with the resident's own listing of that home from the previous event of the same type (nothing
+ *     is saved until they save); a closed event's listings are read-only.
  *     After a save the home is drawn again and the keyboard stays on the same control. Session expiry is enforced by
  *     the server; the countdown here is only a hint and never polls protected endpoints. The event type (events/index.js) fills and
  *     reads its own listing fields, sent as `details`, and supplies its hours and words.
  * @dependencies lib/api.js, lib/render.js, lib/time.js, lib/modal.js, events/index.js
  */
-import { api, ApiError, friendlyError } from './lib/api.js';
+import { api, ApiError, friendlyError, withEvent as forEvent } from './lib/api.js';
 import { esc } from './lib/render.js';
 import { time12 } from './lib/time.js';
 import { toast } from './lib/modal.js';
 import { eventType } from './events/index.js';
 
-let T = eventType(); // the community's event type, from /api/me
+let T = eventType(); // the event's type, from /api/me
 const $ = (s, root = document) => root.querySelector(s);
+// The event this page is about (the server rendered its type's fields); every request names it.
+const EVENT = document.getElementById('dashboard')?.dataset.event || '';
+const withEvent = (url) => forEvent(url, EVENT);
 let expiresAt = 0;
 let idleMinutes = 30;
 
@@ -61,8 +67,15 @@ function homeCard(home, ev) {
   const node = $('#homeTemplate').content.firstElementChild.cloneNode(true);
   const l = home.listing;
   $('[data-f="address"]', node).textContent = home.address;
+  const closed = ev.state === 'closed';
   $('[data-f="meta"]', node).textContent = [home.zone_label, l ? `${time12(l.start)}–${time12(l.end)}` : (ev.active ? `Not listed for ${ev.name}` : 'No listing'),
-    l ? (l.published ? 'Shown on the map' : 'Hidden from the map') : ''].filter(Boolean).join(' · ');
+    l ? (closed ? `${ev.name} has ended` : (ev.state === 'upcoming' ? (l.published ? 'Shown when the event opens' : 'Hidden from the map') : (l.published ? 'Shown on the map' : 'Hidden from the map'))) : ''].filter(Boolean).join(' · ');
+  const others = (home.events || []).filter((x) => String(x.event_id) !== String(ev.id));
+  const evBox = $('[data-f="events"]', node);
+  if (others.length) {
+    evBox.innerHTML = 'Other events: ' + others.map((x) => `<a href="/me?e=${encodeURIComponent(x.event_id)}">${esc(x.name)}</a> ${x.listed ? 'listed' : 'not listed'}${x.state === 'closed' ? ' (ended)' : ''}`).join(' · ');
+    evBox.classList.remove('hide');
+  }
   const warn = $('[data-f="warning"]', node);
   const warnings = [];
   if (l && l.pending_review) warnings.push('Waiting for an organizer to approve this new address. It appears on the map once approved.');
@@ -79,6 +92,10 @@ function homeCard(home, ev) {
     T.fillForm(form, l.details, l, ev);
     form.published.value = String(l.published);
     form.note.value = l.note;
+    if (closed) { // a closed event's listing stays as it was
+      $('.status-row', node).classList.add('hide');
+      form.classList.add('hide');
+    }
   } else {
     const statusRow = $('.status-row', node);
     statusRow.classList.add('hide');
@@ -87,16 +104,32 @@ function homeCard(home, ev) {
     box.classList.remove('hide');
     const btn = $('[data-f="listForButton"]', node);
     $('[data-f="listForText"]', node).textContent = home.can_list
-      ? `This home is not on the map for ${ev.name} yet. List it to take part; you start from an empty form, nothing is copied from an earlier event.`
-      : (ev.active ? 'House listings are closed right now.' : 'There is no event on the map right now. You can list this home when the organizer starts the next one.');
+      ? `This home is not ${ev.state === 'upcoming' ? 'listed' : 'on the map'} for ${ev.name} yet. List it to take part; you start from an empty form${home.can_copy_previous ? ' (or from your details of last time)' : ''}, and nothing is shown until you save.`
+      : (closed ? `${ev.name} has ended.` : (ev.active ? (ev.accepts_listings === false ? `The dates of ${ev.name} are to be announced. You can list this home once they are set.` : 'House listings are closed right now.')
+        : 'There is no event on the map right now. You can list this home when the organizer starts the next one.'));
     if (home.can_list) {
       btn.textContent = `List for ${ev.name}`;
       btn.classList.remove('hide');
       btn.addEventListener('click', () => {
         box.classList.add('hide');
         form.classList.remove('hide');
+        if (home.can_copy_previous) $('[data-f="copyBox"]', node).classList.remove('hide');
         $('[data-f="save"]', node).textContent = `List for ${ev.name}`;
         (form.start || form.querySelector('input, select, textarea'))?.focus(); // a sale has no shared start time
+      });
+      // The resident's own details of last time go into the form; they check them and save (nothing is saved here).
+      $('[data-f="copyPrevious"]', node).addEventListener('click', async () => {
+        try {
+          const prev = (await api(withEvent(`/api/me/homes/${home.id}/previous`))).listing;
+          touch();
+          if (form.start) timeOptions(form.start, ...T.hours.start, prev.start);
+          if (form.end) timeOptions(form.end, ...T.hours.end, prev.end);
+          T.fillForm(form, prev.details, null, ev); // details only: the days and nights stay this event's
+          form.note.value = prev.note;
+          $('[data-f="copyBox"]', node).classList.add('hide');
+          toast('Last year’s details are in the form. Check them, then save.');
+          $('[data-f="save"]', node).focus();
+        } catch (e) { if (!handleAuthError(e)) showError(e); }
       });
     }
   }
@@ -111,7 +144,7 @@ function homeCard(home, ev) {
   const send = async (method, url, body, msg) => {
     $('[data-f="error"]', node).classList.add('hide');
     try {
-      const res = await api(url, { method, body });
+      const res = await api(withEvent(url), { method, body });
       touch();
       const fresh = homeCard(res.home, ev);
       const was = node.contains(document.activeElement) ? document.activeElement : null;
@@ -159,7 +192,7 @@ function resumeDestination(me) {
 
 async function load() {
   try {
-    const me = await api('/api/me');
+    const me = await api(withEvent('/api/me'));
     if (!me.claim_outcome && resumeDestination(me)) return;
     T = eventType(me.event_type);
     touch(me.session);

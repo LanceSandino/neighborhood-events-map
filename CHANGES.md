@@ -1351,4 +1351,94 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T01:20:00Z"
+- id: CU-20261031-45
+  type: feat
+  title: "Several published events per community: upcoming, open, closed and archived states, one default event, one current event per type (ADR 0011)"
+  description: "The owner decided on 2026-10-31 that several events may be on at once (D-20261031-37, superseding the one-active-event clauses of D-20261021-20, D-20261031-05 and -12). migrations/Version20261031000003 maps the active event to open and makes it the default, drops the one-active index, adds is_default (partial unique index; a check lets only an upcoming, open or closed event be it), dates_tentative, closed_at, nullable dates (both or neither: dates to be announced) and one current (upcoming or open) event per type (partial unique index; drafts excluded so the 0.11 backfill's drafts stay lossless); the reverse bridge trigger follows the newest open or closed Halloween. Down maps the states back. EventOccurrence/EventOccurrenceRepository know the states, the default (flagged, else the newest open, else the newest public), the current event of a type and the bridged Halloween; CommunityConfig shows homes only for an open event and takes listings only for an upcoming or open event with dates; ListingRepository's public queries follow."
+  impact: high
+  affected_modules: ["migrations/Version20261031000003.php", "src/Event/EventOccurrence.php", "src/Event/EventOccurrenceRepository.php", "src/Community/CommunityConfig.php", "src/Community/CommunityRepository.php", "src/Listing/ListingRepository.php", "src/Event/OccurrenceSettingsSync.php", "src/Community/CommunityBootstrapper.php"]
+  related_tests: ["tests/Integration/MultiEventMigrationTest.php: testA014DatabaseKeepsEveryEventAndListingAndItsOpenEventBecomesTheDefault, testA09DatabaseUpgradesThroughEveryMigrationLosslessly", "tests/Integration/EventLifecycleRaceTest.php (5 tests)", "tests/Integration/MultiEventTest.php: testEachStateShowsVisitorsOnlyWhatItMay, testTheDefaultEventIsWhatSlashShowsAndPassesOnWhenArchived", "tests/Integration/EventOccurrencesMigrationTest.php"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T16:30:00Z"
+- id: CU-20261031-46
+  type: feat
+  title: "Close an event: the thank-you message and next year's upcoming event in one transaction; announce, open and make default"
+  description: "Event/EventLifecycle: announce (draft → upcoming), open (draft or upcoming with dates, a sale also with days; confirms tentative dates), close (open → closed and next year's upcoming event of the type with its tentative dates, name with the year moved on, hours and lasting settings; never the best night, sale days or thank-you text), make default, archive (a default passes on), purge; one advisory lock, the unique indexes answer 409 'changed'. EventType::newEventDates/nextDates per type (Halloween October 31; lights November 1 – January 1, or the same nights a year later, February 29 clamped; a sale to be announced), EventSettingsType::dateBoundSettings, Event/EventDates (dates in words, tentative, to be announced), Event/ClosingMessage (the organizer's text, plain ≤ 400 through TextInput, or the type's page_closing_message with the year and next year's dates). OccurrenceInput takes dates to be announced, dates_tentative and settings.closing_message (D-20261031-39)."
+  impact: high
+  affected_modules: ["src/Event/EventLifecycle.php", "src/Event/EventType.php", "src/Event/EventSettingsType.php", "src/Event/Type/*", "src/Event/EventDates.php", "src/Event/ClosingMessage.php", "src/Event/OccurrenceInput.php", "src/Controller/Api/EventsAdminApiController.php"]
+  related_tests: ["tests/Unit/Event/NextEventTest.php (16 tests)", "tests/Integration/MultiEventTest.php: testClosingEachTypeCreatesNextYearsEventWithWhatLasts", "tests/Integration/EventsConsoleTest.php: testAnOrganizerClosesTheSeasonNextYearIsCreatedAndNothingCarriesOver", "tests/Integration/EventLifecycleRaceTest.php: testTheSameEventClosedThreeTimesAtOnceIsClosedOnceWithOneNextYear"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T16:40:00Z"
+- id: CU-20261031-47
+  type: feat
+  title: "?e=<event id> selects the event; GET /api/events; the event switcher and the upcoming and closed event pages"
+  description: "Event/EventSelection (kernel.request after the router): e= selects a public event of an offered type for every public page and API, My house and the resident's writes; an unknown, draft or archived id is 404 for /api/* and the default event for a page (D-20261031-38). The claim request names its event; the confirmation page and the claim completion use the request's own event. Event/PublicEvents: GET /api/events (id, type, name, state, dates, tentative, default, a closed event's thank-you text) and the switcher's tabs (Twig/EventSwitcherExtension event_tabs, event_query, event_dates): a second row of the top bar while two or more events are public, links with aria-current, 44 px, the year when names repeat, Soon/Ended in words, scrolling in its own box with soft edges (js/event-switch.js) (D-20261031-40). home/event_status.html.twig + js/event-status.js: an upcoming event's dates and List your home, a closed event's thank-you message and Get my house ready. The public event adds state, dates_tentative, is_default (and closing_message once closed) at its end (D-20261031-45); homes are unchanged. Links and theme.css keep the page's event; every browser request names it (lib/api.js withEvent)."
+  impact: high
+  affected_modules: ["src/Event/EventSelection.php", "src/Event/PublicEvents.php", "src/Twig/EventSwitcherExtension.php", "src/Community/CommunityPresenter.php", "src/Controller/PageController.php", "src/Controller/AuthPageController.php", "src/Controller/Api/PublicApiController.php", "src/Claim/ClaimService.php", "templates/base.html.twig", "templates/home/event_status.html.twig", "public/assets/js/event-status.js", "public/assets/js/event-switch.js", "public/assets/js/lib/api.js", "public/assets/js/home.js", "public/assets/js/register.js", "public/assets/js/route-panel.js", "public/assets/css/app.css"]
+  related_tests: ["tests/Integration/MultiEventTest.php: testEachStateShowsVisitorsOnlyWhatItMay, testListingsGoToTheNamedUpcomingOrOpenEventOnly", "tests/Integration/GoldenApiParityTest.php: testTheAnswersAreThe015Ones", "tests/js/event-storage.test.mjs: every request from a page names the event the page shows", "tests/e2e/specs/events.spec.mjs (5 tests)"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T16:50:00Z"
+- id: CU-20261031-48
+  type: feat
+  title: "My house per event and \"Use last year's details\""
+  description: "My house follows the switcher (/me?e=): each home shows its listing for that event and which other public events it is listed for; a closed event's listings are read-only (PATCH answers 403). GET /api/me/homes/{id}/previous?e= returns the resident's own listing of the same home from the most recent earlier event of the same type (ResidentHomes::previous, owner-scoped) as form values — details, note, hours, never days, status or visibility; nothing is saved. /api/me adds events (the public list), each home's events summary and can_copy_previous; me.js offers the button in the empty List for form (D-20261031-42)."
+  impact: medium
+  affected_modules: ["src/Controller/Api/MeApiController.php", "src/Listing/ResidentHomes.php", "templates/me/index.html.twig", "public/assets/js/me.js"]
+  related_tests: ["tests/Integration/MultiEventTest.php: testUseLastYearsDetailsCopiesOnlyTheResidentsOwnPreviousListingOfTheSameHomeAndType", "tests/Integration/EventsConsoleTest.php: testAnOrganizerClosesTheSeasonNextYearIsCreatedAndNothingCarriesOver", "tests/e2e/specs/events.spec.mjs: a resident switches events in My house and lists next year's Halloween with \"Use last year's details\""]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:00:00Z"
+- id: CU-20261031-49
+  type: feat
+  title: "Organizer → Events for several events; moderation across current events"
+  description: "admin/events.js: announce, open, close (the confirmation shows the thank-you text and next year's dates from close_preview), make default, archive, export, delete listings; a new event starts on its type's usual dates; dates to be announced and tentative; the thank-you message. GET /api/admin/events adds each open event's close_preview, each type's new_dates and closing_template and default_id (active_id is gone with the switch). Hide and unhide apply to the address's listings of every current event; pending reviews are listed across current events; the overview, claims export and Community → Event concern the default event (D-20261031-43)."
+  impact: medium
+  affected_modules: ["public/assets/js/admin/events.js", "public/assets/css/admin.css", "src/Controller/Api/EventsAdminApiController.php", "src/Listing/ListingRepository.php", "src/Admin/ClaimAdministration.php", "src/Controller/Api/AdminApiController.php"]
+  related_tests: ["tests/Integration/EventsConsoleTest.php (7 tests)", "tests/Integration/MultiEventTest.php: testTheCommunityEventBlockIsTheDefaultEvent", "tests/e2e/specs/events.spec.mjs: an organizer opens and closes an event (next year's is created) and changes the default"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:10:00Z"
+- id: CU-20261031-50
+  type: change
+  title: "The 0.9 rollback bridge mirrors the newest open or closed Halloween; the drill closes an event and lists for next year"
+  description: "LegacyListingBridge mirrors only the newest open or closed one-day Halloween (MIRRORED, the same rule as the trigger): an upcoming Halloween's listings never reach the address-keyed legacy table; opening next year's moves the mirror, archiving it moves it back; the settings block mirrors that Halloween, else the default event (D-20261031-41). After 0.15 the image-rollback target is 0.9.0-beta.1; 0.10–0.14 are reached by restore (documented). bin/drill-event-upgrade.sh checks the 0.15 migration and the open default, then (step 4b) an organizer closes the Halloween, a resident lists for next year, the legacy row keeps the closed Halloween's listing, and after the 0.9 round trip the 0.9 write is in the closed Halloween and next year's listing is untouched; scripts/drill_listing.py gains list-for and close; SeasonArchiveCommand uses the bridged Halloween."
+  impact: medium
+  affected_modules: ["src/Listing/LegacyListingBridge.php", "src/Command/SeasonArchiveCommand.php", "bin/drill-event-upgrade.sh", "scripts/drill_listing.py", "docs/runbooks/event-types-migration.md"]
+  related_tests: ["tests/Integration/LegacyBridgeTest.php: testTheLegacyTableMirrorsTheNewestOpenOrClosedHalloweenNeverAnUpcomingOne", "tests/Unit/Deploy/RollbackDrillTest.php", "bin/drill-event-upgrade.sh (run on the built images, docs/quality/test-report.md)"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:20:00Z"
+- id: CU-20261031-51
+  type: test
+  title: "Tests of the one-active-event model rewritten for the owner's new decision"
+  description: "The switch they exercised no longer exists (D-20261031-37), so each was rewritten to keep its guarantee under the new flows, not weakened: EventActivationRaceTest became EventLifecycleRaceTest (concurrent opens of one type, closing three times at once, concurrent default changes, the database refusing a second current event of a type, a second default and a private default); EventsConsoleTest closes the season instead of switching (next year created once, nothing carried over, a closed listing read-only, the event named only by e=); the tests that switched to another type (EventTypesAcceptanceTest, GarageSaleSeasonTest, HolidayLightsTest) archive the event on the map and open the next, which keeps their one-season assertions, and the escaping test now also covers the switcher; SQL that named state 'active' names 'open' (LegacyBridgeTest's would otherwise have compared two empty sets); GoldenApiParityTest keeps the 0.11 parity and pins the 0.15 answers (tests/fixtures/golden/0.15.0-beta.1)."
+  impact: none
+  affected_modules: ["tests/Integration/*", "tests/fixtures/golden/0.15.0-beta.1/"]
+  related_tests: ["tests/Integration/EventLifecycleRaceTest.php", "tests/Integration/EventsConsoleTest.php", "tests/Integration/GoldenApiParityTest.php"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:30:00Z"
+- id: CU-20261031-52
+  type: chore
+  title: "The fictional lights demo has every public state; e2e for several events; the season test closes and opens"
+  description: "examples/demo-lights/homes.json \"events\": a Halloween of 2026 with three fictional homes, closed by the seed (next year's upcoming on October 31, 2027, tentative) and a Community Rummage Sale announced with its dates to be announced, next to the open lights (D-20261031-44); app:demo:seed adds them once and creates next year's Halloween again when an organizer archived it on the demo stack (EventLifecycle::ensureNext). tests/e2e/specs/events.spec.mjs (lights stack, season project): switcher by mouse and keyboard, default at /, closed message, upcoming cards, theme per tab, saved stops per tab, axe light and dark, no overflow 375–1440, My house with Use last year's details, organizer open/close/default; it archives what it adds. season.spec.mjs closes Halloween, lists for next year, opens it, opens the lights and the sale next to it and restores a Halloween on the demo's date. bin/e2e.sh and the Playwright config run events.spec after the other tests."
+  impact: none
+  affected_modules: ["examples/demo-lights/homes.json", "src/Command/DemoSeedCommand.php", "tests/e2e/specs/events.spec.mjs", "tests/e2e/specs/season.spec.mjs", "tests/e2e/playwright.config.mjs", "bin/e2e.sh"]
+  related_tests: ["tests/Integration/MultiEventTest.php: testTheFictionalDemoSeedsEveryPublicState", "tests/e2e/specs/events.spec.mjs", "tests/e2e/specs/season.spec.mjs"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:40:00Z"
+- id: CU-20261031-53
+  type: chore
+  title: "0.15.0-beta.1: version, release notes, decisions, ADR 0011, roadmap, docs, acceptance audit, test report and screenshots"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.15.0-beta.1; the release notes describe several events at once, the switcher, closing an event and next year, residents per event and the upgrade (one migration; image rollback to 0.9 only). DECISIONS D-20261031-37 to -45 with the superseded clauses marked (D-20261021-20, D-20261031-05, -06, -07, -12, -13, -21, -27), ADR 0011 accepted and ADR 0010's one-event part marked superseded. ROADMAP Stage 6; docs/architecture/event-types.md and overview, the organizer guide, the lights and sale checklists, setup, the migration runbook (0.15, rollback targets, the drill's step 4b), docs/design/README.md (the switcher's place). The acceptance audit reads 'one default event, at most one current event per type, the state rules' and gains a Several events section; every test it cites exists. Screenshots of the switcher and the closed message with tiles; the lights captures and Organizer → Events refreshed."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "DECISIONS.md", "ROADMAP.md", "docs/adr/", "docs/architecture/", "docs/runbooks/", "docs/design/", "docs/quality/"]
+  related_tests: ["tests/Unit/About/ReleaseConsistencyTest.php", "tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/Deploy/RollbackDrillTest.php"]
+  commit_ref: "feature/multi-event"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:50:00Z"
 ```

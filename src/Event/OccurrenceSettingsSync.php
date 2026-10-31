@@ -10,18 +10,18 @@ use Doctrine\DBAL\Connection;
 
 /**
  * @module Event/OccurrenceSettingsSync
- * @description The community settings' `event` block is a view of the active occurrence (D-20261031-07). When
- *     settings are saved (community.yaml bootstrap, Organizer → Community → Event) this writes the block to the
- *     occurrence: with no occurrence at all it creates the first one, active; otherwise it updates the active one's
- *     name and default hours, and its dates only while no home is listed for it (moving a season's listings is an
- *     explicit step under Organizer → Events, and the next season is a new event). An occurrence's type never changes.
- *     Takes the same lock as activation, so a save never interleaves with a switch of events.
+ * @description The community settings' `event` block is a view of the default event (D-20261031-07, ADR 0011). When
+ *     settings are saved (community.yaml bootstrap, Organizer → Community → Event) this writes the block to that
+ *     event: with no event at all it creates the first one, open and the default; otherwise it updates the default
+ *     event's name and default hours, and its dates only while no home is listed for it and it has dates (moving a
+ *     season's listings is an explicit step under Organizer → Events, and the next season is a new event). An event's
+ *     type never changes. Takes the same lock as every life-cycle change, so a save never interleaves with one.
  *
  * @dependencies DBAL, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Event/EventSettingsType, Community/EventBlockSchema, Community/ConfigException
  */
 final class OccurrenceSettingsSync
 {
-    /** The advisory lock every change of the active occurrence takes (activation, archive, edits). */
+    /** The advisory lock every change of the events takes (open, close, default, archive, edits). */
     public const LOCK = 'event-occurrences';
 
     public function __construct(
@@ -40,7 +40,7 @@ final class OccurrenceSettingsSync
     {
         $this->db->transactional(function (Connection $db) use ($event): void {
             self::lock($db);
-            $active = $this->occurrences->active($db);
+            $active = $this->occurrences->defaultEvent($db);
             [$first, $last] = EventBlockSchema::range($event);
             $fields = ['type' => (string) $event['type'], 'name' => (string) $event['name'], 'starts_on' => $first,
                 'ends_on' => $last, 'default_start' => (string) $event['starts_at'], 'default_end' => (string) $event['ends_at']];
@@ -49,7 +49,7 @@ final class OccurrenceSettingsSync
                     // The install's first event; a type's settings are completed (e.g. a weekend sale takes its days).
                     $type = $this->types->isEnabled($fields['type']) ? $this->types->get($fields['type']) : null;
                     $settings = $type instanceof EventSettingsType ? $type->finishSettings([], $first, $last)[0] : [];
-                    $this->occurrences->insert($db, $fields + ['settings' => $settings], EventOccurrence::ACTIVE);
+                    $this->occurrences->insert($db, $fields + ['settings' => $settings], EventOccurrence::OPEN, true);
                 }
 
                 return; // between events the block is only the last event's view; Organizer → Events starts the next one
@@ -59,6 +59,14 @@ final class OccurrenceSettingsSync
             }
             if ($fields['type'] !== $active->type) {
                 throw new ConfigException(['event.type cannot change for the current event; prepare an event of another type under Organizer → Events.']);
+            }
+            if (!$active->hasDates() || EventOccurrence::CLOSED === $active->state) {
+                // dates to be announced, or a closed event: only its name and hours follow the block
+                $this->occurrences->updateFields($db, $active->id, ['name' => $fields['name'], 'starts_on' => $active->startsOn, 'ends_on' => $active->endsOn,
+                    'default_start' => EventOccurrence::CLOSED === $active->state ? $active->defaultStart : $fields['default_start'],
+                    'default_end' => EventOccurrence::CLOSED === $active->state ? $active->defaultEnd : $fields['default_end'], 'settings' => $active->settings]);
+
+                return;
             }
             $moved = $fields['starts_on'] !== $active->startsOn || $fields['ends_on'] !== $active->endsOn;
             $listed = $moved ? $this->occurrences->listingCount($active->id, $db) : 0;

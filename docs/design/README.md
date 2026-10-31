@@ -25,8 +25,8 @@ for the `holiday_lights` type; the repository's UX decisions win (D-20261031-21)
   call to action; one card per row on phones.
 - Kept from the app: quick filters as icon + count buttons (Drive-by, No flashing reported, Music, Saved) with the rest
   under Filters (Walk-up welcome, Open tonight, a night, a display style); the status chips; the real Leaflet map; the
-  route inline under the map with the rules folded next to it. Not built: the mockups' public Christmas/Rummage
-  switcher (one active event per install) and their invented streets.
+  route inline under the map with the rules folded next to it. Not built then: the mockups' public Christmas/Rummage
+  switcher (one active event per install until 0.15) and their invented streets.
 
 Screenshots (fictional lights demo, browser clock pinned to Dec 12, 2026, 7:30 PM; tiles blocked until the polish
 stage): `screenshots/lights-{390,1440}.png`, `screenshots/lights-dark-{390,1440}.png`, `screenshots/lights-register-390.png`
@@ -47,8 +47,8 @@ the `garage_sale` type; the repository's UX decisions win (D-20261031-27):
   Filters (Household, Electronics, Free items, Open now, Open <weekday> per sale day, Multi-family, Early birds); the
   zone select in the controls row; status chips; the real Leaflet map; the route inline under the map with the rules
   folded next to it. Teal buttons carry near-black text instead of the mockups' white, which would miss AA
-  (D-20261031-32). Not built: the mockups' public Christmas/Rummage switcher (one active event per install), their
-  invented streets and numbered zone names.
+  (D-20261031-32). Not built then: the mockups' public Christmas/Rummage switcher (one active event per install until
+  0.15), their invented streets and numbered zone names.
 
 Screenshots (fictional sale demo, browser clock pinned to Sat, April 10, 2027, 9:30 AM; tiles blocked until the polish
 stage): `screenshots/sale-{390,1440}.png`, `screenshots/sale-dark-{390,1440}.png`, `screenshots/sale-register-390.png`
@@ -76,3 +76,15 @@ Kept: the shared compact controls (D-20261021-01), the list header (heading, cou
 Screenshots (0.14, with OpenStreetMap tiles, one local run): `screenshots/demo-*.png` and `ventura-*.png` (Halloween,
 existing names, plus `demo-390.png` and `demo-dark-390.png`), `screenshots/lights-*.png`, `screenshots/sale-*.png` and
 `screenshots/admin-events-1440.png` (Organizer → Events with the event on the map and a prepared draft).
+
+## Several events at once (0.15)
+
+The mockups' segmented "✨ Christmas | 🏷️ Rummage sale" switcher is built (ADR 0011, D-20261031-40): a segmented control
+of links in the look of the Appearance panel's, 44 px tabs, the current one raised and outlined, "Soon"/"Ended" in words
+for events that are not open. It sits on a second row of the top bar instead of inside it: with the real bar's pills
+(fictional demo, date, appearance, "+ List your home") and real event names ("Community Rummage Sale") it did not fit
+inside the bar at any width. On phones it scrolls inside its own box with soft edges and brings the page's event into
+view; nothing scrolls the page sideways. It appears only while two or more events are public. Screenshots:
+`events-switcher-1440.png`, `events-switcher-390.png`, `events-switcher-dark-1440.png`, `events-switcher-dark-390.png`,
+`events-closed-1440.png`, `events-closed-390.png` (fictional lights demo, browser clock pinned to a night of the season).
+

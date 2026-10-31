@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStore, migrateYearStore } from '../../public/assets/js/lib/store.js';
 import { otherEvent, readSharedLink } from '../../public/assets/js/lib/share.js';
+import { withEvent } from '../../public/assets/js/lib/api.js';
 import * as halloween from '../../public/assets/js/events/halloween.js';
 
 const memory = () => {
@@ -63,3 +64,14 @@ test('a hostile shared link changes nothing: markup in e=, stops or start is nev
   assert.deepEqual(readSharedLink(q({ e: '7', f: '%%%not-base64' }), 7, clean), {}, 'a damaged filter part is ignored');
 });
 
+
+test('every request from a page names the event the page shows (?e=<id>, several events at once)', () => {
+  assert.equal(withEvent('/api/homes', 7), '/api/homes?e=7');
+  assert.equal(withEvent('/api/addresses/lookup?q=12%20Elm', 7), '/api/addresses/lookup?q=12%20Elm&e=7');
+  assert.equal(withEvent('/api/me/homes/3/listing', '12'), '/api/me/homes/3/listing?e=12');
+  for (const none of [null, undefined, '']) assert.equal(withEvent('/api/homes', none), '/api/homes', 'no event: the default one');
+  assert.equal(withEvent('/api/homes', '1&x=2'), '/api/homes?e=1%26x%3D2', 'a value is never more than the parameter');
+  // A shared link names its event with the same parameter, so a stop list for this event keeps its stops.
+  assert.equal(otherEvent('7', 7), false);
+  assert.equal(otherEvent('8', 7), true);
+});

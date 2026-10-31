@@ -1,7 +1,8 @@
 /**
  * @module assets/js/lib/api
  * @description fetch() wrapper with JSON bodies, same-origin credentials, the session CSRF header
- *     (from <meta name="csrf-token">) and typed errors {status, code, message, fields, retryAfter}.
+ *     (from <meta name="csrf-token">) and typed errors {status, code, message, fields, retryAfter}; withEvent() names
+ *     the event a request is about (?e=<id>, ADR 0011).
  */
 export class ApiError extends Error {
   constructor(status, body) {
@@ -13,6 +14,12 @@ export class ApiError extends Error {
     this.retryAfter = err.retry_after || null;
     this.body = body;
   }
+}
+
+/** The URL with e=<event id> added (the event the page shows); unchanged without an id. */
+export function withEvent(url, eventId) {
+  if (eventId === null || eventId === undefined || eventId === '') return url;
+  return `${url}${url.includes('?') ? '&' : '?'}e=${encodeURIComponent(eventId)}`;
 }
 
 export function csrfToken() {

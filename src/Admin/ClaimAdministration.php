@@ -19,8 +19,8 @@ use Psr\Clock\ClockInterface;
  * @description Organizer-only manual remediation: transfer a claim to another email, unclaim,
  *     hide/unhide a listing, export claims. Every action requires explicit confirmation from the
  *     caller and writes an audit event with old/new account ids. No automated adjudication. Claims are
- *     address-scoped; hide/unhide and the export's listing columns concern the active event's listing (the hold
- *     itself stays on the address).
+ *     address-scoped; hide/unhide concerns the address's listings of every current (upcoming or open) event and the
+ *     export's listing columns the default event's listing (the hold itself stays on the address; D-20261031-43).
  *
  * @dependencies DBAL, clock, Security/*, Listing/ListingRepository, Community/CommunityRepository, Audit/AuditLog
  */
@@ -77,11 +77,12 @@ final class ClaimAdministration
     public function moderate(int $addressId, bool $hide, string $reason, int $adminId): void
     {
         $reason = TextInput::line($reason, 300);
-        $event = $this->community->current()->event;
-        if (null === $event || !$this->listings->setModeration($event->id, $addressId, $hide, '' !== $reason ? $reason : null)) {
-            throw new ValidationException(['address_id' => 'That address has no listing for the current event.']);
+        $events = $this->listings->setModeration($addressId, $hide, '' !== $reason ? $reason : null);
+        if ([] === $events) {
+            throw new ValidationException(['address_id' => 'That address has no listing for a current event.']);
         }
-        $this->audit->record($adminId, 'admin#'.$adminId, $hide ? 'listing.hidden' : 'listing.unhidden', 'address', (string) $addressId, ['reason' => $reason, 'event_id' => $event->id], 'admin');
+        $this->audit->record($adminId, 'admin#'.$adminId, $hide ? 'listing.hidden' : 'listing.unhidden', 'address', (string) $addressId,
+            ['reason' => $reason, 'event_id' => $events[0], 'event_ids' => $events], 'admin');
     }
 
     /** Private CSV export (organizer only): address, zone, owner email, claim time, the active event's listing status. */

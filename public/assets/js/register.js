@@ -8,7 +8,7 @@
  *     centre).
  * @dependencies lib/api.js, lib/pow.js, lib/modal.js, events/index.js, Leaflet (optional, for the self-entry pin map)
  */
-import { api, ApiError, friendlyError } from './lib/api.js';
+import { api, ApiError, friendlyError, withEvent } from './lib/api.js';
 import { solvePow } from './lib/pow.js';
 import { openModal } from './lib/modal.js';
 import { esc } from './lib/render.js';
@@ -118,7 +118,7 @@ async function lookup(text) {
   list.innerHTML = '';
   if (!/^\s*\d+\s+\S{2,}/.test(text)) return;
   try {
-    const { results } = await api(`/api/addresses/lookup?q=${encodeURIComponent(text)}`);
+    const { results } = await api(withEvent(`/api/addresses/lookup?q=${encodeURIComponent(text)}`, C.event.id));
     list.innerHTML = results.length
       ? results.map((r) => `<li role="option"><button type="button" data-id="${r.id}" data-address="${esc(r.address)}" data-claimed="${r.claimed ? 1 : 0}"><span>${esc(r.address)}</span><small>${esc(r.zone_label || '')}${r.claimed ? ' · claimed' : ''}</small></button></li>`).join('')
       : `<li class="form-caption">${missingHint()}</li>`;
@@ -231,7 +231,7 @@ async function submit() {
   try {
     const pow = await solvePow('claim', (p) => { bar.style.width = `${Math.round(p * 100)}%`; });
     const address = selected.address_id ? { address_id: selected.address_id, house_number: houseNumberOf(selected.address) } : { house_number: selected.house_number, street: selected.street, unit: selected.unit, lat: selected.lat, lon: selected.lon, zone_key: selected.zone_key };
-    const res = await api('/api/auth/request-link', { method: 'POST', body: { email, pow, website: $('#regWebsite')?.value || '', claim: { address, listing: details() } } });
+    const res = await api(withEvent('/api/auth/request-link', C.event.id), { method: 'POST', body: { email, pow, website: $('#regWebsite')?.value || '', claim: { address, listing: details() } } });
     form.hidden = true;
     const ok = $('#registerSuccess');
     ok.innerHTML = `<b>📬 Check your email.</b><br>We sent a confirmation link for <b>${esc(res.address || selected?.address || '')}</b> to <b>${esc(email)}</b>. Open it and press <b>Confirm</b> within ${res.minutes} minutes to publish your stop.${!selected.address_id && C.registration.review_new_addresses ? ' Because this address is new, an organizer approves it before it appears on the map.' : ''} If someone else confirms this address first, you’ll be offered a review instead.<div class="modal-actions"><button type="button" class="secondary" data-close>Done</button></div>`;
