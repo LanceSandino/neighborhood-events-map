@@ -84,6 +84,9 @@ final class EventsConsoleTest extends AppTestCase
         self::assertSame(['id' => $draft['id'], 'name' => 'Halloween 2027', 'type' => 'halloween', 'active' => true], array_intersect_key($me['event'], ['id' => 1, 'name' => 1, 'type' => 1, 'active' => 1]));
         $this->json('PATCH', "/api/me/homes/$home", ['note' => 'Revived?'], ['X-CSRF-Token' => $csrf]);
         self::assertSame(404, $this->code(), 'an old listing cannot be revived by editing it');
+        $r = $this->json('POST', "/api/me/homes/$home/listing", ['details' => ['candy' => true], 'event_id' => $current['id']], ['X-CSRF-Token' => $csrf]);
+        self::assertSame(422, $this->code(), 'the client never names an event');
+        self::assertSame('Unknown field.', $r['error']['fields']['event_id']);
         $r = $this->json('POST', "/api/me/homes/$home/listing", ['details' => ['candy' => true]], ['X-CSRF-Token' => $csrf]);
         self::assertSame(201, $this->code(), json_encode($r));
         $l = $r['home']['listing'];
@@ -232,6 +235,28 @@ final class EventsConsoleTest extends AppTestCase
         $this->organizer();
         $this->json('POST', "/api/admin/events/$draft/activate", ['confirm' => true, 'replaces' => 1]);
         self::assertSame(403, $this->code(), 'organizer writes need the CSRF token');
+    }
+
+    /** The organizer's hold stays on the address: a home hidden last season starts hidden when listed for the next one. */
+    public function testAHomeHiddenLastSeasonStartsHiddenForTheNextEvent(): void
+    {
+        $this->configureCommunity();
+        $home = $this->listHome('71', 'held@example.test', self::listing());
+        $this->organizer();
+        $this->json('POST', "/api/admin/listings/$home/hide", ['reason' => 'Unsafe porch'], $this->h());
+        self::assertSame(200, $this->code());
+        $current = (int) $this->json('GET', '/api/admin/events')['active_id'];
+        $next = $this->json('POST', '/api/admin/events', ['type' => 'halloween', 'starts_on' => '2027-10-31'], $this->h())['event']['id'];
+        $this->json('POST', "/api/admin/events/$next/activate", ['confirm' => true, 'replaces' => $current], $this->h());
+        $this->json('POST', "/api/admin/listings/$home/hide", [], $this->h());
+        self::assertSame(422, $this->code(), 'no listing for the new event yet: nothing to hide');
+        $this->client->getCookieJar()->clear();
+        $this->signIn('held@example.test');
+        $r = $this->json('POST', "/api/me/homes/$home/listing", ['details' => ['candy' => true]], ['X-CSRF-Token' => $this->csrf()]);
+        self::assertSame(201, $this->code(), json_encode($r));
+        self::assertTrue($r['home']['listing']['moderation_hidden'], 'the hold applies to the new listing');
+        self::assertSame([], $this->json('GET', '/api/homes')['homes']);
+        self::assertTrue((bool) $this->db()->fetchOne('SELECT moderation_hidden FROM listings WHERE address_id = ?', [$home]), 'and to its legacy row');
     }
 
     /** A claim request (15-minute link) made for an event that ended before it was confirmed lists nothing. */

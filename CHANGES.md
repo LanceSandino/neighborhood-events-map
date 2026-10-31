@@ -1071,4 +1071,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p2"
   author: "Lance Sandino"
   timestamp: "2026-10-31T13:00:00Z"
+- id: CU-20261031-17
+  type: chore
+  title: "0.11.0-beta.1: release notes, decisions D-20261031-05 to -15, ROADMAP Stages 2 and 5, event-types architecture, migration runbook, test report"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.11.0-beta.1; the release notes say organizers prepare and switch events, each season's listings stay separate and residents list each home for the current event. The About page names no ended event as coming (\"No event on the map right now\"). docs/architecture/event-types.md and overview.md describe events, event-scoped listings, the schedule core, the display status, the public keys, the console and the rollback bridge; ROADMAP marks Stage 2's core and Stage 5 (except inviting residents) as shipped. Gates on the final tree are in docs/quality/test-report.md."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "ROADMAP.md", "AGENTS.md", "DECISIONS.md", "docs/", "templates/legal/about.html.twig"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/About/ReleaseConsistencyTest.php", "tests/Integration/EventsConsoleTest.php: testEndingTheEventLeavesANeutralMapAndRetentionDeletesItsListings (About between events)"]
+  commit_ref: "feature/event-types-p2"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T14:00:00Z"
 ```

@@ -20,7 +20,7 @@ URLS=()
 if [ "$(uname -s)" = "Linux" ]; then
   NET=(--network host)
   URLS=(-e E2E_DEMO_URL=http://localhost:8088 -e E2E_VENTURA_URL=http://localhost:8087
-        -e E2E_MAILPIT_URL=http://localhost:8026 -e E2E_VENTURA_MAILPIT_URL=http://localhost:8025)
+        -e E2E_MAILPIT_URL=http://localhost:8026 -e E2E_DEMO_MAILPIT_URL=http://localhost:8026 -e E2E_VENTURA_MAILPIT_URL=http://localhost:8025)
 fi
 # The season test (tests/e2e/specs/season.spec.mjs) puts a new event on the demo's map, which ends the season of the
 # fictional homes; they are listed again for whatever event is active before and after every run (app:demo:seed lists

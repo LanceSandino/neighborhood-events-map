@@ -38,6 +38,21 @@ test('filters affect list and pins together and persist after reload; favorites 
   guard.assertClean();
 });
 
+test('saved homes kept per season year (0.10) move into the event once', async ({ page, request }) => {
+  const event = (await (await request.get(DEMO + '/api/event')).json()).event;
+  const homes = (await (await request.get(DEMO + '/api/homes')).json()).homes;
+  const year = event.date.slice(0, 4);
+  await page.goto(DEMO + '/');
+  await page.evaluate(([y, id]) => { localStorage.clear(); localStorage.setItem(`nhm:maple-hollow-demo:${y}`, JSON.stringify({ saved: [id] })); }, [year, homes[0].id]);
+  await page.reload();
+  await expect(page.locator('#savedCount')).toHaveText('1');
+  const keys = await page.evaluate(() => Object.keys(localStorage));
+  expect(keys).toContain(`nhm:maple-hollow-demo:${event.id}`);
+  expect(keys).not.toContain(`nhm:maple-hollow-demo:${year}`);
+  await page.reload();
+  await expect(page.locator('#savedCount')).toHaveText('1');
+});
+
 test('selecting a card opens the map preview; keyboard works; My route lists saved stops on the same page', async ({ page }) => {
   await page.goto(DEMO + '/');
   await page.evaluate(() => localStorage.clear());

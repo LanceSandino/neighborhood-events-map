@@ -3,12 +3,14 @@
 // puts it on the map: the ended event's homes disappear at once, a stop list shared for it opens without its stops,
 // and a resident lists their home for the new event in My house from an empty form.
 import { test, expect } from '@playwright/test';
-import { DEMO, latestLink, watchConsole, politeTiles } from './helpers.mjs';
+import { DEMO, watchConsole, politeTiles } from './helpers.mjs';
 
 test.beforeEach(async ({ page }) => { await politeTiles(page); });
 
 const ORGANIZER = process.env.E2E_ORGANIZER || 'e2e-organizer@example.test';
 const RESIDENT = 'demo-resident-01@example.invalid'; // the fictional demo's first home (examples/demo/homes.json)
+// The demo's own Mailpit, under a name no other spec changes (admin.spec points E2E_MAILPIT_URL at Ventura's in its worker).
+const DEMO_MAILPIT = process.env.E2E_DEMO_MAILPIT_URL || 'http://host.docker.internal:8026';
 
 async function signIn(page, request, email, next) {
   const since = Date.now() - 1000;
@@ -16,8 +18,15 @@ async function signIn(page, request, email, next) {
   await page.locator('#loginEmail').fill(email);
   await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
   await expect(page.locator('#loginSuccess')).toBeVisible({ timeout: 60_000 });
-  const mail = await latestLink(request, email, { since });
-  await page.goto(mail.url);
+  let path = null;
+  for (let i = 0; i < 40 && !path; i++) {
+    const found = await (await request.get(`${DEMO_MAILPIT}/api/v1/search?query=${encodeURIComponent('to:' + email)}`)).json();
+    const msg = (found.messages || []).find((m) => Date.parse(m.Created) >= since);
+    if (msg) path = (await (await request.get(`${DEMO_MAILPIT}/api/v1/message/${msg.ID}`)).json()).Text.match(/\/auth\/confirm\?t=[A-Za-z0-9_-]{43}/)?.[0];
+    if (!path) await new Promise((r) => setTimeout(r, 500));
+  }
+  expect(path, `a sign-in link for ${email}`).toBeTruthy();
+  await page.goto(DEMO + path);
   await page.getByRole('button', { name: 'Confirm sign-in' }).click();
 }
 

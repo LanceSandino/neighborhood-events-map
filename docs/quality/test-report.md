@@ -1,6 +1,30 @@
 # Test and verification report
 
-## Latest run — 2026-10-31, release 0.10.0-beta.1
+## Latest run — 2026-10-31, release 0.11.0-beta.1
+
+Event-scoped listings (ROADMAP Stages 2 and 5; CU-20261031-08 to -17), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10.
+The bar was data integrity and the rollback path first: the backfill lossless on a seeded 0.10 database, the legacy
+table equal to the active Halloween event in both directions, and both rollback paths run for real.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.10.0-beta.1 (branch start, dev stacks) | PHPUnit **OK — 308 tests, 10970 assertions** |
+| PHPUnit 13.4.5 | **OK — 385 tests, 13332 assertions** (77 new; the migration, bridge, display-status, privacy-widening and console tests were run red before the code) |
+| Coverage (pcov) | Lines **94.16 %** ✓ ≥ 85 · Methods 81.07 % · Branches n/a · ScheduleWindows, DisplayStatus, ResidentHomes 100 % lines, ListingRepository 99 %, EventLifecycle 91 %, OccurrenceInput 78 %, EventBlockSchema 69 % (the several-days branches wait for the types that use them) |
+| Migration fidelity (`EventOccurrencesMigrationTest`) | seeded 0.10 database (9 listings over 4 dates: hidden, pending review, unpublished, out of boundary, a hold, two past seasons, a future date): 4 occurrences (2 archived, 1 active, 1 draft), every row and window copied field for field, `/api/homes` equal to 0.10's frozen query; down drops only the new tables and leaves the legacy rows identical; up again gives the same result |
+| Bridge (`LegacyBridgeTest`) | legacy table = active event after claim, edit, status, visibility, pending review, hide/unhide, release and erasure; 0.9-style inserts/updates/moves/deletes reach the event tables; guarded app writes are not copied back |
+| Display status | 42 shared cases (DST in New York and Chicago, New Year's Eve, month ends, day-scoped statuses, before/inside/after) green in PHPUnit and node:test; 2,000 seeded homes/moments: Halloween's rules = `statusOf` |
+| Activation race (`EventActivationRaceTest`, forked processes) | 4 drafts at once → 1 activated, 3 refused (`changed`); the same draft 3× → 1 activation, 1 audit event; a second active row refused by the unique index |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` · `lint:container` | No errors · no advisories · 38 files OK · 15 files OK · OK |
+| Migrations up / down to zero / up (test database) | OK |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **44/44** · **47/47** |
+| Playwright E2E on both dev stacks (chromium, webkit-iphone, then `season`) | **81 passed, 2 skipped** on the final tree (the new season test: Events console, draft preview, switch, last season gone, a shared link for the ended event, My house "List for" from an empty form; the year-store move on both engines) |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (0.11.0-beta.1; the home page is now the demo's map page, 6 versioned assets) |
+| `bin/drill-event-upgrade.sh nhm-app nhm-nginx smoke` | **all 8 steps passed** (1 min 52 s): published 0.9.0-beta.1 with 14 fictional homes → backup → upgrade (startup migrations; same 14 homes, keys and values; 1 occurrence, 14 event listings) → edit + new self-entered home on 0.11 → images back to 0.9.0-beta.1 ("You have 2 previously executed migrations…", "Already at the latest version"; same 15 homes incl. the edit and the new home) → edit on 0.9 → forward again (the 0.9 edit is in event_listings) → 0.9 + `bin/restore.sh` of the pre-upgrade dump (exactly the 14 pre-upgrade homes, no event tables, 3 migrations recorded) → upgraded again (same 14 homes) |
+| Trivy | not run locally (CI scans the images) |
+
+## Run — 2026-10-31, release 0.10.0-beta.1
 
 Event types, Halloween first (ROADMAP Stage 1; CU-20261031-01 to -06), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10.
 The acceptance bar was Halloween parity with 0.9.0-beta.1, measured against a baseline taken first on fresh dev stacks.
