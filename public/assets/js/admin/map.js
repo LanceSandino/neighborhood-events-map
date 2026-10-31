@@ -9,6 +9,8 @@
 import { $, call, esc, flash } from './common.js';
 import { labelPoint } from '../lib/zone-labels.js';
 
+/** The boundary's line: the console's own colour (admin.css), never an event's or Halloween's orange (D-20261031-52). */
+const boundaryColor = () => getComputedStyle(document.body).getPropertyValue('--orange').trim() || '#3b5674';
 const COLORS = ['#2b8a6e', '#6b4fa0', '#c2410c', '#0369a1', '#a16207', '#be185d', '#4d7c0f', '#7c3aed', '#0f766e', '#b91c1c'];
 let data = null;
 let map = null;
@@ -21,7 +23,7 @@ const zoneColor = (key) => {
 };
 const styleFor = (p) => (p.kind === 'zone'
   ? { color: zoneColor(p.zone_key), weight: 2, dashArray: '5 5', fillOpacity: 0.12 }
-  : { color: '#f07936', weight: 3, fillOpacity: 0.05 });
+  : { color: boundaryColor(), weight: 3, fillOpacity: 0.05 });
 
 function shell() {
   $('#admin-map').innerHTML = `
@@ -98,7 +100,7 @@ function renderLayers() {
   const counts = {};
   const seen = new Set();
   drawn.eachLayer((l) => { const p = l.feature?.properties || {}; if (seen.has(p.__fid)) return; seen.add(p.__fid); const k = p.kind === 'zone' ? `zone:${p.zone_key}` : 'boundary'; counts[k] = (counts[k] || 0) + 1; });
-  $('#layers').innerHTML = Object.entries(counts).map(([k, n]) => `<li><span><i class="swatch" data-color="${k === 'boundary' ? '#f07936' : zoneColor(k.slice(5))}"></i>${esc(k === 'boundary' ? 'Boundary' : 'Zone ' + k.slice(5))}</span><span>${n} area${n === 1 ? '' : 's'}</span></li>`).join('') || '<li>No shapes yet.</li>';
+  $('#layers').innerHTML = Object.entries(counts).map(([k, n]) => `<li><span><i class="swatch" data-color="${k === 'boundary' ? boundaryColor() : zoneColor(k.slice(5))}"></i>${esc(k === 'boundary' ? 'Boundary' : 'Zone ' + k.slice(5))}</span><span>${n} area${n === 1 ? '' : 's'}</span></li>`).join('') || '<li>No shapes yet.</li>';
   document.querySelectorAll('#layers .swatch[data-color]').forEach((el) => { el.style.background = el.dataset.color; }); // CSP: no inline style attributes
   $('#status').innerHTML = `${data.version ? `Saved version v${data.version}` : 'Nothing saved yet'} · ${data.approved ? '<span class="ok">approved</span>' : '<span class="warn">not approved — house listings closed</span>'}${dirty ? ' · <span class="warn">unsaved changes</span>' : ''}`;
 }
