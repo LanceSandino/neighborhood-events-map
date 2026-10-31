@@ -1301,4 +1301,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T00:30:00Z"
+- id: CU-20261031-40
+  type: test
+  title: "Acceptance tests for items no test pinned: listings of every event vs release, unclaim, erasure and transfer; one event's changes and purge never touch another's; ended events hidden by id; route plans; another type's status; List for without CSRF; escaped organizer text; a hostile shared link"
+  description: "tests/Integration/EventTypesAcceptanceTest (5 tests, 297 assertions) and a node test in tests/js/event-storage.test.mjs cover the gaps the acceptance audit found (docs/quality/event-types-acceptance.md). All passed on the first run: they pin behaviour the code already had (no bug found), e.g. that an organizer's transfer keeps an address's listings of every season with the address and the old owner reaches none, while release, unclaim and erasure remove archived seasons' listings too."
+  impact: none
+  affected_modules: ["tests/Integration/EventTypesAcceptanceTest.php", "tests/js/event-storage.test.mjs"]
+  related_tests: ["tests/Integration/EventTypesAcceptanceTest.php", "tests/js/event-storage.test.mjs: a hostile shared link changes nothing: markup in e=, stops or start is never a stop, a filter or this event"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T00:40:00Z"
 ```
