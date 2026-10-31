@@ -17,15 +17,22 @@ and since 0.13 the **garage sale** (`garage_sale`) the third ([below](#garage-sa
 
 | Side | Where | What it provides |
 |---|---|---|
-| PHP | `src/Event/EventType.php`, one final class per type in `src/Event/Type/` | key, default name and branding (optionally its colours), copy (reminders, headings, access label, console labels), schedule kind and maximum days, hour choices, statuses (label, icon, day-scoped flag), display rules, feature switches, details defaults, `normalizeDetails()` (strict), `publicDetails()` (strict projection), `legacyFields()`, filters, legend, stats, route profiles, Twig fragments; optionally event settings of its own (`Event/EventSettingsType`: keys, checks against the event's dates, `finishSettings()` — completed and checked as a whole —, `settingOptions()` for the console, `listingDates()` — the only days a listing may choose —, public part) and a check of resident text (`Event/ListingTextCheck`: the sale's contact-detail check on the note) |
+| PHP | `src/Event/EventType.php`, one final class per type in `src/Event/Type/` | key, default name and branding (optionally its colours), copy (reminders, headings, access label, console labels), schedule kind and maximum days, hour choices, statuses (label, icon, day-scoped flag), display rules, feature switches, details defaults, `normalizeDetails()` (strict), `publicDetails()` (strict projection), `legacyFields()`, filters, legend, stats, route profiles, Twig fragments; optionally event settings of its own (`Event/EventSettingsType`: keys, checks against the event's dates, `finishSettings()` — completed and checked as a whole —, `settingOptions()` for the console, `listingDates()` — the only days a listing may choose —, `offersFilter()` — a sale offers category filters only for the categories it allows —, public part) and a check of resident text (`Event/ListingTextCheck`: the sale's contact-detail check on the note) |
 | Registry | `src/Event/EventTypeRegistry.php` | the types (tagged services) by immutable key; `KEYS` (reserved forever: `halloween`, `holiday_lights`, `garage_sale`), `ENABLED` (what organizers may pick), `problem()` for configuration errors |
 | Twig | `templates/event/<key>/_*.html.twig`, `Twig/EventTypeExtension` | `event_type(key)` gives copy, statuses, filters, legend and hours; `event_fragment(key, name)` returns a template path only from the type's whitelist. Every type provides every fragment the core includes; some may render nothing: `head` (the type's stylesheet), `hero_art`, `schedule_row`, `filter_controls` (Halloween's "Visit at", the sale's "Open <weekday>"), card symbol and tags, confirmation tags, `form_hours` and `manage_hours` (the shared start/end fields; a sale has none), form fields, My house fields, listing checks, `route_rules`, `rule_lines` (a type's own rule lines on About and next to the route) |
 | Browser | `public/assets/js/events/<key>.js`, `events/index.js` | filter toggles and predicates (with the moment, `matches(home, filters, ctx)`), optional filter `choices` (lights: a night and a style), search words, tags, pin symbol and class, `inactive` pins, `statusOf`, `statusChipShown`, `hoursLabel`, `displayRules`, `isOpen(home, ctx)`, route note, copy, hour choices, an optional `mapColor`, the form helpers (`initForm`, `formDetails`, `formExtras` — e.g. the nights as windows —, `fillForm`, `validateDetails`) |
 | Theme | `<html data-event-type>`, `public/assets/css/events/common.css`, `public/assets/css/events/<key>.css` | the components every type with several days shares (season row and pill, route mode and rules, 44 px targets; D-20261031-30), then the type's token overrides in light and dark (identical dark blocks) and its own components, loaded by its `head` fragment; never the organizer's brand variables, so /theme.css still wins (D-20261031-20). Halloween loads none |
 
 Core code (`ListingDraft`, `ListingRepository`, `CommunityPresenter`, `CommunitySchema`, the controllers, `lib/filters.js`,
-`lib/render.js`, `lib/time.js`, `home.js`, `register.js`, `me.js`, `route-panel.js`, the home, My house and confirmation
-templates and the organizer's Community page) asks the type. There is no `if (type === …)` in core.
+`lib/render.js`, `lib/time.js`, `home.js`, `home-map.js`, `register.js`, `me.js`, `route-panel.js`, the home, My house and
+confirmation templates and the organizer's Community page) asks the type. There is no `if (type === …)` in core.
+
+Words of one kind of event live only in its module: other templates, server strings and browser modules take them
+from the type (`page_*` copy for server-rendered pages such as the legal pages, left out of the public event like
+`admin_*`), and `tests/Unit/Event/EventNeutralCopyTest.php` enforces it (D-20261031-35). The public event's `filters`
+are the type's filters that the feature switches and the event's settings offer; the map page draws exactly those,
+and a filter marked `after_controls` follows the type's `filter_controls` fragment (the sale's days come before its
+kind-of-sale toggles).
 
 ## Listing data
 

@@ -1321,4 +1321,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T00:50:00Z"
+- id: CU-20261031-42
+  type: chore
+  title: "0.14.0-beta.1: version, release notes with a what's-new summary for organizers, README for three kinds of event with a screenshots table, ROADMAP stages done and what remains, event-types architecture and design notes"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.14.0-beta.1. The release notes open with what organizers got since 0.9 (Organizer → Events, Christmas lights, garage sales, their looks, invitations by hand), say this release adds no migration and that an install on 0.9 or 0.10 runs the event migrations in order, and list the fixes and known limitations. README: what each kind of event offers (a table), a screenshots table per type (desktop, phone, dark phone, with tiles), Organizer → Events, links to the organizer guide, the migration runbook and the acceptance audit. ROADMAP marks Stages 1–5 done and lists what remains (resident invitations, retiring the legacy table, per-night hours in the lights forms, Halloween's 40 px chips, the contact check's limits); there are no TODO notes in the code. docs/architecture/event-types.md describes offersFilter, after_controls, page_* copy and home-map.js; docs/design/README.md records the polish pass. public.spec.mjs adds Halloween phone screenshots at 390 px (demo-390, demo-dark-390) during the event."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "ROADMAP.md", "docs/architecture/event-types.md", "docs/design/README.md", "tests/e2e/specs/public.spec.mjs"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T01:00:00Z"
 ```
