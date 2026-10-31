@@ -14,7 +14,7 @@ import { eventType } from './events/index.js';
 import { nowInZone } from './lib/time.js';
 import { seasonOf } from './lib/schedule.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
-import { otherEvent } from './lib/share.js';
+import { readSharedLink } from './lib/share.js';
 import { focusMap } from './lib/map-focus.js';
 import { labelPoint, resolveOverlaps } from './lib/zone-labels.js';
 import { initModals, openModal, closeModal, toast } from './lib/modal.js';
@@ -33,7 +33,7 @@ const store = createStore(C.community.id, String(C.event.id));
 let filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
 // A shared link (?f=<filters>&stops=<ids>&start=<id>&e=<event id>) opens exactly that view, in the unsaved route so a
 // saved one stays as it was; a link made for another event opens the map without its stops.
-const shared = readSharedLink();
+const shared = readSharedLink(location.search, C.event.id, (f) => normalizeFilters(f, T));
 if ((shared.filters || shared.stops) && store.get().activeRoute) {
   store.switchRoute(null);
   filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
@@ -257,22 +257,6 @@ function selectHome(id, { pan = true } = {}) {
     }
   }
   render();
-}
-
-/* ---------------- Shareable links ---------------- */
-function readSharedLink() {
-  const q = new URLSearchParams(location.search);
-  const out = {};
-  if (otherEvent(q.get('e'), C.event.id)) { out.otherEvent = true; return out; }
-  try {
-    if (q.get('f')) {
-      const json = JSON.parse(atob(q.get('f').replace(/-/g, '+').replace(/_/g, '/')));
-      out.filters = normalizeFilters(json, T);
-    }
-  } catch { /* ignore a damaged link */ }
-  const ids = (q.get('stops') || '').split('.').map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 60);
-  if (ids.length) { out.stops = ids; out.start = Number(q.get('start')) || null; out.order = q.get('o') === '1'; }
-  return out;
 }
 
 /** A saved route was opened (or saved or deleted): its filters become the page's filters. */

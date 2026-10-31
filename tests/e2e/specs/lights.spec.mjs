@@ -146,6 +146,7 @@ test('saved stops belong to this event; without a provider the tour is an ordere
   await expect(page.locator('[data-provider-path]')).toHaveCount(0);
   await expect(page.locator('#routeItems')).not.toContainText(/\bkm\b|\bmin\b/);
   await expect(page.locator('#routeItems .route-item').first()).toContainText(/Drive-by|Walk-up/);
+  await page.locator('.route-rules summary').click();
   await expect(page.locator('.route-rules')).toContainText('Do not knock on or walk up to “Drive-by” homes');
   await expect(page.locator('.leaflet-marker-icon .pin-number')).toHaveCount(3);
   expect(await page.evaluate(() => Object.keys(localStorage))).toContain(`nhm:maple-hollow-lights-demo:${event.id}`);

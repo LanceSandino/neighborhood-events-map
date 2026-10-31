@@ -202,3 +202,12 @@ test('the lights theme: both dark blocks identical, every light token also set i
   assert.doesNotMatch(css, /--brand(-accent|-ink|-text)?\s*:/, '/theme.css (the organizer\'s colours) keeps winning');
   assert.doesNotMatch(css, /animation|@keyframes/, 'nothing blinks or moves');
 });
+
+test('a shared lights link keeps its night and style, drops what is not a lights filter, and never another event\'s stops', async () => {
+  const { readSharedLink } = await import('../../public/assets/js/lib/share.js');
+  const f = Buffer.from(JSON.stringify({ night: '2026-12-31', style: 'walkthrough', driveBy: true, candy: true, style2: 'x' })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const clean = (x) => normalizeFilters(x, lights);
+  assert.deepEqual(readSharedLink(`?e=7&f=${f}&stops=3.5&start=5&o=1`, 7, clean), { filters: { night: '2026-12-31', style: 'walkthrough', driveBy: true }, stops: [3, 5], start: 5, order: true });
+  assert.deepEqual(readSharedLink(`?e=6&f=${f}&stops=3.5`, 7, clean), { otherEvent: true });
+  assert.deepEqual(readSharedLink('?f=%%%&stops=x.0.-2', 7, clean), {}, 'a damaged link opens the plain map');
+});
