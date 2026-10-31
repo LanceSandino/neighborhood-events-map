@@ -93,6 +93,9 @@ final class MultiEventTest extends AppTestCase
         $closed = $this->event('garage_sale', 'Spring Sale', '2026-04-11', '2026-04-11', 'closed');
         $draft = $this->event('halloween', 'Next Halloween', '2027-10-31', '2027-10-31', 'draft');
         self::assertSame('halloween', $this->client->request('GET', '/')->filter('html')->attr('data-event-type'));
+        self::assertCount(3, $this->client->request('GET', '/')->filter('.event-switch a'), 'three public events: the switcher');
+        $preview = $this->client->request('GET', "/admin/events/$draft/preview");
+        self::assertSame([200, 0], [$this->code(), $preview->filter('.event-switch')->count()], 'a draft\'s preview is not one of the public events');
         $r = $this->json('POST', "/api/admin/events/$draft/default", [], $this->h());
         self::assertSame([409, 'not_public'], [$this->code(), $r['error']['code']], 'a draft is never the default');
         $this->json('POST', "/api/admin/events/$lights/default", [], $this->h());

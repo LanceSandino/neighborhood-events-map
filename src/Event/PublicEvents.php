@@ -49,6 +49,24 @@ final class PublicEvents
     }
 
     /**
+     * Each event's name, with its year when another of the events has the same name ("Halloween 2026", "Halloween 2027").
+     *
+     * @param list<EventOccurrence> $events
+     *
+     * @return array<int,string> by event id
+     */
+    public static function labels(array $events): array
+    {
+        $names = array_count_values(array_map(static fn (EventOccurrence $e) => mb_strtolower($e->name), $events));
+        $out = [];
+        foreach ($events as $e) {
+            $out[$e->id] = $names[mb_strtolower($e->name)] > 1 ? ClosingMessage::nameWithYear($e) : $e->name;
+        }
+
+        return $out;
+    }
+
+    /**
      * The switcher's tabs for a page ('/' or '/me'): shown only when at least two events are public (one event needs no
      * switcher, so a single-event install looks exactly as before).
      *
@@ -61,12 +79,12 @@ final class PublicEvents
             return [];
         }
         $selected = $this->community->current()->event;
-        $names = array_count_values(array_map(static fn (EventOccurrence $e) => mb_strtolower($e->name), $events));
+        $labels = self::labels($events);
 
         return array_map(fn (EventOccurrence $e) => [
             'id' => $e->id,
             'type' => $e->type,
-            'label' => $names[mb_strtolower($e->name)] > 1 ? ClosingMessage::nameWithYear($e) : $e->name,
+            'label' => $labels[$e->id],
             'icon' => (string) ($this->types->get($e->type)->copy()['event_icon'] ?? ''),
             'state' => $e->state,
             'state_words' => match ($e->state) { EventOccurrence::UPCOMING => 'Soon', EventOccurrence::CLOSED => 'Ended', default => '' },

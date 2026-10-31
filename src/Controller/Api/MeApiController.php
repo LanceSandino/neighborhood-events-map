@@ -225,8 +225,9 @@ final class MeApiController
         $homes = $this->residentHomes->of($user);
         $public = $this->community->publicEvents();
         $listed = $homes->listedFor(array_map(static fn (EventOccurrence $e) => $e->id, $public));
+        $labels = PublicEvents::labels($public);
 
-        return array_map(static function (array $r) use ($c, $type, $canList, $homes, $public, $listed): array {
+        return array_map(static function (array $r) use ($c, $type, $canList, $homes, $public, $listed, $labels): array {
             $listing = null === ($r['listing_id'] ?? null) ? null : ListingRepository::toDraft($r, $type);
             $id = (int) $r['id'];
 
@@ -245,7 +246,7 @@ final class MeApiController
                 'can_list' => null === $listing && $canList,
                 // "Use last year's details": the resident's own listing of this home for an earlier event of this type.
                 'can_copy_previous' => null === $listing && $canList && null !== $c->event && null !== $homes->previous($id, $c->event),
-                'events' => array_map(static fn (EventOccurrence $e) => ['event_id' => $e->id, 'name' => $e->name, 'state' => $e->state,
+                'events' => array_map(static fn (EventOccurrence $e) => ['event_id' => $e->id, 'name' => $labels[$e->id], 'state' => $e->state,
                     'listed' => isset($listed[$id][$e->id]), 'published' => $listed[$id][$e->id]['published'] ?? false], $public),
             ];
         }, $homes->all($c->event?->id));

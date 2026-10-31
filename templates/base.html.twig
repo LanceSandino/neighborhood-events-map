@@ -9,7 +9,7 @@
 {%- set event_on = c.event.active ?? true -%}
 {%- set listing_on = event_on and (c.event.state ?? 'open') != 'closed' -%}
 {%- set q = event_query() -%}
-{%- set tabs = switch_path is defined ? event_tabs(switch_path) : [] -%}
+{%- set tabs = (switch_path ?? '') ? event_tabs(switch_path) : [] -%}
 {%- set year = c.event.date|slice(0, 4) -%}
 {%- set event_name = event_on ? c.event.name : '' -%}
 {%- set et = event_type(c.event.type ?? null) -%}

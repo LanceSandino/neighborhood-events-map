@@ -3,7 +3,7 @@
    list + real Leaflet map, bottom bar, modals. Works as a readable list without JavaScript. The community's event
    type supplies the words, filters, legend and fragments (Twig/EventTypeExtension). #}
 {% set nav = 'map' %}
-{% set switch_path = '/' %}
+{% set switch_path = switch_path ?? '/' %}
 {% set et = event_type(c.event.type) %}
 {% set zones = c.zones %}
 {% set zs = zone_summary(zones) %}
