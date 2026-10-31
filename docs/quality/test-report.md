@@ -1,6 +1,27 @@
 # Test and verification report
 
-## Latest run — 2026-10-31, release 0.11.0-beta.1
+## Latest run — 2026-10-31, release 0.12.0-beta.1
+
+Christmas lights, the second event type (ROADMAP Stage 3; CU-20261031-18 to -24), on PHP 8.5.12 + PostgreSQL 18.6,
+Symfony 8.1.10. The bar was Halloween parity first (every earlier test, API answer and page unchanged), then the lights
+season end to end with the browser clock pinned to nights of the season.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.11.0-beta.1 (branch start, dev stacks) | PHPUnit **OK — 385 tests, 13334 assertions** |
+| PHPUnit 13.4.5 | **OK — 422 tests, 13654 assertions** (the lights type, API projection, demo seed, preview and switch tests run red before the code; tests that pinned "only Halloween is enabled" now pin the new set and test garage_sale as not offered) |
+| Coverage (pcov) | Lines **94.96 %** ✓ ≥ 85 · Methods 82.38 % · Branches n/a · HolidayLightsType 99 %, TypeDefaults 100 %, CommunityPresenter 100 %, ListingRepository 99 %, OccurrenceInput 85 % (from 78 %), EventBlockSchema 100 % (from 69 %) |
+| Halloween parity | GoldenApiParityTest and PublicPrivacyTest unchanged and green; the Halloween demo's `/`, `/about`, `/login` and the Ventura map are byte-identical to 0.11.0-beta.1 except `<html data-event-type="halloween">` and the "What's new" release notes; the tiles-blocked Halloween screenshots of 0.11.0-beta.1 and this branch, taken the same way: 11 of 17 pixel-identical, the phone captures differ only in the footer's version text, two differ by at most one colour level in a shadow, the organizer captures grow with the data each run adds (their height changed between two runs of this branch too) |
+| Display status | 48 shared cases (6 new for lights: season preview, season over, the end minute, tomorrow's window, off tonight on New Year's Eve, done before the first night) green in PHPUnit and node:test |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` · `lint:container` | No errors · no advisories · 56 files OK · 18 files OK · OK |
+| Migrations up / down to zero / up (test database) | OK (no new migration in this release) |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **56/56** · **47/47** |
+| Playwright E2E on the three dev stacks (chromium, webkit-iphone, then `season`) | **103 passed, 2 skipped** on the final tree: 22 new lights tests (theme and season pill, every filter and the night picker, Dec 31 → Jan 1, off tonight, done for the season, never "Lights on" outside a window, cards/pins/panel agree, saved stops per event, the tour without a provider, axe light and dark on 4 pages, 7 widths without overflow and with 44 px targets, reduced motion, the map blocked, the listing form and My house actions); the season test also puts Christmas lights after Halloween on the demo stack (the Halloween homes archived and invisible) and returns it to Halloween |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (0.12.0-beta.1: /healthz, the map page, 6 versioned assets, multipart rules, the upload endpoint, all FPM pools, the console) |
+| Trivy | not run locally (CI scans the images) |
+
+## Run — 2026-10-31, release 0.11.0-beta.1
 
 Event-scoped listings (ROADMAP Stages 2 and 5; CU-20261031-08 to -17), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10.
 The bar was data integrity and the rollback path first: the backfill lossless on a seeded 0.10 database, the legacy

@@ -83,10 +83,11 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - “Open now” and “open on <day>” in the community time zone.
    - The season archive and the “last season's homes disappear” rule generalized to ranges.
    - Status: the core shipped in 0.11.0-beta.1 — events are rows of their own with a date range and default hours, listings belong to one event and have their own days and hours (windows), the schedule core checks windows for one-day, nightly and sale-day kinds, and the display status (“open now”, “later”, a status that holds for one day) is derived in the community time zone by the same rules in the server and the browser. Halloween stays a one-day event; the date picker and “open on <day>” filters come with the types that need them ([D-20261031-05](DECISIONS.md) to [-11](DECISIONS.md), [event types](docs/architecture/event-types.md)).
-4. **Stage 3 — Christmas lights.**
+4. **Stage 3 — Christmas lights (done in 0.12.0-beta.1).**
    - The `holiday_lights` type: fields, filters, icons, statuses, copy and reminders.
    - The drive-by tour through a provider's driving profile, only when the organizer enables a provider.
    - Demo data: a fictional lights community under `examples/`.
+   - Status: shipped in 0.12.0-beta.1 — organizers choose Christmas Lights under Organizer → Events (dates up to 62 nights, nightly hours, rules, best night, quiet hours, drive-by tour); residents pick their nights and hours, styles, drive-by or walk-up, music with an FM station, a flashing warning, treats or cocoa, and mark "off tonight" or "done for the season"; visitors get the midnight blue and gold theme, the season row, the filters (drive-by, no flashing reported, music, walk-up, open tonight, a night, a style) and statuses on their own clock; the fictional lights demo is `examples/demo-lights/` ([D-20261031-16](DECISIONS.md) to [-23](DECISIONS.md), [event types](docs/architecture/event-types.md), [organizer checklist](docs/runbooks/christmas-lights.md)).
 5. **Stage 4 — garage sale.**
    - The `garage_sale` type: categories, days and hours, statuses, moderation rules and the server-side contact-detail check on notes.
    - Demo data: a fictional sale under `examples/`.

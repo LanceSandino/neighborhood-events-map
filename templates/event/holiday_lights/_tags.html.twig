@@ -1,0 +1,9 @@
+{# Christmas lights tags of a listing's details (cards, confirmation); events/holiday_lights.js draws the same words.
+   Icons are decorative; the words are always there (never colour only). Expects `d`, the details. #}
+{%- set styles = {classic: ['✨', 'Classic'], animated: ['🌟', 'Animated'], synchronized_music: ['🎵', 'Light show to music'], inflatables: ['⛄', 'Inflatables'], walkthrough: ['🎄', 'Walk-through']} -%}
+{% for key in d.styles %}{% if styles[key] is defined %}<span class="tag lights">{{ styles[key][0] }} {{ styles[key][1] }}</span>{% endif %}{% endfor %}
+      {% if d.viewing_mode == 'walk_up_welcome' %}<span class="tag quiet" title="Walk-up welcome">🚶 Walk-up</span>{% else %}<span class="tag drive" title="Drive-by only: please do not walk up or knock">🚗 Drive-by</span>{% endif %}
+      {% if d.flashing_warning %}<span class="tag strobe" title="Flashing reported by the resident">⚡ Flashing lights</span>{% else %}<span class="tag candy" title="Self-reported by the resident">🕯️ No flashing reported</span>{% endif %}
+      {% if d.music_enabled %}<span class="tag music">🎵 Music{% if d.fm_frequency %} {{ d.fm_frequency }} FM{% endif %}</span>{% endif %}
+      {% if d.treats %}<span class="tag drinks">🍬 Treats</span>{% endif %}
+      {% if d.cocoa %}<span class="tag drinks">☕ Cocoa</span>{% endif %}

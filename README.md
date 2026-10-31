@@ -1,8 +1,8 @@
 # Neighborhood events map
 
-A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. A Christmas lights map and a garage sale map are next: see the [roadmap](ROADMAP.md).
+A small, self-hosted map of the homes taking part in a neighborhood event, for **one neighborhood per install**. The first supported event is **Halloween trick-or-treating**: families browse a mobile-friendly map of homes that chose to participate — candy, non-food treats, 21+ refreshments, sensory notes, hours and live status — and plan a list of stops. Residents list their own home with a one-time email link (no passwords); the first verified neighbor for an address publishes it immediately. Organizers configure everything (name, event name, logo, colours, date, time zone, boundary, optional zones) without touching code. Since 0.12 the same install can also run a **Christmas lights** season: homes pick their nights and hours, visitors filter for drive-by homes, music or no flashing reported and plan a lights tour ([organizer checklist](docs/runbooks/christmas-lights.md)). A garage sale map is next: see the [roadmap](ROADMAP.md).
 
-**Status:** `0.11.0-beta.1` (pre-release; PHP 8.5, Symfony 8.1, PostgreSQL 18) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.12.0-beta.1` (pre-release; PHP 8.5, Symfony 8.1, PostgreSQL 18) — feature-complete beta with light and dark appearance; all automated gates pass locally and in GitHub Actions. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | Desktop | Mobile | Listing a home |
 |---|---|---|
@@ -60,7 +60,7 @@ Nothing neighborhood-specific lives in code. Start from [`config/community.examp
 5. Addresses: import a reviewed CSV (`address,latitude,longitude,zone_key`) in **Addresses & claims** or with `bin/console app:addresses:import file.csv --dry-run`, or enable self-entry with a street allow-list (`registration.address_mode: self_entry|both`). With `registration.review_new_addresses: true`, homes residents add themselves wait for your approval (Overview lists them; approve on Addresses & claims).
 6. Areas without homes yet: give the zone `status: coming_soon` (drawn with that label, not listable) or `hidden`; switch it to `active` when houses are built.
 
-Two communities ship with the code and run unchanged from it: the fictional, zone-less demo ([`examples/demo/`](examples/demo/)) and the zoned real-plat example ([`examples/ventura-reserve/`](examples/ventura-reserve/)). Keep your own neighborhood's files under the git-ignored `deploy/` folder, not in `examples/`.
+Three communities ship with the code and run unchanged from it: the fictional, zone-less Halloween demo ([`examples/demo/`](examples/demo/)), the same fictional neighborhood as a Christmas lights season ([`examples/demo-lights/`](examples/demo-lights/)) and the zoned real-plat example ([`examples/ventura-reserve/`](examples/ventura-reserve/)). Keep your own neighborhood's files under the git-ignored `deploy/` folder, not in `examples/`.
 
 Full guide: [docs/runbooks/setup.md](docs/runbooks/setup.md).
 
@@ -86,7 +86,7 @@ docker compose exec app sh bin/test.sh                     # PHPUnit: unit + int
 docker compose exec app vendor/bin/phpstan analyse         # static analysis (level 6)
 docker run --rm -v "$PWD":/w -w /w node:24-alpine node --test tests/js/*.test.mjs
 docker run --rm -v "$PWD":/w -w /w python:3.14-slim sh -c "pip install -q shapely==2.2.0 && python -I -m unittest discover -s scripts/tests"
-./bin/e2e.sh                                               # Playwright E2E against the Ventura Reserve + demo stacks
+./bin/e2e.sh                                               # Playwright E2E against the Ventura Reserve, demo and lights demo stacks
 python3 scripts/smoke_session.py                           # session lifecycle smoke test on the running stack
 ```
 

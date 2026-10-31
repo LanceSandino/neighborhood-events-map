@@ -1,0 +1,12 @@
+{# The nights a home's lights are on: every night of the season, or the nights it picks (events/holiday_lights.js
+   fills the night chips from the season's dates and reads them back as windows with the form's hours). Expects `c`. #}
+<fieldset class="field full nights-field">
+  <legend class="label">Nights</legend>
+  <div class="checks">
+    <label class="check-chip"><input type="radio" name="nights_mode" value="all" checked> Every night · {{ date_range(c.event.starts_on, c.event.ends_on) }}</label>
+    <label class="check-chip"><input type="radio" name="nights_mode" value="pick"> Only some nights</label>
+  </div>
+  <div class="night-grid hide" data-nights role="group" aria-label="Nights your lights are on"></div>
+  <span class="form-caption">Your hours apply to every night you choose. On a night you skip after all, mark “Off tonight” in My house.</span>
+  <span class="error" data-error="windows"></span>
+</fieldset>

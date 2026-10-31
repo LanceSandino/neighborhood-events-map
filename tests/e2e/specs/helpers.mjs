@@ -3,6 +3,9 @@ import { expect } from '@playwright/test';
 
 export const DEMO = process.env.E2E_DEMO_URL || 'http://host.docker.internal:8088';
 export const VENTURA = process.env.E2E_VENTURA_URL || 'http://host.docker.internal:8087';
+// The fictional Christmas lights demo (examples/demo-lights, .env.lights) and its Mailpit.
+export const LIGHTS = process.env.E2E_LIGHTS_URL || 'http://host.docker.internal:8089';
+export const LIGHTS_MAILPIT = process.env.E2E_LIGHTS_MAILPIT_URL || 'http://host.docker.internal:8027';
 export const MAILPIT = process.env.E2E_MAILPIT_URL || 'http://host.docker.internal:8026';
 export const SHOTS = process.env.E2E_SHOTS || '/work/docs/design/screenshots';
 
@@ -32,6 +35,11 @@ export function atEventTime(event, hhmm) {
   const zone = new Intl.DateTimeFormat('en-US', { timeZone: event.timezone, timeZoneName: 'longOffset' })
     .formatToParts(noon).find((p) => p.type === 'timeZoneName').value.replace('GMT', '');
   return new Date(`${event.date}T${hhmm}:00${zone || '+00:00'}`);
+}
+
+/** The instant when a local date shows `hhmm` in a time zone (for page.clock), e.g. a night of a lights season. */
+export function atLocal(date, hhmm, timezone) {
+  return atEventTime({ date, timezone }, hhmm);
 }
 
 export function watchConsole(page) {

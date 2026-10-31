@@ -68,9 +68,10 @@ function render() {
         <button type="button" class="secondary" id="btnAddLink">+ Add link</button></div>
     </div></div>
     <div class="panel"><h2>Event</h2><div class="form-grid">
-      <div class="field"><label for="eType">Event type</label><select id="eType" aria-describedby="eTypeHelp">${types.map((t) => `<option value="${esc(t.key)}" ${t.key === type.key ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
-        <span class="form-caption" id="eTypeHelp">${types.length > 1 ? 'Changing the type changes the listing fields, filters and words; save, then review this page again.' : `This version supports ${esc(types.map((t) => t.name).join(', '))}. More event types come with later versions.`}</span></div>
-      ${field('eDate', 'Date *', s.event.date, 'type="date"')}
+      <div class="field"><label for="eType">Event type</label><select id="eType" aria-describedby="eTypeHelp" disabled>${types.map((t) => `<option value="${esc(t.key)}" ${t.key === type.key ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+        <span class="form-caption" id="eTypeHelp">The type of the event on the map stays as it is. To run another kind of event (this version offers ${esc(types.map((t) => t.name).join(', '))}), prepare it under <a href="/admin/events">Organizer → Events</a>.</span></div>
+      ${field('eDate', type.schedule_kind === 'single_day' ? 'Date *' : 'First day *', s.event.date, 'type="date"')}
+      ${type.schedule_kind === 'single_day' ? '' : field('eEndsOn', 'Last day *', s.event.ends_on || s.event.date, 'type="date"')}
       ${field('eName', 'Event name', s.event.name, `maxlength="40" placeholder="${esc(type.name)}"`)}
       ${field('eStart', 'Suggested start', s.event.starts_at, 'type="time"')}
       ${field('eEnd', 'Suggested end', s.event.ends_at, 'type="time"')}
@@ -146,6 +147,8 @@ async function save(e) {
     access: $('#cAccess').value, about: $('#cAbout').value, reminders: lines('#cReminders'),
     links: $$('#linkRows .link-row').map((r) => ({ label: $('[data-l=label]', r).value.trim(), url: $('[data-l=url]', r).value.trim() })).filter((l) => l.label || l.url) });
   Object.assign(s.event, { type: $('#eType').value, name: $('#eName').value, date: $('#eDate').value, starts_at: $('#eStart').value, ends_at: $('#eEnd').value });
+  // An event of several days (Christmas lights) has a first and a last day; a one-day event keeps only its date.
+  if ($('#eEndsOn')) Object.assign(s.event, { starts_on: $('#eDate').value, ends_on: $('#eEndsOn').value });
   Object.assign(s.branding, { brand_emoji: $('#bEmoji').value, primary_color: $('#bPrimary').value, accent_color: $('#bAccent').value,
     headline: $('#bHeadline').value, headline_accent: $('#bHeadlineAccent').value, intro: $('#bIntro').value, show_locality: $('#bPlace').checked });
   for (const f of type.features) s.features[f.key] = $(`#feature-${f.key}`).checked;

@@ -1,10 +1,11 @@
-// Playwright config: runs against already-running Docker stacks (see bin/e2e.sh).
+// Playwright config: runs against already-running Docker stacks (see bin/e2e.sh): the Ventura example, the fictional
+// Halloween demo and the fictional Christmas lights demo (E2E_LIGHTS_URL).
 import { defineConfig, devices } from '@playwright/test';
 
 // The stacks are reached over plain HTTP on host.docker.internal; treat them as secure origins so
 // HTTPS-only browser features (geolocation, clipboard) behave as they do on the real HTTPS site.
 const chromium = { ...devices['Desktop Chrome'], channel: 'chromium', launchOptions: { args: [
-  `--unsafely-treat-insecure-origin-as-secure=${process.env.E2E_DEMO_URL || 'http://host.docker.internal:8088'},${process.env.E2E_VENTURA_URL || 'http://host.docker.internal:8087'}`,
+  `--unsafely-treat-insecure-origin-as-secure=${process.env.E2E_DEMO_URL || 'http://host.docker.internal:8088'},${process.env.E2E_VENTURA_URL || 'http://host.docker.internal:8087'},${process.env.E2E_LIGHTS_URL || 'http://host.docker.internal:8089'}`,
 ] } };
 
 export default defineConfig({

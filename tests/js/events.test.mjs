@@ -38,13 +38,14 @@ const randomFilters = () => ({
 });
 const randomCtx = () => ({ today: pick(['2026-10-31', '2026-10-30']), eventDate: '2026-10-31', nowMinutes: Math.floor(rand() * 24 * 60), saved: [1, 3, 5], zoneLabels: { oak: 'Oak', elm: 'Elm' }, areas: [['oak', 'elm'], ['lake']] });
 
-test('the registry knows Halloween by its key and refuses unknown keys', () => {
+test('the registry knows Halloween and Christmas lights by their keys and refuses unknown keys', () => {
   assert.equal(DEFAULT_EVENT_TYPE, 'halloween');
-  assert.deepEqual(eventTypeKeys(), ['halloween']);
+  assert.deepEqual(eventTypeKeys(), ['halloween', 'holiday_lights'], 'EventTypeRegistry::ENABLED (0.12)');
   assert.equal(eventType(), halloween);
   assert.equal(eventType('halloween'), halloween);
   assert.equal(halloween.key, 'halloween');
-  for (const bad of ['holiday_lights', 'garage_sale', 'constructor', '__proto__', 'Halloween']) assert.throws(() => eventType(bad), /Unknown event type/);
+  assert.equal(eventType('holiday_lights').key, 'holiday_lights');
+  for (const bad of ['garage_sale', 'constructor', '__proto__', 'Halloween', 'holidayLights']) assert.throws(() => eventType(bad), /Unknown event type/);
 });
 
 test('Halloween filters: the 0.9 filter object, its quick toggles and hours', () => {

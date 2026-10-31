@@ -110,6 +110,15 @@ export function tags(h) {
   return t;
 }
 
+/** The card's hours: the home's own hours on the event day (the 0.9 card line). */
+export const hoursLabel = (h) => `${time12(h.start)}–${time12(h.end)}`;
+
+/** The status chip is left out when it would only repeat the hours (the 0.9 card and selected-home panel). */
+export const statusChipShown = (st) => !(st.key === 'later' && !st.label.startsWith('Starts'));
+
+/** A pin is greyed for a home that is not handing out (paused, out of candy, done). */
+export const inactive = (h) => h.status !== 'active';
+
 /** What a stop line of the route adds after the hours. */
 export const routeNote = (h) => `${isLowSensory(h) ? ' · 🧩 Sensory-friendly' : ''}${isBigScare(h) ? ' · 👻 Big scares' : ''}`;
 
@@ -132,6 +141,12 @@ export function formDetails(root) {
   const scare = root.querySelector('#regScare, select[name="scare_level"]');
   return { ...Object.fromEntries(FLAGS.map((f) => [f, checked(f)])), scare_level: scare ? scare.value : 'gentle' };
 }
+
+/** Halloween's form needs no set-up (one evening, no nights to pick). */
+export function initForm() {}
+
+/** Nothing besides the hours and the details: a one-day listing takes the event's day. */
+export const formExtras = () => ({});
 
 /** Puts a listing's details into the form fields. */
 export function fillForm(form, details) {

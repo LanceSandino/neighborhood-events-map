@@ -1,8 +1,8 @@
 /**
  * @module assets/js/lib/filters
  * @description Conjunctive family filters shared by the map pins and the list (pure, testable). The search, zone,
- *     time and saved filters are shared; the toggles, their predicates and search words belong to the event type
- *     (ctx.type, a module from events/index.js; Halloween when absent).
+ *     time and saved filters are shared; the toggles, choices (e.g. a night of the season), their predicates and
+ *     search words belong to the event type (ctx.type, a module from events/index.js; Halloween when absent).
  * @input home (public API shape), filter state, context {today, eventDate, nowMinutes, zoneLabels, saved, areas, type}
  *     zone filter: 'all', a zone key, or 'area:<n>' for walking area n (ctx.areas[n] = its zone keys)
  * @dependencies lib/time.js, events/index.js
@@ -12,9 +12,13 @@ import { eventType } from '../events/index.js';
 
 export { isBigScare, isLowSensory } from '../events/halloween.js';
 
-/** The filter object of an event type: search, zone and time first, its toggles, then saved. */
+/** The type's filter choices besides its toggles (lights: a night and a display style); Halloween has none. */
+const choicesOf = (type) => type.choices || [];
+
+/** The filter object of an event type: search, zone and time first, its toggles, saved, then its choices. */
 export function defaultFilters(type = eventType()) {
-  return { q: '', zone: 'all', time: 'any', ...Object.fromEntries(type.filters.map((f) => [f.key, false])), saved: false };
+  return { q: '', zone: 'all', time: 'any', ...Object.fromEntries(type.filters.map((f) => [f.key, false])), saved: false,
+    ...Object.fromEntries(choicesOf(type).map((c) => [c.key, c.default])) };
 }
 
 export const DEFAULT_FILTERS = defaultFilters();
@@ -39,7 +43,9 @@ export function normalizeFilters(f, type = eventType()) {
     if (typeof defaults[k] === 'boolean') {
       if (typeof v === 'boolean') out[k] = v;
     } else if (typeof v === 'string') {
+      const choice = choicesOf(type).find((c) => c.key === k);
       if (k === 'q') out[k] = v.slice(0, 80);
+      else if (choice) { if (choice.valid(v)) out[k] = v; }
       else if (k === 'time' ? isTimeChoice(v) : v.length <= 60) out[k] = v;
     }
   }
@@ -56,7 +62,7 @@ function inZone(h, zone, ctx) {
 export function matches(h, f, ctx) {
   const type = typeOf(ctx);
   if (!inZone(h, f.zone, ctx)) return false;
-  if (!type.matches(h, f)) return false;
+  if (!type.matches(h, f, ctx)) return false;
   if (f.saved && !(ctx.saved || []).includes(h.id)) return false;
   if (f.time === 'now') {
     if (statusOf(h, ctx).key !== 'open') return false;
@@ -73,7 +79,11 @@ export function matches(h, f, ctx) {
   return true;
 }
 
-export const activeFilterCount = (f) => Object.entries(f).filter(([k, v]) => (k === 'zone' || k === 'time') ? v !== 'all' && v !== 'any' : (k === 'q' ? !!v.trim() : v === true)).length;
+export const activeFilterCount = (f, type = eventType()) => Object.entries(f).filter(([k, v]) => {
+  const choice = choicesOf(type).find((c) => c.key === k);
+  if (choice) return v !== choice.default;
+  return (k === 'zone' || k === 'time') ? v !== 'all' && v !== 'any' : (k === 'q' ? !!v.trim() : v === true);
+}).length;
 
 /**
  * How many homes each choice would show, given the other active filters: a toggle's count is the result

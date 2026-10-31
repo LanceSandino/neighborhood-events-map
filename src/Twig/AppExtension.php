@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Twig;
 
+use Psr\Clock\ClockInterface;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -11,17 +12,24 @@ use Twig\TwigFunction;
 /**
  * @module Twig/AppExtension
  * @description Presentation helpers: zone summary chip ("6 phases · 1–3, 5A, 5B, 8"), event badge
- *     text, 12-hour time labels, access facts, and XSS-safe JSON for non-executable <script type="application/json">.
+ *     text and date ranges, today's local date on the app clock, 12-hour time labels, access facts, and XSS-safe JSON for
+ *     non-executable <script type="application/json">.
  *
- * @dependencies Twig
+ * @dependencies Twig, PSR clock
  */
 final class AppExtension extends AbstractExtension
 {
+    public function __construct(private readonly ?ClockInterface $clock = null)
+    {
+    }
+
     public function getFunctions(): array
     {
         return [
+            new TwigFunction('local_today', [$this, 'localToday']),
             new TwigFunction('zone_summary', [$this, 'zoneSummary']),
             new TwigFunction('event_badge', [$this, 'eventBadge']),
+            new TwigFunction('date_range', [$this, 'dateRange']),
             new TwigFunction('access_info', [$this, 'accessInfo']),
             new TwigFunction('zone_areas', [$this, 'zoneAreas']),
         ];
@@ -85,6 +93,7 @@ final class AppExtension extends AbstractExtension
         return [
             new TwigFilter('boot_json', [$this, 'bootJson'], ['is_safe' => ['html']]),
             new TwigFilter('time12', [$this, 'time12']),
+            new TwigFilter('time_span', [$this, 'timeSpan']),
         ];
     }
 
@@ -145,11 +154,40 @@ final class AppExtension extends AbstractExtension
         return implode(', ', $out);
     }
 
-    public function eventBadge(string $date): string
+    /** Today's date (YYYY-MM-DD) in a time zone, on the app's clock (e.g. where a season stands). */
+    public function localToday(string $timezone): string
+    {
+        return ($this->clock?->now() ?? new \DateTimeImmutable())->setTimezone(new \DateTimeZone($timezone))->format('Y-m-d');
+    }
+
+    /** "OCT 31, 2026" for a one-day event; "DEC 1 – JAN 3" for an event of several days. */
+    public function eventBadge(string $date, ?string $endsOn = null): string
     {
         $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        $e = null === $endsOn || $endsOn === $date ? false : \DateTimeImmutable::createFromFormat('!Y-m-d', $endsOn);
+        if (false === $d) {
+            return $date;
+        }
 
-        return false === $d ? $date : strtoupper($d->format('M j, Y'));
+        return strtoupper(false === $e ? $d->format('M j, Y') : $d->format('M j').' – '.$e->format('M j'));
+    }
+
+    /** "Dec 1, 2026 – Jan 3, 2027", "Dec 1 – 24, 2026" or one day "Oct 31, 2026" (plain text; Twig escapes it). */
+    public function dateRange(string $from, ?string $to = null): string
+    {
+        $a = \DateTimeImmutable::createFromFormat('!Y-m-d', $from);
+        $b = null === $to || $to === $from ? false : \DateTimeImmutable::createFromFormat('!Y-m-d', $to);
+        if (false === $a) {
+            return $from;
+        }
+        if (false === $b) {
+            return $a->format('M j, Y');
+        }
+        if ($a->format('Y') !== $b->format('Y')) {
+            return $a->format('M j, Y').' – '.$b->format('M j, Y');
+        }
+
+        return $a->format('M') === $b->format('M') ? $a->format('M j').' – '.$b->format('j, Y') : $a->format('M j').' – '.$b->format('M j, Y');
     }
 
     public function time12(string $hhmm): string
@@ -162,6 +200,15 @@ final class AppExtension extends AbstractExtension
         $h12 = 0 === $h % 12 ? 12 : $h % 12;
 
         return '00' === $m[2] ? $h12.' '.$suffix : $h12.':'.$m[2].' '.$suffix;
+    }
+
+    /** "6–10 PM" when both times share AM or PM, else "11 AM–1 PM" (events/holiday_lights.js span() says the same). */
+    public function timeSpan(string $start, string $end): string
+    {
+        $a = $this->time12($start);
+        $b = $this->time12($end);
+
+        return (str_ends_with($a, 'AM') === str_ends_with($b, 'AM') ? substr($a, 0, -3) : $a).'–'.$b;
     }
 
     public function bootJson(mixed $data): string

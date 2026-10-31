@@ -1,0 +1,46 @@
+# FICTIONAL DEMO community — a Christmas lights season on the same invented Maple Hollow outline as examples/demo.
+# Every home, street, station and note here is invented; the outline sits inside an uninhabited forest so it can
+# never be mistaken for real homes. Demo homes are created only with APP_DEMO=1 (bin/console app:demo:seed, which
+# reads homes.json next to this file). Fixed dates (Dec 1, 2026 – Jan 3, 2027) keep the demo the same whenever it runs.
+schema_version: 1
+community:
+  id: maple-hollow-lights-demo
+  name: "Maple Hollow"
+  subtitle: "A fictional demo neighborhood"
+  locality: "Demo Town"
+  region: "FL"
+  country: "US"
+  timezone: "America/Chicago"
+  gate_notice: "Fictional demo data — these homes do not exist."
+  contact_url: "mailto:organizer@example.org"
+  access: public
+  about: |
+    Maple Hollow is a FICTIONAL neighborhood used to demonstrate the Christmas lights map. Every home, street, radio station and note here is invented.
+
+    Anyone can browse the displays, filter for drive-by homes, music or no flashing reported, pick a night and plan a viewing route; residents list their own homes with a one-time email link.
+  links:
+    - { label: "Project on GitHub", url: "https://github.com/" }
+event:
+  type: holiday_lights
+  name: "Christmas Lights"
+  date: "2026-12-01"
+  starts_on: "2026-12-01"
+  ends_on: "2027-01-03"
+  starts_at: "18:00"
+  ends_at: "22:00"
+# No branding block: the Christmas lights defaults (midnight blue and gold, "Holiday nights. Bright lights.").
+map:
+  boundary_file: boundary.geojson
+  zoom: 16
+  tiles:
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    attribution: "© OpenStreetMap contributors"
+zones: []
+features:
+  optional_zones: false
+registration:
+  enabled: true
+  address_mode: both
+  street_allowlist: ["Evergreen Ct", "Tinsel Ln", "Starlight Way", "Holly Dr"]
+routing:
+  groups: []

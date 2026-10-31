@@ -1,0 +1,3 @@
+{# Christmas lights card symbol, in the pins' order: 🎵 music, 🎄 walk-through, ⛄ inflatables, else ✨. Expects `home`. #}
+{%- set d = home.details -%}
+{{- d.music_enabled or 'synchronized_music' in d.styles ? '🎵' : ('walkthrough' in d.styles ? '🎄' : ('inflatables' in d.styles ? '⛄' : '✨')) -}}

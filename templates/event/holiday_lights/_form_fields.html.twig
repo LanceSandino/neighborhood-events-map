@@ -1,0 +1,5 @@
+{# Christmas lights fields of "List my house" step 2, between the hours and the note: the nights and the listing
+   details (assets/js/events/holiday_lights.js reads them). Expects `c` and `et`. #}
+{% include 'event/holiday_lights/_nights.html.twig' with {c: c} only %}
+          {% include event_fragment(c.event.type, 'listing_checks') with {et: et} only %}
+          <p class="form-caption field full">{{ et.copy.publish_help }}</p>

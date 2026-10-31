@@ -1081,4 +1081,74 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p2"
   author: "Lance Sandino"
   timestamp: "2026-10-31T14:00:00Z"
+- id: CU-20261031-18
+  type: feature
+  title: "Christmas lights event type (holiday_lights): strict details, statuses with a day-scoped off tonight, display rules, filters, legend, stats, driving route profile and its own event settings; enabled in the registry"
+  description: "Event/Type/HolidayLightsType (+ HolidayLightsCopy) implements EventType and the new Event/EventSettingsType: nightly_range up to 62 nights; details styles (at least one of classic, animated, synchronized_music, inflatables, walkthrough; canonical order), flashing_warning, music_enabled, fm_frequency (one decimal 87.5-108.0 as a string, never free text, refused unless music is on), viewing_mode (drive_by_only default, walk_up_welcome), treats, cocoa; unknown keys refused with details.<key>; strict public projection (no station without music, unknown stored values fall back); statuses active, off_tonight (day-scoped), finished with the shared fixture's display rules; filters driveBy, noFlashing, music (quick), walkUp, openTonight; legend lights/music/inflatable/walkthrough; route profiles walking and driving; event settings best_night (inside the event) and quiet_hours (<= 120 characters). The listing note stays the shared note. EventTypeRegistry::ENABLED is halloween and holiday_lights; builtIn() carries both. OccurrenceInput checks a type's own settings against the event's dates (also when only the dates change). ClaimService checks a listing's days when it is requested, so a lights claim without nights is refused at once instead of failing on confirmation. Tests that pinned 'only Halloween is enabled' now pin the new set and move their 'not offered' cases to garage_sale."
+  impact: high
+  affected_modules: ["src/Event/Type/HolidayLightsType.php", "src/Event/Type/HolidayLightsCopy.php", "src/Event/EventSettingsType.php", "src/Event/EventTypeRegistry.php", "src/Event/EventType.php", "src/Event/OccurrenceInput.php", "src/Claim/ClaimService.php", "tests/fixtures/schedule/display-status.json"]
+  related_tests: ["tests/Unit/Event/HolidayLightsTypeTest.php (strict details, 14 FM cases, music rule, projection, statuses = fixture rules, filters, settings, fragments)", "tests/Unit/Event/EventTypeRegistryTest.php", "tests/Unit/Community/CommunitySchemaTest.php: testTheEventTypeDefaultsToHalloweenAndAnUnknownOrDisabledTypeIsRefused (lights defaults, garage_sale refused)", "tests/Integration/HolidayLightsTest.php: testInputIsStrictAndResidentTextIsEscaped, testAnOrganizerSwitchesHalloweenToChristmasLights (settings refused: 77 nights, best night outside, quiet hours too long, route mode)", "tests/fixtures/schedule/display-status.json (6 new lights cases: season preview, season over, end minute, tomorrow's window, off tonight on New Year's Eve, done before the first night)"]
+  commit_ref: "feature/event-types-p3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T16:00:00Z"
+- id: CU-20261031-19
+  type: feature
+  title: "Public API for types with day-scoped statuses: homes add status_date; the public event adds the type's settings and route modes; Halloween's answers unchanged"
+  description: "ListingRepository::publicShape adds status_date after display_status for a type with any day-scoped status: the date of a day-scoped stored status while it is today or later in the community zone (status then names it), else null with the effective status, so an expired off tonight leaves no trace and a browser derives the status on its own clock. CommunityPresenter adds a type's public settings (best_night, quiet_hours) after the shared event keys and, for a type allowing driving, route_modes (driving only when the type, the event's route_modes and an enabled, available provider allow it, as RoutePlanner checks). GoldenApiParityTest and PublicPrivacyTest (Halloween) are unchanged and green."
+  impact: medium
+  affected_modules: ["src/Listing/ListingRepository.php", "src/Community/CommunityPresenter.php"]
+  related_tests: ["tests/Integration/HolidayLightsTest.php: testALightsHomeIsPublicWithItsNightsAndExactlyTheEventKeys (exact home keys, event keys and order, route_modes without a provider), testOffTonightIsNamedOnlyOnItsOwnNightAndDoneForTheSeasonNeverShowsADate, testAnOrganizerSwitchesHalloweenToChristmasLights (route_modes with a provider)", "tests/Integration/GoldenApiParityTest.php (unchanged)", "tests/Integration/PublicPrivacyTest.php (unchanged)"]
+  commit_ref: "feature/event-types-p3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T16:00:00Z"
+- id: CU-20261031-20
+  type: feature
+  title: "Branding still at a type's default follows the event on the map; the draft preview uses the draft type's theme, words, filters and switches"
+  description: "Community/TypeDefaults: branding headline, accent, intro, emoji, the brand colours and the community subtitle that equal another enabled type's built-in default take the active type's defaults when settings load (CommunityRepository) and in the draft preview (AdminPageController); a type's missing feature switches take its defaults. A type may name its default colours (lights: #38597F, #CE9D3D); CommunitySchema falls back to Halloween's (#F07936, #524077, unchanged) and keeps the other offered types' switches named in the input. Halloween's settings read exactly as stored (a type's own defaults are never replaced)."
+  impact: medium
+  affected_modules: ["src/Community/TypeDefaults.php", "src/Community/CommunityRepository.php", "src/Community/CommunitySchema.php", "src/Controller/AdminPageController.php"]
+  related_tests: ["tests/Integration/HolidayLightsTest.php: testAnOrganizerSwitchesHalloweenToChristmasLights (preview: lights theme, 'Holiday nights.', Drive-by filter, no Candy filter, best night; after the switch /theme.css --brand:#38597F)", "tests/Integration/AdminConsoleTest.php, CommunityConfigsTest, GoldenApiParityTest (Halloween unchanged)"]
+  commit_ref: "feature/event-types-p3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T16:30:00Z"
+- id: CU-20261031-21
+  type: feature
+  title: "Christmas lights in the browser and on the page: events/holiday_lights.js, the lights fragments and theme, the season row, night and style filters, statuses on the visitor's clock, Your lights tour and the drive-by tour option"
+  description: "events/holiday_lights.js (registered in events/index.js): toggles and predicates (open tonight uses the moment), choices night ('' or a date) and style, search words, tags (Classic … Music 88.7 FM, Cocoa; 'No flashing reported' or 'Flashing lights'), pins and symbols (music, walk-through, inflatables, lights), displayKey/statusOf by the shared rules (never 'Lights on' outside a window; 'No more nights' after a home's last night), card hours (tonight, the next night, the last), isOpen (nights left), inactive pins, the season (lib/schedule.js seasonOf, eventDates), the form helpers (night chips, every night or picked nights as windows, details, checks). Core modules ask the type: lib/filters.js (choices in the filter object, share links and the active count), lib/render.js (hoursLabel, statusChipShown, inactive), home.js ([data-choice] controls, the season pill, the clock read once a second, the type's outline colour), route-panel.js (choice chips; a Walk / Drive-by tour switch only when /api/event route_modes offers driving, the driving path from the provider only), register.js and me.js (initForm, formExtras, 'Choose at least one night.'). Halloween gets the same hooks returning its 0.9 output (hoursLabel, statusChipShown, inactive, initForm, formExtras) and a filter_controls fragment holding its 'Visit at'; empty head, schedule_row and route_rules fragments. base.html.twig names <html data-event-type> and includes the type's head fragment (the lights stylesheet css/events/holiday_lights.css: tokens in light and identical dark blocks, the type's components, 44 px targets, one card per row on phones); the route title, the Rules sheet and the About page show date ranges, the event rules and quiet hours; Twig date_range, time_span, local_today (app clock) and event_badge for ranges."
+  impact: high
+  affected_modules: ["public/assets/js/events/", "public/assets/js/lib/filters.js", "public/assets/js/lib/render.js", "public/assets/js/lib/schedule.js", "public/assets/js/home.js", "public/assets/js/route-panel.js", "public/assets/js/register.js", "public/assets/js/me.js", "public/assets/css/events/holiday_lights.css", "templates/base.html.twig", "templates/home/", "templates/legal/about.html.twig", "templates/event/", "src/Twig/AppExtension.php", "src/Event/Type/HalloweenType.php"]
+  related_tests: ["tests/js/holiday-lights.test.mjs (11 tests: fixture rules, every lights display-status case, filters incl. a night and Dec 31 -> Jan 1, tags without safety words, hours, cards escaped, the season, the form, the theme blocks)", "tests/js/events.test.mjs (400 seeded Halloween homes: cards, pins, panels identical to 0.9)", "tests/js/schedule.test.mjs", "tests/Unit/Twig/AppExtensionTest.php", "tests/e2e/specs/lights.spec.mjs", "tests/e2e/specs/public.spec.mjs, a11y.spec.mjs (Halloween unchanged)"]
+  commit_ref: "feature/event-types-p3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:00:00Z"
+- id: CU-20261031-22
+  type: feature
+  title: "Organizers: Events console drafts Christmas lights with a date range, nightly hours, rules, best night, quiet hours and the drive-by tour; Community → Event edits a range"
+  description: "GET /api/admin/events lists each type's own setting keys; admin/events.js shows the best night, quiet hours and 'Offer a drive-by tour' for types that have them (route_modes walking or walking and driving) and relabels the dates for one-day types. GET /api/admin/community names the type's schedule kind; admin/community.js shows First day / Last day for a type with several days and saves starts_on/ends_on; its Event type select is fixed (the server already refuses to change the type of the event on the map) and points to Organizer → Events for another kind of event."
+  impact: low
+  affected_modules: ["src/Controller/Api/EventsAdminApiController.php", "src/Controller/Api/AdminApiController.php", "public/assets/js/admin/events.js", "public/assets/js/admin/community.js"]
+  related_tests: ["tests/Integration/EventsConsoleTest.php: testAnOrganizerPreparesPreviewsAndSwitchesToTheNextEventWithoutCarryingAnythingOver (both types listed)", "tests/Integration/HolidayLightsTest.php: testAnOrganizerSwitchesHalloweenToChristmasLights", "tests/e2e/specs/season.spec.mjs (a lights draft in the console, its preview, the switch, back to Halloween)"]
+  commit_ref: "feature/event-types-p3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T17:00:00Z"
+- id: CU-20261031-23
+  type: chore
+  title: "Fictional Christmas lights demo (examples/demo-lights), a third dev stack (.env.lights on :8089), the demo seed per demo, and e2e for the lights season"
+  description: "examples/demo-lights: the Maple Hollow outline of examples/demo, a lights community.yaml (no branding block: the lights defaults) and ten invented homes for Dec 1, 2026 - Jan 3, 2027 with every night, ranges and lists of nights, different hours and styles, one fixed 'off tonight' on Dec 12 and one done for the season. app:demo:seed reads homes.json next to COMMUNITY_BOOTSTRAP_FILE (else examples/demo/homes.json), turns a home's nights into windows and keeps a fixed fictional status_date. bin/e2e.sh grants the organizer and relists on all three stacks; the Playwright config treats E2E_LIGHTS_URL as a secure origin; helpers export LIGHTS, LIGHTS_MAILPIT and atLocal; the CI e2e job creates .env.lights and starts the third stack. lights.spec.mjs pins the browser clock to nights of the season: theme, hero, season pill (preview, tonight, over), every filter and the night picker (Dec 31, Jan 1, the off night), cards/pins/selected panel agree, never 'Lights on' outside a window, New Year's Eve into Jan 1, off tonight, done for the season, saved stops per event, the tour without a provider (no lines, no time), axe in light and dark, no overflow and 44 px targets at 375-1440 px, reduced motion, the map blocked, the listing form and My house actions (the test gives its home back). season.spec.mjs puts Christmas lights after Halloween on the demo stack and returns it to Halloween."
+  impact: low
+  affected_modules: ["examples/demo-lights/", "src/Command/DemoSeedCommand.php", "bin/e2e.sh", "tests/e2e/", ".github/workflows/ci.yml"]
+  related_tests: ["tests/Integration/HolidayLightsTest.php: testTheFictionalLightsDemoSeedsItsNightsAndAFixedOffTonight", "tests/Unit/Community/CommunitySchemaTest.php (examples/demo-lights/community.yaml)", "tests/e2e/specs/lights.spec.mjs", "tests/e2e/specs/season.spec.mjs"]
+  commit_ref: "feature/event-types-p3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T18:00:00Z"
+- id: CU-20261031-24
+  type: chore
+  title: "0.12.0-beta.1: release notes, decisions D-20261031-16 to -23, ROADMAP Stage 3, event-types architecture, the Christmas lights organizer checklist, lights screenshots, test report"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.12.0-beta.1. docs/architecture/event-types.md describes the lights type, the theme and the fragments every type provides; docs/runbooks/christmas-lights.md is the organizer's checklist with a lights community.yaml; ROADMAP marks Stage 3 shipped. docs/design/screenshots/lights-*.png show the lights demo (desktop and phone, light and dark, the listing form and My house; taken with tiles blocked). Gates on the final tree are in docs/quality/test-report.md."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "ROADMAP.md", "DECISIONS.md", "docs/"]
+  related_tests: ["tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Unit/About/ReleaseConsistencyTest.php"]
+  commit_ref: "feature/event-types-p3"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:00:00Z"
 ```

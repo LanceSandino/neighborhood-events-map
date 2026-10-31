@@ -2,10 +2,11 @@
  * @module assets/js/lib/render
  * @description HTML fragments for house cards, tags, selected-home panel and pins. Every
  *     value from the page or API data (resident text and ids alike) goes through esc(). Mirrors templates/home/_card.html.twig.
- *     The event type (ctx.type or the `type` argument; Halloween when absent) supplies the symbol, pin class and tags.
+ *     The event type (ctx.type or the `type` argument; Halloween when absent) supplies the symbol, pin class, tags, the
+ *     card's hours, whether the status chip shows and whether a pin is greyed.
  * @dependencies lib/time.js, events/index.js
  */
-import { statusOf, time12 } from './time.js';
+import { statusOf } from './time.js';
 import { eventType } from '../events/index.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -23,12 +24,12 @@ export function tagsHtml(h, type = eventType()) {
 
 export function metaLine(h, ctx) {
   const zone = ctx.zoneLabels[h.zone];
-  return `${zone ? esc(zone) + ' · ' : ''}<span class="card-hours">${time12(h.start)}–${time12(h.end)}</span>`;
+  return `${zone ? esc(zone) + ' · ' : ''}<span class="card-hours">${esc(typeOf(ctx).hoursLabel(h, ctx))}</span>`;
 }
 
 export function cardHtml(h, ctx, { saved, active, focus }) {
   const st = statusOf(h, ctx);
-  const statusChip = st.key === 'later' && !st.label.startsWith('Starts') ? '' : `<span class="card-status ${st.key}">${esc(st.label)}</span>`;
+  const statusChip = typeOf(ctx).statusChipShown(st, ctx) ? `<span class="card-status ${st.key}">${esc(st.label)}</span>` : '';
   return `<li class="home-card${active ? ' active' : ''}" data-id="${esc(h.id)}" tabindex="0" aria-label="${esc(h.address)}">
     <div class="card-symbol" aria-hidden="true">${symbolOf(h, focus, typeOf(ctx))}</div>
     <div class="card-main">
@@ -44,15 +45,15 @@ export function selectedHtml(h, ctx, saved) {
   const st = statusOf(h, ctx);
   return `<button type="button" class="x" data-close-selected aria-label="Close">×</button>
     <b>${esc(h.address)}</b>
-    <p>${metaLine(h, ctx)}${st.key === 'later' && !st.label.startsWith('Starts') ? '' : ` · <span class="card-status ${st.key}">${esc(st.label)}</span>`}</p>
+    <p>${metaLine(h, ctx)}${typeOf(ctx).statusChipShown(st, ctx) ? ` · <span class="card-status ${st.key}">${esc(st.label)}</span>` : ''}</p>
     ${h.note ? `<p>${esc(h.note)}</p>` : ''}
     <div class="tags">${tagsHtml(h, typeOf(ctx))}</div>
     <button type="button" class="primary" data-save="${esc(h.id)}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save this stop'}</button>
     <p><button type="button" class="link-button" data-report="${esc(h.id)}">Report this listing</button></p>`;
 }
 
-export function pinHtml(h, { dim, number, focus, type = eventType() }) {
-  return `<div class="pin ${pinClass(h, focus, type)}${dim ? ' dim' : ''}${h.status !== 'active' ? ' inactive' : ''}"><span>${symbolOf(h, focus, type)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
+export function pinHtml(h, { dim, number, focus, type = eventType(), ctx = null }) {
+  return `<div class="pin ${pinClass(h, focus, type)}${dim ? ' dim' : ''}${type.inactive(h, ctx) ? ' inactive' : ''}"><span>${symbolOf(h, focus, type)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
 }
 
 /** Leaflet style for a zone outline; with a selected zone, it stands out and the others recede. */

@@ -31,6 +31,10 @@ final class CommunitySchema
     /** active: shown and listable; coming_soon: drawn as "coming soon", not listable; hidden: not shown at all. */
     public const ZONE_STATUS = ['active', 'coming_soon', 'hidden'];
 
+    /** Brand colours of a type that names none (Halloween's orange and plum). */
+    public const DEFAULT_PRIMARY_COLOR = '#F07936';
+    public const DEFAULT_ACCENT_COLOR = '#524077';
+
     public const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     public const DEFAULT_TILE_ATTRIBUTION = '© OpenStreetMap contributors';
 
@@ -105,8 +109,8 @@ final class CommunitySchema
             $e[] = 'community.links allows at most 8 links.';
         }
 
-        $primary = self::color($b['primary_color'] ?? '#F07936', 'branding.primary_color', $e);
-        $accent = self::color($b['accent_color'] ?? '#524077', 'branding.accent_color', $e);
+        $primary = self::color($b['primary_color'] ?? ($brand['primary_color'] ?? self::DEFAULT_PRIMARY_COLOR), 'branding.primary_color', $e);
+        $accent = self::color($b['accent_color'] ?? ($brand['accent_color'] ?? self::DEFAULT_ACCENT_COLOR), 'branding.accent_color', $e);
 
         $center = null;
         if (isset($m['center'])) {
@@ -253,7 +257,7 @@ final class CommunitySchema
                 'crossing_notes' => array_values(array_filter(array_map(fn ($n) => self::text($n, 200), self::arr($m['crossing_notes'] ?? [])))),
             ],
             'zones' => array_values($zones),
-            'features' => self::features($type, $f) + [
+            'features' => self::features($type, $f, $this->types) + [
                 'optional_zones' => (bool) ($f['optional_zones'] ?? ([] !== $zones)),
                 'walking_routes' => (bool) ($f['walking_routes'] ?? true),
             ],
@@ -277,17 +281,25 @@ final class CommunitySchema
     }
 
     /**
-     * The event type's feature switches (its order, its defaults).
+     * The event type's feature switches (its order, its defaults), then the switches of the other types this version
+     * offers that the input names, so an organizer's Halloween choices survive a save during another season.
      *
      * @param array<mixed> $f
      *
      * @return array<string,bool>
      */
-    private static function features(EventType $type, array $f): array
+    private static function features(EventType $type, array $f, EventTypeRegistry $types): array
     {
         $out = [];
         foreach ($type->features() as $key => $feature) {
             $out[$key] = (bool) ($f[$key] ?? $feature['default']);
+        }
+        foreach ($types->enabled() as $other) {
+            foreach (array_keys($other->features()) as $key) {
+                if (!isset($out[$key]) && \array_key_exists($key, $f)) {
+                    $out[$key] = (bool) $f[$key];
+                }
+            }
         }
 
         return $out;

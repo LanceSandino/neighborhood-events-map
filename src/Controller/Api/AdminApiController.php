@@ -361,6 +361,7 @@ final class AdminApiController
         return [
             'key' => $t->key(),
             'name' => $t->defaultName(),
+            'schedule_kind' => $t->scheduleKind(),
             'features' => array_map(static fn (string $k, array $f) => ['key' => $k, 'label' => $f['label']], array_keys($t->features()), array_values($t->features())),
             'copy' => ['access_gated_open' => $copy['admin_access_gated_open'], 'reminders_label' => $copy['admin_reminders_label'], 'reminders_help' => $copy['admin_reminders_help']],
         ];

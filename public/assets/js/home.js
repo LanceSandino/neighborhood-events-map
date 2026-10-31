@@ -12,8 +12,9 @@ import { createStore, migrateYearStore } from './lib/store.js';
 import { defaultFilters, matches, activeFilterCount, normalizeFilters, choiceCounts } from './lib/filters.js';
 import { eventType } from './events/index.js';
 import { nowInZone } from './lib/time.js';
+import { seasonOf } from './lib/schedule.js';
 import { cardHtml, selectedHtml, pinHtml, esc, zoneStyle } from './lib/render.js';
-import { otherEvent } from './lib/share.js';
+import { readSharedLink } from './lib/share.js';
 import { focusMap } from './lib/map-focus.js';
 import { labelPoint, resolveOverlaps } from './lib/zone-labels.js';
 import { initModals, openModal, closeModal, toast } from './lib/modal.js';
@@ -32,7 +33,7 @@ const store = createStore(C.community.id, String(C.event.id));
 let filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
 // A shared link (?f=<filters>&stops=<ids>&start=<id>&e=<event id>) opens exactly that view, in the unsaved route so a
 // saved one stays as it was; a link made for another event opens the map without its stops.
-const shared = readSharedLink();
+const shared = readSharedLink(location.search, C.event.id, (f) => normalizeFilters(f, T));
 if ((shared.filters || shared.stops) && store.get().activeRoute) {
   store.switchRoute(null);
   filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
@@ -43,13 +44,21 @@ let here = null; // the visitor's location for "start from my location": memory 
 let route = null; // the "My route" panel (route-panel.js)
 
 const $ = (sel) => document.querySelector(sel);
+// The community clock, read at most once a second (every filter and status asks for it).
+let clock = null;
+const now = () => {
+  if (!clock || Math.abs(Date.now() - clock.at) > 1000) clock = { at: Date.now(), n: nowInZone(C.event.timezone) };
+  return clock.n;
+};
 const ctx = () => {
-  const n = nowInZone(C.event.timezone);
-  return { today: n.date, eventDate: C.event.date, nowMinutes: n.minutes, zoneLabels, saved: store.get().saved, areas: C.routing.groups || [], type: T };
+  const n = now();
+  return { today: n.date, eventDate: C.event.date, nowMinutes: n.minutes, zoneLabels, saved: store.get().saved, areas: C.routing.groups || [], type: T, event: C.event };
 };
 const visible = () => homes.filter((h) => matches(h, filters, ctx()));
-/** Open now or later today, as the event type says (Halloween: handing out; paused, out of candy and done homes are not). */
-const isOpen = (h) => T.isOpen(h);
+/** On the list, as the event type says (Halloween: handing out; lights: nights left this season). */
+const isOpen = (h) => T.isOpen(h, ctx());
+/** The type's filter choices besides its toggles (a night, a style): the controls marked data-choice. */
+const choiceDefault = (k) => ((T.choices || []).find((c) => c.key === k) || { default: '' }).default;
 let showClosed = false;
 const zoneLayers = new Map();
 /** The device setting, or "Reduce motion" chosen in Appearance. */
@@ -65,7 +74,8 @@ function initMap() {
     map = L.map('map', { zoomControl: false, scrollWheelZoom: false, tap: true, zoomSnap: 0.25 });
     L.tileLayer(C.map.tiles.url, { maxZoom: C.map.tiles.max_zoom, attribution: esc(C.map.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(map);
     if (C.map.boundary) {
-      L.geoJSON(C.map.boundary, { style: { color: '#f07936', weight: 2, fillColor: '#f07936', fillOpacity: 0.05 }, interactive: false }).addTo(map);
+      const line = T.mapColor || '#f07936'; // the event type's outline colour (Halloween: orange)
+      L.geoJSON(C.map.boundary, { style: { color: line, weight: 2, fillColor: line, fillOpacity: 0.05 }, interactive: false }).addTo(map);
     }
     for (const z of C.zones) {
       if (!z.geometry) continue;
@@ -82,7 +92,7 @@ function initMap() {
     spaceLabels();
     map.on('zoomend resize', spaceLabels);
     if (filters.zone && filters.zone !== 'all') highlightZone(filters.zone, { fit: false });
-    if (activeFilterCount(filters)) fitToResults(); // remembered filters: start on the homes that match
+    if (activeFilterCount(filters, T)) fitToResults(); // remembered filters: start on the homes that match
     map.on('click', () => selectHome(null));
     $('#mapFallback').hidden = true;
   } catch (e) {
@@ -131,9 +141,10 @@ function fitAll() {
 
 function renderPins(visibleIds) {
   if (!map) return;
+  const c = ctx();
   for (const [id, m] of markers) if (!homes.some((h) => h.id === id)) { m.remove(); markers.delete(id); }
   for (const h of homes) {
-    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id), focus: filters, type: T }), iconSize: [37, 37], iconAnchor: [5, 36] });
+    const icon = L.divIcon({ className: `pin-icon${activeId === h.id ? ' active' : ''}`, html: pinHtml(h, { dim: !visibleIds.has(h.id), number: route.numbers().get(h.id), focus: filters, type: T, ctx: c }), iconSize: [37, 37], iconAnchor: [5, 36] });
     let m = markers.get(h.id);
     if (!m) {
       m = L.marker([h.lat, h.lon], { icon, keyboard: true, title: h.address, alt: h.address, riseOnHover: true });
@@ -167,16 +178,26 @@ function render() {
   const view = store.get().view === 'compact' ? 'compact' : 'cards';
   $('#homeCards').classList.toggle('compact', view === 'compact');
   for (const b of document.querySelectorAll('[data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
-  const count = activeFilterCount({ ...filters, q: '' });
+  const count = activeFilterCount({ ...filters, q: '' }, T);
   $('#filterCount').textContent = String(count);
   $('#filterCount').classList.toggle('hide', count === 0);
   $('#btnFilters').setAttribute('aria-label', count ? `Filters, ${count} active` : 'Filters');
   renderChoiceCounts(c);
   for (const btn of document.querySelectorAll('[data-filter]')) btn.setAttribute('aria-pressed', String(!!filters[btn.dataset.filter]));
-  $('#btnReset').classList.toggle('hide', activeFilterCount(filters) === 0);
+  $('#btnReset').classList.toggle('hide', activeFilterCount(filters, T) === 0);
+  renderSeason(c);
   route.render(); // stop order first: the pins show its numbers
   renderPins(ids);
   if (activeId && !homes.some((h) => h.id === activeId)) selectHome(null);
+}
+
+/** The season pill under the hero (types with a date range): where the season stands on the visitor's clock. */
+function renderSeason(c) {
+  const pill = $('#seasonPill');
+  if (!pill || !C.event.starts_on) return;
+  const s = seasonOf(C.event, c.today);
+  pill.className = `season-pill ${s}`;
+  pill.textContent = pill.dataset[s] || pill.textContent;
 }
 
 /** Each filter and zone choice shows how many homes handing out it would list (with the other filters kept). */
@@ -208,7 +229,7 @@ function fitToResults({ delay = 0 } = {}) {
   clearTimeout(fitTimer);
   fitTimer = setTimeout(() => {
     if (!map) return;
-    if (activeFilterCount(filters) === 0) { fitAll(); return; }
+    if (activeFilterCount(filters, T) === 0) { fitAll(); return; }
     const shown = visible().filter(isOpen);
     if (shown.length) map.fitBounds(shown.map((h) => [h.lat, h.lon]), { padding: [50, 50], maxZoom: 18, animate: !reducedMotion() });
     else highlightZone(filters.zone || 'all');
@@ -238,22 +259,6 @@ function selectHome(id, { pan = true } = {}) {
   render();
 }
 
-/* ---------------- Shareable links ---------------- */
-function readSharedLink() {
-  const q = new URLSearchParams(location.search);
-  const out = {};
-  if (otherEvent(q.get('e'), C.event.id)) { out.otherEvent = true; return out; }
-  try {
-    if (q.get('f')) {
-      const json = JSON.parse(atob(q.get('f').replace(/-/g, '+').replace(/_/g, '/')));
-      out.filters = normalizeFilters(json, T);
-    }
-  } catch { /* ignore a damaged link */ }
-  const ids = (q.get('stops') || '').split('.').map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 60);
-  if (ids.length) { out.stops = ids; out.start = Number(q.get('start')) || null; out.order = q.get('o') === '1'; }
-  return out;
-}
-
 /** A saved route was opened (or saved or deleted): its filters become the page's filters. */
 function applyStoredFilters() {
   filters = { ...DEFAULT_FILTERS, ...normalizeFilters(store.get().filters, T) };
@@ -263,11 +268,12 @@ function applyStoredFilters() {
   fitToResults();
 }
 
-/** Puts the current filters into the search box, zone and time pickers. */
+/** Puts the current filters into the search box, zone, time and the type's choice controls. */
 function syncControls() {
   $('#search').value = filters.q || '';
   if ($('#zone')) $('#zone').value = filters.zone || 'all';
-  $('#time').value = filters.time || 'any';
+  if ($('#time')) $('#time').value = filters.time || 'any';
+  for (const el of document.querySelectorAll('[data-choice]')) el.value = filters[el.dataset.choice] ?? choiceDefault(el.dataset.choice);
 }
 
 /* ---------------- Location (stays on this device) ---------------- */
@@ -348,11 +354,15 @@ function bind() {
     zone.addEventListener('change', () => { highlightZone(zone.value, { fit: false }); setFilters({ zone: zone.value }); });
   }
   const time = $('#time');
-  time.addEventListener('change', () => setFilters({ time: time.value }));
+  if (time) time.addEventListener('change', () => setFilters({ time: time.value }));
+  for (const el of document.querySelectorAll('[data-choice]')) {
+    el.addEventListener('change', () => setFilters({ [el.dataset.choice]: el.value || choiceDefault(el.dataset.choice) }));
+  }
   $('#btnReset').addEventListener('click', () => {
     filters = { ...DEFAULT_FILTERS };
     store.set({ filters });
-    search.value = ''; if (zone) zone.value = 'all'; time.value = 'any';
+    search.value = ''; if (zone) zone.value = 'all'; if (time) time.value = 'any';
+    syncControls();
     highlightZone('all', { fit: false });
     render();
     fitToResults(); // no filters: the whole neighborhood (also where there are no phases)
@@ -362,7 +372,7 @@ function bind() {
   $('#btnZoomOut').addEventListener('click', () => map && map.zoomOut());
   $('#btnLocate').addEventListener('click', locate);
   // Filters behind the "Filters" button start open when one of them is on.
-  if (T.filters.some((f) => !f.quick && filters[f.key]) || filters.time !== 'any') {
+  if (T.filters.some((f) => !f.quick && filters[f.key]) || filters.time !== 'any' || (T.choices || []).some((c) => filters[c.key] !== c.default)) {
     $('#moreFilters').classList.add('open');
     more.setAttribute('aria-expanded', 'true');
   }

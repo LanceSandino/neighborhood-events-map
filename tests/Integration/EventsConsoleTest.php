@@ -25,12 +25,14 @@ final class EventsConsoleTest extends AppTestCase
         $home = $this->listHome('11', 'alice@example.test', self::listing(['nonfood' => true, 'note' => 'Last year: full-size bars']));
         $this->organizer();
         $list = $this->json('GET', '/api/admin/events');
-        self::assertSame([['key' => 'halloween', 'name' => 'Halloween', 'schedule_kind' => 'single_day', 'max_days' => 1, 'route_profiles' => ['walking']]], $list['types']);
+        self::assertSame([['key' => 'halloween', 'name' => 'Halloween', 'schedule_kind' => 'single_day', 'max_days' => 1, 'route_profiles' => ['walking']],
+            ['key' => 'holiday_lights', 'name' => 'Christmas Lights', 'schedule_kind' => 'nightly_range', 'max_days' => 62, 'route_profiles' => ['walking', 'driving']]], array_map(
+                static fn (array $t) => array_intersect_key($t, array_flip(['key', 'name', 'schedule_kind', 'max_days', 'route_profiles'])), $list['types']));
         [$current] = $list['events'];
         self::assertSame(['active', 1, 1, true], [$current['state'], $current['opted_in'], $current['public'], $current['type_offered']]);
         self::assertSame($current['id'], $list['active_id']);
 
-        $bad = $this->json('POST', '/api/admin/events', ['type' => 'holiday_lights', 'starts_on' => '2027-12-01'], $this->h());
+        $bad = $this->json('POST', '/api/admin/events', ['type' => 'garage_sale', 'starts_on' => '2027-05-01'], $this->h());
         self::assertSame(422, $this->code(), 'only types this version offers');
         self::assertArrayHasKey('type', $bad['error']['fields']);
         $bad = $this->json('POST', '/api/admin/events', ['type' => 'halloween', 'starts_on' => '2027-10-31', 'default_start' => '21:00', 'default_end' => '18:00', 'colour' => 'x', 'settings' => ['rules' => [str_repeat('r', 161)], 'max_days' => 2]], $this->h());

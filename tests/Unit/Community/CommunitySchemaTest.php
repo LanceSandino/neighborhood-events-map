@@ -164,13 +164,21 @@ final class CommunitySchemaTest extends TestCase
         foreach (['config/community.example.yaml', 'examples/demo/community.yaml', 'examples/ventura-reserve/community.yaml'] as $file) {
             self::assertSame('halloween', $schema->normalize(Yaml::parseFile(self::root().'/'.$file))['event']['type'], $file);
         }
-        foreach (['christmas' => 'is not a known event type', 'holiday_lights' => 'is not available in this version', 'garage_sale' => 'is not available in this version', 'HALLOWEEN' => 'is not a known event type'] as $type => $why) {
+        foreach (['christmas' => 'is not a known event type', 'garage_sale' => 'is not available in this version', 'HALLOWEEN' => 'is not a known event type'] as $type => $why) {
             try {
                 $schema->normalize(array_replace_recursive($base, ['event' => ['type' => $type]]));
                 self::fail("expected ConfigException for $type");
             } catch (ConfigException $e) {
-                self::assertSame([sprintf('event.type "%s" %s', $type, $why).('is not a known event type' === $why ? ' (halloween, holiday_lights, garage_sale).' : '; choose halloween.')], $e->errors);
+                self::assertSame([sprintf('event.type "%s" %s', $type, $why).('is not a known event type' === $why ? ' (halloween, holiday_lights, garage_sale).' : '; choose halloween or holiday_lights.')], $e->errors);
             }
         }
+        // 0.12 offers Christmas lights: its defaults, a date range and none of Halloween's switches.
+        $lights = $schema->normalize(['community' => ['id' => 'x1', 'name' => 'X'], 'event' => ['type' => 'holiday_lights', 'date' => '2026-12-01', 'ends_on' => '2027-01-03']]);
+        self::assertSame(['Christmas Lights', 'Holiday nights.', 'Bright lights.', '#38597F', '#CE9D3D', '2026-12-01', '2027-01-03'],
+            [$lights['event']['name'], $lights['branding']['headline'], $lights['branding']['headline_accent'], $lights['branding']['primary_color'], $lights['branding']['accent_color'],
+                $lights['event']['starts_on'], $lights['event']['ends_on']]);
+        self::assertSame(['optional_zones', 'walking_routes'], array_keys($lights['features']));
+        $demo = $schema->normalize(Yaml::parseFile(self::root().'/examples/demo-lights/community.yaml'));
+        self::assertSame(['holiday_lights', '2026-12-01', '2027-01-03', 'maple-hollow-lights-demo'], [$demo['event']['type'], $demo['event']['starts_on'], $demo['event']['ends_on'], $demo['community']['id']]);
     }
 }

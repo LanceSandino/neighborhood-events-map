@@ -39,6 +39,7 @@ export function initRegistration({ community }) {
   mode = C.registration.address_mode;
   const form = $('#registerForm');
   if (!form) return;
+  T.initForm(form, C.event); // e.g. the season's nights to pick from
   form.addEventListener('click', (e) => {
     const next = e.target.closest('[data-next]');
     if (next) { e.preventDefault(); goTo(Number(next.dataset.next)); }
@@ -185,11 +186,14 @@ function validateAddress() {
   return true;
 }
 
-/** The listing: the shared fields and the event type's details. */
+/** The listing: the shared fields, the event type's details and what else the type needs (e.g. its nights). */
 function details() {
+  const start = $('#regStart').value;
+  const end = $('#regEnd').value;
   return {
-    start: $('#regStart').value, end: $('#regEnd').value, status: $('#regStatus')?.value || 'active',
+    start, end, status: $('#regStatus')?.value || 'active',
     note: $('#regNote').value.trim(), details: T.formDetails($('#registerForm')),
+    ...T.formExtras($('#registerForm'), { start, end, event: C.event }),
   };
 }
 
@@ -199,6 +203,7 @@ function validateDetails() {
   let ok = true;
   if (d.end <= d.start) { setError(f, 'end', 'End time must be later than the start time.'); ok = false; }
   for (const [field, message] of Object.entries(T.validateDetails(d.details))) { setError(f, field, message); ok = false; }
+  if (Array.isArray(d.windows) && !d.windows.length) { setError(f, 'windows', T.copy.noDays); ok = false; }
   if (d.note.length > 400) { setError(f, 'note', 'Keep the note to 400 characters.'); ok = false; }
   return ok;
 }
@@ -254,7 +259,7 @@ function initPinMap() {
   if (pinMap || !window.L || !$('#pinMap')) return;
   pinMap = L.map('pinMap', { scrollWheelZoom: false, zoomSnap: 0.25 });
   L.tileLayer(C.map.tiles.url, { maxZoom: C.map.tiles.max_zoom, attribution: esc(C.map.tiles.attribution), referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(pinMap);
-  if (C.map.boundary) L.geoJSON(C.map.boundary, { style: { color: '#f07936', weight: 2, fillOpacity: 0.04 }, interactive: false }).addTo(pinMap);
+  if (C.map.boundary) L.geoJSON(C.map.boundary, { style: { color: T.mapColor || '#f07936', weight: 2, fillOpacity: 0.04 }, interactive: false }).addTo(pinMap);
   const b = C.map.bbox;
   const fit = () => {
     pinMap.invalidateSize();

@@ -7,6 +7,7 @@ namespace App\Command;
 use App\Address\AddressNormalizer;
 use App\Address\AddressRegistry;
 use App\Community\CommunityRepository;
+use App\Event\EventOccurrence;
 use App\Event\EventTypeRegistry;
 use App\Listing\ListingDraft;
 use App\Listing\ListingRepository;
@@ -22,13 +23,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * @module Command/DemoSeedCommand
- * @description Loads the FICTIONAL demo homes (examples/demo/homes.json). Refuses unless APP_DEMO=1
- *     and the configured community is the demo, so production can never show invented homes. Each home's
+ * @description Loads the FICTIONAL demo homes (homes.json next to the bootstrapped demo: examples/demo or
+ *     examples/demo-lights). Refuses unless APP_DEMO=1 and the configured community is the demo, so production can
+ *     never show invented homes. A home's nights ("all", dates or a range) become its windows and a fictional
+ *     "off tonight" may name its night (status_date), so the demo never depends on the day it is seeded. Each home's
  *     listing fields (everything but its address and position) go through ListingDraft and are listed for the
  *     active event. When the demo homes exist, those not listed for the active event (a new one an organizer started
  *     on the demo stack) are listed for it again, from the file, never from an earlier event.
  *
- * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Security/UserRepository
+ * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Event/EventOccurrence, Security/UserRepository
  */
 #[AsCommand('app:demo:seed', 'Load fictional demo homes (APP_DEMO=1 only)')]
 final class DemoSeedCommand extends Command
@@ -49,7 +52,37 @@ final class DemoSeedCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('file', InputArgument::OPTIONAL, 'Demo homes JSON', 'examples/demo/homes.json');
+        $this->addArgument('file', InputArgument::OPTIONAL, 'Demo homes JSON (default: homes.json next to COMMUNITY_BOOTSTRAP_FILE, else examples/demo/homes.json)');
+    }
+
+    /** The demo the stack was bootstrapped with brings its own homes (examples/demo-lights/homes.json for the lights demo). */
+    private static function defaultFile(): string
+    {
+        $bootstrap = (string) (getenv('COMMUNITY_BOOTSTRAP_FILE') ?: '');
+        $beside = '' === $bootstrap ? '' : \dirname($bootstrap).'/homes.json';
+
+        return '' !== $beside && is_file($beside) ? $beside : 'examples/demo/homes.json';
+    }
+
+    /**
+     * A demo home's listing input: its fields without the address, its nights ("all", a list of dates, or
+     * {from, to}) turned into windows with its hours for a type with several days.
+     *
+     * @param array<string,mixed> $h
+     *
+     * @return array<string,mixed>
+     */
+    private static function listingInput(array $h, EventOccurrence $event): array
+    {
+        $in = array_diff_key($h, array_flip(['house_number', 'street', 'unit', 'lat', 'lon', 'nights', 'status_date']));
+        if (isset($h['nights'])) {
+            $all = $event->dates();
+            $n = $h['nights'];
+            $dates = 'all' === $n ? $all : (\is_array($n) && isset($n['from'], $n['to']) ? array_values(array_filter($all, static fn (string $d) => $d >= $n['from'] && $d <= $n['to'])) : (array) $n);
+            $in['windows'] = array_map(static fn ($d) => ['date' => (string) $d, 'start' => (string) ($h['start'] ?? $event->defaultStart), 'end' => (string) ($h['end'] ?? $event->defaultEnd)], $dates);
+        }
+
+        return $in;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -60,7 +93,7 @@ final class DemoSeedCommand extends Command
 
             return Command::FAILURE;
         }
-        $doc = json_decode((string) file_get_contents((string) $input->getArgument('file')), true, 16, \JSON_THROW_ON_ERROR);
+        $doc = json_decode((string) file_get_contents((string) ($input->getArgument('file') ?? self::defaultFile())), true, 16, \JSON_THROW_ON_ERROR);
         if (true !== ($doc['fictional'] ?? null)) {
             $output->writeln('<error>Demo file must declare "fictional": true.</error>');
 
@@ -89,8 +122,13 @@ final class DemoSeedCommand extends Command
                 $this->db->executeStatement('INSERT INTO claims (address_id, user_id, claimed_at, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING',
                     [$id, $user->id, $this->clock->now()->format('Y-m-d H:i:s.uP'), $this->clock->now()->format('Y-m-d H:i:s.uP')]);
             }
-            $draft = ListingDraft::fromInput(array_diff_key($h, array_flip(['house_number', 'street', 'unit', 'lat', 'lon'])), $c, false, null, $this->types);
-            $this->listings->insert($this->db, $event, $id, $draft, ListingDraft::windowsFor($draft, $event, $type), ListingDraft::statusDate($draft, $type, $c, $this->clock->now()));
+            $draft = ListingDraft::fromInput(self::listingInput($h, $event), $c, false, null, $this->types);
+            // A fictional "off tonight" names its own night, so the demo looks the same whenever it is seeded.
+            $statusDate = ListingDraft::statusDate($draft, $type, $c, $this->clock->now());
+            if (null !== $statusDate && \is_string($h['status_date'] ?? null) && $event->contains($h['status_date'])) {
+                $statusDate = $h['status_date'];
+            }
+            $this->listings->insert($this->db, $event, $id, $draft, ListingDraft::windowsFor($draft, $event, $type), $statusDate);
             ++$n;
         }
         $output->writeln($relist && 0 === $n ? 'Demo homes already present; nothing to do.'
