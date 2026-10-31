@@ -68,6 +68,11 @@ test('an organizer switches the map to the next event; last season disappears an
   expect(draft).toBeTruthy();
   const row = page.locator(`tr[data-event="${draft.id}"]`);
   await expect(row).toContainText('Draft');
+  // The draft's "Put on the map" is a primary button the organizer can read (its words were white on white).
+  const put = row.getByRole('button', { name: 'Put on the map' });
+  const [fg, bg] = await put.evaluate((b) => [getComputedStyle(b).color, getComputedStyle(b).backgroundColor]);
+  expect(fg, 'text and background differ').not.toBe(bg);
+  expect(bg, 'the primary colour, not the plain surface').not.toBe('rgb(255, 255, 255)');
   // Organizer → Events with the event on the map and the prepared draft (docs/design/screenshots, README).
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: `${SHOTS}/admin-events-1440.png` });

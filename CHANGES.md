@@ -1331,4 +1331,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-types-p5"
   author: "Lance Sandino"
   timestamp: "2026-11-01T01:00:00Z"
+- id: CU-20261031-43
+  type: fix
+  title: "Organizer → Events: the draft's \"Put on the map\" button was white on white"
+  description: "admin.css's .row-actions button (0,1,1) set the plain surface background over .primary (0,1,0) but left .primary's white text, so the main action of a draft row was a blank box (seen in the refreshed screenshot admin-events-1440.png; present since 0.11). .row-actions button.primary keeps the primary colours."
+  impact: low
+  affected_modules: ["public/assets/css/admin.css"]
+  related_tests: ["tests/e2e/specs/season.spec.mjs: an organizer switches the map to the next event; last season disappears and residents list again from an empty form (the new legibility check failed before the change: text and background both rgb(255, 255, 255))"]
+  commit_ref: "feature/event-types-p5"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T01:10:00Z"
 ```

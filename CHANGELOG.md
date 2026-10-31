@@ -21,6 +21,7 @@ The finishing release of the event-types work. Update by pulling `0.14.0-beta.1`
 - The accessibility statement, the terms of use and the address example in "List your home" use the words of the event on the map (for example the lights' and the sale's own pin icons and labels) instead of Halloween's; between events they stay general. Halloween's pages read exactly as before. The organizer console's address example and the address error message use a neutral "123 Main St".
 
 ### Fixed
+- In Organizer → Events, a draft's "Put on the map" button shows its words again (they were white on white).
 - With "Larger text" on a phone 380 to 440 pixels wide, the list's cards take one column instead of pushing the page sideways (also on Halloween maps).
 - Cards in the list show a home's note itself and no longer also a "📝 Note" tag, which often sat alone on an extra row; the 📝 marker stays in the compact list, as intended (also on Halloween maps). On Christmas lights and sale maps the tags have a little space between icon and words.
 - Keyboard use, for every kind of event: a map pin reached with Tab opens its home with Enter or Space (it did nothing before); in "List your home", the pin for a new address can be placed without a mouse (arrow keys move the map, Enter drops the pin at its centre, marked with a +); in My house, the keyboard stays on the button or field you used after a change is saved instead of jumping back to the top of the page.
