@@ -9,16 +9,18 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 /**
  * @module About/ChangelogReader
  * @description Reads the latest releases from CHANGELOG.md (Keep a Changelog format) for the public
- *     "What's new" dialog and page. Markdown is reduced to plain text (links keep their label); Twig
- *     escapes the result. The "Unreleased" section is never shown.
+ *     "What's new" dialog and page: each release's plain summary paragraph (the text between its heading and its first
+ *     section, for residents and organizers) and its sections. Markdown is reduced to plain text (links keep their
+ *     label); Twig escapes the result. The "Unreleased" section is never shown. Notes for whoever runs the site live in
+ *     docs/runbooks/upgrade-rollback.md and CHANGES.md, never here.
  *
  * @input path to CHANGELOG.md
- * @output list<array{version:string, date:?string, sections:list<array{title:string, items:list<string>}>}>
+ * @output list<array{version:string, date:?string, summary:string, sections:list<array{title:string, items:list<string>}>}>
  * @dependencies none
  */
 final class ChangelogReader
 {
-    /** @var array<string, list<array{version:string, date:?string, sections:list<array{title:string, items:list<string>}>}>> */
+    /** @var array<string, list<array{version:string, date:?string, summary:string, sections:list<array{title:string, items:list<string>}>}>> */
     private array $memo = [];
 
     public function __construct(
@@ -27,7 +29,7 @@ final class ChangelogReader
     ) {
     }
 
-    /** @return list<array{version:string, date:?string, sections:list<array{title:string, items:list<string>}>}> */
+    /** @return list<array{version:string, date:?string, summary:string, sections:list<array{title:string, items:list<string>}>}> */
     public function latest(int $limit = 3): array
     {
         if (!is_file($this->file)) {
@@ -39,7 +41,7 @@ final class ChangelogReader
         return \array_slice($this->memo[$key], 0, max(1, $limit));
     }
 
-    /** @return list<array{version:string, date:?string, sections:list<array{title:string, items:list<string>}>}> */
+    /** @return list<array{version:string, date:?string, summary:string, sections:list<array{title:string, items:list<string>}>}> */
     public static function parse(string $markdown): array
     {
         $releases = [];
@@ -49,11 +51,19 @@ final class ChangelogReader
             }
             $sections = self::sections($block);
             if ('Unreleased' !== $h[1]) { // visitors only see released versions
-                $releases[] = ['version' => $h[1], 'date' => $h[2] ?? null, 'sections' => $sections];
+                $releases[] = ['version' => $h[1], 'date' => $h[2] ?? null, 'summary' => self::summary($block), 'sections' => $sections];
             }
         }
 
         return $releases;
+    }
+
+    /** The plain paragraph between a release's heading and its first section ('' when there is none). */
+    private static function summary(string $release): string
+    {
+        $lines = \array_slice(preg_split('~\R~', preg_split('~^###\s~m', $release)[0] ?? '') ?: [], 1);
+
+        return self::plain(implode(' ', array_filter(array_map('trim', $lines), static fn (string $l) => '' !== $l)));
     }
 
     /** @return list<array{title:string, items:list<string>}> */

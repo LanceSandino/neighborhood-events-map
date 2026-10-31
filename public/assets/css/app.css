@@ -453,6 +453,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .whats-new h2 { font-size: 22px; margin: 4px 0 4px; padding-right: 40px; }
 .release { border-top: 1px solid var(--border); padding: 10px 0; }
 .release summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.release-summary { margin: 8px 0 2px; font-size: 14px; line-height: 1.45; color: var(--text); }
 .release h3 { font-size: 12px; margin: 12px 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .release ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; color: var(--text-2); display: grid; gap: 5px; }
 .release-date { color: var(--muted); font-size: 12px; font-weight: 600; }

@@ -1441,4 +1441,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/multi-event"
   author: "Lance Sandino"
   timestamp: "2026-10-31T17:50:00Z"
+- id: CU-20261031-54
+  type: fix
+  title: "What's new shows plain notes for residents and organizers"
+  description: "The public What's new dialog (every page, three releases) and /changelog (six) rendered CHANGELOG sections that had grown operator and developer text (image-only rollback to 0.9, migrations, pixel sizes, API keys, Halloween's peach). Each release now opens with a plain summary paragraph (ChangelogReader parses the text between a release heading and its first section; templates/partials/_releases.html.twig shows it as .release-summary) and the sections 0.10.0-beta.1 to 0.15.0-beta.1 are rewritten in plain language (also without Halloween words such as treats, so the notes read right on every event's page). The upgrade facts moved to docs/runbooks/upgrade-rollback.md (Notes for each release), whose first step now points there; this file keeps the engineering records (D-20261031-50)."
+  impact: low
+  affected_modules: ["src/About/ChangelogReader.php", "templates/partials/_releases.html.twig", "public/assets/css/app.css", "CHANGELOG.md", "docs/runbooks/upgrade-rollback.md"]
+  related_tests: ["tests/Integration/WhatsNewTest.php: testWhatsNewShowsPlainNotesWithoutOperatorWords", "tests/Unit/About/ChangelogReaderTest.php: testEachReleaseMayOpenWithAPlainSummaryParagraph"]
+  commit_ref: "feature/event-branding"
+  author: "Lance Sandino"
+  timestamp: "2026-10-31T19:00:00Z"
 ```
