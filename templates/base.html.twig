@@ -38,8 +38,7 @@
   <link rel="stylesheet" href="{{ asset_path('css/app.css') }}">
   {%- include event_fragment(et.key, 'head') %}
 
-  {% block theme %}<link rel="stylesheet" href="/theme.css?v={{ app_version }}{{ q ? '&' ~ q|slice(1) }}">{% endblock %}
-</head>
+  {% block theme %}<link rel="stylesheet" href="/theme.css?v={{ app_version }}{{ q ? '&' ~ q|slice(1) }}">{% endblock %}{{ "\n" }}</head>
 <body class="{% block body_class %}{% endblock %}">
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="app">
