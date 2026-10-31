@@ -6,14 +6,15 @@ namespace App\Event;
 
 use App\Community\CommunityConfig;
 use App\Event\Type\HalloweenType;
+use App\Event\Type\HolidayLightsType;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
  * @module Event/EventTypeRegistry
  * @description The code-defined event types, by immutable key (D-20261031-01). Every implementation is a tagged
- *     service; ENABLED lists the keys organizers may choose in this version (only Halloween until the Christmas
- *     lights and garage sale types ship). A key is never renamed or reused: it is stored with the community's
- *     event (and, later, with every event and listing).
+ *     service; ENABLED lists the keys organizers may choose in this version (Halloween and, since 0.12, Christmas
+ *     lights; the garage sale type ships later). A key is never renamed or reused: it is stored with every event
+ *     and listing.
  *
  * @dependencies Event/EventType (tagged services), Community/CommunityConfig
  */
@@ -22,7 +23,7 @@ final class EventTypeRegistry
     /** Every key ever reserved for an event type. Immutable. */
     public const KEYS = ['halloween', 'holiday_lights', 'garage_sale'];
     /** Keys an organizer may choose in this version. */
-    public const ENABLED = ['halloween'];
+    public const ENABLED = ['halloween', 'holiday_lights'];
     /** The event type of a community whose settings name none (everything before event.type existed). */
     public const DEFAULT = 'halloween';
 
@@ -52,7 +53,7 @@ final class EventTypeRegistry
     /** The registry without a container (value objects, CLI defaults, unit tests): the same built-in types. */
     public static function builtIn(): self
     {
-        return new self([new HalloweenType()]);
+        return new self([new HalloweenType(), new HolidayLightsType()]);
     }
 
     /** @throws \InvalidArgumentException for a key without an implementation */

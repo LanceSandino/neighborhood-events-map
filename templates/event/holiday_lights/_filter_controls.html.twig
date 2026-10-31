@@ -1,0 +1,16 @@
+{# Christmas lights controls behind "Filters", after the toggles: one night of the season and a display style
+   (home.js binds every [data-choice] control; events/holiday_lights.js filters by them). Expects `c` and `et`. #}
+    <label class="time-filter"><span class="fi" aria-hidden="true">📅</span>{{ et.copy.night_label }}
+      <input type="date" id="night" data-choice="night" min="{{ c.event.starts_on }}" max="{{ c.event.ends_on }}" aria-describedby="nightHelp">
+    </label>
+    <label class="time-filter"><span class="fi" aria-hidden="true">✨</span>{{ et.copy.style_label }}
+      <select id="style" data-choice="style">
+        <option value="any">Any style</option>
+        <option value="classic">✨ Classic</option>
+        <option value="animated">🌟 Animated</option>
+        <option value="synchronized_music">🎵 Light show to music</option>
+        <option value="inflatables">⛄ Inflatables</option>
+        <option value="walkthrough">🎄 Walk-through</option>
+      </select>
+    </label>
+    <span class="visually-hidden" id="nightHelp">Shows the homes with lights on that night ({{ date_range(c.event.starts_on, c.event.ends_on) }}).</span>

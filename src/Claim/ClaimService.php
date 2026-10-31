@@ -56,6 +56,7 @@ final class ClaimService
         }
         // The request belongs to the event it was made for (claim intents last minutes; the event may change).
         $draft = ListingDraft::fromInput($listingInput, $community, false, null, $this->types) + ['event_id' => $community->event?->id];
+        $this->assertDays($draft, $community);
         $id = Uuid::v4()->toRfc4122();
         $now = $this->clock->now();
         $this->db->insert('claim_intents', [
@@ -133,8 +134,24 @@ final class ClaimService
     public function claimDirect(array $addressInput, array $listingInput, int $userId, CommunityConfig $community): ClaimOutcome
     {
         $draft = ListingDraft::fromInput($listingInput, $community, false, null, $this->types);
+        $this->assertDays($draft, $community);
 
         return $this->db->transactional(fn (Connection $db) => $this->claimInTransaction($db, $addressInput, $userId, $draft, $community, 'dashboard', false));
+    }
+
+    /**
+     * A listing's days are checked when it is asked for, not only when the emailed link is confirmed: a type with
+     * several days (Christmas lights) names its nights; a one-day listing always fits its event's day.
+     *
+     * @param array<string,mixed> $draft
+     *
+     * @throws \App\Shared\ValidationException
+     */
+    private function assertDays(array $draft, CommunityConfig $community): void
+    {
+        if (null !== $community->event) {
+            ListingDraft::windowsFor($draft, $community->event, $this->types->for($community));
+        }
     }
 
     /**

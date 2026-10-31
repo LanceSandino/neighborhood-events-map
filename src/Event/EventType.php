@@ -27,7 +27,11 @@ interface EventType
     /** The event name a new community gets ("Halloween"). */
     public function defaultName(): string;
 
-    /** @return array{subtitle:string, brand_emoji:string, headline:string, headline_accent:string, intro:string} */
+    /**
+     * Default branding; a type without its own colours uses the community defaults (Community/CommunitySchema).
+     *
+     * @return array{subtitle:string, brand_emoji:string, headline:string, headline_accent:string, intro:string, primary_color?:string, accent_color?:string}
+     */
     public function defaultBranding(): array;
 
     /**

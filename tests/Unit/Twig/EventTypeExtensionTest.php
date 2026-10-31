@@ -30,7 +30,7 @@ final class EventTypeExtensionTest extends TestCase
         self::assertSame($view, $x->eventType(null), 'no key means the default type');
         self::assertSame('event/halloween/_card_tags.html.twig', $x->fragment('halloween', 'card_tags'));
         $this->expectException(\InvalidArgumentException::class);
-        $x->fragment('holiday_lights', 'card_tags');
+        $x->fragment('garage_sale', 'card_tags');
     }
 
     public function testAFragmentOutsideTheTypesFolderIsRefused(): void

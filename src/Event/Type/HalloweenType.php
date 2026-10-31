@@ -200,7 +200,8 @@ final class HalloweenType implements EventType
 
     public function fragments(): array
     {
-        $names = ['hero_art', 'card_symbol', 'card_tags', 'confirm_tags', 'form_fields', 'manage_half', 'manage_full', 'listing_checks'];
+        $names = ['head', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_fields', 'manage_half', 'manage_full',
+            'listing_checks', 'route_rules'];
 
         return array_combine($names, array_map(static fn (string $n) => 'event/'.self::KEY.'/_'.$n.'.html.twig', $names));
     }

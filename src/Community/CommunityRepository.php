@@ -23,12 +23,12 @@ use Psr\Clock\ClockInterface;
  *     creates a new version, resets approval and recomputes address boundary membership. The settings' `event`
  *     block is a view of the active event occurrence: loading puts the occurrence's values there, saving writes
  *     them to the occurrence first (Event/OccurrenceSettingsSync), and the stored block mirrors it for the
- *     previous release.
+ *     previous release. Branding still at a type's built-in default follows the event's type (Community/TypeDefaults).
  *
  * @input DBAL connection, clock, parser, schema
  * @output CommunityConfig snapshots, export documents, change summaries
- * @dependencies Community/CommunitySchema, Community/CommunityConfig, Geo/*, Event/EventTypeRegistry, Event/EventOccurrenceRepository,
- *     Event/OccurrenceSettingsSync
+ * @dependencies Community/CommunitySchema, Community/CommunityConfig, Community/TypeDefaults, Geo/*, Event/EventTypeRegistry,
+ *     Event/EventOccurrenceRepository, Event/OccurrenceSettingsSync
  */
 final class CommunityRepository
 {
@@ -298,6 +298,8 @@ final class CommunityRepository
             // between events uses the default type's words; nothing is listed.
             $settings['event']['type'] = EventTypeRegistry::DEFAULT;
         }
+        // Branding still at a built-in default follows the event's type (Community/TypeDefaults).
+        $settings = TypeDefaults::apply($settings, $this->types->get((string) $settings['event']['type']), $this->types);
 
         return new CommunityConfig($settings, $boundary, $approved, $version, $zones, true, $event);
     }

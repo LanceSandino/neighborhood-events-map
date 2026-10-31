@@ -64,8 +64,9 @@ function homeCard(home, ev) {
   // A home without a listing for this event lists from an empty form: nothing comes from an earlier event.
   timeOptions(form.start, ...T.hours.start, l ? l.start : ev.start);
   timeOptions(form.end, ...T.hours.end, l ? l.end : ev.end);
+  T.initForm(form, ev); // e.g. the season's nights to pick from
   if (l) {
-    T.fillForm(form, l.details);
+    T.fillForm(form, l.details, l, ev);
     form.published.value = String(l.published);
     form.note.value = l.note;
   } else {
@@ -105,9 +106,14 @@ function homeCard(home, ev) {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     // Options the organizer turned off are not offered; they read as off.
-    const body = { start: form.start.value, end: form.end.value, published: form.published.value === 'true', note: form.note.value, details: T.formDetails(form) };
-    if (l) { patch(body, 'Saved. The public map updates right away.'); return; }
-    const errors = T.validateDetails(body.details);
+    const body = { start: form.start.value, end: form.end.value, published: form.published.value === 'true', note: form.note.value, details: T.formDetails(form),
+      ...T.formExtras(form, { start: form.start.value, end: form.end.value, event: ev }) };
+    const errors = { ...T.validateDetails(body.details), ...(Array.isArray(body.windows) && !body.windows.length ? { windows: T.copy.noDays } : {}) };
+    if (l) {
+      if (body.windows && Object.keys(errors).length) { showError(new Error(Object.values(errors).join(' '))); return; }
+      patch(body, 'Saved. The public map updates right away.');
+      return;
+    }
     if (Object.keys(errors).length) { showError(new Error(Object.values(errors).join(' '))); return; }
     send('POST', `/api/me/homes/${home.id}/listing`, body, `Listed for ${ev.name}. ${T.copy.published}`);
   });

@@ -18,6 +18,7 @@
   </div>
   <div class="hero-illustration" aria-hidden="true">{% include event_fragment(c.event.type, 'hero_art') %}</div>
 </section>
+{%- include event_fragment(c.event.type, 'schedule_row') %}
 
 <section id="explore" aria-label="{{ et.copy.explore_label }}">
   <div class="controls">
@@ -47,13 +48,7 @@
     {% for f in et.filters|filter(f => not f.quick and (f.feature is null or (c.features[f.feature] ?? false))) %}
     <button type="button" class="mini-filter" data-filter="{{ f.key }}" aria-pressed="false"{% if f.title is defined %} title="{{ f.title }}"{% endif %}><span class="fi{% if f.icon_class is defined %} {{ f.icon_class }}{% endif %}" aria-hidden="true">{{ f.icon }}</span>{{ f.label }}</button>
     {% endfor %}
-    <label class="time-filter"><span class="fi" aria-hidden="true">🕐</span>Visit at
-      <select id="time">
-        <option value="any">Any time</option>
-        <option value="now">Open now</option>
-        {% for h in range(et.hours.visit[0], et.hours.visit[1]) %}<option value="{{ '%02d'|format(h) }}:00">{{ ('%02d:00'|format(h))|time12 }}</option>{% endfor %}
-      </select>
-    </label>
+    {% include event_fragment(c.event.type, 'filter_controls') %}
     <button type="button" class="link-button hide" id="btnReset">Reset filters</button>
   </div>
   <div class="workarea">

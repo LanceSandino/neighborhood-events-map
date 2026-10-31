@@ -105,7 +105,8 @@
     <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
     {% set access = access_info(c.community.access ?? null, et.copy) %}
     <div class="guide-facts">
-      <div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>
+      {% if (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own nights and hours</p></div></div>
+      {%- else %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>{% endif %}
       <div class="about-fact"><span aria-hidden="true">{{ access ? access.icon : '🚪' }}</span><div><b>{{ access ? access.title : 'Gates and private areas' }}</b><p>{{ c.community.gate_notice ?: (access ? access.text : 'This site does not grant access to gated areas.') }}</p></div></div>
       {% if c.map.crossing_notes %}<div class="about-fact"><span aria-hidden="true">🚸</span><div><b>Getting around</b>{% for note in c.map.crossing_notes %}<p>{{ note }}</p>{% endfor %}</div></div>{% endif %}
     </div>

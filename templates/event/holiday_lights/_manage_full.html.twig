@@ -1,0 +1,3 @@
+{# Christmas lights full-width fields of "My house" (before the note): the nights and the listing details. Expects `c`. #}
+{% include 'event/holiday_lights/_nights.html.twig' with {c: c} only %}
+      {% include event_fragment(c.event.type, 'listing_checks') with {et: event_type(c.event.type)} only %}

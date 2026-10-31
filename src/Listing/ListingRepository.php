@@ -18,7 +18,8 @@ use Psr\Clock\ClockInterface;
  *     used by the family map. Public queries return only the ACTIVE occurrence's opted-in, unmoderated, in-boundary
  *     listings and never select owner/user columns; drafts and archived events are never public. A public home keeps
  *     the 0.9 keys (the Halloween details flat) and adds event_id, event_type, details (the type's strict
- *     projection), windows and display_status (D-20261031-09). Every write is mirrored to the legacy `listings` row
+ *     projection), windows and display_status (D-20261031-09); a type with day-scoped statuses also names status_date
+ *     (D-20261031-17). Every write is mirrored to the legacy `listings` row
  *     while the bridge applies (Listing/LegacyListingBridge). Resident-scoped reads and writes live in ResidentHomes.
  *
  * @dependencies DBAL, clock, Community/CommunityConfig, Event/*, Listing/LegacyListingBridge
@@ -186,6 +187,10 @@ final class ListingRepository
         $when = ScheduleWindows::currentOrNext($windows, $today) ?? ['start' => $event->defaultStart, 'end' => $event->defaultEnd];
         $rules = $type->displayRules();
         $statusDate = isset($r['status_date']) ? (string) $r['status_date'] : null;
+        // A day-scoped status (lights "off tonight") is named with its date while that date is today or later, so a
+        // browser derives the right status on its own clock; once the day is over it reads "active", no date shown.
+        $scoped = array_filter($rules['statuses'], static fn (array $s) => $s['day_scoped']);
+        $current = isset($scoped[(string) $r['status']]) && null !== $statusDate && $statusDate >= $today;
 
         return [
             'id' => (int) $r['id'],
@@ -197,14 +202,14 @@ final class ListingRepository
             'end' => $when['end'],
         ] + $type->legacyFields($details) + [
             'note' => (string) $r['note'],
-            'status' => DisplayStatus::effective($rules, (string) $r['status'], $statusDate, $today),
+            'status' => $current ? (string) $r['status'] : DisplayStatus::effective($rules, (string) $r['status'], $statusDate, $today),
             'updated_at' => (new \DateTimeImmutable((string) $r['updated_at']))->format(\DATE_ATOM),
             'event_id' => $event->id,
             'event_type' => $type->key(),
             'details' => $details,
             'windows' => $windows,
             'display_status' => DisplayStatus::derive($rules, (string) $r['status'], $statusDate, $windows, $now, $tz),
-        ];
+        ] + ([] === $scoped ? [] : ['status_date' => $current ? $statusDate : null]);
     }
 
     /**

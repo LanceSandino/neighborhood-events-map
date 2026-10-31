@@ -3,7 +3,8 @@
  * @description Organizer → Events: the current event and every earlier or prepared one with how many homes opted in
  *     and how many the map shows; prepare a draft (types this version offers), edit, preview a draft, switch the map
  *     to a draft (the current event is archived; nothing carries over), end the current event, export one event's
- *     listings (CSRF-checked form POST) and delete an archived event's listings. The server checks everything.
+ *     listings (CSRF-checked form POST) and delete an archived event's listings. A type with settings of its own adds
+ *     them (Christmas lights: best night, quiet hours, the drive-by tour). The server checks everything.
  * @dependencies admin/common.js, lib/api.js
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
@@ -15,6 +16,8 @@ let editing = null; // the event whose form is open (null: a new draft)
 const STATE = { draft: 'Draft', active: 'On the map now', archived: 'Archived' };
 const typeOf = (key) => data.types.find((t) => t.key === key);
 const oneDay = (key) => (typeOf(key) || {}).schedule_kind === 'single_day';
+const drives = (key) => ((typeOf(key) || {}).route_profiles || []).includes('driving');
+const hasSetting = (key, name) => ((typeOf(key) || {}).settings || []).includes(name);
 const dates = (e) => (e.starts_on === e.ends_on ? e.starts_on : `${e.starts_on} – ${e.ends_on}`);
 
 function form(e) {
@@ -30,8 +33,19 @@ function form(e) {
     <div class="field"><label for="evTo">until</label><input id="evTo" type="time" value="${esc(e ? e.default_end : '21:00')}"></div>
     <div class="field full"><label for="evRules">Event rules (one per line, up to 8)</label><textarea id="evRules" maxlength="1400">${esc(rules)}</textarea>
       <span class="form-caption">Plain text, for example parking or quiet hours. Shown with the event.</span></div>
+    <div class="field full">${typeFields(type, e)}</div>
     <div class="field full"><div class="modal-actions"><button type="button" class="secondary" id="evCancel">Cancel</button><button type="submit" class="primary">${e ? 'Save event' : 'Save draft'}</button></div></div>
   </form>`;
+}
+
+/** Settings only some types have: the best night and quiet hours (lights), the drive-by tour (types that allow driving). */
+function typeFields(type, e) {
+  const s = (e && e.settings) || {};
+  const out = [];
+  if (hasSetting(type, 'best_night')) out.push(`<div class="field type-field"><label for="evBest">Best night for a neighborhood walk (optional)</label><input id="evBest" type="date" value="${esc(s.best_night || '')}"></div>`);
+  if (hasSetting(type, 'quiet_hours')) out.push(`<div class="field type-field"><label for="evQuiet">Quiet hours (optional)</label><input id="evQuiet" maxlength="120" value="${esc(s.quiet_hours || '')}" placeholder="e.g. Please keep it quiet after 10 PM"></div>`);
+  if (drives(type)) out.push(`<div class="field full type-field"><label class="check-chip"><input type="checkbox" id="evDriving" ${(s.route_modes || []).includes('driving') ? 'checked' : ''}> Offer a drive-by tour</label><span class="form-caption">Driving directions appear only when a routing provider is configured; otherwise visitors get an ordered list of stops.</span></div>`);
+  return `<div class="form-grid" id="evTypeFields">${out.join('')}</div>`;
 }
 
 function row(e) {
@@ -65,6 +79,9 @@ function readForm() {
   const body = { name: $('#evName').value, starts_on: $('#evStart').value, ends_on: oneDay(type) ? $('#evStart').value : ($('#evEnd').value || $('#evStart').value),
     default_start: $('#evFrom').value, default_end: $('#evTo').value,
     settings: { rules: $('#evRules').value.split('\n').map((l) => l.trim()).filter(Boolean) } };
+  if ($('#evBest')) body.settings.best_night = $('#evBest').value || null;
+  if ($('#evQuiet')) body.settings.quiet_hours = $('#evQuiet').value.trim();
+  if ($('#evDriving')) body.settings.route_modes = $('#evDriving').checked ? ['walking', 'driving'] : ['walking'];
   if (!editing) body.type = type;
   return body;
 }
@@ -107,7 +124,12 @@ function bind() {
 function bindForm() {
   const f = $('#eventForm');
   if (!f) return;
-  $('#evType').addEventListener('change', () => $('#evEndField').classList.toggle('hide', oneDay($('#evType').value)));
+  $('#evType').addEventListener('change', () => {
+    const type = $('#evType').value;
+    $('#evEndField').classList.toggle('hide', oneDay(type));
+    $('#evStart').previousElementSibling.textContent = oneDay(type) ? 'Date *' : 'First day *';
+    $('#evTypeFields').outerHTML = typeFields(type, null);
+  });
   $('#evCancel').addEventListener('click', () => { editing = false; render(); });
   f.addEventListener('submit', async (ev) => {
     ev.preventDefault();

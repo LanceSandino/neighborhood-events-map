@@ -1,0 +1,7 @@
+{# Christmas lights rules next to the route: the organizer's event rules and quiet hours, then the first viewing
+   etiquette lines; the full list is on the About page. Expects `c` and `et`. #}
+<div class="notice route-rules">
+  <b>{{ et.copy.route_rules_title }}</b>
+  <ul>{% for r in c.event.rules ?? [] %}<li>{{ r }}</li>{% endfor %}{% if c.event.quiet_hours ?? '' %}<li>🌙 {{ c.event.quiet_hours }}</li>{% endif %}{% for r in c.community.reminders|slice(0, 3) %}<li>{{ r }}</li>{% endfor %}</ul>
+  <a href="/about">All viewing etiquette</a>
+</div>

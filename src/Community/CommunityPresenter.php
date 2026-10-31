@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventSettingsType;
 use App\Event\EventType;
 use App\Event\EventTypeRegistry;
 use App\Routing\RoutingProviderInterface;
@@ -15,8 +16,11 @@ use App\Shared\RuntimeConfig;
  *     registration state, stats). Never includes addresses, emails, admin identity or session data.
  *     The boundary outline is published only after organizer approval. The event is the active occurrence (its
  *     id, type, dates, hours, filters and words); the type supplies the default reminders and its own stats counts.
+ *     A type with settings of its own adds their public part (the lights' best night and quiet hours) and, when it
+ *     allows driving, the route modes visitors can use; Halloween's event keeps exactly its keys.
  *
- * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Routing/RoutingProviderInterface, Shared/RuntimeConfig
+ * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Event/EventSettingsType, Routing/RoutingProviderInterface,
+ *     Shared/RuntimeConfig
  */
 final class CommunityPresenter
 {
@@ -117,6 +121,21 @@ final class CommunityPresenter
             'copy' => null === $o ? (object) [] : array_filter($type->copy(), static fn ($v, string $k) => \is_string($v) && !str_starts_with($k, 'admin_'), \ARRAY_FILTER_USE_BOTH),
             'rules' => null === $o ? [] : array_values(array_filter((array) ($o->settings['rules'] ?? []), 'is_string')),
             'timezone' => $c->settings['community']['timezone'],
-        ];
+        ] + (null !== $o && $type instanceof EventSettingsType ? $type->publicSettings($o->settings) : [])
+          + (null !== $o && [] !== array_diff($type->routeProfiles(), ['walking']) ? ['route_modes' => $this->routeModes($c, $type)] : []);
+    }
+
+    /**
+     * The route profiles visitors can use for the active event: walking, plus driving when the type allows it, the
+     * event's settings enable it and a provider is configured (Routing/RoutePlanner checks the same).
+     *
+     * @return list<string>
+     */
+    private function routeModes(CommunityConfig $c, EventType $type): array
+    {
+        $driving = \in_array('driving', $type->routeProfiles(), true) && \in_array('driving', (array) ($c->event->settings['route_modes'] ?? []), true)
+            && $c->settings['routing']['provider_enabled'] && $this->routing->available();
+
+        return $driving ? ['walking', 'driving'] : ['walking'];
     }
 }

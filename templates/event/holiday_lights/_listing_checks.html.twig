@@ -1,0 +1,35 @@
+{# Christmas lights listing details for "List my house" and "My house" (events/holiday_lights.js reads them by name):
+   display styles, how visitors may view the display, music and its FM station, the flashing warning, treats and
+   cocoa. The words mirror the map's filters and tags. Groups are fieldsets (no ids: My house repeats the form per
+   home). Expects `et`. #}
+<fieldset class="field full">
+  <legend class="label">Display styles *</legend>
+  <div class="checks">
+    <label class="check-chip"><input type="checkbox" name="styles" value="classic"> ✨ Classic</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="animated"> 🌟 Animated</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="synchronized_music"> 🎵 Light show to music</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="inflatables"> ⛄ Inflatables</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="walkthrough"> 🎄 Walk-through</label>
+  </div>
+  <span class="error" data-error="styles"></span>
+</fieldset>
+<fieldset class="field full">
+  <legend class="label">How visitors may view it</legend>
+  <div class="checks">
+    <label class="check-chip"><input type="radio" name="viewing_mode" value="drive_by_only" checked> 🚗 Drive-by only</label>
+    <label class="check-chip"><input type="radio" name="viewing_mode" value="walk_up_welcome"> 🚶 Walk-up welcome</label>
+  </div>
+  <span class="form-caption">{{ et.copy.drive_by_help }}</span>
+  <span class="error" data-error="viewing_mode"></span>
+</fieldset>
+<fieldset class="field full">
+  <legend class="label">Music, flashing and treats</legend>
+  <div class="checks">
+    <label class="check-chip"><input type="checkbox" name="music_enabled"> 🎵 Music</label>
+    <label class="check-chip"><input type="checkbox" name="flashing_warning"> ⚡ Flashing or strobing effects</label>
+    <label class="check-chip"><input type="checkbox" name="treats"> 🍬 Treats</label>
+    <label class="check-chip"><input type="checkbox" name="cocoa"> ☕ Hot cocoa</label>
+  </div>
+  <span class="form-caption">{{ et.copy.flashing_help }}</span>
+</fieldset>
+<div class="field fm-field"><label>FM station (optional)<input name="fm_frequency" inputmode="decimal" maxlength="5" autocomplete="off" placeholder="e.g. 88.7"></label><span class="form-caption">Only with music: 87.5 to 108.0.</span><span class="error" data-error="fm_frequency"></span></div>

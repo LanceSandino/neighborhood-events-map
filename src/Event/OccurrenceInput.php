@@ -13,10 +13,11 @@ use App\Shared\ValidationException;
  * @description Validates what an organizer sends for an event (Organizer → Events): name, first and last day (a
  *     one-day type has one day; others span at most 62 days), default hours, and the settings every type shares —
  *     rules (up to 8 short plain-text lines, shown with the event), route_modes (walking, plus the type's other
- *     profiles) and, for a type with several days, max_days (the organizer's cap of days per listing). Unknown
- *     fields are refused. Type-specific settings come with the types that use them.
+ *     profiles) and, for a type with several days, max_days (the organizer's cap of days per listing). A type with
+ *     settings of its own (Event/EventSettingsType, e.g. the lights' best night) checks those against the event's
+ *     dates. Unknown fields are refused.
  *
- * @dependencies Event/EventType, Event/EventOccurrence, Community/EventBlockSchema, Shared/TextInput, Shared/ValidationException
+ * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Community/EventBlockSchema, Shared/TextInput, Shared/ValidationException
  */
 final class OccurrenceInput
 {
@@ -64,7 +65,10 @@ final class OccurrenceInput
         } elseif (null === $end || $end <= $start) {
             $e['default_end'] = 'The end must be a time after the start, on the same day.';
         }
-        $settings = \array_key_exists('settings', $in) ? self::settings($in['settings'], $type, $e) : ($current->settings ?? []);
+        $settings = \array_key_exists('settings', $in) ? self::settings($in['settings'], $type, $startsOn, $endsOn, $e) : ($current->settings ?? []);
+        if (!\array_key_exists('settings', $in) && $type instanceof EventSettingsType) {
+            self::recheck($settings, $type, $startsOn, $endsOn, $e); // the type's settings still fit the event's new dates
+        }
         if ([] !== $e) {
             throw new ValidationException($e);
         }
@@ -78,7 +82,7 @@ final class OccurrenceInput
      *
      * @return array<string,mixed>
      */
-    private static function settings(mixed $raw, EventType $type, array &$e): array
+    private static function settings(mixed $raw, EventType $type, string $startsOn, string $endsOn, array &$e): array
     {
         if (!\is_array($raw) || ([] !== $raw && array_is_list($raw))) {
             $e['settings'] = 'Send the settings as an object.';
@@ -86,8 +90,14 @@ final class OccurrenceInput
             return [];
         }
         $out = [];
+        $own = $type instanceof EventSettingsType ? $type->settingKeys() : [];
         foreach ($raw as $k => $v) {
-            match ((string) $k) {
+            $k = (string) $k;
+            if ($type instanceof EventSettingsType && \in_array($k, $own, true)) {
+                $out[$k] = self::own($type, $k, $v, $startsOn, $endsOn, $e);
+                continue;
+            }
+            match ($k) {
                 'rules' => $out['rules'] = self::rules($v, $e),
                 'route_modes' => $out['route_modes'] = self::routeModes($v, $type, $e),
                 'max_days' => $out['max_days'] = self::maxDays($v, $type, $e),
@@ -96,6 +106,30 @@ final class OccurrenceInput
         }
 
         return $out;
+    }
+
+    /** @param array<string,string> $e */
+    private static function own(EventSettingsType $type, string $key, mixed $value, string $startsOn, string $endsOn, array &$e): mixed
+    {
+        [$normalized, $error] = $type->normalizeSetting($key, $value, $startsOn, $endsOn);
+        if (null !== $error) {
+            $e['settings.'.$key] = $error;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<string,mixed>  $settings the event's current settings
+     * @param array<string,string> $e
+     */
+    private static function recheck(array $settings, EventSettingsType $type, string $startsOn, string $endsOn, array &$e): void
+    {
+        foreach ($type->settingKeys() as $key) {
+            if (\array_key_exists($key, $settings)) {
+                self::own($type, $key, $settings[$key], $startsOn, $endsOn, $e);
+            }
+        }
     }
 
     /**

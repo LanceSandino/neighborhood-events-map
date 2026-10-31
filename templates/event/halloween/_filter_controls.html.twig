@@ -1,0 +1,8 @@
+{# Halloween controls behind "Filters", after the toggles: the "Visit at" time (home.js reads #time). Expects `et`. #}
+    <label class="time-filter"><span class="fi" aria-hidden="true">🕐</span>Visit at
+      <select id="time">
+        <option value="any">Any time</option>
+        <option value="now">Open now</option>
+        {% for h in range(et.hours.visit[0], et.hours.visit[1]) %}<option value="{{ '%02d'|format(h) }}:00">{{ ('%02d:00'|format(h))|time12 }}</option>{% endfor %}
+      </select>
+    </label>

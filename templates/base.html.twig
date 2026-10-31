@@ -1,5 +1,6 @@
 {# Shared shell: dark navigation rail (desktop), top bar, mobile bottom navigation. Between events (no active
-   event) the shell names only the community and offers no listing action. #}
+   event) the shell names only the community and offers no listing action. <html data-event-type> names the event
+   type, whose head fragment may add its theme tokens (organizer colours from /theme.css still win). #}
 {%- set community = c.community -%}
 {%- set branding = c.branding -%}
 {%- set event_on = c.event.active ?? true -%}
@@ -9,7 +10,7 @@
 {%- set place = community.locality ? community.locality ~ (community.region ? ', ' ~ community.region : '') : '' -%}
 {%- set show_place = (branding.show_locality ?? false) and place -%}
 <!doctype html>
-<html lang="en">
+<html lang="en" data-event-type="{{ et.key }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -25,6 +26,7 @@
   <link rel="preload" href="/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   {% block styles %}{% endblock %}
   <link rel="stylesheet" href="{{ asset_path('css/app.css') }}">
+  {%- include event_fragment(et.key, 'head') %}
   <link rel="stylesheet" href="/theme.css?v={{ app_version }}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -60,7 +62,7 @@
       <a class="crumb" href="/">{% if branding.logo_url %}<img class="crumb-logo" src="{{ branding.logo_url }}" alt="">{% else %}📍{% endif %} {% if place and not show_place %}<span class="crumb-loc">{{ place }} <span class="sep">/</span> </span>{% endif %}<span class="crumb-name"><strong>{{ community.name }} Community</strong>{% if show_place %}<small class="crumb-sub">{{ place }}</small>{% endif %}</span></a>
       <div class="topright">
         {% if c.demo %}<span class="demo-pill">FICTIONAL DEMO</span>{% elseif c.map.boundary_status == 'pending_review' %}<span class="demo-pill warn" title="House listings open after the organizer approves the boundary">SETUP IN REVIEW</span>{% endif %}
-        {% if event_on %}<a class="event-pill" href="/about" title="Event date, hours and reminders">{{ et.copy.event_icon }} {{ event_badge(c.event.date) }}</a>{% endif %}
+        {% if event_on %}<a class="event-pill" href="/about" title="Event date, hours and reminders">{{ et.copy.event_icon }} {{ event_badge(c.event.date, c.event.ends_on ?? null) }}</a>{% endif %}
         <button type="button" class="top-icon" data-appearance aria-haspopup="dialog" aria-controls="appearanceDialog" aria-label="Appearance and accessibility" title="Appearance and accessibility"><span aria-hidden="true">🎨</span></button>
         {% if event_on %}<a class="top-add" href="/#list-my-house" data-action="register">+ List your home</a>{% endif %}
       </div>

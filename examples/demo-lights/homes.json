@@ -1,0 +1,209 @@
+{
+ "fictional": true,
+ "notice": "Invented Christmas lights demo homes for development, tests and screenshots only. Nights: \"all\", a list of dates, or {from, to}; status_date names a fictional \"off tonight\".",
+ "homes": [
+  {
+   "house_number": "12",
+   "street": "Evergreen Ct",
+   "lat": 29.19986,
+   "lon": -81.687345,
+   "start": "18:00",
+   "end": "22:00",
+   "nights": "all",
+   "note": "Warm white lights along the porch and the old oak.",
+   "details": {
+    "styles": [
+     "classic"
+    ],
+    "viewing_mode": "walk_up_welcome",
+    "cocoa": true
+   }
+  },
+  {
+   "house_number": "24",
+   "street": "Tinsel Ln",
+   "lat": 29.201688,
+   "lon": -81.685632,
+   "start": "17:30",
+   "end": "22:00",
+   "nights": "all",
+   "note": "A light show every 15 minutes; tune in on 88.7 FM in your car.",
+   "details": {
+    "styles": [
+     "animated",
+     "synchronized_music"
+    ],
+    "viewing_mode": "drive_by_only",
+    "flashing_warning": true,
+    "music_enabled": true,
+    "fm_frequency": "88.7"
+   }
+  },
+  {
+   "house_number": "36",
+   "street": "Starlight Way",
+   "lat": 29.19986,
+   "lon": -81.686776,
+   "start": "18:00",
+   "end": "21:00",
+   "nights": {
+    "from": "2026-12-12",
+    "to": "2026-12-31"
+   },
+   "note": "Inflatable snowmen and a candy cane lane.",
+   "details": {
+    "styles": [
+     "classic",
+     "inflatables"
+    ],
+    "viewing_mode": "walk_up_welcome",
+    "treats": true
+   }
+  },
+  {
+   "house_number": "48",
+   "street": "Holly Dr",
+   "lat": 29.201924,
+   "lon": -81.686357,
+   "start": "18:00",
+   "end": "21:30",
+   "nights": [
+    "2026-12-04",
+    "2026-12-05",
+    "2026-12-11",
+    "2026-12-12",
+    "2026-12-18",
+    "2026-12-19",
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-26",
+    "2026-12-31",
+    "2027-01-01",
+    "2027-01-02"
+   ],
+   "note": "Walk through the lit garden path; cocoa on weekends.",
+   "details": {
+    "styles": [
+     "walkthrough",
+     "classic"
+    ],
+    "viewing_mode": "walk_up_welcome",
+    "cocoa": true,
+    "treats": true
+   }
+  },
+  {
+   "house_number": "60",
+   "street": "Evergreen Ct",
+   "lat": 29.20187,
+   "lon": -81.686737,
+   "start": "17:00",
+   "end": "23:00",
+   "nights": "all",
+   "status": "off_tonight",
+   "status_date": "2026-12-12",
+   "note": "Rooftop star and icicle lights.",
+   "details": {
+    "styles": [
+     "classic"
+    ],
+    "viewing_mode": "drive_by_only"
+   }
+  },
+  {
+   "house_number": "72",
+   "street": "Tinsel Ln",
+   "lat": 29.199937,
+   "lon": -81.68442,
+   "start": "18:00",
+   "end": "22:00",
+   "nights": {
+    "from": "2026-12-01",
+    "to": "2026-12-24"
+   },
+   "note": "Twinkling reindeer on the lawn.",
+   "details": {
+    "styles": [
+     "animated"
+    ],
+    "viewing_mode": "drive_by_only",
+    "flashing_warning": true
+   }
+  },
+  {
+   "house_number": "84",
+   "street": "Starlight Way",
+   "lat": 29.200933,
+   "lon": -81.68499,
+   "start": "18:00",
+   "end": "21:00",
+   "nights": "all",
+   "status": "finished",
+   "note": "Thanks for visiting this year!",
+   "details": {
+    "styles": [
+     "classic",
+     "inflatables"
+    ],
+    "viewing_mode": "walk_up_welcome"
+   }
+  },
+  {
+   "house_number": "96",
+   "street": "Holly Dr",
+   "lat": 29.202688,
+   "lon": -81.685543,
+   "start": "18:30",
+   "end": "22:30",
+   "nights": {
+    "from": "2026-12-18",
+    "to": "2027-01-03"
+   },
+   "note": "Lights dance to music on 101.1 FM.",
+   "details": {
+    "styles": [
+     "synchronized_music"
+    ],
+    "viewing_mode": "walk_up_welcome",
+    "music_enabled": true,
+    "fm_frequency": "101.1"
+   }
+  },
+  {
+   "house_number": "108",
+   "street": "Evergreen Ct",
+   "lat": 29.199565,
+   "lon": -81.686981,
+   "start": "16:30",
+   "end": "21:00",
+   "nights": "all",
+   "note": "Giant inflatable gingerbread house.",
+   "details": {
+    "styles": [
+     "inflatables"
+    ],
+    "viewing_mode": "drive_by_only"
+   }
+  },
+  {
+   "house_number": "120",
+   "street": "Tinsel Ln",
+   "lat": 29.200789,
+   "lon": -81.683171,
+   "start": "18:00",
+   "end": "22:00",
+   "nights": {
+    "from": "2026-12-26",
+    "to": "2027-01-03"
+   },
+   "note": "Carols from the porch speaker after Christmas.",
+   "details": {
+    "styles": [
+     "classic"
+    ],
+    "viewing_mode": "walk_up_welcome",
+    "music_enabled": true
+   }
+  }
+ ]
+}

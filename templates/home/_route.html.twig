@@ -1,7 +1,8 @@
-{# "My route" on the map page (route-panel.js fills it; hidden without JavaScript). A suggested stop order, never walking directions. #}
+{# "My route" on the map page (route-panel.js fills it; hidden without JavaScript). A suggested stop order, never walking
+   directions. The event type may name it ("Your lights tour") and add its rules (route_rules fragment). #}
 <section class="route-pane empty" id="route" aria-labelledby="routeTitle" hidden>
   <div class="route-head">
-    <div><h2 id="routeTitle" tabindex="-1">🧭 My route</h2><p class="route-meta"><span id="savedCount">0</span> saved ♡</p></div>
+    <div><h2 id="routeTitle" tabindex="-1">{{ et.copy.route_title ?? '🧭 My route' }}</h2><p class="route-meta"><span id="savedCount">0</span> saved ♡</p></div>
     <div class="route-actions route-planned"><button type="button" class="secondary" id="btnRouteMap">🗺️ Show on map</button><button type="button" class="primary" id="btnShareRoute">↗ Share</button></div>
   </div>
   <div class="route-pick" id="routePickRow">
@@ -18,4 +19,5 @@
   <div id="routeItems" aria-live="polite"></div>
   <div class="notice route-planned" id="routeNotice">🚸 A suggested order of stops, not walking directions. It never connects separate areas across major roads, water or gates. Use sidewalks and marked crossings.</div>
   {% for note in c.map.crossing_notes %}<div class="notice route-planned">⚠️ {{ note }}</div>{% endfor %}
+  {%- include event_fragment(c.event.type, 'route_rules') %}
 </section>
