@@ -4,7 +4,8 @@
  *     and how many the map shows; prepare a draft (types this version offers), edit, preview a draft, switch the map
  *     to a draft (the current event is archived; nothing carries over), end the current event, export one event's
  *     listings (CSRF-checked form POST) and delete an archived event's listings. A type with settings of its own adds
- *     them (Christmas lights: best night, quiet hours, the drive-by tour). The server checks everything.
+ *     them (Christmas lights: best night, quiet hours; a garage sale: its one to three sale days, the categories it
+ *     takes, the early-bird time; the drive-by tour for types that allow driving). The server checks everything.
  * @dependencies admin/common.js, lib/api.js
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
@@ -18,6 +19,7 @@ const typeOf = (key) => data.types.find((t) => t.key === key);
 const oneDay = (key) => (typeOf(key) || {}).schedule_kind === 'single_day';
 const drives = (key) => ((typeOf(key) || {}).route_profiles || []).includes('driving');
 const hasSetting = (key, name) => ((typeOf(key) || {}).settings || []).includes(name);
+const options = (key, name) => Object.entries(((typeOf(key) || {}).setting_options || {})[name] || {});
 const dates = (e) => (e.starts_on === e.ends_on ? e.starts_on : `${e.starts_on} – ${e.ends_on}`);
 
 function form(e) {
@@ -38,13 +40,25 @@ function form(e) {
   </form>`;
 }
 
-/** Settings only some types have: the best night and quiet hours (lights), the drive-by tour (types that allow driving). */
+/** A sale's own settings: up to three sale days, the categories it takes and the early-bird time. */
+function saleFields(type, s) {
+  const days = s.days || [];
+  const cats = s.categories || options(type, 'categories').map(([k]) => k);
+  return [`<div class="field full type-field"><span class="label" id="evDaysLabel">Sale days (up to 3, inside the dates above)</span><div class="checks" role="group" aria-labelledby="evDaysLabel">${
+    [0, 1, 2].map((i) => `<input id="evDay${i + 1}" class="sale-day-input" type="date" value="${esc(days[i] || '')}" aria-label="Sale day ${i + 1}">`).join('')}</div>
+      <span class="form-caption">Leave them empty for a sale of up to three days: every day of it is a sale day.</span></div>`,
+  `<div class="field full type-field"><span class="label" id="evCatsLabel">Categories residents may list</span><div class="checks" role="group" aria-labelledby="evCatsLabel">${
+    options(type, 'categories').map(([k, label]) => `<label class="check-chip"><input type="checkbox" name="evCategory" value="${esc(k)}" ${cats.includes(k) ? 'checked' : ''}> ${esc(label)}</label>`).join('')}</div></div>`,
+  `<div class="field type-field"><label for="evEarly">Early birds not before (optional)</label><input id="evEarly" type="time" value="${esc(s.early_bird_time || '')}"></div>`];
+}
+
+/** Settings only some types have: the best night and quiet hours (lights), a sale's days, categories and early birds, the drive-by tour (types that allow driving). */
 function typeFields(type, e) {
   const s = (e && e.settings) || {};
-  const out = [];
+  const out = hasSetting(type, 'days') ? saleFields(type, s) : [];
   if (hasSetting(type, 'best_night')) out.push(`<div class="field type-field"><label for="evBest">Best night for a neighborhood walk (optional)</label><input id="evBest" type="date" value="${esc(s.best_night || '')}"></div>`);
   if (hasSetting(type, 'quiet_hours')) out.push(`<div class="field type-field"><label for="evQuiet">Quiet hours (optional)</label><input id="evQuiet" maxlength="120" value="${esc(s.quiet_hours || '')}" placeholder="e.g. Please keep it quiet after 10 PM"></div>`);
-  if (drives(type)) out.push(`<div class="field full type-field"><label class="check-chip"><input type="checkbox" id="evDriving" ${(s.route_modes || []).includes('driving') ? 'checked' : ''}> Offer a drive-by tour</label><span class="form-caption">Driving directions appear only when a routing provider is configured; otherwise visitors get an ordered list of stops.</span></div>`);
+  if (drives(type)) out.push(`<div class="field full type-field"><label class="check-chip"><input type="checkbox" id="evDriving" ${(s.route_modes || []).includes('driving') ? 'checked' : ''}> ${hasSetting(type, 'days') ? 'Offer a driving tour' : 'Offer a drive-by tour'}</label><span class="form-caption">Driving directions appear only when a routing provider is configured; otherwise visitors get an ordered list of stops.</span></div>`);
   return `<div class="form-grid" id="evTypeFields">${out.join('')}</div>`;
 }
 
@@ -82,6 +96,12 @@ function readForm() {
   if ($('#evBest')) body.settings.best_night = $('#evBest').value || null;
   if ($('#evQuiet')) body.settings.quiet_hours = $('#evQuiet').value.trim();
   if ($('#evDriving')) body.settings.route_modes = $('#evDriving').checked ? ['walking', 'driving'] : ['walking'];
+  if ($('#evDay1')) {
+    const days = ['#evDay1', '#evDay2', '#evDay3'].map((id) => $(id).value).filter(Boolean);
+    if (days.length) body.settings.days = days;
+    body.settings.categories = [...document.querySelectorAll('input[name="evCategory"]:checked')].map((i) => i.value);
+    body.settings.early_bird_time = $('#evEarly').value || null;
+  }
   if (!editing) body.type = type;
   return body;
 }

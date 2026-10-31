@@ -33,7 +33,7 @@ final class ListingDraftWindowsTest extends TestCase
 
     private static function registry(): EventTypeRegistry
     {
-        return new EventTypeRegistry([new HalloweenType(), new TestEventType('holiday_lights', 'nightly_range')]);
+        return new EventTypeRegistry([new HalloweenType(), new TestEventType('holiday_lights', 'nightly_range')], ['halloween', 'holiday_lights']);
     }
 
     public function testHalloweenTakesTheEventDayAndKeepsRefusingWindows(): void

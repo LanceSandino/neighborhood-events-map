@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Event\Type;
 
 use App\Community\EventBlockSchema;
+use App\Event\EventOccurrence;
 use App\Event\EventSettingsType;
 use App\Event\EventType;
 use App\Event\OccurrenceSettings;
@@ -20,7 +21,7 @@ use App\Shared\ValidationException;
  *     only on the local date it was set) and done for the season. Walking or driving routes. Event settings of its
  *     own: the best night for a neighborhood walk and a quiet-hours note. Words live in HolidayLightsCopy.
  *
- * @dependencies Event/EventType, Event/EventSettingsType, Event/OccurrenceSettings, Event/Type/HolidayLightsCopy, Community/EventBlockSchema,
+ * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Event/OccurrenceSettings, Event/Type/HolidayLightsCopy, Community/EventBlockSchema,
  *     Shared/TextInput, Shared/ValidationException
  */
 final class HolidayLightsType implements EventType, EventSettingsType
@@ -216,8 +217,8 @@ final class HolidayLightsType implements EventType, EventSettingsType
 
     public function fragments(): array
     {
-        $names = ['head', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_fields', 'manage_half', 'manage_full',
-            'listing_checks', 'route_rules'];
+        $names = ['head', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_hours', 'form_fields', 'manage_hours',
+            'manage_half', 'manage_full', 'listing_checks', 'route_rules', 'rule_lines'];
 
         return array_combine($names, array_map(static fn (string $n) => 'event/'.self::KEY.'/_'.$n.'.html.twig', $names));
     }
@@ -244,6 +245,23 @@ final class HolidayLightsType implements EventType, EventSettingsType
         }
 
         return [null, 'Unknown field.'];
+    }
+
+    /** The best night and quiet hours stand on their own: nothing to complete. */
+    public function finishSettings(array $settings, string $startsOn, string $endsOn): array
+    {
+        return [$settings, []];
+    }
+
+    public function settingOptions(): array
+    {
+        return [];
+    }
+
+    /** A home picks any night of the season. */
+    public function listingDates(EventOccurrence $event): ?array
+    {
+        return null;
     }
 
     public function publicSettings(array $settings): array

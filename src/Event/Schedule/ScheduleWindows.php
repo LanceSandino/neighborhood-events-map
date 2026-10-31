@@ -13,7 +13,8 @@ use App\Shared\ValidationException;
  *     every window lies inside the occurrence's dates, a date appears once, a listing has at most the schedule
  *     kind's days (single_day 1 — exactly the event day —, nightly_range 62, sale_days 3) and the organizer's own
  *     cap, the end is later than the start on the same local day (no overnight windows) and the hours stay inside
- *     the bounds. Windows come back sorted by date as {date, start, end} with HH:MM times.
+ *     the bounds. A type may narrow the days a listing can choose (a garage sale's own sale days). Windows come back
+ *     sorted by date as {date, start, end} with HH:MM times.
  *
  * @dependencies Event/EventOccurrence, Shared/ValidationException
  */
@@ -38,12 +39,13 @@ final class ScheduleWindows
      * @param list<mixed>            $input  windows as {date, start, end}
      * @param array{0:string,1:string} $bounds earliest start and latest end (HH:MM)
      * @param int|null                $cap    the organizer's own limit of days per listing, if any
+     * @param list<string>|null       $dates  the only days a listing may choose (null: every day of the event)
      *
      * @return list<array{date:string,start:string,end:string}>
      *
      * @throws ValidationException field "windows" (the whole list) or "windows.N" (one window)
      */
-    public static function normalize(string $kind, EventOccurrence $event, mixed $input, array $bounds = self::DAY, ?int $cap = null): array
+    public static function normalize(string $kind, EventOccurrence $event, mixed $input, array $bounds = self::DAY, ?int $cap = null, ?array $dates = null): array
     {
         $max = self::MAX_DAYS[$kind] ?? throw new \InvalidArgumentException(sprintf('Unknown schedule kind "%s".', $kind));
         $max = null === $cap ? $max : max(1, min($max, $cap));
@@ -63,6 +65,8 @@ final class ScheduleWindows
                 $errors["windows.$i"] = 'Use a date like 2026-12-18.';
             } elseif (!$event->contains($date)) {
                 $errors["windows.$i"] = sprintf('Choose a day from %s to %s.', $event->startsOn, $event->endsOn);
+            } elseif (null !== $dates && !\in_array($date, $dates, true)) {
+                $errors["windows.$i"] = sprintf('Choose one of the event\'s days: %s.', implode(', ', $dates));
             } elseif ('single_day' === $kind && $date !== $event->startsOn) {
                 $errors["windows.$i"] = 'This event is on '.$event->startsOn.'.';
             } elseif (isset($out[$date])) {

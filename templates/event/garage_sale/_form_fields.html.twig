@@ -1,0 +1,5 @@
+{# Garage sale fields of "List my house" step 2, before the note: the sale days with their hours and the listing
+   details (assets/js/events/garage_sale.js reads them). Expects `c` and `et`. #}
+{% include 'event/garage_sale/_days.html.twig' with {c: c, et: et} only %}
+          {% include event_fragment(c.event.type, 'listing_checks') with {c: c, et: et} only %}
+          <p class="form-caption field full">{{ et.copy.note_help }} {{ et.copy.publish_help }}</p>

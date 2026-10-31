@@ -1,0 +1,119 @@
+/*
+ * @module assets/css/events/garage_sale.css
+ * @description The garage sale event type's look (templates/event/garage_sale/_head.html.twig loads it after app.css
+ *     and events/common.css): teal, coral, soft mint and off-white tokens in light and dark (the two dark blocks are
+ *     identical, like app.css's), and the components only this type draws — the hero's box and plant, the sale-day
+ *     rows of the listing form, category, multi-family, early-bird and payment tags, status chips and pins. Every
+ *     rule is scoped to <html data-event-type="garage_sale">, so other pages are untouched. The organizer's brand
+ *     colours (/theme.css: --brand, --brand-accent, --brand-ink, --brand-text) are never set here, so they still win.
+ *     Nothing moves.
+ * @dependencies assets/css/app.css (tokens and layout), assets/css/events/common.css (shared components), /theme.css (brand colours)
+ */
+
+:root[data-event-type="garage_sale"] {
+  --night: #1c2733; --orange2: #f2a98f;
+  --bg: #f6f5f0; --surface: #fff; --surface-2: #fbfbf8; --surface-3: #f2f2ec; --glass: #ffffffed;
+  --text: #1d2a2a; --text-strong: #142222; --text-2: #3f4d4c; --muted: #5a6766; --muted-2: #8a9493;
+  --border: #e2e4dd; --border-soft: #ecede7;
+  --warm: #e2f2ee; --warm-soft: #eff8f5; --warm-border: #8fcfc2; --warm-text: #0e6359; --link: #11786c; --heart: #cf5536;
+  --focus: #178d80; --map-bg: #e4eee8; --overlay: #0f1f1ea6; --inverse-bg: #1b3431; --inverse-fg: #fff;
+  --tag-cat-bg: #e2f2ee; --tag-cat-fg: #0e5f55; --tag-family-bg: #fbe9e3; --tag-family-fg: #8c3a20;
+  --tag-early-bg: #f6efd9; --tag-early-fg: #6c5414; --tag-pay-bg: #eef0ee; --tag-pay-fg: #434f4d;
+  --pin-sale: #178d80; --pin-closed: #8c9895;
+  --season-before-bg: #e2f2ee; --season-before-fg: #0e6359; --season-during-bg: #fbe4db; --season-during-fg: #8f3a1f;
+  --season-after-bg: #eeefed; --season-after-fg: #59625f;
+  --side-action-bg: #e77c5d; --side-action-fg: #1d1a22; --hero-glow: #178d8026; --side-hover: #2b3846; --side-line: #394656;
+}
+/* Dark: deep slate teal instead of app.css's plum-grey; must stay identical to the [data-theme="dark"] block below. Surfaces stay
+   no lighter than app.css's dark surface, which /theme.css checks the brand text colour against (BrandPalette). */
+@media (prefers-color-scheme: dark) {
+  :root[data-event-type="garage_sale"]:not([data-theme="light"]) {
+    --night: #0d151a; --orange2: #f2a98f;
+    --bg: #0e181a; --surface: #152022; --surface-2: #162224; --surface-3: #1b2729; --glass: #152022eb;
+    --text: #eef5f3; --text-strong: #f8fbfa; --text-2: #d2dfdc; --muted: #a6b6b3; --muted-2: #84948f;
+    --border: #2b3d3f; --border-soft: #243436;
+    --warm: #183a35; --warm-soft: #15302c; --warm-border: #2f6b62; --warm-text: #8fe0d1; --link: #8fe0d1; --heart: #ff9b7f;
+    --focus: #5fd0bf; --map-bg: #152220; --overlay: #050a0bcc; --inverse-bg: #eef5f3; --inverse-fg: #152022;
+    --tag-cat-bg: #183a35; --tag-cat-fg: #9be3d5; --tag-family-bg: #3d2620; --tag-family-fg: #f7b8a3;
+    --tag-early-bg: #36301c; --tag-early-fg: #ecd18c; --tag-pay-bg: #253335; --tag-pay-fg: #d2dfdc;
+    --pin-sale: #1f9a8b; --pin-closed: #6b7b78;
+    --season-before-bg: #183a35; --season-before-fg: #9be3d5; --season-during-bg: #3d2620; --season-during-fg: #f7b8a3;
+    --season-after-bg: #253335; --season-after-fg: #c3cfcc;
+    --side-action-bg: #e77c5d; --side-action-fg: #1d1a22; --hero-glow: #5fd0bf24; --side-hover: #1d2b33; --side-line: #2b3a44;
+  }
+}
+:root[data-event-type="garage_sale"][data-theme="dark"] {
+  --night: #0d151a; --orange2: #f2a98f;
+  --bg: #0e181a; --surface: #152022; --surface-2: #162224; --surface-3: #1b2729; --glass: #152022eb;
+  --text: #eef5f3; --text-strong: #f8fbfa; --text-2: #d2dfdc; --muted: #a6b6b3; --muted-2: #84948f;
+  --border: #2b3d3f; --border-soft: #243436;
+  --warm: #183a35; --warm-soft: #15302c; --warm-border: #2f6b62; --warm-text: #8fe0d1; --link: #8fe0d1; --heart: #ff9b7f;
+  --focus: #5fd0bf; --map-bg: #152220; --overlay: #050a0bcc; --inverse-bg: #eef5f3; --inverse-fg: #152022;
+  --tag-cat-bg: #183a35; --tag-cat-fg: #9be3d5; --tag-family-bg: #3d2620; --tag-family-fg: #f7b8a3;
+  --tag-early-bg: #36301c; --tag-early-fg: #ecd18c; --tag-pay-bg: #253335; --tag-pay-fg: #d2dfdc;
+  --pin-sale: #1f9a8b; --pin-closed: #6b7b78;
+  --season-before-bg: #183a35; --season-before-fg: #9be3d5; --season-during-bg: #3d2620; --season-during-fg: #f7b8a3;
+  --season-after-bg: #253335; --season-after-fg: #c3cfcc;
+  --side-action-bg: #e77c5d; --side-action-fg: #1d1a22; --hero-glow: #5fd0bf24; --side-hover: #1d2b33; --side-line: #2b3a44;
+}
+/* "More contrast" (system or Appearance) keeps winning over this type's tokens. */
+@media (prefers-contrast: more) {
+  :root[data-event-type="garage_sale"][data-event-type] { --muted: var(--text-2); --border: var(--muted-2); --border-soft: var(--muted-2); }
+}
+:root[data-event-type="garage_sale"][data-contrast="more"] { --muted: var(--text-2); --border: var(--muted-2); --border-soft: var(--muted-2); }
+
+/* ---- Shell and hero: a moving box, a plant and a price tag (decorative, still) ---- */
+[data-event-type="garage_sale"] .nav a.active, [data-event-type="garage_sale"] .nav a:hover { background: var(--side-hover); }
+[data-event-type="garage_sale"] .side-panel { border-color: var(--side-line); }
+[data-event-type="garage_sale"] .side-action { background: var(--side-action-bg); color: var(--side-action-fg); min-height: 44px; }
+[data-event-type="garage_sale"] .hero-illustration { background: transparent; color: inherit; overflow: visible; }
+[data-event-type="garage_sale"] .hero-glow { position: absolute; inset: 10px 30px; border-radius: 50%; background: radial-gradient(circle, var(--hero-glow), transparent 70%); }
+[data-event-type="garage_sale"] .hero-box { position: relative; font-size: 76px; line-height: 1; transform: translate(-34px, 8px) rotate(-6deg); filter: drop-shadow(0 8px 10px #10201e26); }
+[data-event-type="garage_sale"] .hero-plant { position: absolute; right: 34px; top: 8px; font-size: 62px; line-height: 1; filter: drop-shadow(0 8px 10px #10201e1f); }
+[data-event-type="garage_sale"] .hero-tag { position: absolute; left: 52px; top: 14px; font-size: 26px; line-height: 1; transform: rotate(-18deg); }
+[data-event-type="garage_sale"] .home-card:hover, [data-event-type="garage_sale"] .home-card.active { box-shadow: 0 5px 15px #178d801a; }
+[data-event-type="garage_sale"] .home-card.active { background: var(--warm-soft); }
+
+/* ---- Cards, tags, status chips and pins ---- */
+[data-event-type="garage_sale"] .tag { white-space: normal; max-width: 100%; }
+.tag.cat { background: var(--tag-cat-bg); color: var(--tag-cat-fg); }
+.tag.family { background: var(--tag-family-bg); color: var(--tag-family-fg); }
+.tag.early { background: var(--tag-early-bg); color: var(--tag-early-fg); }
+.tag.pay { background: var(--tag-pay-bg); color: var(--tag-pay-fg); }
+[data-event-type="garage_sale"] .card-status.opens_at { background: var(--tag-quiet-bg); color: var(--info-fg); }
+[data-event-type="garage_sale"] .card-status.sold_out { background: var(--tag-family-bg); color: var(--tag-family-fg); }
+[data-event-type="garage_sale"] .card-status.not_today, [data-event-type="garage_sale"] .card-status.ended,
+[data-event-type="garage_sale"] .card-status.closed { background: var(--done-bg); color: var(--muted); }
+.pin.sale { background: var(--pin-sale); }
+[data-event-type="garage_sale"] .pin-icon.active .pin.sale { background: var(--brand-accent, #e77c5d); }
+.legend-bullet.sale { background: var(--pin-sale); }
+.legend-bullet.closed { background: var(--pin-closed); }
+
+/* ---- Listing forms: the sale days, each with its own hours ---- */
+.sale-days { display: grid; gap: 8px; }
+.sale-day { display: grid; grid-template-columns: minmax(128px, auto) minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; max-width: 520px; }
+.sale-hour select { width: 100%; height: 44px; border: 1px solid var(--border); border-radius: 9px; padding: 0 10px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 800; }
+.sale-hour select:disabled { opacity: .5; }
+.sale-to { font-size: 12px; font-weight: 800; color: var(--muted); }
+.sale-days-field .form-caption { display: block; margin-top: 8px; }
+
+/* ---- Phones: a smaller hero picture beside the headline (the mockup), one card per row ---- */
+@media (max-width: 850px), (max-height: 500px) and (orientation: landscape) {
+  [data-event-type="garage_sale"] .hero-illustration { display: flex; width: 96px; min-width: 96px; height: 96px; }
+  [data-event-type="garage_sale"] .hero-box { font-size: 48px; transform: translate(-16px, 10px) rotate(-6deg); }
+  [data-event-type="garage_sale"] .hero-plant { font-size: 38px; right: 0; top: 0; }
+  [data-event-type="garage_sale"] .hero-tag { display: none; }
+}
+@media (max-width: 560px) {
+  [data-event-type="garage_sale"] .cards { grid-template-columns: 1fr; }
+  /* A sale day on two even rows: the day, then its opening and closing time side by side. */
+  .sale-day { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .sale-day .check-chip { grid-column: 1 / -1; }
+}
+@media (max-width: 660px) {
+  [data-event-type="garage_sale"] .intro { gap: 8px; }
+}
+/* A long sale name ("Maple Hollow Community Rummage Sale") may wrap in the footer instead of widening a phone page. */
+[data-event-type="garage_sale"] .footer-id { white-space: normal; }
+/* My house: "Visible on the map" takes the row the sale form has no half-width neighbour for. */
+[data-event-type="garage_sale"] .dash-home .form-grid > .field:has(select[name="published"]) { grid-column: 1 / -1; max-width: 360px; }

@@ -1,0 +1,18 @@
+{# The sale days a home takes part in, each with its own hours (Saturday and Sunday may differ): the organizer's days
+   (c.event.days, at most three). events/garage_sale.js reads the checked days with their hours as windows and turns a
+   day's hours off while the day is unticked. No ids: My house repeats the form per home. Expects `c` and `et`. #}
+{%- set hours = et.hours -%}
+<fieldset class="field full sale-days-field">
+  <legend class="label">{{ et.copy.days_label }} *</legend>
+  <div class="sale-days">
+    {% for day in c.event.days ?? [] %}{% set name = day_list([day]) %}<div class="sale-day">
+      <label class="check-chip"><input type="checkbox" name="sale_day" value="{{ day }}" checked> {{ day|date('D, M j') }}</label>
+      <label class="sale-hour"><span class="visually-hidden">Opens on {{ name }}</span><select name="day_start" data-day="{{ day }}">{% for h in range(hours.start[0], hours.start[1]) %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.starts_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></label>
+      <span class="sale-to" aria-hidden="true">to</span>
+      <label class="sale-hour"><span class="visually-hidden">Closes on {{ name }}</span><select name="day_end" data-day="{{ day }}">{% for h in range(hours.end[0], hours.end[1]) %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.ends_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></label>
+    </div>
+    {% endfor %}
+  </div>
+  <span class="form-caption">{{ et.copy.days_help }}</span>
+  <span class="error" data-error="windows"></span>
+</fieldset>

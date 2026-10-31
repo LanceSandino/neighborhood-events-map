@@ -1,0 +1,4 @@
+{# Garage sale full-width fields of "My house" (before the note): the sale days with their hours and the details. Expects `c`. #}
+{% include 'event/garage_sale/_days.html.twig' with {c: c, et: event_type(c.event.type)} only %}
+      {% include event_fragment(c.event.type, 'listing_checks') with {c: c, et: event_type(c.event.type)} only %}
+      <p class="form-caption field full">{{ event_type(c.event.type).copy.note_help }}</p>

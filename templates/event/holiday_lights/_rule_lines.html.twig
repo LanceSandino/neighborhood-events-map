@@ -1,0 +1,2 @@
+{#- The lights' own rule line after the organizer's rules (About): the quiet hours. Expects `c`. -#}
+{%- if c.event.quiet_hours ?? '' %}<li>🌙 Quiet hours: {{ c.event.quiet_hours }}</li>{% endif -%}

@@ -9,17 +9,19 @@ ask which type is running.
 Since 0.10 Halloween is the first event type. Since 0.11 each event is a row of its own (an *occurrence*) and listings
 belong to one occurrence: the next season, or another kind of event, starts with no listings, and a resident lists
 their claimed home for it again from an empty form. Since 0.12 **Christmas lights** (`holiday_lights`) is the second
-enabled type ([below](#christmas-lights-012); organizer checklist: [christmas-lights.md](../runbooks/christmas-lights.md)).
+enabled type ([below](#christmas-lights-012); organizer checklist: [christmas-lights.md](../runbooks/christmas-lights.md)),
+and since 0.13 the **garage sale** (`garage_sale`) the third ([below](#garage-sale-013); organizer checklist:
+[garage-sale.md](../runbooks/garage-sale.md)). Every reserved key is enabled now (D-20261031-31).
 
 ## The contract
 
 | Side | Where | What it provides |
 |---|---|---|
-| PHP | `src/Event/EventType.php`, one final class per type in `src/Event/Type/` | key, default name and branding (optionally its colours), copy (reminders, headings, access label, console labels), schedule kind and maximum days, hour choices, statuses (label, icon, day-scoped flag), display rules, feature switches, details defaults, `normalizeDetails()` (strict), `publicDetails()` (strict projection), `legacyFields()`, filters, legend, stats, route profiles, Twig fragments; optionally event settings of its own (`Event/EventSettingsType`: keys, checks against the event's dates, public part) |
+| PHP | `src/Event/EventType.php`, one final class per type in `src/Event/Type/` | key, default name and branding (optionally its colours), copy (reminders, headings, access label, console labels), schedule kind and maximum days, hour choices, statuses (label, icon, day-scoped flag), display rules, feature switches, details defaults, `normalizeDetails()` (strict), `publicDetails()` (strict projection), `legacyFields()`, filters, legend, stats, route profiles, Twig fragments; optionally event settings of its own (`Event/EventSettingsType`: keys, checks against the event's dates, `finishSettings()` — completed and checked as a whole —, `settingOptions()` for the console, `listingDates()` — the only days a listing may choose —, public part) and a check of resident text (`Event/ListingTextCheck`: the sale's contact-detail check on the note) |
 | Registry | `src/Event/EventTypeRegistry.php` | the types (tagged services) by immutable key; `KEYS` (reserved forever: `halloween`, `holiday_lights`, `garage_sale`), `ENABLED` (what organizers may pick), `problem()` for configuration errors |
-| Twig | `templates/event/<key>/_*.html.twig`, `Twig/EventTypeExtension` | `event_type(key)` gives copy, statuses, filters, legend and hours; `event_fragment(key, name)` returns a template path only from the type's whitelist. Every type provides every fragment the core includes; some may render nothing: `head` (the type's stylesheet), `hero_art`, `schedule_row`, `filter_controls` (Halloween's "Visit at"), card symbol and tags, confirmation tags, form fields, My house fields, listing checks, `route_rules` |
+| Twig | `templates/event/<key>/_*.html.twig`, `Twig/EventTypeExtension` | `event_type(key)` gives copy, statuses, filters, legend and hours; `event_fragment(key, name)` returns a template path only from the type's whitelist. Every type provides every fragment the core includes; some may render nothing: `head` (the type's stylesheet), `hero_art`, `schedule_row`, `filter_controls` (Halloween's "Visit at", the sale's "Open <weekday>"), card symbol and tags, confirmation tags, `form_hours` and `manage_hours` (the shared start/end fields; a sale has none), form fields, My house fields, listing checks, `route_rules`, `rule_lines` (a type's own rule lines on About and next to the route) |
 | Browser | `public/assets/js/events/<key>.js`, `events/index.js` | filter toggles and predicates (with the moment, `matches(home, filters, ctx)`), optional filter `choices` (lights: a night and a style), search words, tags, pin symbol and class, `inactive` pins, `statusOf`, `statusChipShown`, `hoursLabel`, `displayRules`, `isOpen(home, ctx)`, route note, copy, hour choices, an optional `mapColor`, the form helpers (`initForm`, `formDetails`, `formExtras` — e.g. the nights as windows —, `fillForm`, `validateDetails`) |
-| Theme | `<html data-event-type>`, `public/assets/css/events/<key>.css` | token overrides in light and dark (identical dark blocks) and the type's own components, loaded by its `head` fragment; never the organizer's brand variables, so /theme.css still wins (D-20261031-20). Halloween has none |
+| Theme | `<html data-event-type>`, `public/assets/css/events/common.css`, `public/assets/css/events/<key>.css` | the components every type with several days shares (season row and pill, route mode and rules, 44 px targets; D-20261031-30), then the type's token overrides in light and dark (identical dark blocks) and its own components, loaded by its `head` fragment; never the organizer's brand variables, so /theme.css still wins (D-20261031-20). Halloween loads none |
 
 Core code (`ListingDraft`, `ListingRepository`, `CommunityPresenter`, `CommunitySchema`, the controllers, `lib/filters.js`,
 `lib/render.js`, `lib/time.js`, `home.js`, `register.js`, `me.js`, `route-panel.js`, the home, My house and confirmation
@@ -94,10 +96,30 @@ Branding that still holds a type's built-in default follows the type of the even
 uses the draft's type (Community/TypeDefaults, D-20261031-16). The fictional demo is `examples/demo-lights/` (ten homes,
 Dec 1, 2026 – Jan 3, 2027; the dev stack `.env.lights` on port 8089).
 
+## Garage sale (0.13)
+
+| Part | Garage sale (`GarageSaleType`, `events/garage_sale.js`, `templates/event/garage_sale/`) |
+|---|---|
+| Schedule | `sale_days`, one to three days chosen by the organizer (event setting `days`; a span of up to three days takes all its days); a listing names its days as windows, each with its own hours (Saturday and Sunday may differ); the forms have no shared start and end (D-20261031-26) |
+| Details (strict) | `categories` (≥ 1 of kids_baby, toys, furniture, clothing, tools, books_media, electronics, sports, household, free; only those the event allows), `multi_family`, `early_birds_allowed`, `payment_types` (cash, card, apps — the kind only); the note is the shared listing note (D-20261031-24) |
+| Note check | `Shared/ContactDetails` through `Event/ListingTextCheck`: a note with a phone number, email, payment handle or web address fails the whole listing with a field error before anything is written — no claim request, no listing, no email (D-20261031-25) |
+| Statuses | `active`, `paused` and `sold_out` (day-scoped, through `status_date` like the lights' off tonight), `closed`; display keys `open`, `opens_at`, `not_today`, `paused`, `sold_out`, `closed` — sold out never shows as open; a paused, sold-out or closed pin is greyed on a sale day |
+| Public home | the shared keys (no legacy flat fields), the event keys and `status_date` (D-20261031-17) |
+| Public event | `days`, `categories` (allowed), `early_bird_time`, and `route_modes` (driving only with the type, the event's `route_modes` and a provider) |
+| Filters | quick: Kids & toys, Furniture, Tools (+ Saved); more: Household, Electronics, Free items, Open now, Open <weekday> per sale day (`day1`–`day3`, drawn by `filter_controls`), Multi-family, Early birds welcome; search over streets, categories, payment kinds and notes (D-20261031-27) |
+| Words | hero "Good finds. / Close to home.", the sale row ("Sat–Sun, April 10–11, 2027", "Most homes: 8 AM–2 PM · Individual hours vary", the early-bird time), the pill "Coming this <season>" / "Today" / "More sale days ahead" / "Sale over" (D-20261031-28), "Having a sale?", "Your sale stops", sale etiquette (early birds, parking and traffic, driveways and private yards, no recalled or prohibited items, the map sells nothing) |
+| Look | teal `#178D80`, coral `#E77C5D`, soft mint, off-white; slate-teal dark mode; category icons with words (🍼 🧸 🪑 👕 🛠️ 📚 🔌 ⚽ 🧺 🆓); teal buttons carry near-black text for AA (D-20261031-32) |
+| Event settings | `days`, `categories`, `early_bird_time`, plus the shared `rules`, `route_modes`, `max_days`; a sale day homes chose cannot be removed (409 `listings_days`) |
+
+The public name is the event's name (default "Garage Sale", e.g. "Community Rummage Sale"). `community.yaml` may set the
+first event's settings (`event.settings`, D-20261031-29). The fictional demo is `examples/demo-sale/` (ten homes, Sat–Sun,
+April 10–11, 2027; the dev stack `.env.sale` on port 8090).
+
 ## Adding a type (later stages)
 
-1. Implement `EventType` in `src/Event/Type/<Name>Type.php` (its key is already reserved in `EventTypeRegistry::KEYS`),
-   and `EventSettingsType` if its events have settings of their own.
+1. Reserve its key in `EventTypeRegistry::KEYS` and in the `event_occurrences` type check (a migration), implement
+   `EventType` in `src/Event/Type/<Name>Type.php`, `EventSettingsType` if its events have settings of their own and
+   `ListingTextCheck` if resident text needs a check of its own.
 2. Add its fragments under `templates/event/<key>/` (all of them; a fragment may render nothing), its module
    `public/assets/js/events/<key>.js`, registered in `events/index.js`, and optionally its stylesheet
    `public/assets/css/events/<key>.css`.
@@ -105,4 +127,4 @@ Dec 1, 2026 – Jan 3, 2027; the dev stack `.env.lights` on port 8089).
    exist, the module's filters and tags.
 4. A fictional demo under `examples/` and a stack for the end-to-end tests.
 
-Organizers choose among enabled types in the console (Community & branding → Event); they cannot define new fields.
+Organizers choose among enabled types under Organizer → Events; they cannot define new fields.

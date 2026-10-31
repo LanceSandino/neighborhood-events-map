@@ -24,8 +24,11 @@ let step = 1;
 const $ = (s) => document.querySelector(s);
 const show = (el, on) => el && el.classList.toggle('hide', !on);
 
+/** A field's error slot; "windows.1" (one day of a listing) falls back to the slot of "windows". */
+const errorSlot = (scope, field) => scope.querySelector(`[data-error="${field}"]`) || scope.querySelector(`[data-error="${field.split('.')[0]}"]`);
+
 function setError(scope, field, message) {
-  const el = scope.querySelector(`[data-error="${field}"]`);
+  const el = errorSlot(scope, field);
   if (el) el.textContent = message || '';
 }
 
@@ -186,10 +189,13 @@ function validateAddress() {
   return true;
 }
 
-/** The listing: the shared fields, the event type's details and what else the type needs (e.g. its nights). */
+/**
+ * The listing: the shared fields, the event type's details and what else the type needs (e.g. its nights, or a sale's
+ * days with their own hours). A type whose hours live in its own fields has no shared start and end.
+ */
 function details() {
-  const start = $('#regStart').value;
-  const end = $('#regEnd').value;
+  const start = $('#regStart')?.value || C.event.starts_at;
+  const end = $('#regEnd')?.value || C.event.ends_at;
   return {
     start, end, status: $('#regStatus')?.value || 'active',
     note: $('#regNote').value.trim(), details: T.formDetails($('#registerForm')),
@@ -204,6 +210,7 @@ function validateDetails() {
   if (d.end <= d.start) { setError(f, 'end', 'End time must be later than the start time.'); ok = false; }
   for (const [field, message] of Object.entries(T.validateDetails(d.details))) { setError(f, field, message); ok = false; }
   if (Array.isArray(d.windows) && !d.windows.length) { setError(f, 'windows', T.copy.noDays); ok = false; }
+  if (Array.isArray(d.windows) && d.windows.some((w) => w.end <= w.start)) { setError(f, 'windows', 'End time must be later than the start time.'); ok = false; }
   if (d.note.length > 400) { setError(f, 'note', 'Keep the note to 400 characters.'); ok = false; }
   return ok;
 }
@@ -237,7 +244,11 @@ async function submit() {
       return;
     }
     if (e instanceof ApiError && e.fields) {
+      // A field of an earlier step (e.g. a note the server refused) is shown on its step.
+      const steps = Object.keys(e.fields).map((k) => Number(errorSlot(form, k)?.closest('[data-step]')?.dataset.step || 0)).filter((n) => n && n < step);
+      if (steps.length) goTo(Math.min(...steps));
       for (const [k, v] of Object.entries(e.fields)) setError(form, k, v);
+      if (steps.length) return;
     }
     if (e instanceof ApiError && ['outside_boundary', 'zone_mismatch', 'ambiguous_zone', 'pin_collision', 'street_not_allowed', 'zone_not_claimable', 'zone_not_open', 'unknown_zone', 'not_eligible', 'invalid_address', 'self_entry_disabled'].includes(e.code)) {
       goTo(1);

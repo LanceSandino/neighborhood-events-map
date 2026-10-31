@@ -1,0 +1,8 @@
+{# Garage sale tags of a listing's details (cards, confirmation); events/garage_sale.js draws the same words. Icons are
+   decorative; the words are always there (never colour only). No prices or photos. Expects `d`, the details. #}
+{%- set cats = {kids_baby: ['🍼', 'Kids & baby'], toys: ['🧸', 'Toys'], furniture: ['🪑', 'Furniture'], clothing: ['👕', 'Clothing'], tools: ['🛠️', 'Tools'], books_media: ['📚', 'Books & media'], electronics: ['🔌', 'Electronics'], sports: ['⚽', 'Sports'], household: ['🧺', 'Household'], free: ['🆓', 'Free items']} -%}
+{%- set pays = {cash: 'Cash', card: 'Card', apps: 'Apps'} -%}
+{% for key in d.categories %}{% if cats[key] is defined %}<span class="tag cat">{{ cats[key][0] }} {{ cats[key][1] }}</span>{% endif %}{% endfor %}
+      {% if d.multi_family %}<span class="tag family">🏘️ Multi-family</span>{% endif %}
+      {% if d.early_birds_allowed %}<span class="tag early">🐦 Early birds welcome</span>{% endif %}
+      {% if d.payment_types %}<span class="tag pay" title="Payment kinds">💵 {{ d.payment_types|map(p => pays[p] ?? p)|join(' · ') }}</span>{% endif %}

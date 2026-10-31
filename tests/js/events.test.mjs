@@ -38,14 +38,15 @@ const randomFilters = () => ({
 });
 const randomCtx = () => ({ today: pick(['2026-10-31', '2026-10-30']), eventDate: '2026-10-31', nowMinutes: Math.floor(rand() * 24 * 60), saved: [1, 3, 5], zoneLabels: { oak: 'Oak', elm: 'Elm' }, areas: [['oak', 'elm'], ['lake']] });
 
-test('the registry knows Halloween and Christmas lights by their keys and refuses unknown keys', () => {
+test('the registry knows Halloween, Christmas lights and the garage sale by their keys and refuses unknown keys', () => {
   assert.equal(DEFAULT_EVENT_TYPE, 'halloween');
-  assert.deepEqual(eventTypeKeys(), ['halloween', 'holiday_lights'], 'EventTypeRegistry::ENABLED (0.12)');
+  assert.deepEqual(eventTypeKeys(), ['halloween', 'holiday_lights', 'garage_sale'], 'EventTypeRegistry::ENABLED (0.13)');
   assert.equal(eventType(), halloween);
   assert.equal(eventType('halloween'), halloween);
   assert.equal(halloween.key, 'halloween');
   assert.equal(eventType('holiday_lights').key, 'holiday_lights');
-  for (const bad of ['garage_sale', 'constructor', '__proto__', 'Halloween', 'holidayLights']) assert.throws(() => eventType(bad), /Unknown event type/);
+  assert.equal(eventType('garage_sale').key, 'garage_sale');
+  for (const bad of ['rummage', 'constructor', '__proto__', 'Halloween', 'holidayLights', 'garageSale']) assert.throws(() => eventType(bad), /Unknown event type/);
 });
 
 test('Halloween filters: the 0.9 filter object, its quick toggles and hours', () => {

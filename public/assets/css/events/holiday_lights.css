@@ -2,12 +2,13 @@
  * @module assets/css/events/holiday_lights.css
  * @description The Christmas lights event type's look (templates/event/holiday_lights/_head.html.twig loads it after
  *     app.css): midnight blue, warm gold and calm cream tokens in light and dark (the two dark blocks are identical,
- *     like app.css's), and the components only this type draws — the season row, the season pill, the night chips,
- *     the FM field, the rules next to the route, pins, tags and status chips. Every rule is scoped to
+ *     like app.css's), and the components only this type draws — the night chips, the FM field, pins, tags and status
+ *     chips; the season row, the route's mode switch and rules and the 44 px targets come from events/common.css,
+ *     which the head fragment loads first. Every rule is scoped to
  *     <html data-event-type="holiday_lights">, so Halloween pages are untouched. The organizer's brand colours
  *     (/theme.css: --brand, --brand-accent, --brand-ink, --brand-text) are never set here, so they still win.
  *     Nothing blinks or animates.
- * @dependencies assets/css/app.css (tokens and layout), /theme.css (brand colours)
+ * @dependencies assets/css/app.css (tokens and layout), assets/css/events/common.css (shared components), /theme.css (brand colours)
  */
 
 :root[data-event-type="holiday_lights"] {
@@ -73,23 +74,6 @@
 [data-event-type="holiday_lights"] .hero-spark.two { font-size: 22px; right: 116px; top: 10px; }
 [data-event-type="holiday_lights"] .hero-spark.three { font-size: 18px; right: 30px; bottom: 16px; }
 
-/* ---- The season row under the hero ---- */
-.schedule-row { display: flex; align-items: center; gap: 14px; margin-top: 20px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 15px; }
-.schedule-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
-.schedule-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.schedule-text b { font-size: 14px; font-weight: 900; color: var(--text-strong); }
-.schedule-text span { font-size: 12px; color: var(--muted); }
-.season-pill { flex-shrink: 0; font-size: 12px; font-weight: 900; border-radius: 30px; padding: 6px 12px; white-space: nowrap; }
-.season-pill.before { background: var(--season-before-bg); color: var(--season-before-fg); }
-.season-pill.during { background: var(--season-during-bg); color: var(--season-during-fg); }
-.season-pill.after { background: var(--season-after-bg); color: var(--season-after-fg); }
-[data-event-type="holiday_lights"] #explore { margin-top: 16px; }
-
-/* ---- Filters: 44 px targets for the night, style and toggle controls ---- */
-[data-event-type="holiday_lights"] .mini-filter { height: 44px; }
-[data-event-type="holiday_lights"] .time-filter select, [data-event-type="holiday_lights"] .time-filter input { height: 44px; border: 1px solid var(--border); border-radius: 30px; padding: 0 12px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 800; }
-[data-event-type="holiday_lights"] .time-filter input { min-width: 150px; }
-
 /* ---- Cards, tags, status chips and pins ---- */
 [data-event-type="holiday_lights"] .tag { white-space: normal; max-width: 100%; }
 .tag.lights { background: var(--tag-lights-bg); color: var(--tag-lights-fg); }
@@ -99,13 +83,6 @@
 .card-status.later_tonight { background: var(--tag-music-bg); color: var(--tag-music-fg); }
 .card-status.off_tonight { background: var(--tag-lights-bg); color: var(--tag-lights-fg); }
 .card-status.not_tonight, .card-status.finished { background: var(--done-bg); color: var(--muted); }
-[data-event-type="holiday_lights"] .save { width: 44px; height: 44px; top: 2px; right: 2px; }
-[data-event-type="holiday_lights"] .card-line { padding-right: 38px; }
-[data-event-type="holiday_lights"] .map-selected .x { min-width: 44px; min-height: 44px; }
-[data-event-type="holiday_lights"] .map-selected .primary { min-height: 44px; width: 100%; }
-[data-event-type="holiday_lights"] .view-toggle button { width: 44px; height: 40px; }
-[data-event-type="holiday_lights"] .map-tools button { width: 44px; height: 44px; }
-[data-event-type="holiday_lights"] .filter-more .link-button { min-height: 44px; }
 .pin.lights { background: var(--pin-lights); }
 .pin.music { background: var(--pin-music); }
 .pin.inflatable { background: var(--pin-inflatable); }
@@ -113,28 +90,13 @@
 .legend-bullet.lights { background: var(--pin-lights); } .legend-bullet.music { background: var(--pin-music); }
 .legend-bullet.inflatable { background: var(--pin-inflatable); } .legend-bullet.walkthrough { background: var(--pin-walkthrough); }
 
-/* ---- Route: the mode switch and the rules next to it ---- */
-.route-mode { display: inline-flex; gap: 2px; padding: 3px; margin-top: 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-3); }
-.route-mode button { min-height: 40px; padding: 0 14px; border-radius: 999px; background: transparent; color: var(--text-2); font-size: 12px; font-weight: 800; }
-.route-mode button[aria-pressed="true"] { background: var(--surface); color: var(--warm-text); box-shadow: var(--shadow-sm); }
-.route-rules { padding: 0 12px; }
-.route-rules summary { min-height: 44px; display: flex; align-items: center; gap: 6px; font-weight: 900; cursor: pointer; }
-.route-rules summary::-webkit-details-marker { display: none; }
-.route-rules summary::after { content: '▾'; margin-left: auto; font-size: 14px; }
-.route-rules[open] summary::after { content: '▴'; }
-.route-rules[open] { padding-bottom: 12px; }
-.route-rules ul { margin: 2px 0 8px; padding-left: 18px; display: grid; gap: 3px; }
-.route-rules a { font-weight: 800; }
-
-/* ---- Listing forms: nights, FM station, 44 px chips ---- */
-[data-event-type="holiday_lights"] .check-chip { min-height: 44px; }
+/* ---- Listing forms: nights and the FM station ---- */
 .nights-field .checks + .night-grid { margin-top: 10px; }
 .night-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; max-height: 260px; overflow: auto; padding: 2px; }
 .night-grid .check-chip { justify-content: flex-start; padding: 6px 9px; gap: 6px; font-variant-numeric: tabular-nums; }
 .night-grid .check-chip small { color: var(--muted); font-weight: 700; }
 .night-month { grid-column: 1 / -1; font-size: 12px; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
 .fm-field { max-width: 220px; }
-fieldset.field > legend.label { padding: 0; }
 
 /* ---- Phones: a smaller hero picture beside the headline (the mockup), the season row stacked ---- */
 @media (max-width: 850px), (max-height: 500px) and (orientation: landscape) {
@@ -149,9 +111,6 @@ fieldset.field > legend.label { padding: 0; }
   [data-event-type="holiday_lights"] .cards { grid-template-columns: 1fr; }
 }
 @media (max-width: 660px) {
-  .schedule-row { margin-top: 14px; padding: 12px 13px; gap: 10px; align-items: flex-start; }
-  .schedule-icon { font-size: 22px; }
-  .season-pill { white-space: normal; text-align: center; max-width: 92px; }
   [data-event-type="holiday_lights"] .intro { gap: 8px; }
 }
 /* My house: "Visible on the map" takes the row the lights form has no half-width neighbour for. */

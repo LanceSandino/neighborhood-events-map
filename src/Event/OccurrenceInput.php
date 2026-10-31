@@ -14,8 +14,8 @@ use App\Shared\ValidationException;
  *     one-day type has one day; others span at most 62 days), default hours, and the settings every type shares —
  *     rules (up to 8 short plain-text lines, shown with the event), route_modes (walking, plus the type's other
  *     profiles) and, for a type with several days, max_days (the organizer's cap of days per listing). A type with
- *     settings of its own (Event/EventSettingsType, e.g. the lights' best night) checks those against the event's
- *     dates. Unknown fields are refused.
+ *     settings of its own (Event/EventSettingsType, e.g. the lights' best night, a sale's days) checks those against
+ *     the event's dates and completes them as a whole. Unknown fields are refused.
  *
  * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Community/EventBlockSchema, Shared/TextInput, Shared/ValidationException
  */
@@ -68,6 +68,10 @@ final class OccurrenceInput
         $settings = \array_key_exists('settings', $in) ? self::settings($in['settings'], $type, $startsOn, $endsOn, $e) : ($current->settings ?? []);
         if (!\array_key_exists('settings', $in) && $type instanceof EventSettingsType) {
             self::recheck($settings, $type, $startsOn, $endsOn, $e); // the type's settings still fit the event's new dates
+        }
+        if ($type instanceof EventSettingsType && !isset($e['starts_on']) && !isset($e['ends_on'])) {
+            [$settings, $whole] = $type->finishSettings($settings, $startsOn, $endsOn); // e.g. a sale's days, as a whole
+            $e += $whole;
         }
         if ([] !== $e) {
             throw new ValidationException($e);

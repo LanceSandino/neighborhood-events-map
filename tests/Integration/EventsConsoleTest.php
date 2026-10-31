@@ -26,15 +26,16 @@ final class EventsConsoleTest extends AppTestCase
         $this->organizer();
         $list = $this->json('GET', '/api/admin/events');
         self::assertSame([['key' => 'halloween', 'name' => 'Halloween', 'schedule_kind' => 'single_day', 'max_days' => 1, 'route_profiles' => ['walking']],
-            ['key' => 'holiday_lights', 'name' => 'Christmas Lights', 'schedule_kind' => 'nightly_range', 'max_days' => 62, 'route_profiles' => ['walking', 'driving']]], array_map(
+            ['key' => 'holiday_lights', 'name' => 'Christmas Lights', 'schedule_kind' => 'nightly_range', 'max_days' => 62, 'route_profiles' => ['walking', 'driving']],
+            ['key' => 'garage_sale', 'name' => 'Garage Sale', 'schedule_kind' => 'sale_days', 'max_days' => 3, 'route_profiles' => ['walking', 'driving']]], array_map(
                 static fn (array $t) => array_intersect_key($t, array_flip(['key', 'name', 'schedule_kind', 'max_days', 'route_profiles'])), $list['types']));
         [$current] = $list['events'];
         self::assertSame(['active', 1, 1, true], [$current['state'], $current['opted_in'], $current['public'], $current['type_offered']]);
         self::assertSame($current['id'], $list['active_id']);
 
-        $bad = $this->json('POST', '/api/admin/events', ['type' => 'garage_sale', 'starts_on' => '2027-05-01'], $this->h());
+        $bad = $this->json('POST', '/api/admin/events', ['type' => 'fireworks', 'starts_on' => '2027-05-01'], $this->h());
         self::assertSame(422, $this->code(), 'only types this version offers');
-        self::assertArrayHasKey('type', $bad['error']['fields']);
+        self::assertSame('Choose one of the event types this version offers: halloween, holiday_lights, garage_sale.', $bad['error']['fields']['type'] ?? null);
         $bad = $this->json('POST', '/api/admin/events', ['type' => 'halloween', 'starts_on' => '2027-10-31', 'default_start' => '21:00', 'default_end' => '18:00', 'colour' => 'x', 'settings' => ['rules' => [str_repeat('r', 161)], 'max_days' => 2]], $this->h());
         self::assertSame(422, $this->code());
         self::assertSame(['colour', 'default_end', 'settings.rules', 'settings.max_days'], array_keys($bad['error']['fields']));
@@ -186,8 +187,23 @@ final class EventsConsoleTest extends AppTestCase
         $this->configureCommunity();
         $this->listHome('41', 'erin@example.test', self::listing());
         $this->db()->executeStatement("UPDATE event_occurrences SET state = 'archived', archived_at = NOW() WHERE state = 'active'");
+        // Every reserved type is offered since 0.13, so the event comes from a newer release (after an image-only
+        // rollback): that release's migration widened the type check, as this test does for its own duration.
+        $this->db()->executeStatement('ALTER TABLE event_occurrences DROP CONSTRAINT event_occurrences_type_check');
+        $this->db()->executeStatement("ALTER TABLE event_occurrences ADD CONSTRAINT event_occurrences_type_check CHECK (type IN ('halloween', 'holiday_lights', 'garage_sale', 'fireworks'))");
+        try {
+            $this->aNewerReleasesEventBreaksNothing();
+        } finally {
+            $this->db()->executeStatement("DELETE FROM event_occurrences WHERE type = 'fireworks'");
+            $this->db()->executeStatement('ALTER TABLE event_occurrences DROP CONSTRAINT event_occurrences_type_check');
+            $this->db()->executeStatement("ALTER TABLE event_occurrences ADD CONSTRAINT event_occurrences_type_check CHECK (type IN ('halloween', 'holiday_lights', 'garage_sale'))");
+        }
+    }
+
+    private function aNewerReleasesEventBreaksNothing(): void
+    {
         $raw = (int) $this->db()->fetchOne("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at, activated_at)
-            VALUES ('garage_sale', 'Community Rummage Sale', '2027-05-01', '2027-05-02', '08:00', '13:00', 'active', NOW(), NOW()) RETURNING id");
+            VALUES ('fireworks', 'Fireworks Night', '2027-07-04', '2027-07-04', '20:00', '23:00', 'active', NOW(), NOW()) RETURNING id");
         $this->repo()->reset();
 
         $crawler = $this->client->request('GET', '/');
@@ -204,7 +220,7 @@ final class EventsConsoleTest extends AppTestCase
         $this->client->request('GET', '/admin/events');
         self::assertSame(200, $this->code());
         $listed = array_column($this->json('GET', '/api/admin/events')['events'], null, 'id')[$raw];
-        self::assertSame(['garage_sale', false, 'garage_sale'], [$listed['type'], $listed['type_offered'], $listed['type_name']], 'shown by its key');
+        self::assertSame(['fireworks', false, 'fireworks'], [$listed['type'], $listed['type_offered'], $listed['type_name']], 'shown by its key');
         $this->json('PUT', "/api/admin/events/$raw", ['name' => 'Renamed'], $this->h());
         self::assertSame(409, $this->code());
         $this->json('GET', '/api/admin/overview');

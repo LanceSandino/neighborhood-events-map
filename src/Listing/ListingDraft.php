@@ -6,8 +6,10 @@ namespace App\Listing;
 
 use App\Community\CommunityConfig;
 use App\Event\EventOccurrence;
+use App\Event\EventSettingsType;
 use App\Event\EventType;
 use App\Event\EventTypeRegistry;
+use App\Event\ListingTextCheck;
 use App\Event\OccurrenceSettings;
 use App\Event\Schedule\ScheduleWindows;
 use App\Shared\TextInput;
@@ -21,11 +23,14 @@ use App\Shared\ValidationException;
  *     compatibility window (D-20261031-02) the Halloween type's flat fields are accepted too, and a draft also
  *     carries them flat next to `details` (the shape 0.9 code and the legacy columns know). A one-day event's listing
  *     takes the event day with its own hours (start/end); a type with several days also sends `windows`, checked by
- *     the schedule core (Event/Schedule/ScheduleWindows) against the active event.
+ *     the schedule core (Event/Schedule/ScheduleWindows) against the active event and the days the type allows
+ *     (Event/EventSettingsType::listingDates). A type that checks resident text (Event/ListingTextCheck) refuses a
+ *     note it may not publish: the draft fails, so nothing is stored.
  *
  * @input array<string,mixed> raw form/JSON input, CommunityConfig
  * @output array<string,mixed> normalized listing draft
- * @dependencies Community/CommunityConfig, Event/EventTypeRegistry, Event/Schedule/ScheduleWindows, Shared/TextInput, Shared/ValidationException
+ * @dependencies Community/CommunityConfig, Event/EventTypeRegistry, Event/EventSettingsType, Event/ListingTextCheck, Event/Schedule/ScheduleWindows,
+ *     Shared/TextInput, Shared/ValidationException
  */
 final class ListingDraft
 {
@@ -81,8 +86,11 @@ final class ListingDraft
         $note = $current['note'] ?? '';
         if (\array_key_exists('note', $in)) {
             $text = TextInput::paragraphs(\is_string($in['note']) ? $in['note'] : '', 4 * self::NOTE_MAX);
+            $problem = $type instanceof ListingTextCheck ? $type->textProblem('note', $text) : null;
             if (mb_strlen($text) > self::NOTE_MAX) {
                 $errors['note'] = 'Keep the note to 400 characters.';
+            } elseif (null !== $problem) {
+                $errors['note'] = $problem;
             } else {
                 $note = $text;
             }
@@ -96,7 +104,8 @@ final class ListingDraft
             try {
                 $windows = null === $community->event
                     ? throw new ValidationException(['windows' => 'There is no event on the map right now.'])
-                    : ScheduleWindows::normalize($type->scheduleKind(), $community->event, $in['windows'], ScheduleWindows::DAY, self::dayCap($community->event));
+                    : ScheduleWindows::normalize($type->scheduleKind(), $community->event, $in['windows'], ScheduleWindows::DAY, self::dayCap($community->event),
+                        self::dates($community->event, $type));
             } catch (ValidationException $e) {
                 $errors += $e->fields;
             }
@@ -127,7 +136,17 @@ final class ListingDraft
             return ScheduleWindows::singleDay($event, (string) $draft['start'], (string) $draft['end']);
         }
 
-        return ScheduleWindows::normalize($type->scheduleKind(), $event, $draft['windows'] ?? null, ScheduleWindows::DAY, self::dayCap($event));
+        return ScheduleWindows::normalize($type->scheduleKind(), $event, $draft['windows'] ?? null, ScheduleWindows::DAY, self::dayCap($event), self::dates($event, $type));
+    }
+
+    /**
+     * The days a listing of the event may choose, when the type narrows them (a garage sale's sale days).
+     *
+     * @return list<string>|null
+     */
+    private static function dates(EventOccurrence $event, EventType $type): ?array
+    {
+        return $type instanceof EventSettingsType ? $type->listingDates($event) : null;
     }
 
     /**

@@ -1,0 +1,3 @@
+{# Garage sale card symbol: the first category's icon (canonical order), as on the pins. Expects `home`. #}
+{%- set icons = {kids_baby: '🍼', toys: '🧸', furniture: '🪑', clothing: '👕', tools: '🛠️', books_media: '📚', electronics: '🔌', sports: '⚽', household: '🧺', free: '🆓'} -%}
+{{- icons[home.details.categories|first] ?? '🏷️' -}}

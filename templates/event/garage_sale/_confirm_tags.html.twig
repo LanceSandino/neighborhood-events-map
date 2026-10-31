@@ -1,0 +1,2 @@
+{# Garage sale tags of the listing a confirmation will publish (auth/confirm). Expects `l`, the stored draft. #}
+{% include 'event/garage_sale/_tags.html.twig' with {d: l.details} only %}

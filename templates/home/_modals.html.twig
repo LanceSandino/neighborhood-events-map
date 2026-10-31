@@ -56,8 +56,7 @@
       <fieldset data-step="2" hidden>
         <legend class="visually-hidden">Step 2 of 3: your stop</legend>
         <div class="form-grid">
-          <div class="field"><label for="regStart">Start time</label><select id="regStart">{% for h in range(et.hours.start[0], et.hours.start[1]) %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.starts_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
-          <div class="field"><label for="regEnd">End time</label><select id="regEnd">{% for h in range(et.hours.end[0], et.hours.end[1]) %}{% for m in ['00', '30'] %}{% set t = '%02d'|format(h) ~ ':' ~ m %}<option value="{{ t }}" {{ t == c.event.ends_at ? 'selected' }}>{{ t|time12 }}</option>{% endfor %}{% endfor %}</select></div>
+          {% include event_fragment(c.event.type, 'form_hours') %}
           {% include event_fragment(c.event.type, 'form_fields') %}
           <div class="field full"><label for="regNote">Short public note (optional)</label><textarea id="regNote" maxlength="400" placeholder="{{ et.copy.note_placeholder }}"></textarea><span class="form-caption"><span id="noteCount">0</span>/400</span><span class="error" data-error="note"></span></div>
         </div>
@@ -105,7 +104,7 @@
     <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
     {% set access = access_info(c.community.access ?? null, et.copy) %}
     <div class="guide-facts">
-      {% if (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own nights and hours</p></div></div>
+      {% if (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ c.event.days ?? false ? day_list(c.event.days) : date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · {{ et.copy.own_schedule ?? 'each home sets its own nights and hours' }}</p></div></div>
       {%- else %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>{% endif %}
 
       <div class="about-fact"><span aria-hidden="true">{{ access ? access.icon : '🚪' }}</span><div><b>{{ access ? access.title : 'Gates and private areas' }}</b><p>{{ c.community.gate_notice ?: (access ? access.text : 'This site does not grant access to gated areas.') }}</p></div></div>

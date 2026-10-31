@@ -102,7 +102,7 @@ final class RouteProfileTest extends AppTestCase
         $c = static::getContainer();
 
         return new RoutePlanner($c->get(RoutingProviderInterface::class), $c->get(ListingRepository::class), $c->get(Connection::class), $c->get(ClockInterface::class),
-            $c->get(Throttle::class), new EventTypeRegistry([new HalloweenType(), new TestEventType('holiday_lights', 'nightly_range', ['walking', 'driving'])]));
+            $c->get(Throttle::class), new EventTypeRegistry([new HalloweenType(), new TestEventType('holiday_lights', 'nightly_range', ['walking', 'driving'])], ['halloween', 'holiday_lights']));
     }
 
     /** The test community as a lights event (a type no release enables yet) with the given route modes. */

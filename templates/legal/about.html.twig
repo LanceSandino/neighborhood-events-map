@@ -4,13 +4,14 @@
 {% block body %}
 {% set et = event_type(c.event.type) %}
 {% set access = access_info(c.community.access ?? null, et.copy) %}
+{% set type_rules %}{% if c.event.active ?? true %}{% include event_fragment(c.event.type, 'rule_lines') %}{% endif %}{% endset %}
 <article class="page-card legal about">
   <div class="eyebrow">{{ c.branding.brand_emoji }} About</div>
   <h1>{{ c.community.name }} {{ c.event.name }}</h1>
   {% if c.community.subtitle %}<p class="legal-lead">{{ c.community.subtitle }}</p>{% endif %}
 
   <div class="about-facts">
-    {% if (c.event.active ?? true) and (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; each home sets its own nights and hours.</p></div></div>
+    {% if (c.event.active ?? true) and (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ c.event.days ?? false ? day_list(c.event.days) : date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; {{ et.copy.own_schedule ?? 'each home sets its own nights and hours' }}.</p></div></div>
     {%- elseif c.event.active ?? true %}<div class="about-fact"><span aria-hidden="true">{{ et.copy.event_icon }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested hours {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }}; each home sets its own.</p></div></div>
     {%- else %}<div class="about-fact"><span aria-hidden="true">📅</span><div><b>No event on the map right now</b><p>The next event's date appears here when the organizer starts it.</p></div></div>{% endif %}
     {% if c.community.locality %}<div class="about-fact"><span aria-hidden="true">📍</span><div><b>{{ c.community.locality }}{% if c.community.region %}, {{ c.community.region }}{% endif %}</b><p>{{ c.map.boundary_status == 'approved' ? 'Homes inside the neighborhood outline can take part.' : 'The neighborhood outline is still being reviewed.' }}</p></div></div>{% endif %}
@@ -40,9 +41,9 @@
     {% endif %}
   </section>
 
-  {% if (c.event.rules ?? []) or (c.event.quiet_hours ?? '') %}<section class="about-section" aria-labelledby="eventRules">
+  {% if (c.event.rules ?? []) or type_rules|trim %}<section class="about-section" aria-labelledby="eventRules">
     <h2 id="eventRules">Event rules</h2>
-    <ul class="reminders two-col">{% for r in c.event.rules ?? [] %}<li>{{ r }}</li>{% endfor %}{% if c.event.quiet_hours ?? '' %}<li>🌙 Quiet hours: {{ c.event.quiet_hours }}</li>{% endif %}</ul>
+    <ul class="reminders two-col">{% for r in c.event.rules ?? [] %}<li>{{ r }}</li>{% endfor %}{{ type_rules }}</ul>
   </section>
 
   {% endif %}<section class="about-section" aria-labelledby="reminders">

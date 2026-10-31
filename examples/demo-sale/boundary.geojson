@@ -1,0 +1,43 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Maple Hollow (FICTIONAL DEMO)",
+    "fictional": true
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -81.688,
+       29.199
+      ],
+      [
+       -81.6805,
+       29.199
+      ],
+      [
+       -81.6805,
+       29.2026
+      ],
+      [
+       -81.68249999999999,
+       29.2038
+      ],
+      [
+       -81.688,
+       29.2038
+      ],
+      [
+       -81.688,
+       29.199
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

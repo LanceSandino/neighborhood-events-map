@@ -12,8 +12,9 @@ use Twig\TwigFunction;
 /**
  * @module Twig/AppExtension
  * @description Presentation helpers: zone summary chip ("6 phases · 1–3, 5A, 5B, 8"), event badge
- *     text and date ranges, today's local date on the app clock, 12-hour time labels, access facts, and XSS-safe JSON for
- *     non-executable <script type="application/json">.
+ *     text and date ranges, a sale's days in words ("Sat–Sun, April 10–11, 2027") and their weekday names, the season
+ *     of a date (by hemisphere), today's local date on the app clock, 12-hour time labels, access facts, and XSS-safe
+ *     JSON for non-executable <script type="application/json">.
  *
  * @dependencies Twig, PSR clock
  */
@@ -32,6 +33,9 @@ final class AppExtension extends AbstractExtension
             new TwigFunction('date_range', [$this, 'dateRange']),
             new TwigFunction('access_info', [$this, 'accessInfo']),
             new TwigFunction('zone_areas', [$this, 'zoneAreas']),
+            new TwigFunction('day_list', [$this, 'dayList']),
+            new TwigFunction('day_names', [$this, 'dayNames']),
+            new TwigFunction('season_of', [$this, 'seasonOf']),
         ];
     }
 
@@ -188,6 +192,68 @@ final class AppExtension extends AbstractExtension
         }
 
         return $a->format('M') === $b->format('M') ? $a->format('M j').' – '.$b->format('j, Y') : $a->format('M j').' – '.$b->format('M j, Y');
+    }
+
+    /**
+     * Days of an event in words: one day spelled out, consecutive days as a range ("Sat–Sun, April 10–11, 2027"),
+     * other days one by one ("Sat, April 10 and Sat, April 17, 2027").
+     *
+     * @param list<string> $days sorted local dates
+     */
+    public function dayList(array $days): string
+    {
+        $d = array_values(array_filter(array_map(static fn ($v) => \is_string($v) ? \DateTimeImmutable::createFromFormat('!Y-m-d', $v) : false, $days)));
+        if ([] === $d) {
+            return '';
+        }
+        $first = $d[0];
+        $last = $d[\count($d) - 1];
+        if (1 === \count($d)) {
+            return $first->format('l, F j, Y');
+        }
+        $consecutive = (int) $first->diff($last)->days === \count($d) - 1;
+        if ($consecutive) {
+            $span = match (true) {
+                $first->format('Y') !== $last->format('Y') => $first->format('F j, Y').' – '.$last->format('F j, Y'),
+                $first->format('m') !== $last->format('m') => $first->format('F j').' – '.$last->format('F j, Y'),
+                default => $first->format('F j').'–'.$last->format('j, Y'),
+            };
+
+            return $first->format('D').'–'.$last->format('D').', '.$span;
+        }
+        $sameYear = $first->format('Y') === $last->format('Y');
+        $parts = array_map(static fn (\DateTimeImmutable $x) => $x->format($sameYear ? 'D, F j' : 'D, F j, Y'), $d);
+        $end = array_pop($parts);
+
+        return implode(', ', $parts).' and '.$end.($sameYear ? $last->format(', Y') : '');
+    }
+
+    /**
+     * Weekday names of days ("Saturday"); when a weekday repeats, every name carries its date ("Saturday, Apr 10").
+     *
+     * @param list<string> $days
+     *
+     * @return list<string>
+     */
+    public function dayNames(array $days): array
+    {
+        $d = array_values(array_filter(array_map(static fn ($v) => \is_string($v) ? \DateTimeImmutable::createFromFormat('!Y-m-d', $v) : false, $days)));
+        $names = array_map(static fn (\DateTimeImmutable $x) => $x->format('l'), $d);
+        if (\count(array_unique($names)) === \count($names)) {
+            return $names;
+        }
+
+        return array_map(static fn (\DateTimeImmutable $x) => $x->format('l, M j'), $d);
+    }
+
+    /** The season of a date (spring, summer, fall, winter) by month; south of the equator the other way round. */
+    public function seasonOf(string $date, ?float $latitude = null): string
+    {
+        $month = max(1, min(12, (int) substr($date, 5, 2)));
+        $north = [1 => 'winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'];
+        $flip = ['winter' => 'summer', 'summer' => 'winter', 'spring' => 'fall', 'fall' => 'spring'];
+
+        return null !== $latitude && $latitude < 0 ? $flip[$north[$month]] : $north[$month];
     }
 
     public function time12(string $hhmm): string
