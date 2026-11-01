@@ -212,3 +212,38 @@ main { padding: 0 32px 24px; display: grid; gap: 36px; }
 .tab.active { color: var(--warm-text); }
 
 .sheet-foot { padding: 0 32px 32px; font-size: 12px; color: var(--muted); }
+
+/* ---- Christmas lights: C9 bulb, marks, garland ---- */
+.block-note { max-width: 110ch; margin: -6px 0 14px; color: var(--text-2); }
+.c9-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.c9-sizes { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 16px; padding: 12px 16px; display: grid; gap: 4px; }
+.c9-row { display: grid; grid-template-columns: 230px repeat(5, 1fr); align-items: end; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.c9-row:last-child { border-bottom: 0; }
+.c9-row code { align-self: center; white-space: normal; }
+.c9-size { display: grid; justify-items: center; gap: 2px; }
+.c9-size figcaption { font-size: 10px; color: var(--muted); }
+.s48 { width: 48px; height: 48px; } .s64 { width: 64px; height: 64px; }
+.bulb-red { --bulb: #d6262b; --bulb-edge: #99161b; --bulb-socket-edge: #1b4f2e; --icon-accent: #2c7446; }
+.bulb-trio { --bulb-1: #d6262b; --bulb-2: #f5bf1b; --bulb-3: #2160d4; --bulb-edge: #1b4f2e; --bulb-socket-edge: #1b4f2e; --icon-accent: #2c7446; }
+.c9-marks { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 28px; }
+.c9-marks .spread-label { flex-basis: 100%; }
+.c9-marks-size { display: flex; align-items: flex-end; gap: 10px; }
+.c9-marks-size small { align-self: center; font-size: 11px; color: var(--muted); }
+.m64 { width: 64px; height: 64px; }
+.lights-page { position: relative; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; padding-bottom: 14px; }
+.garland { height: 60px; background: url('../../public/assets/icons/garland-lights.svg') repeat-x left top; }
+.garland-corner { position: absolute; right: 0; bottom: 0; width: 200px; height: 72px; background: url('../../public/assets/icons/garland-lights-corner.svg') no-repeat; transform: scaleX(-1); }
+.lights-head { display: grid; grid-template-columns: 40px 1fr 240px; gap: 14px; align-items: center; padding: 6px 18px 78px; }
+.dark .garland, .dark.lights-page .garland { background-image: url('../../public/assets/icons/garland-lights-dark.svg'); }
+.dark .garland-corner, .dark.lights-page .garland-corner { background-image: url('../../public/assets/icons/garland-lights-corner-dark.svg'); }
+.dark { --bulb-halo: .2; }
+@media (prefers-color-scheme: dark) {
+  .auto { --bulb-halo: .2; }
+  .auto:not(.light) .garland { background-image: url('../../public/assets/icons/garland-lights-dark.svg'); }
+}
+.light .garland, .light.lights-page .garland { background-image: url('../../public/assets/icons/garland-lights.svg'); }
+.light { --bulb-halo: .1; }
+.c9-close { display: grid; grid-template-columns: repeat(2, 400px); gap: 0; width: max-content; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.c9-close > div { background: var(--bg); padding: 12px 20px 0; display: grid; gap: 8px; }
+.c9-close-row { display: flex; align-items: flex-end; gap: 18px; padding: 0 0 2px; }
+.c9-close .garland { margin: 0 -20px; }
