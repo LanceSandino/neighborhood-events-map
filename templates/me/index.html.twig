@@ -9,6 +9,8 @@
 {% set et = event_type(c.event.type) %}
 {% block title %}My house · {{ c.community.name }} {{ c.event.name }}{% endblock %}
 {% block meta %}<meta name="csrf-token" content="{{ csrf_token('nhm') }}">{% endblock %}
+{# My house's own stylesheet: the colours of the event it names, a hidden one too (residents only). #}
+{% block theme %}<link rel="stylesheet" href="/me/theme.css?v={{ app_version }}{{ event_query() ? '&' ~ event_query()|slice(1) }}">{% endblock %}
 {% block body %}
 <div class="dash" id="dashboard" data-event="{{ c.event.id ?? '' }}">
   <div class="dash-head">

@@ -18,14 +18,15 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
  * @module Controller/PageController
  * @description Server-rendered pages: for the selected event (`?e=<id>`) or the default one, the public map shell
  *     with a no-JS readable list of homes (open), the event's dates and a way to list a home (upcoming) or its
  *     thank-you message (closed), each with the event switcher; with no public event a neutral "no event right now"
- *     page; sign-in page, owner dashboard shell, theme CSS from config (the selected event's type), uploaded logo,
- *     health check.
+ *     page; sign-in page, owner dashboard shell, theme CSS from config (the selected event's type; My house's own,
+ *     residents only, also for a hidden event it may name, D-20261101-01), uploaded logo, health check.
  *
  * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, About/ChangelogReader
  */
@@ -103,6 +104,16 @@ final class PageController extends AbstractController
         $css = BrandPalette::css($b['primary_color'], $b['accent_color']);
 
         return new Response($css, 200, ['Content-Type' => 'text/css; charset=utf-8', 'Cache-Control' => 'public, max-age=300']);
+    }
+
+    /** My house's colours: the same as /theme.css, for the event My house names — a hidden one too (residents only, never cached). */
+    #[Route('/me/theme.css', name: 'me_theme_css', methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
+    public function meTheme(): Response
+    {
+        $b = $this->community->current()->settings['branding'];
+
+        return new Response(BrandPalette::css($b['primary_color'], $b['accent_color']), 200, ['Content-Type' => 'text/css; charset=utf-8', 'Cache-Control' => 'no-store, private']);
     }
 
     #[Route('/branding/{name}', name: 'branding', requirements: ['name' => 'logo\.(svg|png|jpg|webp)'], methods: ['GET'])]

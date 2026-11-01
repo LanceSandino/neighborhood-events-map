@@ -134,18 +134,18 @@ test('an organizer closes the season; last season disappears, next year is creat
   await row(next.id).getByRole('button', { name: 'Announce' }).click();
   await expect(page.locator('#flash')).toContainText(`“${name}” is announced.`);
   await expect(row(next.id)).toContainText('Upcoming');
-  const look = await (await browser.newContext()).newPage();
-  await politeTiles(look);
-  await look.goto(DEMO + '/');
-  const tabs = look.getByRole('navigation', { name: 'Events' }).getByRole('link');
+  const announced = await (await browser.newContext()).newPage();
+  await politeTiles(announced);
+  await announced.goto(DEMO + '/');
+  const tabs = announced.getByRole('navigation', { name: 'Events' }).getByRole('link');
   await expect(tabs).toHaveCount(2);
   await expect(tabs.nth(1)).toContainText(`${name} ${year + 1}`);
   await expect(tabs.nth(1)).toContainText('Soon');
-  await expect(look.getByRole('link', { name: `See ${name} ${year + 1}` })).toHaveAttribute('href', `/?e=${next.id}`);
-  await expect(look.getByRole('link', { name: 'Get my house ready' })).toHaveAttribute('href', `/me?e=${next.id}`);
+  await expect(announced.getByRole('link', { name: `See ${name} ${year + 1}` })).toHaveAttribute('href', `/?e=${next.id}`);
+  await expect(announced.getByRole('link', { name: 'Get my house ready' })).toHaveAttribute('href', `/me?e=${next.id}`);
   await tabs.nth(1).click();
-  await expect(look.locator('#eventStatusTitle')).toHaveText(`Oct 31, ${year + 1}, tentative`);
-  await look.context().close();
+  await expect(announced.locator('#eventStatusTitle')).toHaveText(`Oct 31, ${year + 1}, tentative`);
+  await announced.context().close();
   expect((await (await request.get(`${DEMO}/api/homes?e=${next.id}`)).json()).homes, 'announced: not public before it opens').toEqual([]);
 
   // Next year's opens (its date confirmed) and becomes the default: the home is on the map again, for this event.

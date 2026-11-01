@@ -18,7 +18,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  *     value — not a number, an unknown id, a draft, an archived event — answers an API request with 404 exactly like an
  *     unknown id, while a page shows the default event (a shared link made for an event that is gone then says so in the
  *     browser and shows no stops), so ids reveal nothing either way. The organizer console (/admin, /api/admin) chooses
- *     its events itself and ignores the parameter. My house (/me, /api/me — residents only, by access_control and the
+ *     its events itself and ignores the parameter. My house (/me, its /me/theme.css, /api/me — residents only, by access_control and the
  *     controllers' roles) may also name a hidden event, which residents get ready for (D-20261101-01); everywhere else a
  *     hidden event is exactly an unknown id.
  *
@@ -82,6 +82,6 @@ final class EventSelection implements EventSubscriberInterface
     /** My house: the page and its API (ROLE_USER); a hidden event may be named here only. */
     private static function isMyHouse(string $path): bool
     {
-        return '/me' === $path || '/api/me' === $path || str_starts_with($path, '/api/me/');
+        return '/me' === $path || '/me/theme.css' === $path || '/api/me' === $path || str_starts_with($path, '/api/me/');
     }
 }

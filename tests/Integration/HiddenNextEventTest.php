@@ -75,6 +75,8 @@ final class HiddenNextEventTest extends AppTestCase
         self::assertSame(401, $this->code(), 'residents only');
         $this->client->request('GET', "/me?e=$next");
         self::assertTrue($this->client->getResponse()->isRedirect(), 'My house asks to sign in');
+        $this->client->request('GET', "/me/theme.css?e=$next");
+        self::assertNotSame(200, $this->code(), 'its stylesheet too');
 
         $this->signIn('me@example.test');
         $csrf = $this->csrf();
@@ -91,6 +93,11 @@ final class HiddenNextEventTest extends AppTestCase
         self::assertSame(["/me", "/me?e=$next"], $page->filter('.event-switch a')->each(static fn ($a) => $a->attr('href')), 'My house has its tab');
         self::assertStringContainsString('Getting ready', $page->filter('.event-switch a[aria-current="page"]')->text());
         self::assertStringContainsString('Only residents see', $page->filter('#eventHiddenNotice')->text());
+        self::assertSame(1, $page->filter('link[rel="stylesheet"][href$="&e='.$next.'"][href^="/me/theme.css?v="]')->count(), 'its own colours, from a residents-only stylesheet');
+        $this->client->request('GET', "/me/theme.css?e=$next");
+        self::assertSame(200, $this->code());
+        self::assertStringContainsString('no-store', (string) $this->client->getResponse()->headers->get('Cache-Control'));
+        self::assertStringContainsString('--brand:', (string) $this->client->getResponse()->getContent());
 
         $prev = $this->json('GET', "/api/me/homes/$mine/previous?e=$next");
         self::assertSame([200, 'Full-size bars', '18:00', true], [$this->code(), $prev['listing']['note'], $prev['listing']['start'], $prev['listing']['details']['nonfood']], 'last year\'s details');
