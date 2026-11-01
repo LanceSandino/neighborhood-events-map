@@ -6,7 +6,8 @@
 {% set switch_path = '/' %}
 {% set et = event_type(c.event.type) %}
 {% set closed = c.event.state == 'closed' %}
-{% set next = closed ? event_tabs('/me')|filter(t => t.type == c.event.type and t.state == 'upcoming')|first : null %}
+{# The next event of the type is named only once it is public; a hidden one (residents get ready, D-20261101-01) never is. #}
+{% set next = closed ? next_public_event(c.event) : null %}
 {% block body %}
 <section class="intro">
   <div>

@@ -5,7 +5,8 @@
  *     status buttons and the edit form PATCH /api/me/homes/{id} (CSRF header); a home not listed for an upcoming or open
  *     event offers "List for <event>" (POST /api/me/homes/{id}/listing) from an empty form, which "Use last year’s
  *     details" may fill with the resident's own listing of that home from the previous event of the same type (nothing
- *     is saved until they save); a closed event's listings are read-only.
+ *     is saved until they save); a closed event's listings are read-only and the page points to the next event of its
+ *     type. A hidden event (only residents see it, D-20261101-01) is listed for like an upcoming one.
  *     After a save the home is drawn again and the keyboard stays on the same control. Session expiry is enforced by
  *     the server; the countdown here is only a hint and never polls protected endpoints. The event type (events/index.js) fills and
  *     reads its own listing fields, sent as `details`, and supplies its hours and words.
@@ -68,12 +69,13 @@ function homeCard(home, ev) {
   const l = home.listing;
   $('[data-f="address"]', node).textContent = home.address;
   const closed = ev.state === 'closed';
+  const soon = ev.state === 'upcoming' || ev.state === 'hidden'; // no homes on the map yet
   $('[data-f="meta"]', node).textContent = [home.zone_label, l ? `${time12(l.start)}–${time12(l.end)}` : (ev.active ? `Not listed for ${ev.name}` : 'No listing'),
-    l ? (closed ? `${ev.name} has ended` : (ev.state === 'upcoming' ? (l.published ? 'Shown when the event opens' : 'Hidden from the map') : (l.published ? 'Shown on the map' : 'Hidden from the map'))) : ''].filter(Boolean).join(' · ');
+    l ? (closed ? `${ev.name} has ended` : (soon ? (l.published ? 'Shown when the event opens' : 'Hidden from the map') : (l.published ? 'Shown on the map' : 'Hidden from the map'))) : ''].filter(Boolean).join(' · ');
   const others = (home.events || []).filter((x) => String(x.event_id) !== String(ev.id));
   const evBox = $('[data-f="events"]', node);
   if (others.length) {
-    evBox.innerHTML = 'Other events: ' + others.map((x) => `<a href="/me?e=${encodeURIComponent(x.event_id)}">${esc(x.name)}</a> ${x.listed ? 'listed' : 'not listed'}${x.state === 'closed' ? ' (ended)' : ''}`).join(' · ');
+    evBox.innerHTML = 'Other events: ' + others.map((x) => `<a href="/me?e=${encodeURIComponent(x.event_id)}">${esc(x.name)}</a> ${x.listed ? 'listed' : 'not listed'}${x.state === 'closed' ? ' (ended)' : (x.state === 'hidden' ? ' (getting ready)' : '')}`).join(' · ');
     evBox.classList.remove('hide');
   }
   const warn = $('[data-f="warning"]', node);
@@ -104,7 +106,7 @@ function homeCard(home, ev) {
     box.classList.remove('hide');
     const btn = $('[data-f="listForButton"]', node);
     $('[data-f="listForText"]', node).textContent = home.can_list
-      ? `This home is not ${ev.state === 'upcoming' ? 'listed' : 'on the map'} for ${ev.name} yet. List it to take part; you start from an empty form${home.can_copy_previous ? ' (or from your details of last time)' : ''}, and nothing is shown until you save.`
+      ? `This home is not ${soon ? 'listed' : 'on the map'} for ${ev.name} yet. List it to take part; you start from an empty form${home.can_copy_previous ? ' (or from your details of last time)' : ''}, and nothing is shown until you save.`
       : (closed ? `${ev.name} has ended.` : (ev.active ? (ev.accepts_listings === false ? `The dates of ${ev.name} are to be announced. You can list this home once they are set.` : 'House listings are closed right now.')
         : 'There is no event on the map right now. You can list this home when the organizer starts the next one.'));
     if (home.can_list) {
@@ -219,6 +221,11 @@ async function load() {
       $('[data-f="text"]', another).textContent = 'Manage more than one property? Use the map’s “List your home” form while signed in, or contact the organizer.';
     }
     const ev = me.event || { active: true, name: 'this event', start: '17:00', end: '21:00' };
+    const nextBox = $('#eventNextNotice');
+    if (nextBox && ev.state === 'closed' && ev.next) { // the ended event points to the next one of its kind
+      nextBox.innerHTML = `${esc(ev.name)} has ended. <a href="/me?e=${encodeURIComponent(ev.next.id)}">Get your house ready for next time</a>${ev.next.state === 'hidden' ? ' — only residents see it for now.' : '.'}`;
+      nextBox.classList.remove('hide');
+    }
     for (const h of me.homes) list.appendChild(homeCard(h, ev));
   } catch (e) {
     if (!handleAuthError(e)) $('#homes').innerHTML = `<p class="notice danger">${esc(friendlyError(e))}</p>`;

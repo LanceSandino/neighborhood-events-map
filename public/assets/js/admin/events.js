@@ -5,8 +5,9 @@
  *     Christmas lights November 1 to January 1, a sale's dates to be announced), edit (name, dates or "to be
  *     announced", tentative, hours, rules, the thank-you message, the type's own settings and the event's own branding —
  *     emoji, headline, intro, colours and About text, each optional with the type's default as its placeholder, ADR 0012),
- *     preview a draft (a public event: its page), announce
- *     it (upcoming), open, close (the confirmation shows the thank-you text and next year's dates it creates), make an
+ *     preview a draft or a hidden event (a public event: its page), hide a draft or an upcoming event (residents get
+ *     ready in My house, visitors see nothing; D-20261101-01) or create one hidden, announce a draft or a hidden event
+ *     (upcoming), open, close (the confirmation shows the thank-you text and that next year's event is created hidden), make an
  *     event the default (what "/" shows), archive, export one event's listings (CSRF-checked form POST) and delete an
  *     archived event's listings. Several events may be on at once, one of each kind. Each event's row, summary and form
  *     is its own section (data-event-section) with its type's mark: the one place in the console an event's words and
@@ -19,7 +20,8 @@ import { csrfToken } from '../lib/api.js';
 let data = null;
 let editing = null; // the event whose form is open (null: a new draft)
 
-const STATE = { draft: 'Draft', upcoming: 'Upcoming', open: 'Open — on the map', closed: 'Closed', archived: 'Archived' };
+const STATE = { draft: 'Draft', hidden: 'Hidden · residents can get ready', upcoming: 'Upcoming', open: 'Open — on the map', closed: 'Closed', archived: 'Archived' };
+const PREVIEWABLE = ['draft', 'hidden']; // organizer-only pages; a public event has its own page
 const typeOf = (key) => data.types.find((t) => t.key === key);
 const oneDay = (key) => (typeOf(key) || {}).schedule_kind === 'single_day';
 const drives = (key) => ((typeOf(key) || {}).route_profiles || []).includes('driving');
@@ -36,6 +38,10 @@ function form(e) {
     <div class="field"><label for="evType">Event type</label><select id="evType" ${e ? 'disabled' : ''}>${(e ? [{ key: e.type, name: e.type_name }] : data.types).map((t) => `<option value="${esc(t.key)}" ${t.key === type ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
       <span class="form-caption">${e ? 'The type of an event never changes.' : 'This version offers ' + esc(data.types.map((t) => t.name).join(', ')) + '.'}</span></div>
     <div class="field"><label for="evName">Public name</label><input id="evName" maxlength="60" value="${esc(e ? e.name : '')}" placeholder="${esc((typeOf(type) || {}).name || '')}"></div>
+    ${e ? '' : `<div class="field full"><span class="label" id="evStartAsLabel">Start as</span><div class="checks" role="radiogroup" aria-labelledby="evStartAsLabel">
+      <label class="check-chip"><input type="radio" name="evStartAs" value="draft" checked> Draft — only organizers see it</label>
+      <label class="check-chip"><input type="radio" name="evStartAs" value="hidden"> Hidden — residents can get ready</label></div>
+      <span class="form-caption">Hidden: residents list their homes in My house (or use last year’s details) while visitors see nothing. Announce it when visitors may see it.</span></div>`}
     <div class="field full"><label class="check-chip"><input type="checkbox" id="evTbd" ${tbd ? 'checked' : ''}> Dates to be announced</label>
       <label class="check-chip"><input type="checkbox" id="evTentative" ${e && e.dates_tentative ? 'checked' : ''}> The dates are tentative</label>
       <span class="form-caption">Visitors see “dates to be announced” or “tentative”. Opening an event confirms its dates; residents can list once it has dates.</span></div>
@@ -71,7 +77,7 @@ function brandFields(type, e) {
 /** Where to see the branding: a draft's preview, a public event's own page. */
 function previewLink(e) {
   if (!e) return 'Save the draft, then preview it to see its look.';
-  if (e.state === 'draft') return `<a href="/admin/events/${e.id}/preview">Preview this draft</a> to see its look (save first).`;
+  if (PREVIEWABLE.includes(e.state)) return `<a href="/admin/events/${e.id}/preview">Preview this ${e.state === 'draft' ? 'draft' : 'hidden event'}</a> to see its look (save first).`;
   return e.state === 'archived' ? '' : `<a href="/?e=${e.id}">Open this event’s page</a> to see its look (save first).`;
 }
 
@@ -113,8 +119,9 @@ function typeFields(type, e) {
 function row(e) {
   const a = [];
   const offered = e.type_offered;
-  if (e.state === 'draft' && offered) a.push(`<a class="secondary" href="/admin/events/${e.id}/preview">Preview</a>`, `<button type="button" class="secondary" data-announce="${e.id}">Announce</button>`);
-  if (['draft', 'upcoming'].includes(e.state) && offered) a.push(`<button type="button" class="primary" data-open="${e.id}">Open</button>`);
+  if (PREVIEWABLE.includes(e.state) && offered) a.push(`<a class="secondary" href="/admin/events/${e.id}/preview">Preview</a>`, `<button type="button" class="secondary" data-announce="${e.id}">Announce</button>`);
+  if (['draft', 'upcoming'].includes(e.state) && offered) a.push(`<button type="button" class="secondary" data-hide="${e.id}">${e.state === 'draft' ? 'Let residents get ready' : 'Hide'}</button>`);
+  if (['draft', 'hidden', 'upcoming'].includes(e.state) && offered) a.push(`<button type="button" class="primary" data-open="${e.id}">Open</button>`);
   if (e.state === 'open' && offered) a.push(`<button type="button" class="primary" data-close="${e.id}">Close</button>`);
   if (['upcoming', 'open', 'closed'].includes(e.state) && !e.is_default && offered) a.push(`<button type="button" class="secondary" data-default="${e.id}">Make default</button>`);
   if (e.state !== 'archived' && offered) a.push(`<button type="button" class="secondary" data-edit="${e.id}">Edit</button>`);
@@ -133,7 +140,7 @@ function render() {
     <div class="panel"><h2>On the public site</h2>${shown.length
       ? `<ul class="event-summary">${shown.map((e) => `<li data-event-section="${esc(e.type)}"><span aria-hidden="true">${esc(e.type_icon || '')}</span> <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''} · ${esc(STATE[e.state])} · ${esc(dates(e))}${e.state === 'open' ? ` · ${e.public} of ${e.opted_in} listed homes on the map` : (e.opted_in ? ` · ${e.opted_in} homes listed` : '')}</li>`).join('')}</ul>`
       : '<p class="notice">No event is public. Visitors see “No event on the map right now” and nobody can list a home until you announce or open an event.</p>'}
-      <p class="form-caption">Several events can be on at once, one of each kind; visitors switch between them and “/” shows the default. Closing an event shows its thank-you message and creates next year's event of the same kind (upcoming, tentative dates). Claims stay with their residents; listings belong to one event, and nothing is copied from an earlier event unless a resident chooses “Use last year's details”.</p></div>
+      <p class="form-caption">Several events can be on at once, one of each kind; visitors switch between them and “/” shows the default. Closing an event shows its thank-you message and creates next year's event of the same kind, hidden (tentative dates): residents can get ready in My house, and visitors see it once you announce it. Claims stay with their residents; listings belong to one event, and nothing is copied from an earlier event unless a resident chooses “Use last year's details”.</p></div>
     <div class="panel"><h2>${editing ? 'Edit event' : 'Prepare an event'}</h2><div id="eventFormHost">${editing !== undefined && editing !== false ? form(editing) : '<button type="button" class="primary" id="evNew">+ Prepare an event</button>'}</div></div>
     <div class="panel"><h2>All events</h2><div class="table-wrap"><table class="data events-table"><thead><tr><th>Event</th><th>Dates</th><th>State</th><th>Homes opted in</th><th>On the map</th><th></th></tr></thead>
       <tbody>${data.events.map(row).join('') || '<tr><td colspan="6">No events yet.</td></tr>'}</tbody></table></div></div>`;
@@ -157,7 +164,10 @@ function readForm() {
     body.settings.early_bird_time = $('#evEarly').value || null;
   }
   body.settings.branding = Object.fromEntries([...document.querySelectorAll('#evBrandFields [data-brand]')].map((i) => [i.dataset.brand, i.value.trim()]).filter(([, v]) => v !== ''));
-  if (!editing) body.type = type;
+  if (!editing) {
+    body.type = type;
+    if (document.querySelector('input[name="evStartAs"]:checked')?.value === 'hidden') body.state = 'hidden';
+  }
   return body;
 }
 
@@ -185,12 +195,14 @@ function bind() {
   }));
   step('announce', (e) => `Announce “${e.name}” (${dates(e)})? Visitors see it with its dates and residents can list their homes${e.starts_on ? '' : ' once the dates are set'}. Its homes appear on the map when you open it.`,
     'announce', (e) => `“${e.name}” is announced.`);
+  step('hide', (e) => `${e.state === 'draft' ? 'Let residents get ready for' : 'Hide'} “${e.name}”? Visitors do not see it (no tab, no page); residents can list their homes for it in My house${e.starts_on ? '' : ' once the dates are set'}. Announce it when visitors may see it.`,
+    'hide', (e) => `“${e.name}” is hidden: residents can get ready.`);
   step('open', (e) => `Open “${e.name}” (${dates(e)})? Its listed homes appear on the map now${e.dates_tentative ? ' and its dates are confirmed' : ''}.`,
     'open', (e) => `“${e.name}” is open: its homes are on the map now.`);
   step('close', (e) => {
     const p = e.close_preview || { message: '', next: { name: e.name, words: 'dates to be announced' } };
-    return `Close “${e.name}”? Its homes leave the map and visitors see this thank-you message:\n\n${p.message}\n\nNext year's event is created now: “${p.next.name}”, ${p.next.words}. Residents can list their homes for it.`;
-  }, 'close', (e) => `“${e.name}” is closed. Next year's event is ready.`);
+    return `Close “${e.name}”? Its homes leave the map and visitors see this thank-you message:\n\n${p.message}\n\nNext year's event is created now, hidden: “${p.next.name}”, ${p.next.words}. Residents can get ready for it in My house (list their homes or use last year's details); visitors see it once you announce it.`;
+  }, 'close', (e) => `“${e.name}” is closed. Next year's event is ready. It stays hidden until you announce it.`);
   step('default', () => null, 'default', (e) => `“${e.name}” is the default event now: “/” shows it.`, () => ({}));
   step('archive', (e) => `Archive “${e.name}”? It leaves the public site for good${e.is_default ? ' and another public event becomes the default' : ''}. Its listings are kept until you delete them.`,
     'archive', (e) => `“${e.name}” is archived.`);
@@ -244,7 +256,7 @@ function bindForm() {
       flash('Event saved.');
     } else {
       await call('/api/admin/events', { method: 'POST', body });
-      flash('Draft saved. Preview it, then announce or open it when you are ready.');
+      flash(body.state === 'hidden' ? 'Hidden event saved: residents can get ready. Announce or open it when you are ready.' : 'Draft saved. Preview it, then announce or open it when you are ready.');
     }
     editing = false;
     load();

@@ -19,7 +19,7 @@ use Psr\Clock\ClockInterface;
  * @description Organizer-only manual remediation: transfer a claim to another email, unclaim,
  *     hide/unhide a listing, export claims. Every action requires explicit confirmation from the
  *     caller and writes an audit event with old/new account ids. No automated adjudication. Claims are
- *     address-scoped; hide/unhide concerns the address's listings of every current (upcoming or open) event and the
+ *     address-scoped; hide/unhide concerns the address's listings of every current (hidden, upcoming or open) event and the
  *     export's listing columns the default event's listing (the hold itself stays on the address; D-20261031-43).
  *
  * @dependencies DBAL, clock, Security/*, Listing/ListingRepository, Community/CommunityRepository, Audit/AuditLog

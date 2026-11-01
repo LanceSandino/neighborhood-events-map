@@ -61,6 +61,17 @@ final class RollbackDrillTest extends TestCase
         self::assertLessThan(strpos($drill, 'custom headline after the image rollback'), strpos($drill, 'step "5. path (a)'));
     }
 
+    /** Hidden events (D-20261101-01): next year's is hidden after closing, stays hidden across the rollback, then is announced. */
+    public function testTheDrillChecksNextYearsEventStaysHiddenUntilAnnounced(): void
+    {
+        $drill = self::read('bin/drill-event-upgrade.sh');
+        foreach (['Version20261101000001', '= "hidden 2027-10-31 true"', 'next year\'s hidden Halloween is listed for visitors', 'the hidden event answers the public API',
+            'the thank-you page names the hidden event', 'announce --event-id "$next_id"', '= "closed,open,upcoming"'] as $needle) {
+            self::assertStringContainsString($needle, $drill);
+        }
+        self::assertLessThan(strpos($drill, 'announce --event-id'), strpos($drill, 'step "6. forward again'), 'announced only after the rollback and the forward again');
+    }
+
     public function testTheRunbookNamesBothPathsAndIsLinked(): void
     {
         $runbook = self::read('docs/runbooks/event-types-migration.md');

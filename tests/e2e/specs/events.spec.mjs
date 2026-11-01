@@ -286,11 +286,14 @@ test('an organizer opens and closes an event (next year\'s is created) and chang
   await row(e.sale.id).getByRole('button', { name: 'Close' }).click();
   await expect(page.locator('#flash')).toContainText('is closed. Next year\'s event is ready.');
   expect(shown).toContain('Community Rummage Sale 2027 was a success — thank you! The next sale: dates to be announced.');
-  expect(shown).toContain('“Community Rummage Sale”, dates to be announced');
+  expect(shown).toContain('created now, hidden: “Community Rummage Sale”, dates to be announced');
   const after = await events(request);
-  expect(after.sale.id, 'the next sale, created by closing').not.toBe(e.sale.id);
+  expect(after.sale, 'the next sale is hidden from visitors (0.17)').toBeUndefined();
+  const nextSale = (await (await page.request.get(LIGHTS + '/api/admin/events')).json()).events.find((x) => x.type === 'garage_sale' && x.state === 'hidden');
+  expect(nextSale.id, 'the next sale, created by closing').not.toBe(e.sale.id);
+  await expect(row(nextSale.id)).toContainText('Hidden · residents can get ready');
   const closedSale = after.list.find((x) => x.id === e.sale.id);
-  expect([closedSale.state, after.sale.starts_on]).toEqual(['closed', null]);
+  expect([closedSale.state, nextSale.starts_on]).toEqual(['closed', null]);
 
   // The closed sale becomes the default: "/" shows its thank-you message; then the lights again.
   await row(e.sale.id).getByRole('button', { name: 'Make default' }).click();
@@ -308,13 +311,16 @@ test('an organizer opens and closes an event (next year\'s is created) and chang
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: `${SHOTS}/admin-events-1440.png` });
 
-  // Give back: the closed sale and next year's Halloween (with the resident's listing) are archived; the demo seed
-  // brings next year's Halloween back.
+  // Give back: the closed sale and next year's Halloween (with the resident's listing) are archived, the next sale is
+  // announced (the demo's sale to be announced again); the demo seed brings next year's Halloween back.
   for (const ev of [e.sale, e.next]) {
     page.once('dialog', (d) => d.accept());
     await row(ev.id).getByRole('button', { name: 'Archive' }).click();
     await expect(row(ev.id)).toContainText('Archived');
   }
+  page.once('dialog', (d) => d.accept());
+  await row(nextSale.id).getByRole('button', { name: 'Announce' }).click();
+  await expect(row(nextSale.id)).toContainText('Upcoming');
   const end = await events(request);
   expect(end.list.map((x) => [x.type, x.state, x.is_default])).toEqual([['holiday_lights', 'open', true], ['halloween', 'closed', false], ['garage_sale', 'upcoming', false]]);
   guard.assertClean();

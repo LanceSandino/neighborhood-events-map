@@ -12,7 +12,9 @@ use App\Community\CommunityRepository;
  *     their public description for GET /api/events — id, type, name, state, dates, tentative, default and, for a
  *     closed event, its thank-you text — and the event switcher's tabs (emoji and name, the year when two events
  *     share a name, the state in words for an event that is not open, the link and whether it is the selected one).
- *     Drafts and archived events are never described (ADR 0011, D-20261031-40).
+ *     Drafts, hidden and archived events are never described to visitors (ADR 0011, D-20261031-40); My house's
+ *     switcher also has a tab for a hidden event residents get ready for ("Getting ready", D-20261101-01), and a
+ *     closed event's thank-you text and card name the next event of its type only once it is public.
  *
  * @dependencies Community/CommunityRepository, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Event/ClosingMessage, Event/EventDates
  */
@@ -39,13 +41,38 @@ final class PublicEvents
             + (EventOccurrence::CLOSED === $e->state ? ['closing_message' => $this->closingMessage($e)] : []);
     }
 
-    /** The thank-you text of a closed event (the organizer's, or the type's default naming next year's dates). */
+    /** The thank-you text of a closed event (the organizer's, or the type's default naming next year's dates once announced). */
     public function closingMessage(EventOccurrence $closed): string
     {
-        $type = $this->types->get($closed->type);
+        return ClosingMessage::text($closed, $this->types->get($closed->type), $this->publicNext($closed));
+    }
+
+    /**
+     * The event of the same type that follows a closed one, for its thank-you card ("See <event>"): only while it is
+     * public (upcoming or open); a hidden one is never named.
+     *
+     * @param array<string,mixed> $closed the public event payload (c.event) or the event
+     *
+     * @return array{id:int, label:string}|null
+     */
+    public function nextAfter(array|EventOccurrence $closed): ?array
+    {
+        $event = $closed instanceof EventOccurrence ? $closed : $this->occurrences->find((int) ($closed['id'] ?? 0));
+        $next = null === $event || EventOccurrence::CLOSED !== $event->state ? null : $this->publicNext($event);
+        if (null === $next) {
+            return null;
+        }
+        $labels = self::labels($this->community->publicEvents()); // the next event is one of them
+
+        return ['id' => $next->id, 'label' => $labels[$next->id] ?? $next->name];
+    }
+
+    /** The current event of a closed one's type while it is public and of a type this release offers. */
+    private function publicNext(EventOccurrence $closed): ?EventOccurrence
+    {
         $next = $this->occurrences->currentOfType($closed->type);
 
-        return ClosingMessage::text($closed, $type, null !== $next && $next->id !== $closed->id ? $next : null);
+        return null !== $next && $next->id !== $closed->id && $next->isPublic() && $this->types->isEnabled($next->type) ? $next : null;
     }
 
     /**
@@ -68,13 +95,14 @@ final class PublicEvents
 
     /**
      * The switcher's tabs for a page ('/' or '/me'): shown only when at least two events are public (one event needs no
-     * switcher, so a single-event install looks exactly as before).
+     * switcher, so a single-event install looks exactly as before). My house (signed-in residents only) counts and shows
+     * hidden events too.
      *
      * @return list<array{id:int, type:string, label:string, icon:string, state:string, state_words:string, href:string, current:bool}>
      */
     public function tabs(string $path): array
     {
-        $events = $this->community->publicEvents();
+        $events = '/me' === $path ? $this->community->residentEvents() : $this->community->publicEvents();
         if (\count($events) < 2) {
             return [];
         }
@@ -87,7 +115,7 @@ final class PublicEvents
             'label' => $labels[$e->id],
             'icon' => (string) ($this->types->get($e->type)->copy()['event_icon'] ?? ''),
             'state' => $e->state,
-            'state_words' => match ($e->state) { EventOccurrence::UPCOMING => 'Soon', EventOccurrence::CLOSED => 'Ended', default => '' },
+            'state_words' => match ($e->state) { EventOccurrence::UPCOMING => 'Soon', EventOccurrence::CLOSED => 'Ended', EventOccurrence::HIDDEN => 'Getting ready', default => '' },
             'href' => $e->isDefault ? $path : $path.'?e='.$e->id,
             'current' => $e->id === $selected?->id,
         ], $events);

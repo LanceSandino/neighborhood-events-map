@@ -9,23 +9,28 @@ namespace App\Event;
  * @description One event of the community (a row of event_occurrences): its immutable type key, public name, date
  *     range in the community's local calendar (both null while the dates are to be announced; tentative dates are
  *     flagged), default hours, validated type settings (with the organizer's closing message), its life-cycle state —
- *     draft (organizers only) → upcoming (residents may list; visitors see the dates) → open (the public map with homes)
- *     → closed (a thank-you message) → archived (hidden) — and whether it is the default event "/" shows
- *     (D-20261031-37). Listings belong to exactly one occurrence.
+ *     draft (organizers only) → hidden (residents get ready in My house; visitors see nothing, D-20261101-01) →
+ *     upcoming (residents may list; visitors see the dates) → open (the public map with homes) → closed (a thank-you
+ *     message) → archived (gone) — and whether it is the default event "/" shows (D-20261031-37). Listings belong to
+ *     exactly one occurrence.
  *
  * @dependencies none
  */
 final class EventOccurrence
 {
     public const DRAFT = 'draft';
+    /** Residents may list in My house; visitors never see it (not public). Closing an event creates next year's in it. */
+    public const HIDDEN = 'hidden';
     public const UPCOMING = 'upcoming';
     public const OPEN = 'open';
     public const CLOSED = 'closed';
     public const ARCHIVED = 'archived';
     /** Visitors see these events (the switcher, /api/events); the others are the organizer's only. */
     public const PUBLIC_STATES = [self::UPCOMING, self::OPEN, self::CLOSED];
-    /** At most one event of a type is current at a time (a partial unique index). */
-    public const CURRENT_STATES = [self::UPCOMING, self::OPEN];
+    /** Residents see these in My house: the public ones and hidden ones they can get ready for. */
+    public const RESIDENT_STATES = [self::HIDDEN, self::UPCOMING, self::OPEN, self::CLOSED];
+    /** At most one event of a type is current at a time (a partial unique index); a hidden one counts. */
+    public const CURRENT_STATES = [self::HIDDEN, self::UPCOMING, self::OPEN];
     public const CLOSING_MESSAGE_MAX = 400;
 
     /** @param array<string,mixed> $settings */
@@ -71,13 +76,25 @@ final class EventOccurrence
         return \in_array($this->state, self::PUBLIC_STATES, true);
     }
 
+    /** Hidden from visitors; residents get ready for it in My house. */
+    public function isHidden(): bool
+    {
+        return self::HIDDEN === $this->state;
+    }
+
+    /** Residents see it in My house (a public event or a hidden one). */
+    public function isForResidents(): bool
+    {
+        return \in_array($this->state, self::RESIDENT_STATES, true);
+    }
+
     /** Dates are set (possibly tentative); without them the dates are to be announced. */
     public function hasDates(): bool
     {
         return null !== $this->startsOn && null !== $this->endsOn;
     }
 
-    /** Residents may list for an upcoming or open event that has dates (a listing's days lie inside them). */
+    /** Residents may list for a hidden, upcoming or open event that has dates (a listing's days lie inside them). */
     public function acceptsListings(): bool
     {
         return \in_array($this->state, self::CURRENT_STATES, true) && $this->hasDates();

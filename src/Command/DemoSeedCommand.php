@@ -34,8 +34,9 @@ use Symfony\Component\Console\Output\OutputInterface;
  *     default event. When the demo homes exist, those not listed for the default event (a new one an organizer started
  *     on the demo stack) are listed for it again, from the file, never from an earlier event. A demo with several events
  *     (homes.json "events", D-20261031-44) also gets those once, in order, each with its own homes (demo homes by
- *     address), then the step it names: "close" (the thank-you message and next year's upcoming event, as an organizer's
- *     Close does) or "announce" (upcoming, its dates possibly to be announced).
+ *     address), then the step it names: "close" (the thank-you message and next year's event, hidden, as an organizer's
+ *     Close does; "next": "announce" then announces next year's, so the demo shows it as upcoming) or "announce"
+ *     (upcoming, its dates possibly to be announced).
  *
  * @dependencies Address/*, Community/CommunityRepository, Listing/*, Event/EventTypeRegistry, Event/EventOccurrence, Event/EventLifecycle,
  *     Event/EventOccurrenceRepository, Event/OccurrenceInput, Security/UserRepository
@@ -153,18 +154,23 @@ final class DemoSeedCommand extends Command
      * One more event of a demo with several events: created once (an event of that type and name with these dates
      * already exists: nothing to do), with its demo homes listed, then closed or announced.
      *
-     * @param array<string,mixed> $spec {type, name, starts_on, ends_on, default_start, default_end, settings, homes, then}
+     * @param array<string,mixed> $spec {type, name, starts_on, ends_on, default_start, default_end, settings, homes, then, next}
      */
     private function seedEvent(array $spec, OutputInterface $output): void
     {
         $type = $this->types->get((string) $spec['type']);
         $then = (string) ($spec['then'] ?? '');
+        $announceNext = 'close' === $then && 'announce' === ($spec['next'] ?? null);
         $fields = OccurrenceInput::normalize(array_intersect_key($spec, array_flip(OccurrenceInput::FIELDS)), $type);
         $exists = $this->db->fetchOne('SELECT id FROM event_occurrences WHERE type = ? AND name = ? AND starts_on IS NOT DISTINCT FROM ? ORDER BY id LIMIT 1', [$fields['type'], $fields['name'], $fields['starts_on']]);
         if (false !== $exists) {
             // Already there; a closed one gets its next year's event back if an organizer archived it on the demo stack.
             $seeded = $this->occurrences->find((int) $exists);
-            if ('close' === $then && null !== $seeded && null !== $this->lifecycle->ensureNext($seeded, null)) {
+            $next = 'close' === $then && null !== $seeded ? $this->lifecycle->ensureNext($seeded, null) : null;
+            if (null !== $next) {
+                if ($announceNext) {
+                    $this->lifecycle->announce($next->id, null);
+                }
                 $output->writeln(sprintf('Added next year\'s FICTIONAL demo event after "%s".', $seeded->name));
             }
 
@@ -188,6 +194,10 @@ final class DemoSeedCommand extends Command
             'announce' => $this->lifecycle->announce($id, null),
             default => null,
         };
+        if ($announceNext) {
+            $next = $this->occurrences->currentOfType($fields['type']) ?? throw new \LogicException('Closing created no next event.');
+            $this->lifecycle->announce($next->id, null);
+        }
         $this->community->reset();
         $output->writeln(sprintf('Added the FICTIONAL demo event "%s" (%d homes%s).', $fields['name'], $listed, '' !== $then ? ', '.$then.'d' : ''));
     }

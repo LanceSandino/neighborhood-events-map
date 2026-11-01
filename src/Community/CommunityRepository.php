@@ -22,7 +22,8 @@ use Psr\Clock\ClockInterface;
  *     (PostgreSQL JSONB), tracks boundary approval, and imports/exports the canonical
  *     GeoJSON FeatureCollection (features tagged kind=boundary|zone). Every geometry change
  *     creates a new version, resets approval and recomputes address boundary membership. Several events may be public
- *     at once (ADR 0011): a request selects one (`?e=<id>`, Event/EventSelection) or gets the default event, and the
+ *     at once (ADR 0011): a request selects one (`?e=<id>`, Event/EventSelection; My house may also name a hidden event,
+ *     D-20261101-01) or gets the default event, and the
  *     settings' `event` block is a view of that event: loading puts its values there; saving the settings writes them
  *     to the default event first (Event/OccurrenceSettingsSync); the stored block mirrors the event the previous
  *     release shows after an image-only rollback (the bridged Halloween, else the default; D-20261031-41), and so do the
@@ -83,6 +84,27 @@ final class CommunityRepository
         $e = $this->occurrences->find($id);
 
         return null !== $e && $e->isPublic() && $this->types->isEnabled($e->type) ? $e : null;
+    }
+
+    /**
+     * An event a signed-in resident may name in My house (D-20261101-01): a public one or a hidden one they can get
+     * ready for, of a type this release offers; null for anything else.
+     */
+    public function residentEvent(int $id): ?EventOccurrence
+    {
+        $e = $this->occurrences->find($id);
+
+        return null !== $e && $e->isForResidents() && $this->types->isEnabled($e->type) ? $e : null;
+    }
+
+    /**
+     * The events residents see in My house (the public ones and hidden ones) of types this release offers.
+     *
+     * @return list<EventOccurrence>
+     */
+    public function residentEvents(): array
+    {
+        return array_values(array_filter($this->occurrences->residentEvents(), fn (EventOccurrence $e) => $this->types->isEnabled($e->type)));
     }
 
     /**

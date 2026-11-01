@@ -2,7 +2,8 @@
 {# "My house": the resident's own homes (assets/js/me.js fills the template) for the event the page is about (the
    switcher above, ?e=<id>, else the default event; ADR 0011). The event type supplies the statuses and its listing
    fields. A home not listed for an upcoming or open event offers "List for <event>" with an empty form and, when the
-   resident listed it for the previous event of the same type, "Use last year's details". A closed event is read-only. #}
+   resident listed it for the previous event of the same type, "Use last year's details". A closed event is read-only.
+   A hidden event (D-20261101-01) is shown here only: residents get ready while visitors see nothing yet. #}
 {% set nav = 'me' %}
 {% set switch_path = '/me' %}
 {% set et = event_type(c.event.type) %}
@@ -14,6 +15,8 @@
     <div><div class="eyebrow">🔑 Signed in</div><h1>My house</h1><p class="session-hint" id="sessionHint">Loading…</p></div>
     <div class="bottom-actions"><a class="secondary hide" href="/admin" id="adminLink">Organizer console</a><button type="button" class="secondary" id="btnLogoutAll">Sign out everywhere</button><button type="button" class="secondary" id="btnLogout">Sign out</button></div>
   </div>
+  {% if c.event.state == 'hidden' %}<p class="notice" id="eventHiddenNotice">Only residents see {{ c.event.name }} for now. Get your house ready: list it, or use last year’s details. Visitors see it once the organizer announces it, and homes appear on the map when it opens.</p>{% endif %}
+  <p class="notice hide" id="eventNextNotice"></p>
   <div id="claimOutcome" role="status" tabindex="-1"></div>
   <div id="homes" aria-live="polite"><p class="empty">Loading your homes…</p></div>
   <div class="dash-home" id="listAnother">

@@ -1,8 +1,9 @@
 // Seasons on the fictional demo stack (runs last: project "season"; bin/e2e.sh lists the fictional homes again for
 // the default event afterwards; ADR 0011). An organizer closes Halloween: its homes leave the map at once, visitors see
-// the thank-you message (a stop list shared for it opens without its stops), next year's Halloween is created as
-// upcoming, and a resident lists their home for it in My house from an empty form (or from their own details of last
-// time). Next year's opens and becomes the default. Christmas lights and a rummage sale are prepared, previewed and
+// the thank-you message (a stop list shared for it opens without its stops), next year's Halloween is created hidden
+// (0.17: no tab, no page, no API for visitors), a resident lists their home for it in My house from an empty form (or
+// from their own details of last time), the organizer announces it and its tab appears. Next year's opens and becomes
+// the default. Christmas lights and a rummage sale are prepared, previewed and
 // opened next to it — each with its own look, not the demo's Halloween branding —: the same resident lists the same home
 // for each, independent listings, and an ended season's listing is never public again. The demo then gets a Halloween
 // event on October 31 back, as it started, with its branding entered in the event's Branding section.
@@ -69,11 +70,13 @@ test('an organizer closes the season; last season disappears, next year is creat
   page.once('dialog', (d) => { shown = d.message(); d.accept(); });
   await close.click();
   await expect(page.locator('#flash')).toContainText(`“${name}” is closed. Next year's event is ready.`);
-  expect(shown).toContain(`${name} ${year} was a success — thank you! Come back next year (Oct 31, ${year + 1}, tentative).`);
+  expect(shown).toContain(`${name} ${year} was a success — thank you! Come back next year (dates to be announced).`);
+  expect(shown).toContain(`Next year's event is created now, hidden: “${name}”, Oct 31, ${year + 1}, tentative. Residents can get ready for it in My house`);
   const listed = (await (await page.request.get(DEMO + '/api/admin/events')).json()).events;
-  const next = listed.find((e) => e.type === 'halloween' && e.state === 'upcoming');
+  const next = listed.find((e) => e.type === 'halloween' && e.state === 'hidden');
   expect([next.name, next.starts_on, next.dates_tentative]).toEqual([name, `${year + 1}-10-31`, true]);
   await expect(row(before.id)).toContainText('Closed');
+  await expect(row(next.id)).toContainText('Hidden · residents can get ready');
 
   // Last season's homes are gone at once; visitors see the thank-you message; nothing was carried over.
   const after = (await (await request.get(DEMO + '/api/event')).json()).event;
@@ -82,7 +85,15 @@ test('an organizer closes the season; last season disappears, next year is creat
   expect((await request.get(`${DEMO}/api/homes/${mine.id}`)).status()).toBe(404);
   await visitor.goto(DEMO + '/');
   await expect(visitor.locator('.event-status-message')).toHaveText(after.closing_message);
-  await expect(visitor.locator('.event-switch a')).toHaveCount(2);
+  // Next year's is hidden: no 2027 tab, no "See" link, nothing names it; "Get my house ready" leads to My house.
+  await expect(visitor.locator('.event-switch'), 'one public event: no switcher, no tab for next year').toHaveCount(0);
+  await expect(visitor.locator('.event-status-actions a')).toHaveCount(1);
+  await expect(visitor.getByRole('link', { name: 'Get my house ready' })).toHaveAttribute('href', '/me');
+  expect((await (await request.get(DEMO + '/api/events')).json()).events.map((e) => e.id)).toEqual([before.id]);
+  expect((await request.get(`${DEMO}/api/event?e=${next.id}`)).status()).toBe(404);
+  expect((await request.get(`${DEMO}/api/homes?e=${next.id}`)).status()).toBe(404);
+  await visitor.goto(`${DEMO}/?e=${next.id}`);
+  await expect(visitor.locator('.event-status.is-closed'), 'its link shows the default event').toBeVisible();
   // The stop list shared for the ended event opens its thank-you page, without stops.
   await visitor.goto(shared);
   await expect(visitor.locator('.event-status')).toBeVisible();
@@ -96,6 +107,8 @@ test('an organizer closes the season; last season disappears, next year is creat
   await signIn(res, request, RESIDENT, `/me`);
   await expect(res).toHaveURL(/\/me$/);
   await res.goto(`${DEMO}/me?e=${next.id}`);
+  await expect(res.locator('#eventHiddenNotice')).toContainText(`Only residents see ${name} for now`);
+  await expect(res.getByRole('navigation', { name: 'Events' }).getByRole('link', { name: /Getting ready/ })).toHaveAttribute('aria-current', 'page');
   const card = res.locator('.dash-home', { hasText: mine.address });
   await expect(card.locator('[data-f="meta"]')).toContainText(`Not listed for ${name}`);
   await expect(card.locator('[data-f="form"]')).toBeHidden();
@@ -113,7 +126,27 @@ test('an organizer closes the season; last season disappears, next year is creat
   await card.getByRole('button', { name: `List for ${name}` }).click();
   await expect(res.locator('.toast', { hasText: `Listed for ${name}` })).toBeVisible();
   await expect(res.locator('.dash-home', { hasText: mine.address }).locator('[data-f="meta"]')).toContainText('Shown when the event opens');
-  expect((await (await request.get(`${DEMO}/api/homes?e=${next.id}`)).json()).homes, 'not public before it opens').toEqual([]);
+  expect((await request.get(`${DEMO}/api/homes?e=${next.id}`)).status(), 'hidden: not public at all').toBe(404);
+
+  // The organizer announces it: its tab appears with its tentative date, the thank-you card links it, still no homes.
+  await page.goto(DEMO + '/admin/events');
+  page.once('dialog', (d) => d.accept());
+  await row(next.id).getByRole('button', { name: 'Announce' }).click();
+  await expect(page.locator('#flash')).toContainText(`“${name}” is announced.`);
+  await expect(row(next.id)).toContainText('Upcoming');
+  const look = await (await browser.newContext()).newPage();
+  await politeTiles(look);
+  await look.goto(DEMO + '/');
+  const tabs = look.getByRole('navigation', { name: 'Events' }).getByRole('link');
+  await expect(tabs).toHaveCount(2);
+  await expect(tabs.nth(1)).toContainText(`${name} ${year + 1}`);
+  await expect(tabs.nth(1)).toContainText('Soon');
+  await expect(look.getByRole('link', { name: `See ${name} ${year + 1}` })).toHaveAttribute('href', `/?e=${next.id}`);
+  await expect(look.getByRole('link', { name: 'Get my house ready' })).toHaveAttribute('href', `/me?e=${next.id}`);
+  await tabs.nth(1).click();
+  await expect(look.locator('#eventStatusTitle')).toHaveText(`Oct 31, ${year + 1}, tentative`);
+  await look.context().close();
+  expect((await (await request.get(`${DEMO}/api/homes?e=${next.id}`)).json()).homes, 'announced: not public before it opens').toEqual([]);
 
   // Next year's opens (its date confirmed) and becomes the default: the home is on the map again, for this event.
   await page.goto(DEMO + '/admin/events');
