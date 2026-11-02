@@ -1531,4 +1531,34 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-branding"
   author: "Lance Sandino"
   timestamp: "2026-10-31T20:30:00Z"
+- id: CU-20261101-01
+  type: feat
+  title: "Hidden events: closing creates next year's event hidden; residents get ready in My house; organizers announce, open or hide it"
+  description: "A new event state `hidden` (migrations/Version20261101000001: the state check allows it and uniq_current_event_per_type counts it with upcoming and open; down makes hidden events drafts). EventOccurrence::HIDDEN (current, not public, accepts listings with dates; RESIDENT_STATES). EventLifecycle: close inserts next year's event hidden (fields and the close preview moved to Event/NextEvent), announce takes a draft or a hidden event (not_announceable), hide (new; a draft or an upcoming event, a default passes on; not_hideable for open/closed), open takes a hidden event, createDraft(..., 'hidden') under the occurrences lock. POST /api/admin/events/{id}/hide (confirmed), POST /api/admin/events takes state draft|hidden. EventSelection resolves /me, /me/theme.css and /api/me after the firewall and allows a hidden event there only (CommunityRepository::residentEvent/residentEvents); everywhere else a hidden id is unknown (404 API, default event for pages). PublicEvents: the thank-you text and card (next_public_event) name the next event only while it is public; My house's switcher includes hidden events ('Getting ready'). MeApiController lists resident events per home and gives a closed event's next one (event.next). My house: a notice for a hidden event, a pointer from an ended event, /me/theme.css (residents only, no-store). Organizer → Events: 'Hidden · residents can get ready', Hide / Let residents get ready, Start as hidden, preview of hidden events, the close confirmation says next year's is hidden. Moderation holds and the review queue include hidden events. The lights demo announces next year's Halloween after its seed closes it (homes.json next: announce)."
+  impact: high
+  affected_modules: ["migrations/Version20261101000001.php", "src/Event/EventOccurrence.php", "src/Event/EventOccurrenceRepository.php", "src/Event/EventLifecycle.php", "src/Event/NextEvent.php", "src/Event/EventSelection.php", "src/Event/PublicEvents.php", "src/Community/CommunityRepository.php", "src/Controller/Api/EventsAdminApiController.php", "src/Controller/Api/MeApiController.php", "src/Controller/AdminPageController.php", "src/Controller/PageController.php", "src/Listing/ListingRepository.php", "src/Twig/EventSwitcherExtension.php", "src/Command/DemoSeedCommand.php", "templates/home/event_status.html.twig", "templates/me/index.html.twig", "templates/admin/event_preview.html.twig", "public/assets/js/me.js", "public/assets/js/admin/events.js", "examples/demo-lights/homes.json"]
+  related_tests: ["tests/Integration/HiddenNextEventTest.php (5 tests)", "tests/Integration/HiddenEventMigrationTest.php: testUpKeepsEveryEventAndDownMakesHiddenEventsDrafts", "tests/Unit/Event/EventStatesTest.php", "tests/Integration/EventLifecycleRaceTest.php: testClosingWhileANextYearDraftIsHiddenAtOnceLeavesOneHiddenHalloween", "tests/Integration/EventLifecycleRaceTest.php: testConcurrentAnnouncesOfAHiddenEventHaveOneWinner", "tests/Integration/EventLifecycleRaceTest.php: testTheDatabaseCountsAHiddenEventAsTheCurrentOneOfItsType", "tests/Integration/EventsConsoleTest.php: testAnOrganizerClosesTheSeasonNextYearIsCreatedAndNothingCarriesOver", "tests/Integration/MultiEventTest.php: testClosingEachTypeCreatesNextYearsEventWithWhatLasts", "tests/e2e/specs/season.spec.mjs"]
+  commit_ref: "feature/hidden-next-year"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T23:00:00Z"
+- id: CU-20261101-02
+  type: test
+  title: "The rollback drill and the e2e suite cover hidden events"
+  description: "bin/drill-event-upgrade.sh: both 0.16 and 0.17 migrations run at start; (4b) next year's Halloween is hidden after closing — not in /api/events, 404 on /api/event?e=, not named by the thank-you page — and a resident lists for it; (6) after the image rollback to 0.9 and forward again it is still hidden, an organizer announces it (scripts/drill_listing.py announce), /api/events lists it as upcoming and the thank-you card links it. season.spec.mjs: close Halloween → no 2027 tab, the API 404s and its link shows the default event → the resident lists for 2027 with last year's details in My house (Getting ready tab) → the organizer announces it → the tab and 'See Halloween 2027' appear. events.spec.mjs: closing the sale creates a hidden one, which the give-back announces."
+  impact: none
+  affected_modules: ["bin/drill-event-upgrade.sh", "scripts/drill_listing.py", "tests/e2e/specs/season.spec.mjs", "tests/e2e/specs/events.spec.mjs"]
+  related_tests: ["tests/Unit/Deploy/RollbackDrillTest.php: testTheDrillChecksNextYearsEventStaysHiddenUntilAnnounced", "tests/e2e/specs/season.spec.mjs", "tests/e2e/specs/events.spec.mjs: an organizer opens and closes an event (next year's is created) and changes the default", "bin/drill-event-upgrade.sh (run on the built images, docs/quality/test-report.md)"]
+  commit_ref: "feature/hidden-next-year"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T23:10:00Z"
+- id: CU-20261101-03
+  type: chore
+  title: "0.17.0-beta.1: version, release notes, decisions, roadmap, docs, acceptance audit and test report"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.17.0-beta.1; plain release notes. DECISIONS D-20261101-01 to -03 (refining D-20261031-37, -38, -39), ADR 0011 amended, ROADMAP Stage 8 and the new-homes-for-a-hidden-event gap, docs/architecture/event-types.md, the organizer guide (the Hidden state, Close), the migration runbook (0.17, the drill's steps 4b and 6), the upgrade runbook's notes, the acceptance audit's hidden-events section and the test report."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "DECISIONS.md", "ROADMAP.md", "docs/adr/0011-several-published-events.md", "docs/architecture/event-types.md", "docs/runbooks/", "docs/quality/"]
+  related_tests: ["tests/Unit/About/ReleaseConsistencyTest.php", "tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Integration/WhatsNewTest.php"]
+  commit_ref: "feature/hidden-next-year"
+  author: "Lance Sandino"
+  timestamp: "2026-11-01T23:20:00Z"
 ```
