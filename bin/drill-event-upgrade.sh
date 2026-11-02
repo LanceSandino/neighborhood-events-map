@@ -118,9 +118,10 @@ step "3. upgrade to $new_app:$new_tag (startup migrations)"
 images "$new_app" "$new_nginx" "$new_tag"
 up
 log=$(applog)
-for migration in Version20261031000004 Version20261101000001; do
-  grep -q "Migrating up to DoctrineMigrations\\\\$migration" <<<"$log" || fail "the event migrations did not run at start ($migration)"
-done
+# Every migration runs at start, up to the latest (Version20261031000004 per-event branding, then Version20261101000001
+# hidden events): Doctrine names the target and how many it executed (5 from 0.9: 0.10, 0.11, 0.15, 0.16, 0.17).
+grep -q 'Migrating up to DoctrineMigrations\\Version20261101000001' <<<"$log" || fail "the event migrations did not run at start"
+grep -q '5 migrations executed' <<<"$log" || fail "not every event migration ran at start: $(grep -o '[0-9]* migrations executed' <<<"$log" | head -1)"
 after=$(homes | view09)
 [ "$after" = "$before" ] || fail "/api/homes changed across the upgrade"
 [ "$(sql "SELECT state || '/' || is_default FROM event_occurrences")" = "open/true" ] || fail "the Halloween is not the open default event"
@@ -189,7 +190,10 @@ up
 [ "$(sql "SELECT note FROM event_listings WHERE event_id = $closed_id AND address_id = $home")" = "Edited on $old_tag" ] || fail "the write made on $old_tag was lost"
 [ "$(sql "SELECT note FROM event_listings WHERE event_id = $next_id AND address_id = $home")" = "Next year on $new_tag" ] || fail "next year's listing changed"
 [ "$(public_states)" = "closed,open" ] || fail "/api/events after the forward: $(public_states)"
-python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" announce --event-id "$next_id" >/dev/null || fail "announce"
+# A second organizer: the first one has used its three sign-in links of the quarter hour (open-event, brand, close).
+organizer2=drill-organizer-2@example.invalid
+"${compose[@]}" exec -T app php bin/console app:admin:grant "$organizer2" >/dev/null
+python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer2" announce --event-id "$next_id" >/dev/null || fail "announce"
 [ "$(public_states)" = "closed,open,upcoming" ] || fail "/api/events after the announcement: $(public_states)"
 [ "$(curl -fsS "$base/?e=$closed_id" | grep -c "href=\"/?e=$next_id\"")" -ge 1 ] || fail "the thank-you card does not link the announced event"
 [ "$(headline /)" = "$custom" ] || fail "the closed Halloween lost its headline"
