@@ -40,6 +40,17 @@ CI verifies every migration on a blank database up → down to zero → up again
 What each release needs from whoever runs the site. `CHANGELOG.md` (and the app's "What's new") is written for
 residents and organizers and leaves this out; the engineering records are in `CHANGES.md`.
 
+### 0.17.0-beta.1 (hidden events, D-20261101-01)
+
+- Pull `0.17.0-beta.1` and recreate the stack; back up first. One additive migration runs at start,
+  `Version20261101000001`: the state check allows `hidden` and `uniq_current_event_per_type` counts hidden events.
+  No row changes; announced (upcoming) events stay visible. An install on 0.9 runs `Version20261031000001` to
+  `Version20261101000001` in order.
+- Image rollback to 0.9.0-beta.1 and the full restore work as before (the 0.9 image reads neither table); the drill
+  covers both. To go back to 0.15 or 0.16 images, migrate down to `Version20261031000004` first (hidden events become
+  drafts) — see [event-types-migration.md](event-types-migration.md#017-hidden-events).
+- New route `/me/theme.css` (residents only, not cached): no proxy rule needed; nginx passes it to the app like `/theme.css`.
+
 ### 0.16.0-beta.1 (per-event branding, ADR 0012)
 
 - Pull `0.16.0-beta.1` and recreate the stack; back up first. One data-only migration runs at start,

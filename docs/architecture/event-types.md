@@ -2,7 +2,8 @@
 
 The map serves one community; since 0.15 several of its events can be public at once — upcoming, open or closed —
 and visitors switch between them ([ADR 0011](../adr/0011-several-published-events.md), [below](#several-events-at-once-015)),
-and since 0.16 each event has its own branding next to the community's ([below](#community-branding-and-event-branding-016)).
+since 0.16 each event has its own branding next to the community's ([below](#community-branding-and-event-branding-016)),
+and since 0.17 an event can be hidden: residents get ready for it in My house while visitors see nothing (D-20261101-01).
 What differs between a Halloween map, a Christmas lights map and a garage sale map (listing fields, statuses, filters,
 icons, words) lives in an **event type**: a code module chosen for each event ([ADR 0010](../adr/0010-generic-event-types.md),
 D-20261021-19, D-20261031-01). Claims, sign-in, abuse controls, moderation, routes and privacy are shared and never
@@ -55,7 +56,7 @@ kind-of-sale toggles).
 
 | Table | What it holds |
 |---|---|
-| `event_occurrences` | one event: immutable type key, public name, first and last local day (both null: to be announced; `dates_tentative`), default hours, validated settings (`rules`, `route_modes`, `max_days`, `closing_message`), state `draft` → `upcoming` → `open` → `closed` → `archived` (0.11–0.14: `draft` → `active` → `archived`), `is_default`; partial unique indexes allow one current (upcoming or open) event per type and one default (0.15) |
+| `event_occurrences` | one event: immutable type key, public name, first and last local day (both null: to be announced; `dates_tentative`), default hours, validated settings (`rules`, `route_modes`, `max_days`, `closing_message`), state `draft` → `hidden` (0.17) → `upcoming` → `open` → `closed` → `archived` (0.11–0.14: `draft` → `active` → `archived`), `is_default`; partial unique indexes allow one current (hidden, upcoming or open) event per type and one default (0.15) |
 | `event_listings` | one address's listing for one event (`UNIQUE (event_id, address_id)`): details, status and its `status_date`, note, publication, moderation; references `claims`, so release and erasure remove every event's listings |
 | `event_listing_windows` | the listing's days: local date, start and end on that day (no overnight windows) |
 
@@ -94,16 +95,17 @@ kind-of-sale toggles).
 
 | Part | What it does |
 |---|---|
-| States | `draft` (organizers only) → `upcoming` (residents may list once it has dates; visitors see its dates, no homes) → `open` (the public map with homes) → `closed` (the thank-you message, no homes) → `archived` (hidden; listings kept until purged). A closed event never reopens; archived is final (D-20261031-37) |
-| Invariants | at most one current (upcoming or open) event per type (`uniq_current_event_per_type`); one default (`uniq_default_event`, check `event_occurrences_default_public`); dates both set or both null (`event_occurrences_dates_tbd`); drafts may coexist |
+| States | `draft` (organizers only) → `hidden` (residents get ready in My house; visitors see nothing, an `e=` naming it is an unknown id outside My house; D-20261101-01) → `upcoming` (residents may list once it has dates; visitors see its dates, no homes) → `open` (the public map with homes) → `closed` (the thank-you message, no homes) → `archived` (hidden; listings kept until purged). A closed event never reopens; archived is final (D-20261031-37) |
+| Invariants | at most one current (hidden, upcoming or open) event per type (`uniq_current_event_per_type`); one default (`uniq_default_event`, check `event_occurrences_default_public`); dates both set or both null (`event_occurrences_dates_tbd`); drafts may coexist |
 | Default | what "/" shows; the organizer picks it; archived → the newest open event, else the newest public one (`EventOccurrenceRepository::defaultEvent`, `ensureDefault`) |
 | Selection | `?e=<id>` (`Event/EventSelection`, before the guards): a public event of an offered type; otherwise 404 for `/api/*` and the default event for a page; `/admin` and `/api/admin` ignore it (D-20261031-38). The browser sends it with every request (`lib/api.js` `withEvent`) |
-| Close | `EventLifecycle::close`: closed + next year's upcoming event in one transaction; the type gives the dates (`EventType::nextDates`: Halloween October 31, lights the same nights a year later, a sale to be announced) and a new event's dates (`newEventDates`); `Event/ClosingMessage` the thank-you text (the organizer's, or the type's `page_closing_message` with the year and next year's dates in words, `Event/EventDates`) (D-20261031-39) |
-| Open | only a draft or an upcoming event with dates (a sale also with days, `EventSettingsType::listingDates`); clears `dates_tentative` |
-| Public | `GET /api/events` (`Event/PublicEvents`); the switcher (`Twig/EventSwitcherExtension` `event_tabs`, `templates/base.html.twig`, `js/event-switch.js`) on the map and My house while two or more events are public; `home/event_status.html.twig` for an upcoming or closed event (D-20261031-40) |
+| Close | `EventLifecycle::close`: closed + next year's hidden event (`Event/NextEvent`) in one transaction; the type gives the dates (`EventType::nextDates`: Halloween October 31, lights the same nights a year later, a sale to be announced) and a new event's dates (`newEventDates`); `Event/ClosingMessage` the thank-you text (the organizer's, or the type's `page_closing_message` with the year and next year's dates in words, `Event/EventDates`) — naming next year's dates only once that event is public (D-20261031-39, D-20261101-02) |
+| Hide / announce | `EventLifecycle::hide`: a draft or an upcoming event becomes hidden (a default passes on); `announce`: a draft or a hidden event becomes upcoming; `createDraft(..., 'hidden')` creates one hidden. Each checks no other current event of the type under the occurrences lock |
+| Open | only a draft, a hidden or an upcoming event with dates (a sale also with days, `EventSettingsType::listingDates`); clears `dates_tentative` |
+| Public | `GET /api/events` (`Event/PublicEvents`); the switcher (`Twig/EventSwitcherExtension` `event_tabs`, `templates/base.html.twig`, `js/event-switch.js`) on the map and My house while two or more events are public (My house also counts hidden events: `CommunityRepository::residentEvents`, `EventSelection` resolves `/me` and `/api/me` after the firewall); `home/event_status.html.twig` for an upcoming or closed event (D-20261031-40) |
 | Residents | My house per event (`/me?e=`); each home names its listings of the other public events; "Use last year's details" (`GET /api/me/homes/{id}/previous?e=`, `ResidentHomes::previous`): the resident's own listing of the same home and type from the most recent earlier event — details, note, hours — into the form only (D-20261031-42) |
 | Bridge | the newest open or closed one-day Halloween (`EventOccurrenceRepository::bridged`, `LegacyListingBridge::MIRRORED`, the trigger); the settings block mirrors it, else the default event (D-20261031-41) |
-| Demo | `examples/demo-lights/homes.json` "events": a closed Halloween with next year's upcoming one and a rummage sale to be announced next to the open lights (D-20261031-44) |
+| Demo | `examples/demo-lights/homes.json` "events": a closed Halloween with next year's one announced right after ("next": "announce", D-20261101-03) and a rummage sale to be announced next to the open lights (D-20261031-44) |
 
 ## Community branding and event branding (0.16)
 

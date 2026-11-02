@@ -11,8 +11,9 @@ use Psr\Clock\ClockInterface;
 /**
  * @module Event/EventOccurrenceRepository
  * @description Rows of event_occurrences: one by id, the public events (upcoming, open, closed; the default first,
- *     then by date), the default event — the flagged one, else the newest open event, else the newest public one —,
- *     the current (upcoming or open) event of a type, the event the legacy `listings` table mirrors (the newest open or
+ *     then by date), the events residents see in My house (the public ones and hidden ones), the default event — the
+ *     flagged one, else the newest open event, else the newest public one —, the current (hidden, upcoming or open) event
+ *     of a type, the event the legacy `listings` table mirrors (the newest open or
  *     closed one-day Halloween, D-20261031-41), all events with their opted-in and public listing counts (organizer
  *     view), inserts and field updates. Life-cycle changes (open, close, default, archive, purge) and their side
  *     effects live in Event/EventLifecycle; this class only reads and writes rows.
@@ -54,6 +55,18 @@ final class EventOccurrenceRepository
         ));
     }
 
+    /**
+     * The events residents see in My house: the public ones and hidden ones (D-20261101-01), in the same order.
+     *
+     * @return list<EventOccurrence>
+     */
+    public function residentEvents(): array
+    {
+        return array_map(EventOccurrence::fromRow(...), $this->db->fetchAllAssociative(
+            'SELECT '.self::COLUMNS." FROM event_occurrences WHERE state IN ('hidden', 'upcoming', 'open', 'closed') ORDER BY is_default DESC, starts_on ASC NULLS LAST, id ASC",
+        ));
+    }
+
     /** The default event: the flagged one, else the newest open event, else the newest public one (null: none is public). */
     public function defaultEvent(?Connection $db = null): ?EventOccurrence
     {
@@ -63,10 +76,10 @@ final class EventOccurrenceRepository
         return false === $row ? null : EventOccurrence::fromRow($row);
     }
 
-    /** The current (upcoming or open) event of a type; the database allows at most one. */
+    /** The current (hidden, upcoming or open) event of a type; the database allows at most one. */
     public function currentOfType(string $type, ?Connection $db = null): ?EventOccurrence
     {
-        $row = ($db ?? $this->db)->fetchAssociative('SELECT '.self::COLUMNS." FROM event_occurrences WHERE type = ? AND state IN ('upcoming', 'open')", [$type]);
+        $row = ($db ?? $this->db)->fetchAssociative('SELECT '.self::COLUMNS." FROM event_occurrences WHERE type = ? AND state IN ('hidden', 'upcoming', 'open')", [$type]);
 
         return false === $row ? null : EventOccurrence::fromRow($row);
     }
@@ -132,17 +145,21 @@ final class EventOccurrenceRepository
         );
     }
 
-    /** Moves an event to a later state and stamps it (open: activated_at and the dates confirmed; closed: closed_at; archived: archived_at, never the default). */
+    /**
+     * Moves an event to another state and stamps it (open: activated_at and the dates confirmed; closed: closed_at;
+     * archived: archived_at; hidden or archived: never the default).
+     */
     public function setState(Connection $db, int $id, string $state): void
     {
         $set = match ($state) {
             EventOccurrence::UPCOMING => '',
+            EventOccurrence::HIDDEN => ', is_default = FALSE',
             EventOccurrence::OPEN => ', activated_at = :now, dates_tentative = FALSE',
             EventOccurrence::CLOSED => ', closed_at = :now',
             EventOccurrence::ARCHIVED => ', archived_at = :now, is_default = FALSE',
             default => throw new \LogicException('An event never goes back to a draft.'),
         };
-        $db->executeStatement("UPDATE event_occurrences SET state = :state$set WHERE id = :id", ['state' => $state, 'id' => $id] + ('' === $set ? [] : ['now' => $this->now()]));
+        $db->executeStatement("UPDATE event_occurrences SET state = :state$set WHERE id = :id", ['state' => $state, 'id' => $id] + (str_contains($set, ':now') ? ['now' => $this->now()] : []));
     }
 
     /** Makes one public event the default (the previous default stops being it in the same statement order). */

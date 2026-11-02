@@ -34,11 +34,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  *     timeout enforced before this runs). A resident's own homes are reached only through the
  *     owner-scoped ResidentHomes, so no query here can touch another resident's home. Listing details are
  *     validated by the event's type (ListingDraft). Claims stay with the resident across events. Several events may be
- *     public (ADR 0011): the request names one with `?e=<id>` (Event/EventSelection; else the default event). Each home
- *     shows its listing for that event and which public events it is listed for, and can be listed for an upcoming or
- *     open event from an empty form — optionally filled with the resident's own listing of the same home from the
+ *     public (ADR 0011): the request names one with `?e=<id>` (Event/EventSelection; else the default event), here also
+ *     a hidden event residents get ready for (D-20261101-01). Each home shows its listing for that event and which of
+ *     the events residents see (public or hidden) it is listed for, and can be listed for a hidden, upcoming or open
+ *     event from an empty form — optionally filled with the resident's own listing of the same home from the
  *     previous event of the same type ("Use last year's details"; nothing is saved until they save). A closed event's
- *     listings are read-only.
+ *     listings are read-only; a closed event names the next one of its type (`event.next`, hidden or public) so the
+ *     resident can get ready for it.
  *
  * @dependencies Listing/*, Claim/ClaimService, Community/CommunityRepository, Event/EventTypeRegistry, Event/PublicEvents, Security/*, Audit/AuditLog
  */
@@ -223,7 +225,7 @@ final class MeApiController
         $type = $this->types->for($c);
         $canList = null !== $c->event && $c->registrationState()['open'];
         $homes = $this->residentHomes->of($user);
-        $public = $this->community->publicEvents();
+        $public = $this->community->residentEvents(); // the public events and hidden ones residents get ready for
         $listed = $homes->listedFor(array_map(static fn (EventOccurrence $e) => $e->id, $public));
         $labels = PublicEvents::labels($public);
 
@@ -261,7 +263,20 @@ final class MeApiController
         return ['id' => $e?->id, 'name' => $c->eventName(), 'type' => $c->eventTypeKey(), 'active' => null !== $e, 'starts_on' => $e?->startsOn, 'ends_on' => $e?->endsOn,
             'start' => (string) $c->settings['event']['starts_at'], 'end' => (string) $c->settings['event']['ends_at'],
             'state' => $e?->state, 'dates_tentative' => (bool) $e?->datesTentative, 'is_default' => (bool) $e?->isDefault, 'accepts_listings' => (bool) $e?->acceptsListings()]
-            + (null !== $e && \is_array($e->settings['days'] ?? null) ? ['days' => $e->settings['days']] : []);
+            + (null !== $e && \is_array($e->settings['days'] ?? null) ? ['days' => $e->settings['days']] : [])
+            + (null !== $e && EventOccurrence::CLOSED === $e->state ? ['next' => $this->nextAfter($e)] : []);
+    }
+
+    /** @return array{id:int, name:string, state:string}|null the event residents get ready for after a closed one (hidden or public) */
+    private function nextAfter(EventOccurrence $closed): ?array
+    {
+        foreach ($this->community->residentEvents() as $e) {
+            if ($e->type === $closed->type && \in_array($e->state, EventOccurrence::CURRENT_STATES, true)) {
+                return ['id' => $e->id, 'name' => $e->name, 'state' => $e->state];
+            }
+        }
+
+        return null;
     }
 
     /** @return array<string,mixed>|null */

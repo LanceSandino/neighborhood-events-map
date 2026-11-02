@@ -225,6 +225,7 @@
     }
    },
    "then": "close",
+   "next": "announce",
    "homes": [
     {
      "house_number": "12",

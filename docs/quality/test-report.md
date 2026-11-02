@@ -1,6 +1,36 @@
 # Test and verification report
 
-## Latest run — 2026-10-31, release 0.16.0-beta.1
+## Latest run — 2026-11-01, release 0.17.0-beta.1
+
+Hidden events (D-20261101-01 to -03; CU-20261101-01 to -03), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10. The
+bar: the owner's report (closing Halloween showed 2027 to visitors at once) fixed — next year's event is hidden from
+every public page and API while residents get ready in My house, and the organizer announces, opens or hides it —
+with an additive migration that the upgrade production takes (0.9.0-beta.1 straight to this release), the image
+rollback to 0.9 and the full restore.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.16.0-beta.1 | PHPUnit **OK — 634 tests** (the 0.16 report) |
+| PHPUnit 13.4.5 (with pcov) | **OK — 652 tests, 17260 assertions** (new: HiddenNextEventTest 5, HiddenEventMigrationTest 1, EventStatesTest 7, EventLifecycleRaceTest +4, RollbackDrillTest +1; EventsConsoleTest, MultiEventTest, EventLifecycleRaceTest and the close-preview assertion follow the new contract — next year's is hidden, announced before the switcher shows it — keeping every earlier guarantee) |
+| Coverage (pcov) | Lines **95.79 %** ✓ ≥ 85 · Methods 85.63 % · Branches n/a |
+| PHPStan level 6 · `composer audit --locked` · `lint:twig` · `lint:yaml` (config, examples) · `lint:container` · `php -l` | No errors · no advisories · 80 files OK · 21 files OK · OK · OK |
+| Migrations up / down to zero / up (test database) | OK (8 migrations, Version20261101000001 new) |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **68/68** · **48/48** |
+| Playwright E2E on the four dev stacks, tiles blocked (fresh stacks) | **232 passed, 2 skipped** (16.0 min; the same 2 skipped as before). New or changed: season.spec closes Halloween → no 2027 tab, the API answers 404 and its link shows the default event → the resident lists for 2027 with last year's details in My house (its "Getting ready" tab and notice) → the organizer announces it → the tab and "See Halloween 2027" appear, then it opens; events.spec: closing the sale creates a hidden one ("Hidden · residents can get ready"), announced when the test gives back. An earlier full run on the same code also had 232 passed. Two runs on stacks reused for the third and fourth time in an evening failed the keyboard-only tests (1 and then 3 of them) with `pin_collision`: the self-entered homes of earlier runs (unclaimed, never cleaned up) sat on the spots the test picks at random; fresh stacks pass |
+| Session smoke test | **13/13** |
+| `bin/smoke-prod-image.sh` on the built prod and nginx images | **7/7 passed** (0.17.0-beta.1) |
+| `bin/drill-event-upgrade.sh nhm-app nhm-nginx smoke` | **all steps passed**: published 0.9.0-beta.1 with 14 fictional homes → backup → upgrade (5 migrations at start up to Version20261101000001; the same 14 homes, keys and values; one open default occurrence; the Halloween keeps "Spooky streets. Sweet treats.") → edit + new self-entered home (15) → (4a) lights open with their own look, the Halloween's headline "Drill streets." → (4b) the Halloween closes; next year's (2027-10-31, tentative) is **hidden**: not in /api/events, 404 on /api/event?e=, not named by the thank-you page; a resident lists for it; the legacy row keeps the closed Halloween's listing → images back to 0.9.0-beta.1 ("You have 5 previously executed migrations", "Already at the latest version"; the same 15 homes; "Drill streets. Sweet treats.") → edit on 0.9 → forward again (the 0.9 edit kept; next year's listing untouched; still hidden: /api/events closed, open; a second organizer announces it: closed, open, upcoming; the thank-you card links it) → 0.9 + `bin/restore.sh` (exactly 14 homes, no event tables, 3 migrations) → upgraded again (same 14 homes, the custom headline moved again) |
+| Trivy | not run locally (CI scans the images) |
+
+Found on the way: the drill's first run grepped Doctrine's log for each migration's name, but Doctrine logs only the
+target and the count (fixed: the target and "5 migrations executed"); its announce step hit the sign-in link limit
+(three per address per quarter hour) of the organizer who had opened, branded and closed, so a second organizer
+announces. The keyboard-only e2e tests drop their self-entry pin on a few random spots and earlier runs' addresses
+stay, so a stack reused many times collides (known, not changed here). A visitor who is not signed in could have told a hidden id (401) from an unknown one (404) on /api/me, so My
+house resolves the event after the firewall. My house on a hidden event took the default event's colours from the public
+/theme.css; it has its own residents-only /me/theme.css now. Screenshots were not refreshed (git restore after each run).
+
+## Run — 2026-10-31, release 0.16.0-beta.1
 
 Community branding and each event's own branding (ADR 0012; CU-20261031-54 to -62), on PHP 8.5.12 + PostgreSQL 18.6,
 Symfony 8.1.10. The bar: the owner's report (Halloween words on the Christmas lights and the yard sale of a community

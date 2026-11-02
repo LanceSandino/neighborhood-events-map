@@ -13,17 +13,18 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 /**
  * @module Event/EventLifecycle
- * @description The organizer's events (Organizer → Events, ADR 0011): prepare a draft of a type this release offers,
- *     edit an event, announce a draft (upcoming: residents may list, visitors see its dates), open an event (the public
- *     map with its homes; its dates are then confirmed), close an open event — in the same transaction next year's event
- *     of the type is created as upcoming with tentative dates (or dates to be announced) —, make a public event the
- *     default, archive (a default that is archived passes to the newest open event, else the newest public one) and
- *     purge an archived event's listings (retention). At most one upcoming or open event per type, one default, a closed
- *     event never reopens (D-20261031-37, -39). Every change runs under the occurrences lock (the partial unique indexes
+ * @description The organizer's events (Organizer → Events, ADR 0011): prepare a draft (or a hidden event) of a type this
+ *     release offers, edit an event, hide a draft or an upcoming event (residents get ready in My house, visitors see
+ *     nothing; D-20261101-01), announce a draft or a hidden event (upcoming: residents may list, visitors see its dates),
+ *     open an event (the public map with its homes; its dates are then confirmed), close an open event — in the same
+ *     transaction next year's event of the type is created hidden with tentative dates (or dates to be announced,
+ *     Event/NextEvent) —, make a public event the default, archive (a default that is archived or hidden passes to the
+ *     newest open event, else the newest public one) and purge an archived event's listings (retention). At most one
+ *     hidden, upcoming or open event per type, one default, a closed event never reopens (D-20261031-37, -39). Every change runs under the occurrences lock (the partial unique indexes
  *     are the last line of defense), is audited and is mirrored for the previous release (settings block and legacy
  *     rows of the bridged Halloween, D-20261031-41). Nothing is copied from an earlier event's listings.
  *
- * @dependencies DBAL, Event/*, Community/CommunityRepository, Listing/LegacyListingBridge, Audit/AuditLog
+ * @dependencies DBAL, Event/* (Event/NextEvent: next year's event), Community/CommunityRepository, Listing/LegacyListingBridge, Audit/AuditLog
  */
 final class EventLifecycle
 {
@@ -34,19 +35,39 @@ final class EventLifecycle
         private readonly LegacyListingBridge $bridge,
         private readonly CommunityRepository $community,
         private readonly AuditLog $audit,
+        private readonly NextEvent $next,
     ) {
     }
 
-    /** @param array<string,mixed> $input */
-    public function createDraft(array $input, int $adminId): EventOccurrence
+    /**
+     * A new event: a draft (organizers only), or hidden (residents may get ready at once; the type must have no current
+     * event, checked under the occurrences lock).
+     *
+     * @param array<string,mixed> $input
+     */
+    public function createDraft(array $input, int $adminId, string $state = EventOccurrence::DRAFT): EventOccurrence
     {
         $key = \is_string($input['type'] ?? null) ? $input['type'] : '';
         if (!$this->types->isEnabled($key)) {
             throw new ValidationException(['type' => sprintf('Choose one of the event types this version offers: %s.', implode(', ', array_map(static fn (EventType $t) => $t->key(), $this->types->enabled())))]);
         }
+        if (!\in_array($state, [EventOccurrence::DRAFT, EventOccurrence::HIDDEN], true)) {
+            throw new ValidationException(['state' => 'A new event starts as a draft or hidden (residents can get ready).']);
+        }
         $fields = OccurrenceInput::normalize($input, $this->types->get($key));
-        $id = $this->db->transactional(fn (Connection $db) => $this->occurrences->insert($db, $fields, EventOccurrence::DRAFT));
-        $this->audit->record($adminId, 'admin#'.$adminId, 'event.created', 'event', (string) $id, ['type' => $fields['type'], 'starts_on' => $fields['starts_on']], 'admin');
+        try {
+            $id = $this->db->transactional(function (Connection $db) use ($fields, $state): int {
+                if (EventOccurrence::HIDDEN === $state) {
+                    OccurrenceSettingsSync::lock($db);
+                    $this->assertNoOtherCurrent($db, new EventOccurrence(0, $fields['type'], $fields['name'], null, null, '', '', [], $state));
+                }
+
+                return $this->occurrences->insert($db, $fields, $state);
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw new EventConflictException('changed', 'Another change to the events happened meanwhile. Reload the page and check before you try again.');
+        }
+        $this->audit->record($adminId, 'admin#'.$adminId, 'event.created', 'event', (string) $id, ['type' => $fields['type'], 'starts_on' => $fields['starts_on'], 'state' => $state], 'admin');
 
         return $this->get($id);
     }
@@ -93,12 +114,12 @@ final class EventLifecycle
         return $this->get($id);
     }
 
-    /** A draft becomes upcoming: residents may list (once it has dates) and visitors see it with its dates. */
+    /** A draft or a hidden event becomes upcoming: residents may list (once it has dates) and visitors see it with its dates. */
     public function announce(int $id, ?int $adminId): EventOccurrence
     {
         return $this->change($id, $adminId, 'event.announced', function (Connection $db, EventOccurrence $e): array {
-            if (EventOccurrence::DRAFT !== $e->state) {
-                throw new EventConflictException('not_draft', 'Only a draft can be announced; this event is '.$e->state.'.');
+            if (!\in_array($e->state, [EventOccurrence::DRAFT, EventOccurrence::HIDDEN], true)) {
+                throw new EventConflictException('not_announceable', 'Only a draft or a hidden event can be announced; this event is '.$e->state.'.');
             }
             $this->assertNoOtherCurrent($db, $e);
             $this->occurrences->setState($db, $e->id, EventOccurrence::UPCOMING);
@@ -107,14 +128,33 @@ final class EventLifecycle
         });
     }
 
-    /** A draft or an upcoming event opens: the public map shows its homes and its dates are confirmed. */
+    /**
+     * A draft or an upcoming event becomes hidden: visitors no longer see it (no tab, no page, no API), residents keep
+     * getting ready in My house and their listings stay; a default passes on.
+     */
+    public function hide(int $id, ?int $adminId): EventOccurrence
+    {
+        return $this->change($id, $adminId, 'event.hidden', function (Connection $db, EventOccurrence $e): array {
+            if (!\in_array($e->state, [EventOccurrence::DRAFT, EventOccurrence::UPCOMING], true)) {
+                throw new EventConflictException('not_hideable', EventOccurrence::OPEN === $e->state
+                    ? 'An open event is on the map; close it when it is over.'
+                    : 'Only a draft or an upcoming event can be hidden; this event is '.$e->state.'.');
+            }
+            $this->assertNoOtherCurrent($db, $e);
+            $this->occurrences->setState($db, $e->id, EventOccurrence::HIDDEN);
+
+            return ['was_default' => $e->isDefault];
+        });
+    }
+
+    /** A draft, a hidden or an upcoming event opens: the public map shows its homes and its dates are confirmed. */
     public function open(int $id, ?int $adminId): EventOccurrence
     {
         return $this->change($id, $adminId, 'event.opened', function (Connection $db, EventOccurrence $e): array {
-            if (!\in_array($e->state, [EventOccurrence::DRAFT, EventOccurrence::UPCOMING], true)) {
+            if (!\in_array($e->state, [EventOccurrence::DRAFT, EventOccurrence::HIDDEN, EventOccurrence::UPCOMING], true)) {
                 throw new EventConflictException('not_openable', EventOccurrence::CLOSED === $e->state
                     ? 'A closed event stays closed. Next year\'s event was created when it closed; open that one.'
-                    : 'Only a draft or an upcoming event can be opened; this event is '.$e->state.'.');
+                    : 'Only a draft, a hidden or an upcoming event can be opened; this event is '.$e->state.'.');
             }
             if (!$e->hasDates()) {
                 throw new EventConflictException('dates_tbd', 'Set the event\'s dates before you open it.');
@@ -131,8 +171,8 @@ final class EventLifecycle
     }
 
     /**
-     * Closes an open event and creates next year's event of the type (upcoming, tentative dates or dates to be
-     * announced) in the same transaction. The thank-you text may be set at the same time.
+     * Closes an open event and creates next year's event of the type (hidden: residents get ready, visitors see
+     * nothing until it is announced; tentative dates or dates to be announced) in the same transaction. The thank-you text may be set at the same time.
      *
      * @return array{closed: EventOccurrence, next: EventOccurrence}
      */
@@ -151,7 +191,7 @@ final class EventLifecycle
                     'default_start' => $e->defaultStart, 'default_end' => $e->defaultEnd, 'settings' => $settings]);
             }
             $this->occurrences->setState($db, $e->id, EventOccurrence::CLOSED);
-            $nextId = $this->occurrences->insert($db, $this->nextFields($e, $type), EventOccurrence::UPCOMING);
+            $nextId = $this->occurrences->insert($db, $this->next->fields($e), EventOccurrence::HIDDEN);
 
             return ['next_id' => $nextId];
         });
@@ -160,19 +200,19 @@ final class EventLifecycle
     }
 
     /**
-     * Next year's event of a closed one, created again when its type has no current event (the fictional demo's seed
-     * after an organizer archived it); null when one exists.
+     * Next year's event of a closed one, created again (hidden, as closing creates it) when its type has no current
+     * event (the fictional demo's seed after an organizer archived it); null when one exists.
      */
     public function ensureNext(EventOccurrence $closed, ?int $adminId): ?EventOccurrence
     {
         if (EventOccurrence::CLOSED !== $closed->state || null !== $this->occurrences->currentOfType($closed->type)) {
             return null;
         }
-        $fields = $this->nextFields($closed, $this->types->get($closed->type));
+        $fields = $this->next->fields($closed);
         $id = $this->db->transactional(function (Connection $db) use ($fields): int {
             OccurrenceSettingsSync::lock($db);
 
-            return $this->occurrences->insert($db, $fields, EventOccurrence::UPCOMING);
+            return $this->occurrences->insert($db, $fields, EventOccurrence::HIDDEN);
         });
         $this->audit->record($adminId, null === $adminId ? 'cli' : 'admin#'.$adminId, 'event.created', 'event', (string) $id, ['type' => $fields['type'], 'starts_on' => $fields['starts_on'], 'after' => $closed->id], null === $adminId ? 'cli' : 'admin');
         $this->community->reset();
@@ -181,20 +221,13 @@ final class EventLifecycle
     }
 
     /**
-     * What closing an open event will do, for the organizer's confirmation: the thank-you text and next year's dates.
+     * What closing an open event will do, for the organizer's confirmation (Event/NextEvent).
      *
-     * @return array{message: string, next: array{name: string, starts_on: ?string, ends_on: ?string, dates_tentative: bool, words: string}}
+     * @return array{message: string, next: array{name: string, starts_on: ?string, ends_on: ?string, dates_tentative: bool, words: string, state: string}}
      */
     public function closePreview(EventOccurrence $e): array
     {
-        $type = $this->types->get($e->type);
-        $next = $this->nextFields($e, $type);
-        $upcoming = new EventOccurrence(0, $e->type, $next['name'], $next['starts_on'], $next['ends_on'], $next['default_start'], $next['default_end'], [],
-            EventOccurrence::UPCOMING, datesTentative: $next['dates_tentative']);
-
-        return ['message' => ClosingMessage::text($e, $type, $upcoming),
-            'next' => ['name' => $next['name'], 'starts_on' => $next['starts_on'], 'ends_on' => $next['ends_on'], 'dates_tentative' => $next['dates_tentative'],
-                'words' => EventDates::words($upcoming)]];
+        return $this->next->preview($e);
     }
 
     /** A public event becomes the default: what "/" shows. */
@@ -300,33 +333,6 @@ final class EventLifecycle
         if (null !== $current && $current->id !== $e->id) {
             throw new EventConflictException('type_current', sprintf('“%s” is already the current event of this kind (%s). Close or archive it first; closing creates next year\'s event.', $current->name, $current->state));
         }
-    }
-
-    /**
-     * Next year's event of a closed one: the same type, name (its year moved on), default hours and lasting settings;
-     * the type's tentative dates (or none); no settings tied to the old dates and no thank-you text.
-     *
-     * @return array{type:string,name:string,starts_on:?string,ends_on:?string,dates_tentative:bool,default_start:string,default_end:string,settings:array<string,mixed>}
-     */
-    private function nextFields(EventOccurrence $closed, EventType $type): array
-    {
-        [$first, $last] = $type->nextDates($closed);
-        $settings = $closed->settings;
-        unset($settings['closing_message']);
-        if ($type instanceof EventSettingsType) {
-            foreach ($type->dateBoundSettings() as $key) {
-                unset($settings[$key]);
-            }
-            if (null !== $first && null !== $last) {
-                $settings = $type->finishSettings($settings, $first, $last)[0];
-            }
-        }
-        $year = EventDates::year($closed);
-        $nextYear = null !== $first ? substr($first, 0, 4) : (string) ((int) $year + 1);
-        $name = '' !== $year && str_contains($closed->name, $year) ? str_replace($year, $nextYear, $closed->name) : $closed->name;
-
-        return ['type' => $closed->type, 'name' => mb_substr($name, 0, 60), 'starts_on' => $first, 'ends_on' => $last, 'dates_tentative' => null !== $first,
-            'default_start' => $closed->defaultStart, 'default_end' => $closed->defaultEnd, 'settings' => $settings];
     }
 
     /**

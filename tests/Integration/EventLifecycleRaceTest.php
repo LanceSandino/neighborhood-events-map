@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RequiresPhpExtension;
  * @description The event invariants under concurrency (ADR 0011, D-20261031-37; this replaces the one-active-event race
  *   test of 0.11, whose switch no longer exists): organizers in separate OS processes with separate PostgreSQL
  *   connections act at the same instant — opening different events of one type, closing the same event, making
- *   different events the default. Exactly one of each conflicting change wins, the others are refused, closing creates
+ *   different events the default, closing while a draft of next year is hidden, announcing a hidden event. Exactly one of each conflicting change wins, the others are refused, closing creates
  *   next year's event exactly once, there is always exactly one default, and the partial unique indexes and the check
  *   refuse a second current event of a type, a second default and a default that is not public even without the app.
  * @dependencies tests/Support/AppTestCase, Event/EventLifecycle
@@ -54,7 +54,7 @@ final class EventLifecycleRaceTest extends AppTestCase
         ksort($counts);
         self::assertSame(['not_open' => 2, 'ok' => 1], $counts, json_encode($outcomes));
         self::assertSame('closed', $this->db()->fetchOne('SELECT state FROM event_occurrences WHERE id = ?', [$open]));
-        self::assertSame([['type' => 'halloween', 'starts_on' => '2027-10-31', 'state' => 'upcoming', 'dates_tentative' => true]],
+        self::assertSame([['type' => 'halloween', 'starts_on' => '2027-10-31', 'state' => 'hidden', 'dates_tentative' => true]],
             $this->db()->fetchAllAssociative('SELECT type, starts_on, state, dates_tentative FROM event_occurrences WHERE id <> ?', [$open]), 'next year\'s event exactly once');
         self::assertSame(1, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE action = 'event.closed'"));
     }
@@ -81,6 +81,52 @@ final class EventLifecycleRaceTest extends AppTestCase
         $this->expectException(UniqueConstraintViolationException::class);
         $this->db()->executeStatement("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at)
             VALUES ('halloween', 'Second', '2027-10-31', '2027-10-31', '17:00', '21:00', 'upcoming', NOW())");
+    }
+
+    public function testTheDatabaseCountsAHiddenEventAsTheCurrentOneOfItsType(): void
+    {
+        $this->configureCommunity();
+        $this->expectException(UniqueConstraintViolationException::class);
+        $this->db()->executeStatement("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at)
+            VALUES ('halloween', 'Hidden', '2027-10-31', '2027-10-31', '17:00', '21:00', 'hidden', NOW())");
+    }
+
+    public function testAHiddenEventIsNeverTheDefaultEvenWithoutTheApp(): void
+    {
+        $this->configureCommunity();
+        $hidden = (int) $this->db()->fetchOne("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at)
+            VALUES ('holiday_lights', 'Lights', '2026-12-01', '2027-01-03', '18:00', '22:00', 'hidden', NOW()) RETURNING id");
+        $this->db()->executeStatement('UPDATE event_occurrences SET is_default = FALSE');
+        $this->expectException(DriverException::class); // event_occurrences_default_public
+        $this->db()->executeStatement('UPDATE event_occurrences SET is_default = TRUE WHERE id = ?', [$hidden]);
+    }
+
+    public function testClosingWhileANextYearDraftIsHiddenAtOnceLeavesOneHiddenHalloween(): void
+    {
+        $this->configureCommunity();
+        $open = (int) $this->db()->fetchOne("SELECT id FROM event_occurrences WHERE state = 'open'");
+        $draft = $this->draft('2027-10-30');
+        $outcomes = $this->race([['close', $open], ['hide', $draft], ['hide', $draft]]);
+        $counts = array_count_values($outcomes);
+        ksort($counts);
+        self::assertSame(['ok' => 1, 'type_current' => 2], $counts, 'the open Halloween is current until it closes, then next year\'s hidden one: '.json_encode($outcomes));
+        self::assertSame([['closed', $open], ['draft', $draft]], array_map(static fn (array $r) => [$r['state'], (int) $r['id']],
+            $this->db()->fetchAllAssociative('SELECT id, state FROM event_occurrences WHERE id IN (?, ?) ORDER BY id', [$open, $draft])));
+        self::assertSame(['2027-10-31'], $this->db()->fetchFirstColumn("SELECT starts_on FROM event_occurrences WHERE state = 'hidden'"), 'exactly one hidden Halloween: the one closing created');
+    }
+
+    public function testConcurrentAnnouncesOfAHiddenEventHaveOneWinner(): void
+    {
+        $this->configureCommunity();
+        $open = (int) $this->db()->fetchOne("SELECT id FROM event_occurrences WHERE state = 'open'");
+        static::getContainer()->get(EventLifecycle::class)->close($open, null, null);
+        $hidden = (int) $this->db()->fetchOne("SELECT id FROM event_occurrences WHERE state = 'hidden'");
+        $outcomes = $this->race([['announce', $hidden], ['announce', $hidden], ['announce', $hidden]]);
+        $counts = array_count_values($outcomes);
+        ksort($counts);
+        self::assertSame(['not_announceable' => 2, 'ok' => 1], $counts, json_encode($outcomes));
+        self::assertSame('upcoming', $this->db()->fetchOne('SELECT state FROM event_occurrences WHERE id = ?', [$hidden]));
+        self::assertSame(1, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE action = 'event.announced'"));
     }
 
     public function testTheDatabaseRefusesASecondDefaultAndADefaultThatIsNotPublic(): void

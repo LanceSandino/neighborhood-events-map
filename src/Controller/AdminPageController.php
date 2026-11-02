@@ -44,14 +44,14 @@ final class AdminPageController extends AbstractController
     }
 
     /**
-     * A draft event as visitors will see it: the public page with the draft's type, words and dates and no homes.
-     * Organizers only (this controller's role and access_control); never public, never cached.
+     * A draft or hidden event (D-20261101-01) as visitors will see it: the public page with its type, words and dates
+     * and no homes. Organizers only (this controller's role and access_control); never public, never cached.
      */
     #[Route('/admin/events/{id}/preview', name: 'admin_event_preview', requirements: ['id' => '\d{1,12}'], methods: ['GET'])]
     public function preview(int $id, CommunityRepository $community, CommunityPresenter $presenter, EventOccurrenceRepository $occurrences, EventTypeRegistry $types): Response
     {
         $draft = $occurrences->find($id);
-        if (null === $draft || EventOccurrence::DRAFT !== $draft->state || !$types->isEnabled($draft->type)) {
+        if (null === $draft || !\in_array($draft->state, [EventOccurrence::DRAFT, EventOccurrence::HIDDEN], true) || !$types->isEnabled($draft->type)) {
             throw $this->createNotFoundException();
         }
         // The community as the draft shows it: its type's theme, words, filters and switches and its own branding, as
@@ -64,12 +64,12 @@ final class AdminPageController extends AbstractController
         return $response;
     }
 
-    /** A draft's own colours for its preview (BrandPalette over its branding and type); organizers only, never cached. */
+    /** A draft's or hidden event's own colours for its preview (BrandPalette over its branding and type); organizers only, never cached. */
     #[Route('/admin/events/{id}/theme.css', name: 'admin_event_theme', requirements: ['id' => '\d{1,12}'], methods: ['GET'])]
     public function previewTheme(int $id, CommunityRepository $community, EventOccurrenceRepository $occurrences, EventTypeRegistry $types): Response
     {
         $draft = $occurrences->find($id);
-        if (null === $draft || EventOccurrence::DRAFT !== $draft->state || !$types->isEnabled($draft->type)) {
+        if (null === $draft || !\in_array($draft->state, [EventOccurrence::DRAFT, EventOccurrence::HIDDEN], true) || !$types->isEnabled($draft->type)) {
             throw $this->createNotFoundException();
         }
         $b = $community->forEvent($draft)->settings['branding'];

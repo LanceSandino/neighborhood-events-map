@@ -3,7 +3,7 @@
 One install serves one neighborhood. Since 0.15 it can show **several events at once** — a Halloween evening, a
 Christmas lights season, a garage or rummage sale — and visitors switch between them with the tabs at the top of the
 page; "/" shows the **default** event, which you choose ([ADR 0011](../adr/0011-several-published-events.md),
-[D-20261031-37](../../DECISIONS.md)). There is at most one current (upcoming or open) event of each kind. Residents keep
+[D-20261031-37](../../DECISIONS.md)). There is at most one current (hidden, upcoming or open) event of each kind. Residents keep
 their claimed homes from one event to the next; each event has its own listings, and a home is listed for a new event
 from an empty form — or, if the resident chooses, from their own details of last time ("Use last year's details",
 [D-20261031-42](../../DECISIONS.md)). Nothing is copied or shown again by itself.
@@ -16,8 +16,9 @@ Everything here happens in **Organizer → Events** (`/admin/events`). The check
 
 | State | Who sees it | What you can do |
 |---|---|---|
-| **Draft** | organizers only (preview) | edit its name, dates (or "to be announced"), hours, settings and thank-you message; preview it; announce it; open it |
-| **Upcoming** | everyone: a tab with its dates ("tentative" or "dates to be announced"), no homes | residents list their homes once it has dates; you edit it, open it, make it the default |
+| **Draft** | organizers only (preview) | edit its name, dates (or "to be announced"), hours, settings and thank-you message; preview it; let residents get ready (hidden); announce it; open it |
+| **Hidden · residents can get ready** | residents in My house and organizers (preview); visitors see nothing — no tab, no page | residents list their homes (or use last year's details) once it has dates; you edit it, preview it, announce it or open it. Closing an event creates next year's in this state ([D-20261101-01](../../DECISIONS.md)) |
+| **Upcoming** | everyone: a tab with its dates ("tentative" or "dates to be announced"), no homes | residents list their homes once it has dates; you edit it, open it, make it the default, or hide it again |
 | **Open** | everyone: the map with its homes | residents list and update their homes; you edit its name, hours and settings (its dates while nobody has listed, or move them explicitly), make it the default, close it |
 | **Closed** | everyone: a tab with the thank-you message, no homes | edit its name and thank-you message; make it the default (for example right after the event); archive it. Its listings are read-only |
 | **Archived** | organizers only (export) | export its listings; delete its listings for retention |
@@ -40,9 +41,23 @@ A closed event never opens again, and archived is final: next year's event is a 
    A driving tour needs a routing provider as well; without one, saved stops stay an ordered list with no lines.
 2. **Preview** the draft. The preview is the public map with the draft's look, words, filters and dates and no homes;
    only organizers can open it, and nothing about a draft is public (not in `/api/events`, not on any page).
-3. **Announce** it when residents may start listing (it becomes upcoming: a tab with its dates, no homes yet), or
-   **Open** it to put it on the map right away. Opening needs dates (a sale also its days) and confirms tentative dates.
-   Only one event of each kind can be upcoming or open: close or archive the current one first.
+3. **Let residents get ready** (hidden) when residents may start listing but visitors should not see it yet,
+   **Announce** it when visitors may see it too (it becomes upcoming: a tab with its dates, no homes yet), or **Open**
+   it to put it on the map right away. Opening needs dates (a sale also its days) and confirms tentative dates. Only
+   one event of each kind can be hidden, upcoming or open: close or archive the current one first. You can also
+   choose **Start as: Hidden — residents can get ready** when you prepare it.
+
+## Hidden: residents get ready, visitors see nothing yet
+
+A hidden event is for getting ready ([D-20261101-01](../../DECISIONS.md)):
+
+- visitors do not see it anywhere: no tab, no page, nothing in the public lists, and a link to it shows the default
+  event instead;
+- signed-in residents see it in **My house** (its tab says "Getting ready"), list their homes for it and can use
+  "Use last year's details"; nothing they save is public;
+- **Announce** makes it upcoming (a tab with its tentative dates, no homes), **Open** puts its homes on the map at
+  once, and **Hide** on an upcoming event makes it hidden again (if it was the default, the newest open event, else
+  the newest public one, becomes the default). An open or closed event is never hidden.
 
 ## Community branding and each event's branding
 
@@ -73,23 +88,25 @@ Since 0.16 the neighborhood's look and each event's look are separate ([ADR 0012
 
 ## Close an event when it is over
 
-**Close** asks for confirmation and shows the thank-you text visitors will see and next year's dates it will create.
+**Close** asks for confirmation and shows the thank-you text visitors will see and next year's dates it will create;
+it says that next year's event is created hidden and that residents can get ready for it.
 In one step:
 
 - the event's homes leave the map (also by direct link) and its tab shows the thank-you message, for example "Halloween
-  2026 was a success — thank you! Come back next year (Oct 31, 2027, tentative). Residents: sign in to get your house
-  ready for next year.";
-- next year's event of the same kind is created as **upcoming**: Halloween on October 31 of next year, Christmas
-  lights on the same nights a year later, a sale with its dates to be announced — with the same name, hours, rules and
-  lasting settings (never the best night, the sale days or the thank-you text);
-- residents see next year's tab in My house and can list their homes for it before it opens; nothing is public until
-  you open it.
+  2026 was a success — thank you! Come back next year (dates to be announced). Residents: sign in to get your house
+  ready for next year." with a **Get my house ready** button to My house;
+- next year's event of the same kind is created **hidden**: Halloween on October 31 of next year, Christmas lights on
+  the same nights a year later, a sale with its dates to be announced — with the same name, hours, rules and lasting
+  settings (never the best night, the sale days or the thank-you text);
+- residents see next year's tab in My house ("Getting ready") and can list their homes for it; visitors do not see it
+  until you **Announce** it. Then its tab appears, the default thank-you text names its dates ("Come back next year (Oct
+  31, 2027, tentative)") and the thank-you card adds **See Halloween 2027** ([D-20261101-02](../../DECISIONS.md)).
 
 Two organizers closing at the same moment cannot both succeed (the second gets "changed" or "not open" and reloads).
 
 ## The default event
 
-**Make default** on any upcoming, open or closed event: "/" shows it (Community & branding names it). A typical year:
+**Make default** on any upcoming, open or closed event (never a draft or a hidden one): "/" shows it (Community & branding names it). A typical year:
 Halloween open and default in October; closed (still default, showing its thank-you) on November 1; the Christmas lights
 opened and made default in December; the sale announced months ahead. If you archive the default event, the newest
 open event (else the newest public one) becomes the default.

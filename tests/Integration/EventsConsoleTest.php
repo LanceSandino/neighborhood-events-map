@@ -39,9 +39,10 @@ final class EventsConsoleTest extends AppTestCase
         [$current] = $list['events'];
         self::assertSame(['open', true, 1, 1, true], [$current['state'], $current['is_default'], $current['opted_in'], $current['public'], $current['type_offered']]);
         self::assertSame($current['id'], $list['default_id']);
-        self::assertSame(['Halloween 2026 was a success — thank you! Come back next year (Oct 31, 2027, tentative). Residents: sign in to get your house ready for next year.',
-            'Halloween', '2027-10-31', true], [$current['close_preview']['message'], $current['close_preview']['next']['name'], $current['close_preview']['next']['starts_on'],
-            $current['close_preview']['next']['dates_tentative']], 'the organizer sees what closing will say and create');
+        self::assertSame(['Halloween 2026 was a success — thank you! Come back next year (dates to be announced). Residents: sign in to get your house ready for next year.',
+            'Halloween', '2027-10-31', true, 'hidden', 'Oct 31, 2027, tentative'], [$current['close_preview']['message'], $current['close_preview']['next']['name'], $current['close_preview']['next']['starts_on'],
+            $current['close_preview']['next']['dates_tentative'], $current['close_preview']['next']['state'], $current['close_preview']['next']['words']],
+            'the organizer sees what closing will say (no hidden event\'s dates) and create (hidden, with its tentative date)');
 
         $bad = $this->json('POST', '/api/admin/events', ['type' => 'fireworks', 'starts_on' => '2027-05-01'], $this->h());
         self::assertSame(422, $this->code(), 'only types this version offers');
@@ -78,12 +79,15 @@ final class EventsConsoleTest extends AppTestCase
         self::assertSame(200, $this->code(), json_encode($r));
         self::assertSame(['closed', true], [$r['event']['state'], $r['event']['is_default']], 'the closed event stays the default until the organizer changes it');
         $next = $r['next'];
-        self::assertSame(['halloween', 'Halloween', '2027-10-31', '2027-10-31', true, 'upcoming', '17:00', '21:00'],
+        self::assertSame(['halloween', 'Halloween', '2027-10-31', '2027-10-31', true, 'hidden', '17:00', '21:00'],
             [$next['type'], $next['name'], $next['starts_on'], $next['ends_on'], $next['dates_tentative'], $next['state'], $next['default_start'], $next['default_end']]);
         $this->json('POST', '/api/admin/events/'.$current['id'].'/close', ['confirm' => true], $this->h());
         self::assertSame(409, $this->code(), 'an event closes once');
         $this->json('POST', '/api/admin/events/'.$current['id'].'/open', ['confirm' => true], $this->h());
         self::assertSame(409, $this->code(), 'a closed event never reopens');
+        self::assertSame([$current['id']], array_column($this->json('GET', '/api/events')['events'], 'id'), 'next year\'s is hidden until it is announced (0.17)');
+        $this->json('POST', '/api/admin/events/'.$next['id'].'/announce', ['confirm' => true], $this->h());
+        self::assertSame(200, $this->code(), 'announced: visitors see it with its dates');
 
         // The closed season's homes leave the map at once; visitors see the thank-you text and next year's event.
         $this->client->getCookieJar()->clear();
@@ -140,7 +144,7 @@ final class EventsConsoleTest extends AppTestCase
         self::assertSame(200, $this->code());
         self::assertSame([$home], array_column($this->json('GET', '/api/homes')['homes'], 'id'));
         self::assertSame('2027-10-31', json_decode((string) $this->db()->fetchOne('SELECT settings FROM community_settings'), true)['event']['date'], 'the previous release now mirrors next year\'s event');
-        self::assertSame(['event.created', 'event.archived', 'event.closed', 'event.opened', 'event.default'], $this->db()->fetchFirstColumn("SELECT action FROM audit_events WHERE target_type = 'event' ORDER BY id"));
+        self::assertSame(['event.created', 'event.archived', 'event.closed', 'event.announced', 'event.opened', 'event.default'], $this->db()->fetchFirstColumn("SELECT action FROM audit_events WHERE target_type = 'event' ORDER BY id"));
     }
 
     public function testEndingTheEventLeavesANeutralMapAndRetentionDeletesItsListings(): void

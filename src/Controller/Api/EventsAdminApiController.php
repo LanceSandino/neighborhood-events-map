@@ -31,8 +31,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @description Organizer API for events (ROLE_ADMIN, CSRF and idle timeout enforced first; ADR 0011): list events with
  *     their type's name and mark and their opted-in and public counts (an open event also with what closing it will do: the thank-you text and next
  *     year's dates), the types with the dates a new event gets and their default branding (the placeholders of an
- *     event's own branding, ADR 0012), prepare a draft of an offered type, edit an event (its branding too),
- *     announce a draft (upcoming), open, close (confirmed; creates next year's event), make an event the default,
+ *     event's own branding, ADR 0012), prepare a draft of an offered type (or a hidden event: residents can get ready),
+ *     edit an event (its branding too), hide a draft or an upcoming event (D-20261101-01), announce a draft or a hidden
+ *     event (upcoming), open, close (confirmed; creates next year's event, hidden), make an event the default,
  *     archive, export one event's listings (a CSRF-checked form POST, like the claims export) and delete an archived
  *     event's listings. Every change is audited (Event/EventLifecycle).
  *
@@ -79,9 +80,13 @@ final class EventsAdminApiController
     }
 
     #[Route('', methods: ['POST'], name: 'admin_events_create')]
-    public function create(#[CurrentUser] User $admin, Request $request): JsonResponse
+    public function create(#[CurrentUser] User $admin, Request $request): Response
     {
-        return new JsonResponse(['event' => $this->lifecycle->createDraft(JsonBody::decode($request), $admin->id)->toArray()], 201);
+        $body = JsonBody::decode($request);
+        $state = \array_key_exists('state', $body) ? (\is_string($body['state']) ? $body['state'] : '') : EventOccurrence::DRAFT;
+        unset($body['state']);
+
+        return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->createDraft($body, $admin->id, $state)->toArray()], 201));
     }
 
     #[Route('/{id}', requirements: ['id' => '\d{1,12}'], methods: ['PUT'], name: 'admin_events_update')]
@@ -104,6 +109,16 @@ final class EventsAdminApiController
         return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->announce($id, $admin->id)->toArray()]));
     }
 
+    #[Route('/{id}/hide', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_hide')]
+    public function hide(#[CurrentUser] User $admin, Request $request, int $id): Response
+    {
+        if (true !== (JsonBody::decode($request)['confirm'] ?? false)) {
+            return ApiError::response(422, 'confirmation_required', 'Confirm that the event is hidden: visitors no longer see it; residents can still get their house ready in My house.');
+        }
+
+        return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->hide($id, $admin->id)->toArray()]));
+    }
+
     #[Route('/{id}/open', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_open')]
     public function open(#[CurrentUser] User $admin, Request $request, int $id): Response
     {
@@ -114,13 +129,13 @@ final class EventsAdminApiController
         return $this->conflicts(fn () => new JsonResponse(['event' => $this->lifecycle->open($id, $admin->id)->toArray()]));
     }
 
-    /** Closes an open event; next year's event of its type is created at the same time (upcoming). */
+    /** Closes an open event; next year's event of its type is created at the same time (hidden until announced). */
     #[Route('/{id}/close', requirements: ['id' => '\d{1,12}'], methods: ['POST'], name: 'admin_events_close')]
     public function close(#[CurrentUser] User $admin, Request $request, int $id): Response
     {
         $body = JsonBody::decode($request);
         if (true !== ($body['confirm'] ?? false)) {
-            return ApiError::response(422, 'confirmation_required', 'Confirm that the event closes: its homes leave the map, visitors see the thank-you message and next year\'s event is created.');
+            return ApiError::response(422, 'confirmation_required', 'Confirm that the event closes: its homes leave the map, visitors see the thank-you message and next year\'s event is created, hidden until you announce it.');
         }
         $message = \array_key_exists('closing_message', $body) ? (\is_string($body['closing_message']) ? $body['closing_message'] : '') : null;
 

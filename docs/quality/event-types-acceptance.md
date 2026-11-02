@@ -119,7 +119,7 @@ the API take different hours per night (windows), so a later form can offer them
 | Risk | What guards it |
 |---|---|
 | Historic overwrite (a season's listing replaced by the next) | listings belong to one event (`UNIQUE (event_id, address_id)`); `I/EventsConsoleTest.php::testAnOrganizerClosesTheSeasonNextYearIsCreatedAndNothingCarriesOver`, `I/GarageSaleSeasonTest.php::testOneAddressListsForHalloweenChristmasAndTheRummageSaleIndependently`, **new** `I/EventTypesAcceptanceTest.php::testChangesToTheActiveListingAndTheRetentionPurgeNeverTouchAnotherEventsListing` |
-| Activation race (0.15: open, close and default races) | the occurrences lock, the partial unique indexes (one current per type, one default) and the check: `I/EventLifecycleRaceTest.php` (5 tests) |
+| Activation race (0.15: open, close and default races; 0.17: hidden events) | the occurrences lock, the partial unique indexes (one current per type, hidden events included; one default) and the check: `I/EventLifecycleRaceTest.php` (9 tests) |
 | Stale listing revival | an old listing cannot be edited back (`I/EventsConsoleTest.php` first test: PATCH 404; a closed event's listing is read-only, 403), `::testAHomeHiddenLastSeasonStartsHiddenForTheNextEvent`, `I/LegacyBridgeTest.php::testTheAppsOwnMirrorIsNotCopiedBackAndAnotherDaysRowsStayOut`; closed never reopens, archived is final (D-20261031-37); "Use last year's details" only fills the form (`I/MultiEventTest.php::testUseLastYearsDetailsCopiesOnlyTheResidentsOwnPreviousListingOfTheSameHomeAndType`) |
 | Detail JSON leaks | strict projections (`U/Event/*TypeTest.php::testThePublicProjectionIsStrictAndTyped`), exact key lists (`I/HolidayLightsTest.php`, `I/GarageSaleTest.php` first tests, `I/PublicPrivacyTest.php`) |
 | Time zones and DST | the shared display-status fixture in PHP and the browser (48 cases); `U/Listing/ListingDraftWindowsTest.php::testADayScopedStatusCarriesTheLocalDate` |
@@ -150,6 +150,43 @@ the API take different hours per night (windows), so a later form can offer them
 - Organizer → Events branding (strict checks, empty is the type default, kept when a client leaves it out, next year keeps it, BrandPalette per event, the draft preview): `::testOrganizersSetAnEventsBrandingUnderEvents`; `U/Event/EventBrandingTest.php` (4 tests); the community console's own fields: `::testTheCommunityConsoleKeepsOnlyTheCommunitysOwnFields`; community.yaml: `::testCommunityYamlBrandsTheFirstEventAndAnExplicitEventBrandingWins`.
 - What's new without operator words: `I/WhatsNewTest.php`.
 - The organizer console is the community's (D-20261031-52): every console page's chrome (mark, icon, colours, title) is the community's with no Halloween word or emoji, the data of an event names its event and type, the draft preview uses its own colours: `I/OrganizerConsoleNeutralTest.php` (2 tests); in a browser on the fictional lights demo (whose default is the lights and whose Halloween has its own branding), in light and dark, no word, emoji or colour of the default event or of Halloween outside an event's own section on Overview, Community, Boundary, Addresses, Review requests, Audit and Events: `E/events.spec.mjs` "the organizer console names the community and uses its own colours…".
+
+## Hidden events (0.17)
+
+The owner's report on 2026-11-01: closing Halloween showed 2027 to visitors at once; next year's event should stay
+hidden while residents get ready ([D-20261101-01](../../DECISIONS.md), -02, -03).
+
+- Closing creates next year's event hidden, and no public surface shows it — `/api/events`, the switcher, `/api/event`,
+  `/api/community`, `/api/homes`, `/api/homes/{id}`, route plans and claim requests answer 404 like an unknown id;
+  `/`, `/about`, a shared stop list and `/theme.css` with `e=` show the default event and never name it; the thank-you
+  text names no hidden dates and the card keeps "Get my house ready" (to My house) without "See <event>":
+  `I/HiddenNextEventTest.php::testClosingCreatesNextYearsEventHiddenFromEveryPublicSurface`; `E/season.spec.mjs` (no
+  2027 tab after closing, the API 404s, its link shows the default event).
+- Residents see it in My house only (401 for a visitor who is not signed in, whatever the id): its tab "Getting
+  ready", the notice, its colours (`/me/theme.css`, residents only), "List for <event>", "Use last year's details",
+  edits; nothing public, the legacy row untouched:
+  `I/HiddenNextEventTest.php::testResidentsGetReadyForAHiddenEventInMyHouse`; `E/season.spec.mjs` (the resident lists
+  for next year with last year's details on the hidden event).
+- Organizer transitions — announce (confirmed; upcoming with its tentative dates, the tab and "See Halloween 2027"
+  appear), hide again, open directly (homes on the map), refused for open and closed events, preview, audit:
+  `I/HiddenNextEventTest.php::testTheOrganizerAnnouncesHidesAndOpensAHiddenEvent`; `E/season.spec.mjs` (announce →
+  the tab appears), `E/events.spec.mjs` (closing the sale creates a hidden one; announcing it).
+- Create hidden, draft → hidden, one current event per type counting hidden events, a hidden event never the default
+  (the default passes on when an announced default is hidden again):
+  `I/HiddenNextEventTest.php::testAnEventCanBeCreatedOrDraftedHiddenAndOneCurrentPerTypeCountsHiddenEvents`;
+  `U/Event/EventStatesTest.php` (what each state allows).
+- Races and the database without the app: `I/EventLifecycleRaceTest.php::testClosingWhileANextYearDraftIsHiddenAtOnceLeavesOneHiddenHalloween`,
+  `::testConcurrentAnnouncesOfAHiddenEventHaveOneWinner`, `::testTheDatabaseCountsAHiddenEventAsTheCurrentOneOfItsType`,
+  `::testAHiddenEventIsNeverTheDefaultEvenWithoutTheApp`.
+- Moderation reaches a hidden event's listings: `I/HiddenNextEventTest.php::testAModerationHoldReachesAHiddenEventsListing`.
+- The migration is additive (upcoming events keep their state; down makes hidden events drafts):
+  `I/HiddenEventMigrationTest.php::testUpKeepsEveryEventAndDownMakesHiddenEventsDrafts`; the drill (steps 4b and 6:
+  hidden across the image rollback to 0.9, announced afterwards), `U/Deploy/RollbackDrillTest.php::testTheDrillChecksNextYearsEventStaysHiddenUntilAnnounced`.
+
+## Known limitations at 0.17.0-beta.1
+
+- A resident who has not claimed a home yet cannot list a new one for a hidden event: the map's "List your home" form
+  is public and lists for the event its page shows. Residents with claimed homes get ready in My house.
 
 ## Known limitations at 0.16.0-beta.1
 

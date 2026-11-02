@@ -3,6 +3,10 @@
 **Status.** Accepted (owner decision, confirmed on 2026-10-31). Decisions D-20261031-37 to -45. Supersedes the
 one-active-event part of [ADR 0010](0010-generic-event-types.md) and of D-20261021-20.
 
+**Amended in 0.17** (D-20261101-01, -02): a `hidden` state between draft and upcoming. Closing creates next year's
+event hidden — residents get ready in My house, visitors see nothing until the organizer announces it — and counts as
+the current event of its type. The rest of this record is unchanged.
+
 **Context.** Since 0.11 every event is a row of its own and listings belong to one event, but only one event could be
 on the map: an organizer switched seasons by archiving the event on the map. Neighborhoods run their events side by
 side — the Christmas lights season starts while Halloween's thank-you is still up, and a rummage sale is announced

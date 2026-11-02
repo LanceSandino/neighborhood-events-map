@@ -221,7 +221,7 @@ final class MultiEventTest extends AppTestCase
 
         $r = $this->json('POST', "/api/admin/events/$lights/close", ['confirm' => true], $this->h());
         self::assertSame([200, 'Thanks for the lights!'], [$this->code(), $r['event']['settings']['closing_message']]);
-        self::assertSame(['Lights 2027', '2027-12-01', '2028-01-03', true, 'upcoming', '18:00', ['quiet_hours' => 'Quiet after 10 PM', 'rules' => ['Drive slowly']]],
+        self::assertSame(['Lights 2027', '2027-12-01', '2028-01-03', true, 'hidden', '18:00', ['quiet_hours' => 'Quiet after 10 PM', 'rules' => ['Drive slowly']]],
             [$r['next']['name'], $r['next']['starts_on'], $r['next']['ends_on'], $r['next']['dates_tentative'], $r['next']['state'], $r['next']['default_start'], self::sorted($r['next']['settings'])],
             'the same nights a year later; the best night and the thank-you text stay with the closed season');
         $r = $this->json('POST', '/api/admin/events/'.$sale['id'].'/close', ['confirm' => true], $this->h());
@@ -231,7 +231,8 @@ final class MultiEventTest extends AppTestCase
         $sale2 = $r['next']['id'];
         $page = $this->client->request('GET', '/?e='.$r['event']['id']);
         self::assertStringContainsString('Rummage Sale 2027 was a success — thank you! The next sale: dates to be announced.', $page->filter('.event-status-message')->text());
-        self::assertCount(1, $page->filter('a[href="/me?e='.$sale2.'"]'), 'residents get ready for the next sale from here');
+        self::assertCount(1, $page->filter('.event-status-actions a[href="/me"]'), 'residents get ready for the next sale from here (My house; the next sale is hidden until announced)');
+        self::assertStringNotContainsString('e='.$sale2, (string) $page->html());
     }
 
     public function testTheCommunityEventBlockIsTheDefaultEvent(): void

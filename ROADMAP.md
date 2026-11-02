@@ -113,6 +113,11 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - Emails name what they concern (the sign-in link only the community); "What's new" shows plain notes for residents and organizers.
    - Status: shipped in 0.16.0-beta.1 ([D-20261031-46](DECISIONS.md) to [-51](DECISIONS.md), [ADR 0012](docs/adr/0012-community-and-event-branding.md), [event types](docs/architecture/event-types.md#community-branding-and-event-branding-016), [organizer guide](docs/runbooks/organizer-events.md#community-branding-and-each-events-branding)).
 
+9. **Stage 8 — hidden next year's event (done in 0.17.0-beta.1; the owner's report of 2026-11-01).**
+   - Closing an event creates next year's hidden: residents get ready in My house (list, or use last year's details) while visitors see nothing; the organizer announces it (upcoming), opens it directly or hides an announced one again, and may create an event hidden.
+   - The thank-you card names and links next year's event only once it is announced; "Get my house ready" leads to My house.
+   - Status: shipped in 0.17.0-beta.1 ([D-20261101-01](DECISIONS.md) to [-03](DECISIONS.md), [event types](docs/architecture/event-types.md), [organizer guide](docs/runbooks/organizer-events.md#hidden-residents-get-ready-visitors-see-nothing-yet)).
+
 ## What remains
 
 These are known, deliberate gaps, each tracked here (there are no TODO notes in the code):
@@ -120,6 +125,7 @@ These are known, deliberate gaps, each tracked here (there are no TODO notes in 
 - **Inviting residents to a new event.** Organizer → Events switches the map; residents keep their claims and list again from an empty form, but they are told by hand (newsletter, group chat). An opt-in email through the existing mailer, with consent and the same limits as sign-in links, is the next step.
 - **Retiring the legacy `listings` table.** It and its two triggers keep an image-only rollback to 0.9 working for one Halloween — the newest open or closed one (D-20261031-03, -06, -41). A later release drops them once no install needs that rollback, together with the community branding keys kept for 0.9 (D-20261031-49); the drill (`bin/drill-event-upgrade.sh`) proves the path until then.
 - **Reminders per event.** An organizer's own reminders (Community & branding) still show for every event; each kind of event's built-in list applies only while they are empty. Moving them to each event, like its rules and branding, is the next step for them.
+- **New homes for a hidden event.** A resident who has not claimed a home yet lists it from the map's public form, which lists for the event its page shows; for a hidden event they wait until it is announced. A "+ Add a home" form in My house would close this gap.
 - **Ordering the switcher's tabs.** Tabs are the default first, then by date; an organizer-chosen order is not built.
 - **Per-night hours in the lights forms.** A lights home has one start and end time for all its nights in the forms; the server and the API already take hours per night.
 - **44 px targets on Halloween.** Halloween's filter chips, time picker and card hearts stay 40 px high so its pages stay as they were; the other types have 44 px.

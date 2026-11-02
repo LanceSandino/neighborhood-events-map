@@ -1,16 +1,43 @@
-# Event migrations: upgrade to 0.11, 0.15 and 0.16 and both rollback paths
+# Event migrations: upgrade to 0.11, 0.15, 0.16 and 0.17 and both rollback paths
 
 0.11.0-beta.1 gives every event its own listings (ROADMAP Stage 2, [DECISIONS](../../DECISIONS.md) D-20261031-05 to
 -14). This runbook says what the upgrade changes in the database, how to check it, and how to go back — with the
 image only (the database is kept) or with the backup taken before the upgrade. The drill script runs all of it on a
 throwaway stack; run it before upgrading a real installation.
 
-0.12, 0.13 and 0.14 add no migration; 0.15 adds one (several published events) and 0.16 one (per-event branding,
-below). An installation still on 0.9.0-beta.1 that upgrades straight to the latest release runs `Version20261031000001`
-(0.10, `listings.details`), `Version20261031000002` (0.11, event-scoped listings), `Version20261031000003` (0.15,
-several events) and `Version20261031000004` (0.16, per-event branding) in that order when the app starts; everything
+0.12, 0.13 and 0.14 add no migration; 0.15 adds one (several published events), 0.16 one (per-event branding) and
+0.17 one (hidden events, below). An installation still on 0.9.0-beta.1 that upgrades straight to the latest release
+runs `Version20261031000001` (0.10, `listings.details`), `Version20261031000002` (0.11, event-scoped listings),
+`Version20261031000003` (0.15, several events), `Version20261031000004` (0.16, per-event branding) and
+`Version20261101000001` (0.17, hidden events) in that order when the app starts; everything
 below applies, and the drill starts from the published 0.9.0-beta.1 images for exactly that path. Set `APP_IMAGE_TAG`
 to the release you deploy wherever this page says 0.11.0-beta.1.
+
+## 0.17: hidden events
+
+0.17.0-beta.1 adds `Version20261101000001` ([D-20261101-01](../../DECISIONS.md)). It is additive and changes no row:
+
+- **Schema.** The state check allows `hidden` (draft → hidden → upcoming → open → closed → archived), and
+  `uniq_current_event_per_type` counts hidden events with upcoming and open ones (one current event per type).
+  `event_occurrences_default_public` already refuses a hidden default.
+- **Data.** None changes: every upcoming event stays upcoming and visible, so visitors see exactly what they saw on 0.16.
+  From now on, closing an event creates next year's as hidden.
+- **0.9 image.** It reads neither table (only the settings block and the legacy `listings` table), and the bridge
+  never mirrors a hidden event; path (a) is unchanged.
+
+Check after the upgrade:
+
+```bash
+docker compose exec postgres psql -U halloween -d halloween -c \
+  "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'event_occurrences_state_check'"
+docker compose exec postgres psql -U halloween -d halloween -c \
+  "SELECT id, type, name, state, is_default FROM event_occurrences ORDER BY id"
+```
+
+**Rollback.** Path (a) and path (b) below work as before (the drill checks next year's event stays hidden across the
+image rollback and is announced afterwards). To leave 0.17's schema before going back to 0.15 or 0.16 (path (a) to
+0.9 does not need it): `docker compose exec app php bin/console doctrine:migrations:migrate 'DoctrineMigrations\Version20261031000004' -n`
+makes every hidden event a draft (organizers only; its listings stay) and puts the 0.16 check and index back.
 
 ## 0.16: per-event branding
 
@@ -196,20 +223,22 @@ bin/drill-event-upgrade.sh nhm-app nhm-nginx drill
 
 1. starts the **published** `0.9.0-beta.1` images and checks the demo's homes;
 2. takes a backup with `bin/backup-now.sh`;
-3. upgrades to the given images (every startup migration runs, up to `Version20261031000003`) and checks that
+3. upgrades to the given images (every startup migration runs, up to `Version20261101000001`) and checks that
    `/api/homes` shows the same homes, keys and values and that the Halloween is the open default event;
 4. signs a fictional resident in (real proof-of-work, link from the drill's Mailpit), edits a listing and lists a new
    self-entered home (`scripts/drill_listing.py`);
    4a. (per-event branding) checks the Halloween kept the demo's custom headline ("Spooky streets.", now its own), an
    organizer opens Christmas lights next to it — they show "Holiday nights. Bright lights.", not Halloween's — and
    changes the Halloween's headline, which also reaches the keys the 0.9 image reads;
-   4b. (several events) an organizer closes the Halloween — next year's is created as upcoming on October 31 —, the
-   resident lists the home for next year, and the legacy row keeps the closed Halloween's listing;
+   4b. (several events) an organizer closes the Halloween — next year's is created hidden on October 31: not in
+   `/api/events`, 404 on `/api/event?e=`, not named by the thank-you page —, the resident lists the home for next
+   year, and the legacy row keeps the closed Halloween's listing;
 5. path (a): rolls the images back to `0.9.0-beta.1`, checks it starts, reports the newer migrations and shows the
    bridged homes (the closed Halloween's, with the edit and the new home) and the Halloween's custom headline (the one
    changed in step 4a); a resident edits on 0.9;
-6. goes forward again and checks the edit made on 0.9 reached the closed Halloween and next year's listing is
-   untouched;
+6. goes forward again and checks the edit made on 0.9 reached the closed Halloween, next year's listing is untouched
+   and its event still hidden; then an organizer announces it, `/api/events` lists it as upcoming and the thank-you
+   card links it;
 7. path (b): restores the pre-upgrade backup with `bin/restore.sh` on `0.9.0-beta.1` and checks the homes are exactly
    the pre-upgrade ones and the event tables are gone;
 8. upgrades the restored database once more and checks the homes again and the custom headline (moved again).

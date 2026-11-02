@@ -6,6 +6,27 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.17.0-beta.1] - 2026-11-01
+
+Next year's event now stays hidden until you are ready to show it. When you close an event, next year's is created without appearing to visitors, so residents can get their houses ready first.
+
+### New for organizers
+- **Next year's event starts hidden.** Closing an event still creates next year's right away, with its tentative dates, but visitors do not see it yet: no tab, no page. Organizer → Events shows it as "Hidden · residents can get ready".
+- **Announce, open or hide.** Announce a hidden event when visitors may see it (its tab appears with its dates, no homes yet), or open it to put its homes on the map at once. An announced event can be hidden again until it opens.
+- **Start an event hidden.** When you prepare an event, choose "Hidden — residents can get ready", or use "Let residents get ready" on a draft. Hidden events can be previewed like drafts.
+- The close confirmation says that next year's event is created hidden and that residents can get ready for it.
+
+### New for residents
+- **Get ready for next year early.** My house shows next year's event with a "Getting ready" tab: list your home for it, or start from last year's details. Nothing you save is shown to visitors until the organizer opens the event.
+- After an event ends, My house points you to the next one of its kind.
+
+### Changed
+- The thank-you message of an ended event names next year's dates and links to next year's event only once the organizer has announced it. "Get my house ready" always leads to My house.
+- Events that were already announced stay as they are.
+
+### Known limitations
+- A resident who has not listed a home before cannot add a new home for a hidden event yet; they can once it is announced.
+
 ## [0.16.0-beta.1] - 2026-10-31
 
 Each event now has its own look. The neighborhood keeps its name, logo, links and an optional general description for every event, while Halloween, the Christmas lights and a sale each have their own emoji, headline, introduction, colours and About text. Halloween looks exactly as before, and the Christmas lights and sales no longer borrow Halloween's words and colours.
