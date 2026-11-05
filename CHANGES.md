@@ -1681,4 +1681,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/event-art"
   author: "Lance Sandino"
   timestamp: "2026-11-05T10:30:00Z"
+- id: CU-20261105-50
+  type: security
+  title: "0.9.1-beta.1, released from maintenance/0.9: Symfony 8.1.11 and libexpat 2.10.0 on the line production runs"
+  description: "Recorded here from the maintenance branch (v0.9.1-beta.1, commit 15a4242). composer update 'symfony/*' clears the 14 advisories reported on 2026-11-04; the 0.9 nginx stage names libexpat 2.10.0 so a build cache cannot reuse the older layer. On that branch the Images workflow publishes only the version tag and never :latest, and the Release workflow checks that branch instead of main (D-20261105-50). No migration. Main already has both fixes: Symfony 8.1.11 since 0.18.0-beta.1, and libexpat 2.10.0 in the images built from it."
+  impact: none
+  affected_modules: ["CHANGELOG.md", "DECISIONS.md", "docs/runbooks/release.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php on maintenance/0.9: testNginxImageNamesTheFixedLibexpat, testMaintenanceReleasesNeverMoveLatest"]
+  commit_ref: "maintenance/0.9"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T15:30:00Z"
 ```

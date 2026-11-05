@@ -10,6 +10,10 @@
 
 Pre-releases: `-design.N` (UI snapshots), `-alpha.N`, `-beta.N`. Never tag unbuilt or failing work.
 
+## Security release of an older version
+
+When production runs a version older than main (D-20261105-50): push a `maintenance/X.Y` branch from that version's tag and open the fix as a pull request against it, with only the security changes. On that branch, first change `.github/workflows/images.yml` so version tags never move `:latest`, and `.github/workflows/release.yml` to check that branch instead of main (a tag run uses the workflow files of the tagged commit; see `maintenance/0.9`). After CI passes, squash-merge to the branch, run the Images workflow by hand on it (`gh workflow run images.yml --ref maintenance/X.Y`) to build and smoke-test `:sha-<short>`, then push the annotated tag. Check that `:latest` did not move before deploying. Add the release to main's `CHANGELOG.md`, `CHANGES.md` and `DECISIONS.md`.
+
 ## Making the repository public (only with the owner's explicit go-ahead)
 
 The repository and its history are kept free of private data (DECISIONS D-20261019-02/03), so going public is a visibility switch, not a separate export. Before switching:

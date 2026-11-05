@@ -213,6 +213,14 @@ Groundwork for more kinds of events. Nothing changes for visitors or residents.
 ### Changed
 - Behind the scenes, everything that is particular to Halloween (the listing fields, filters, statuses, icons and words) now lives in one place, so the next kinds of events can be added without touching the shared parts. The map, the listing forms and My house stay exactly as they were.
 
+## [0.9.1-beta.1] - 2026-11-05
+
+Security release of the 0.9 line, from the `maintenance/0.9` branch. No new features and no database changes.
+
+### Security
+- Symfony 8.1.11, with the fixes published on 2026-11-04.
+- libexpat 2.10.0 in the nginx image (CVE-2026-113351, CVE-2026-117610, CVE-2026-118370).
+
 ## [0.9.0-beta.1] - 2026-10-30
 
 Update by pulling `0.9.0-beta.1` and recreating the stack. No data changes; the database and its migrations are unchanged.
