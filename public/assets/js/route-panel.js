@@ -10,6 +10,7 @@
  */
 import { planStops, applyOrder, moveStop, suggestNearby } from './lib/route.js';
 import { esc } from './lib/render.js';
+import { icon } from './lib/icons.js';
 import { time12 } from './lib/time.js';
 import { defaultFilters } from './lib/filters.js';
 import { eventType } from './events/index.js';
@@ -72,12 +73,12 @@ export function createRoutePanel(d) {
       chips.push({ icon, words });
     }
     const time = $('#time');
-    if (time && time.value !== 'any') chips.push(`🕐 ${time.selectedOptions[0]?.textContent || time.value}`);
+    if (time && time.value !== 'any') chips.push({ icon: icon('i-clock'), words: time.selectedOptions[0]?.textContent || time.value });
     for (const el of document.querySelectorAll('[data-choice]')) {
-      if (el.value && el.value !== 'any') chips.push(el.tagName === 'SELECT' ? (el.selectedOptions[0]?.textContent || el.value) : `📅 ${el.value}`);
+      if (el.value && el.value !== 'any') chips.push(el.tagName === 'SELECT' ? (el.selectedOptions[0]?.textContent || el.value) : { icon: icon('i-calendar'), words: el.value });
     }
     const q = (d.filters().q || '').trim();
-    if (q) chips.push(`🔍 “${q}”`);
+    if (q) chips.push({ icon: icon('i-search'), words: `“${q}”` });
     if (!chips.length) return `<p class="form-caption route-filters">${esc(T.copy.routeShowingAll)} <button type="button" class="link-button" data-edit-filters>Add filters</button></p>`;
     const html = chips.map((c) => `<span class="route-chip">${typeof c === 'string' ? esc(c) : `${c.icon}${esc(c.words)}`}</span>`).join('');
     return `<div class="route-filters" aria-label="Filters used for these stops"><span class="label">Filtered by</span>${html}<button type="button" class="link-button" data-edit-filters>Change</button></div>`;
@@ -115,12 +116,12 @@ export function createRoutePanel(d) {
     $('#savedCount').textContent = String(savedHere.length);
     renderPicker(linked, planning);
     const source = !linked && (saved.length || routeAll)
-      ? `<div class="route-source" role="group" aria-label="Stops to include"><button type="button" data-route-all="0" aria-pressed="${!routeAll}">🧡 Saved (${savedHere.length})</button><button type="button" data-route-all="1" aria-pressed="${routeAll}">All matching (${vis.filter(d.isOpen).length})</button></div>`
+      ? `<div class="route-source" role="group" aria-label="Stops to include"><button type="button" data-route-all="0" aria-pressed="${!routeAll}">${icon('i-heart-filled')} Saved (${savedHere.length})</button><button type="button" data-route-all="1" aria-pressed="${routeAll}">All matching (${vis.filter(d.isOpen).length})</button></div>`
       : '';
     if (!planning) {
       plan = []; numbers = new Map(); manualOrder = false;
       const n = vis.filter(d.isOpen).length;
-      $('#routeSub').textContent = 'Tap ♡ on the homes you want to visit and they appear here in a suggested order.';
+      $('#routeSub').innerHTML = `Tap the heart ${icon('i-heart')} on the homes you want to visit and they appear here in a suggested order.`;
       $('#routeItems').innerHTML = source + (n ? `<p class="route-empty-action"><button type="button" class="secondary" data-route-all="1">Plan with all ${n} matching ${n === 1 ? 'home' : 'homes'}</button></p>` : '');
       $('#btnShareRoute').dataset.url = shareLink();
       return;
@@ -135,7 +136,7 @@ export function createRoutePanel(d) {
     const pref = (linked && shared.start) || store.get().start || '';
     const startId = Number(pref) || null;
     startSel.innerHTML = '<option value="">The first stop in each area</option>'
-      + ('geolocation' in navigator && window.isSecureContext ? `<option value="here" ${pref === 'here' ? 'selected' : ''}>📍 My current location</option>` : '')
+      + ('geolocation' in navigator && window.isSecureContext ? `<option value="here" ${pref === 'here' ? 'selected' : ''}>My current location</option>` : '')
       + chosen.map((h) => `<option value="${h.id}" ${h.id === startId ? 'selected' : ''}>${esc(h.address)}</option>`).join('');
     const here = d.here();
     const start = pref === 'here' && here ? { id: null, lat: here.lat, lon: here.lon } : chosen.find((h) => h.id === startId) || null;
@@ -144,18 +145,18 @@ export function createRoutePanel(d) {
     // A drive-by tour is one trip (driving may join areas); walking keeps the walkable trips.
     plan = applyOrder(planStops(chosen, mode === 'driving' ? { groups: [], zonesEnabled: false, start } : { groups: C.routing.groups, zonesEnabled: C.zones.length > 0, start }), order);
     const modeSwitch = drivingOffered
-      ? `<div class="route-mode" role="group" aria-label="How you will go"><button type="button" data-route-mode="walking" aria-pressed="${mode === 'walking'}">${esc(T.copy.walking)}</button><button type="button" data-route-mode="driving" aria-pressed="${mode === 'driving'}">${esc(T.copy.drivingTour)}</button></div>`
+      ? `<div class="route-mode" role="group" aria-label="How you will go"><button type="button" data-route-mode="walking" aria-pressed="${mode === 'walking'}">${icon('i-walk')} ${esc(T.copy.walking)}</button><button type="button" data-route-mode="driving" aria-pressed="${mode === 'driving'}">${icon('i-car')} ${esc(T.copy.drivingTour)}</button></div>`
       : '';
     $('#routeSub').innerHTML = esc(linked
-      ? 'A stop list someone shared with you. Save it to keep it, or save the homes you like with ♡.'
+      ? 'A stop list someone shared with you. Save it to keep it, or save the homes you like with the heart.'
       : useSaved
       ? `Your ${savedHere.length} saved ${savedHere.length === 1 ? 'home' : 'homes'}, in ${manualOrder ? 'your own' : 'a suggested'} order.`
       : T.copy.routeEvery)
       // "My current location" is remembered as a choice, but the position never is: asked for again, on a tap.
-      + (pref === 'here' && !here ? (locating ? ' 📍 Finding your location…' : ' <button type="button" class="link-button" data-locate-start>📍 Use my location</button>') : '');
+      + (pref === 'here' && !here ? (locating ? ` ${icon('i-location')} Finding your location…` : ` <button type="button" class="link-button" data-locate-start>${icon('i-location')} Use my location</button>`) : '');
     let n = 0;
     numbers = new Map();
-    const move = (h, i, last, dir) => `<button type="button" class="move" data-move="${dir}" data-id="${h.id}" aria-label="Move ${esc(h.address)} ${dir < 0 ? 'earlier' : 'later'}" ${(dir < 0 ? i === 0 : i === last) ? 'disabled' : ''}>${dir < 0 ? '↑' : '↓'}</button>`;
+    const move = (h, i, last, dir) => `<button type="button" class="move" data-move="${dir}" data-id="${h.id}" aria-label="Move ${esc(h.address)} ${dir < 0 ? 'earlier' : 'later'}" ${(dir < 0 ? i === 0 : i === last) ? 'disabled' : ''}>${icon(dir < 0 ? 'i-arrow-up' : 'i-arrow-down')}</button>`;
     const ideas = useSaved && chosen.length
       ? suggestNearby(chosen, vis.filter((h) => d.isOpen(h) && !skippedIds.has(h.id)), { groups: C.routing.groups, zonesEnabled: C.zones.length > 0 })
       : [];
@@ -166,11 +167,11 @@ export function createRoutePanel(d) {
       + plan.map((g, gi) => {
         const label = tripLabel(g, gi);
         return `${label ? `<h3 class="route-group-title">${plan.length > 1 ? `Trip ${gi + 1}: ` : ''}${esc(label)}</h3>` : ''}
-        <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; numbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${esc(T.routeNote(h))}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">✕</button></span></li>`; }).join('')}</ol>
+        <ol class="route-items" tabindex="0" aria-label="${esc(label || 'Stops')}: ${g.stops.length} stops">${g.stops.map((h, i) => { n += 1; numbers.set(h.id, n); return `<li class="route-item"><span class="route-index" aria-hidden="true">${n}</span><div class="route-text"><b>${esc(h.address)}</b><p>${time12(h.start)}–${time12(h.end)}${esc(T.routeNote(h))}</p></div><span class="route-move">${g.stops.length > 1 ? move(h, i, g.stops.length - 1, -1) + move(h, i, g.stops.length - 1, 1) : ''}<button type="button" class="move skip" data-skip="${h.id}" aria-label="Skip ${esc(h.address)}">${icon('i-close')}</button></span></li>`; }).join('')}</ol>
         ${g.truncated ? '<p class="form-caption">Showing the first 20 stops in this area.</p>' : ''}
         ${(mode === 'driving' ? drivingOffered : C.routing.provider) && g.stops.length > 1 ? `<button type="button" class="secondary" data-provider-path="${gi}">${mode === 'driving' ? 'Show the driving route for this tour' : 'Show walking path for this trip'}</button>` : ''}`;
-      }).join('') + (plan.length > 1 ? '<div class="notice">🚧 These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>' : '')
-      : '<div class="empty">No stops yet. Save some homes ♡ or change your filters.</div>') + extras;
+      }).join('') + (plan.length > 1 ? `<div class="notice">${icon('i-warning')} These areas are separate trips. The site does not suggest crossing between them; check for safe sidewalks, crossings and gate rules.</div>` : '')
+      : `<div class="empty">No stops yet. Save some homes with the heart ${icon('i-heart')} or change your filters.</div>`) + extras;
     $('#btnShareRoute').dataset.url = shareLink();
   }
 

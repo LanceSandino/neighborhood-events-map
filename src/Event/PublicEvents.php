@@ -10,7 +10,7 @@ use App\Community\CommunityRepository;
  * @module Event/PublicEvents
  * @description The events visitors may see (upcoming, open, closed; of types this release offers), the default first:
  *     their public description for GET /api/events — id, type, name, state, dates, tentative, default and, for a
- *     closed event, its thank-you text —, the event switcher's tabs (emoji and name, the year when two events
+ *     closed event, its thank-you text —, the event switcher's tabs (drawn icon and name, the year when two events
  *     share a name, the state in words for an event that is not open, the link and whether it is the selected one) and
  *     the list of past events. The map's tabs are the current events (open and upcoming); closed events are listed under
  *     Past events, newest first (D-20261104-02). Drafts, hidden and archived events are never described to visitors (ADR

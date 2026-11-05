@@ -129,10 +129,10 @@ test('filters: categories, open now, open on each sale day, multi-family, early 
 
 test('tags carry words, never only colour; pins show the first category or the quick filter picked', () => {
   const h = home(1, { categories: ['free', 'kids_baby'], multi_family: true, early_birds_allowed: true, payment_types: ['cash', 'apps'] });
-  assert.deepEqual(sale.tags(h).map((x) => `${x.icon} ${x.text}`), ['🍼 Kids & baby', '🆓 Free items', '🏘️ Multi-family', '🐦 Early birds welcome', '💵 Cash · Apps']);
-  assert.equal(sale.symbol(h), '🍼', 'the first category in canonical order');
-  assert.equal(sale.symbol(home(2, { categories: ['clothing', 'tools'] }), { tools: true }), '🛠️', 'the Tools filter is on');
-  assert.equal(sale.symbol(home(3, { categories: [] })), '🏷️');
+  assert.deepEqual(sale.tags(h).map((x) => `${x.icon} ${x.text}`), ['i-kids-baby Kids & baby', 'i-free Free items', 'i-multi-family Multi-family', 'i-bird Early birds welcome', 'i-cash Cash · Apps']);
+  assert.equal(sale.symbol(h), 'i-kids-baby', 'the first category in canonical order');
+  assert.equal(sale.symbol(home(2, { categories: ['clothing', 'tools'] }), { tools: true }), 'i-tools', 'the Tools filter is on');
+  assert.equal(sale.symbol(home(3, { categories: [] })), 'i-tag');
   assert.equal(sale.pinClass(h), 'sale');
   for (const word of Object.values(sale.copy)) assert.doesNotMatch(word, /\$\d|price|buy now|checkout/i, 'no commerce words');
 });
@@ -147,7 +147,7 @@ test('cards, the selected home and pins: status chips from the first sale day, r
   assert.match(card, /North · <span class="card-hours">Sat–Sun 8 AM–2 PM<\/span>/);
   assert.doesNotMatch(cardHtml(evil, ctxAt('2027-03-20', '10:00'), { saved: false, active: false, focus: {} }), /card-status/, 'before the sale no chip says "opens Sat"');
   assert.match(cardHtml(home(2, {}, { status: 'sold_out', status_date: SAT }), ctxAt(SAT, '10:00'), { saved: false, active: false, focus: {} }), /card-status sold_out">Sold out today</);
-  assert.match(selectedHtml(evil, ctxAt(SAT, '10:00'), false), /♡ Save this stop/);
+  assert.match(selectedHtml(evil, ctxAt(SAT, '10:00'), false), / Save this stop/);
   assert.match(pinHtml(evil, { focus: {}, type: sale, ctx: ctxAt(SAT, '10:00') }), /class="pin sale"/);
   assert.match(pinHtml(home(3, {}, { status: 'closed' }), { focus: {}, type: sale, ctx: ctxAt(SAT, '10:00') }), /class="pin sale inactive"/);
   assert.doesNotMatch(tagsHtml(home(1, { categories: ['<script>', 'toys'] }), sale), /<script>/i);

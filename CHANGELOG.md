@@ -6,6 +6,27 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.19.0-beta.1] - 2026-11-05
+
+The site now draws everything itself, the same on every phone and computer, and Christmas lights pages hang a string of classic C9 bulbs along the top. Each event can have its own logo, and logos are now part of your backups.
+
+### New for visitors
+- **Drawn icons everywhere.** Pins, filters, tags, the legend, navigation, the hero picture and the browser tab use the site's own drawings instead of emoji.
+- **A C9 garland on Christmas lights pages.** Red, yellow, blue, green and orange bulbs along the top of the page, in light and dark. It is decoration only and never moves.
+- **Each event looks like itself.** An event's pages show its own logo, or the drawing for its kind of event.
+- **The tabs fit on a phone.** "Past events" moves to its own line when it does not fit beside the tabs.
+
+### New for organizers
+- **A logo for each event.** Under Organizer > Events, the Branding section has a logo with upload and remove. Without one, the event shows the drawing for its kind.
+- **The community logo** now shows in the organizer console, on pages with no event and in sign-in emails. A logo you already had also stays on your Halloween events, so they look the same as before.
+- **Logos are in your backups.** Restoring a backup brings the logos back.
+- **Emails match.** Emails show the logo or drawing of what they are about, and the button in a listing email takes the event's colour. An SVG logo cannot be shown by mail apps, so those emails show the drawing instead.
+- **The page's opening line uses your event's name**, such as "Your Rummage Sale", unless you wrote your own.
+
+### Worth checking
+- **Words you wrote stay as you wrote them.** If a headline, intro, note or reminder of yours contains an emoji, it still shows. To change it, edit that event under Organizer > Events, or your reminders under Community & branding.
+- **Other events no longer show the community logo.** If you want a logo on your Christmas lights or sale, add it to that event.
+
 ## [0.18.0-beta.1] - 2026-11-04
 
 Events now end by themselves. The day after an event's last day it closes on its own, moves under "Past events" with its thank-you message, and the front page goes to the event happening next. Each event can also say who may come.
@@ -19,7 +40,7 @@ Events now end by themselves. The day after an event's last day it closes on its
 - **Events close by themselves after their last day**, at midnight in your community's time zone (within the hour). Homes leave the map, visitors find the thank-you message under Past events, and next year's event is created hidden, exactly as when you press Close. A season from November 1 to January 1 stays open across New Year and closes on January 2. Hidden, upcoming and draft events never close by the date. You can still press Close to end an event earlier, or change its last day to keep it going.
 - **The default event follows what is on.** When the default event closes, the front page moves to the event happening soonest: one on today, then the next open event, then the next announced one. With nothing on, it keeps showing the thank-you message until you announce or open another event. Next year's hidden event is never the default. If you choose a default yourself, it stays while that event is on the site.
 - **Closed events can no longer be made the default**; they are under Past events.
-- **Organizer → Events is grouped**: On the site now, Hidden and getting ready, Drafts, Past events and Archived, with a short explanation of how events close. The Close confirmation says where the front page goes.
+- **Organizer > Events is grouped**: On the site now, Hidden and getting ready, Drafts, Past events and Archived, with a short explanation of how events close. The Close confirmation says where the front page goes.
 - **"Who may come" in each event's form**, in the words of its kind of event, with "Same as the community" as the usual choice. Next year's event keeps it.
 
 ### Changed
@@ -37,7 +58,7 @@ Events now end by themselves. The day after an event's last day it closes on its
 Next year's event now stays hidden until you are ready to show it. When you close an event, next year's is created without appearing to visitors, so residents can get their houses ready first.
 
 ### New for organizers
-- **Next year's event starts hidden.** Closing an event still creates next year's right away, with its tentative dates, but visitors do not see it yet: no tab, no page. Organizer → Events shows it as "Hidden · residents can get ready".
+- **Next year's event starts hidden.** Closing an event still creates next year's right away, with its tentative dates, but visitors do not see it yet: no tab, no page. Organizer > Events shows it as "Hidden · residents can get ready".
 - **Announce, open or hide.** Announce a hidden event when visitors may see it (its tab appears with its dates, no homes yet), or open it to put its homes on the map at once. An announced event can be hidden again until it opens.
 - **Start an event hidden.** When you prepare an event, choose "Hidden — residents can get ready", or use "Let residents get ready" on a draft. Hidden events can be previewed like drafts.
 - The close confirmation says that next year's event is created hidden and that residents can get ready for it.
@@ -58,10 +79,10 @@ Next year's event now stays hidden until you are ready to show it. When you clos
 Each event now has its own look. The neighborhood keeps its name, logo, links and an optional general description for every event, while Halloween, the Christmas lights and a sale each have their own emoji, headline, introduction, colours and About text. Halloween looks exactly as before, and the Christmas lights and sales no longer borrow Halloween's words and colours.
 
 ### New for organizers
-- **Branding for each event.** Under Organizer → Events every event has a Branding section: the emoji, the headline and its coloured second part, the introduction, the two colours and the About text visitors read for that event. Every field is optional: an empty field uses the built-in look of that kind of event, shown in grey in the field. Preview a draft, or open a public event's page, to see the result.
-- **Community & branding is for the whole neighborhood.** It keeps the name, subtitle, city line, logo, contact, links and an optional general About text that shows for every event without an About text of its own. Event names, dates and hours are changed under Organizer → Events.
+- **Branding for each event.** Under Organizer > Events every event has a Branding section: the emoji, the headline and its coloured second part, the introduction, the two colours and the About text visitors read for that event. Every field is optional: an empty field uses the built-in look of that kind of event, shown in grey in the field. Preview a draft, or open a public event's page, to see the result.
+- **Community & branding is for the whole neighborhood.** It keeps the name, subtitle, city line, logo, contact, links and an optional general About text that shows for every event without an About text of its own. Event names, dates and hours are changed under Organizer > Events.
 - **Your own Halloween look stays with Halloween.** If you gave your map its own emoji, headline, colours or About text before, they now belong to your Halloween (next year's Halloween keeps them too). Your Christmas lights and sales show their own look until you give them one.
-- **The organizer console is the neighborhood's.** Its header shows your logo (or your community's initial) and it keeps its own calm colours on every page. An event's look appears only where that event is in focus: its row and form in Organizer → Events, its preview, the list of events on the Overview and the listing column of Addresses, which now names the event it shows.
+- **The organizer console is the neighborhood's.** Its header shows your logo (or your community's initial) and it keeps its own calm colours on every page. An event's look appears only where that event is in focus: its row and form in Organizer > Events, its preview, the list of events on the Overview and the listing column of Addresses, which now names the event it shows.
 
 ### Changed
 - The sign-in email belongs to the whole neighborhood: "Your <community> sign-in link", without an event name. The email that confirms a new listing names its event and address ("Confirm your <community> Christmas Lights listing for 12 Holly Dr"), and a review request names the event it was sent from.
@@ -78,7 +99,7 @@ Several events at once: visitors switch between Halloween, the Christmas lights 
 
 ### New: several events at once
 - A neighborhood can show **several events at the same time**, for example Halloween's thank-you, the Christmas lights and a rummage sale announced for the spring. Visitors switch between them with the **tabs at the top of the page**; each tab is the event's own page with its own look, filters, homes and saved stops, and a shared link keeps its event. A neighborhood with one event sees no tabs: the map looks exactly as before.
-- **The default event** is what the front page shows; organizers choose it under Organizer → Events.
+- **The default event** is what the front page shows; organizers choose it under Organizer > Events.
 - **Close an event when it is over.** Its homes leave the map and its tab shows a thank-you message instead, for example "Halloween 2026 was a success — thank you! Come back next year (Oct 31, 2027, tentative). Residents: sign in to get your house ready for next year." Write your own message or keep the default.
 - **Next year is ready right away.** Closing creates next year's event of the same kind: Halloween on October 31, the Christmas lights on the same nights a year later, a garage sale with its dates "to be announced". Visitors see it as "coming soon" with its tentative dates; homes appear when you open it.
 - **Upcoming events and dates to be announced.** Announce an event before it opens so residents can list their homes early; mark dates as tentative, or leave them to be announced (a sale opens once it has its days). New events start on the usual dates: Halloween October 31, Christmas lights November 1 to January 1, a sale to be announced.
@@ -88,7 +109,7 @@ Several events at once: visitors switch between Halloween, the Christmas lights 
 - **Get your house ready for next year** while this year's event is still showing: "List for <event>" starts from an empty form, and **"Use last year's details"** fills it with your own listing of last time (your details, note and hours — never last year's days). Nothing is shown until you save, and nothing appears on the map until the event opens.
 
 ### Changed
-- Organizer → Events: Announce, Open, Close (the confirmation shows the thank-you text and next year's dates), Make default and Archive replace "Put on the map" and "End event". Only one event of each kind can be upcoming or open at a time.
+- Organizer > Events: Announce, Open, Close (the confirmation shows the thank-you text and next year's dates), Make default and Archive replace "Put on the map" and "End event". Only one event of each kind can be upcoming or open at a time.
 - Hiding or unhiding a listing applies to the home's listings of every upcoming or open event; the organizer's hold stays on the address as before.
 
 ### Known limitations
@@ -100,7 +121,7 @@ Several events at once: visitors switch between Halloween, the Christmas lights 
 Christmas lights and garage sales are ready for every neighborhood, with fixes for keyboard use, phones and long names. Halloween maps work as before; the fixes marked "also on Halloween maps" are the only changes there.
 
 ### New for organizers: Christmas lights and garage sales
-- One install now runs **Halloween, a Christmas lights season or a garage (or rummage) sale**. Under **Organizer → Events** you prepare the next event as a draft, preview it, put it on the map and end it when it is over; residents keep their homes and list them again for each event from an empty form. Nothing from an earlier event is copied or shown again.
+- One install now runs **Halloween, a Christmas lights season or a garage (or rummage) sale**. Under **Organizer > Events** you prepare the next event as a draft, preview it, put it on the map and end it when it is over; residents keep their homes and list them again for each event from an empty form. Nothing from an earlier event is copied or shown again.
 - **Christmas lights:** up to 62 nights with the hours most homes keep; homes pick their nights and hours, display styles, drive-by or walk-up, music with an FM station, a flashing warning and hot cocoa; visitors filter by drive-by, no flashing reported, music, open tonight, a night or a style, and plan a lights tour.
 - **Garage sales:** one to three sale days; homes pick their days with their own hours on each, categories, multi-family, early birds and payment kinds (the kind only); notes never carry phone numbers, emails, payment usernames or links; visitors filter by category, open now and sale day, and plan their sale stops.
 - Each kind of event has its own look and words (midnight blue and gold, teal and coral). Inviting residents to a new event is still done by hand (newsletter, group chat).
@@ -110,9 +131,9 @@ Christmas lights and garage sales are ready for every neighborhood, with fixes f
 - The accessibility statement, the terms of use and the address example in "List your home" use the words of the event on the map instead of Halloween's; between events they stay general. Halloween's pages read exactly as before. The organizer console's address example and the address error message use a neutral "123 Main St".
 
 ### Fixed
-- In Organizer → Events, a draft's "Put on the map" button shows its words again (they were white on white).
+- In Organizer > Events, a draft's "Put on the map" button shows its words again (they were white on white).
 - With "Larger text" on a narrow phone, the list's cards take one column instead of pushing the page sideways (also on Halloween maps).
-- Cards in the list show a home's note itself and no longer also a "📝 Note" tag, which often sat alone on an extra row; the 📝 marker stays in the compact list (also on Halloween maps). On Christmas lights and sale maps the tags have a little space between icon and words.
+- Cards in the list show a home's note itself and no longer also a "Note" tag, which often sat alone on an extra row; the note marker stays in the compact list (also on Halloween maps). On Christmas lights and sale maps the tags have a little space between icon and words.
 - Keyboard use, for every kind of event: a map pin reached with Tab opens its home with Enter or Space; in "List your home", the pin for a new address can be placed without a mouse (arrow keys move the map, Enter drops the pin at its centre, marked with a +); in My house, the keyboard stays on the button or field you used after a change is saved.
 - A long community or event name no longer fills the sidebar with three large lines: it is set a little smaller and wraps evenly. A long name also wraps in the footer instead of widening a phone screen.
 - The route's notices on a Christmas lights or sale map use that map's own colours.
@@ -132,7 +153,7 @@ Christmas lights and garage sales are ready for every neighborhood, with fixes f
 Garage and rummage sales: organizers run a sale of one to three days, residents list what they sell and when, and visitors find the stops they want. Halloween and Christmas lights maps look and work exactly as before.
 
 ### Added
-- **Garage and rummage sales.** Organizers can run a sale under Organizer → Events: its name (for example "Community Rummage Sale"), one to three sale days, the hours most homes keep, the item categories residents may list, an early-bird time, rules and, with directions set up, a driving tour. The preview shows the sale's look before it goes on the map.
+- **Garage and rummage sales.** Organizers can run a sale under Organizer > Events: its name (for example "Community Rummage Sale"), one to three sale days, the hours most homes keep, the item categories residents may list, an early-bird time, rules and, with directions set up, a driving tour. The preview shows the sale's look before it goes on the map.
 - Residents list their sale with the days they take part in and their own hours on each day (Saturday and Sunday may differ), item categories, multi-family, early birds welcome and the payment kinds they take (cash, card or payment apps — the kind only). In My house they mark "Paused today", "Sold out today" or "Closed".
 - Sale notes are public, so a note with a phone number, email address, payment username or web address is refused with a message asking to remove it; nothing of it is saved.
 - Visitors get a teal and coral map with the sale days and hours, quick filters for kids & toys, furniture and tools, more filters for household, electronics, free items, homes open now, open on each sale day, multi-family sales and early birds, search over streets, categories and notes, and each home's status on their own clock ("Open now" only during that home's hours; "Sold out today" never shows as open). Saved stops become "Your sale stops", with the sale etiquette next to it.
@@ -152,7 +173,7 @@ Garage and rummage sales: organizers run a sale of one to three days, residents 
 Christmas lights: organizers run a lights season of up to 62 nights, residents list their displays, and visitors plan a walk or a drive-by tour. Halloween maps look and work exactly as before.
 
 ### Added
-- **Christmas lights.** Organizers can run a Christmas lights season under Organizer → Events: the first and last night (up to 62 nights, for example Dec 1 – Jan 3), the hours most homes keep, rules, the best night for a neighborhood walk, quiet hours and, with directions set up, a drive-by tour. The preview shows the lights look before it goes on the map.
+- **Christmas lights.** Organizers can run a Christmas lights season under Organizer > Events: the first and last night (up to 62 nights, for example Dec 1 – Jan 3), the hours most homes keep, rules, the best night for a neighborhood walk, quiet hours and, with directions set up, a drive-by tour. The preview shows the lights look before it goes on the map.
 - Residents list their light display with the nights they take part in (every night or only some), their hours, display styles (classic, animated, light show to music, inflatables, walk-through), drive-by only (please do not approach) or walk-up welcome, music and its FM station, a flashing warning and hot cocoa. In My house they mark a single night "Off tonight" or the whole season "Done for the season".
 - Visitors get a midnight blue and gold map with the season's dates and hours, quick filters for drive-by homes, no flashing reported and music, more filters for walk-up homes, homes open tonight, one night of the season and a display style, and each home's status on their own clock ("Lights on" only during that home's hours). Saved stops become "Your lights tour", with the viewing etiquette next to it.
 - A fictional Christmas lights demo for trying it out.
@@ -171,13 +192,13 @@ Each event's listings now stay with that event: next season starts fresh, and la
 
 ### Added
 - Each event now has its own listings. A home's Halloween listing belongs to that Halloween; next year's, or a different kind of event, starts fresh, and last season's homes never show up again by accident. Your claim on your home stays yours.
-- Organizers can prepare and switch events under Organizer → Events: prepare the next event as a draft, preview it, put it on the map when the time comes (the current event ends at the same moment), end an event, export one event's listings and delete an old event's listings.
+- Organizers can prepare and switch events under Organizer > Events: prepare the next event as a draft, preview it, put it on the map when the time comes (the current event ends at the same moment), end an event, export one event's listings and delete an old event's listings.
 - Residents list each home for the current event in My house with "List for …": the form starts empty, so nothing from last season carries over.
 
 ### Changed
 - Between events, the map says that there is no event right now instead of showing an old one.
 - Saved homes and routes are kept per event; the ones you saved for this Halloween are still there. A shared stop list made for an earlier event opens without its stops.
-- Under Organizer → Community → Event, the name and hours still change the current event; its date changes there only while nobody is listed. The next season is a new event under Organizer → Events, so this season's listings stay with this season.
+- Under Organizer > Community > Event, the name and hours still change the current event; its date changes there only while nobody is listed. The next season is a new event under Organizer > Events, so this season's listings stay with this season.
 
 ### Known limitations
 - Halloween is still the only kind of event; Christmas lights and garage sales come next. Inviting residents by email to list for a new event is not built yet.
@@ -187,10 +208,18 @@ Each event's listings now stay with that event: next season starts fresh, and la
 Groundwork for more kinds of events. Nothing changes for visitors or residents.
 
 ### Added
-- Organizers can see the kind of event of their map under Organizer → Community → Event. Halloween is the kind this version offers; Christmas lights and garage sales come in later versions.
+- Organizers can see the kind of event of their map under Organizer > Community > Event. Halloween is the kind this version offers; Christmas lights and garage sales come in later versions.
 
 ### Changed
 - Behind the scenes, everything that is particular to Halloween (the listing fields, filters, statuses, icons and words) now lives in one place, so the next kinds of events can be added without touching the shared parts. The map, the listing forms and My house stay exactly as they were.
+
+## [0.9.1-beta.1] - 2026-11-05
+
+Security release of the 0.9 line, from the `maintenance/0.9` branch. No new features and no database changes.
+
+### Security
+- Symfony 8.1.11, with the fixes published on 2026-11-04.
+- libexpat 2.10.0 in the nginx image (CVE-2026-113351, CVE-2026-117610, CVE-2026-118370).
 
 ## [0.9.0-beta.1] - 2026-10-30
 
@@ -308,7 +337,7 @@ Security release. Update now (pull `0.8.0-beta.2` and recreate the stack; no dat
 
 ### Changed
 - Pins and list cards show the kind you filter by (tick 21+ and those homes show 🍺); the map legend now includes 🍺 21+.
-- The site and its emails name the community's own event instead of always saying Halloween: organizers set the **Event name** under Organizer → Community → Event (it stays "Halloween" unless changed). Page titles, the sidebar, footer, search description and email subjects read "<community> <event name>".
+- The site and its emails name the community's own event instead of always saying Halloween: organizers set the **Event name** under Organizer > Community > Event (it stays "Halloween" unless changed). Page titles, the sidebar, footer, search description and email subjects read "<community> <event name>".
 - Documentation matches this release: event-neutral naming, current filters and tabs, private vulnerability reporting, and checks for pull-request refs before going public.
 
 ### Fixed
@@ -369,7 +398,7 @@ Security release. Update now (pull `0.8.0-beta.2` and recreate the stack; no dat
 ## [0.5.0-beta.4] - 2026-10-19
 
 ### Changed
-- Faster pages: nginx compresses text responses (about 70 % smaller), the map's stylesheet no longer blocks the first paint, and the browser connects to the map-tile server early. Lighthouse (mobile, development stack): Performance 79 → 91.
+- Faster pages: nginx compresses text responses (about 70 % smaller), the map's stylesheet no longer blocks the first paint, and the browser connects to the map-tile server early. Lighthouse (mobile, development stack): Performance 79 > 91.
 - Production PHP preloads Symfony's most-used classes into OPcache when PHP-FPM starts; the PHP-FPM worker pool is set from `.env` (`FPM_MAX_CHILDREN`…). The upgrade runbook recreates containers on every deploy, which is what clears OPcache.
 - Small text is at least 12 px on phones (11 px for tags and badges), so it passes Lighthouse's legibility check.
 - `robots.txt` lets search engines index the public map, About and policy pages but not the API, sign-in, resident or organizer pages.
@@ -390,7 +419,7 @@ Security release. Update now (pull `0.8.0-beta.2` and recreate the stack; no dat
 ## [0.5.0-beta.1] - 2026-10-19
 
 ### Added
-- **Walking areas in the zone filter**: the organizer's walkable groups appear as choices such as "Main (1–3)", "Second (4)" or "Phases 6A, 6B"; choosing one shows, outlines and routes all its zones together. Groups can be named (`routing.group_labels`, or "Name: zone-a, zone-b" in Organizer → Community); unnamed one-zone groups stay plain zone choices.
+- **Walking areas in the zone filter**: the organizer's walkable groups appear as choices such as "Main (1–3)", "Second (4)" or "Phases 6A, 6B"; choosing one shows, outlines and routes all its zones together. Groups can be named (`routing.group_labels`, or "Name: zone-a, zone-b" in Organizer > Community); unnamed one-zone groups stay plain zone choices.
 - **Counts on every filter**: each filter button, chip and zone choice shows how many homes handing out it would list, given the other filters.
 - Route trips are named after their walking area, and a filter-based route shows the filters it used ("Filtered by: Main (1–3) · 🍬 Candy") with a link to change them.
 - A small "back to top" button on long pages.
@@ -420,7 +449,7 @@ Security release. Update now (pull `0.8.0-beta.2` and recreate the stack; no dat
 - **Appearance panel** (🎨 in the header): Auto, Light or Dark, plus Larger text, More contrast and Reduce motion. Saved on the device only, applied before the page draws; your device's own accessibility settings still apply.
 - **Trick-or-treat reminders** on the About page and in the map guide (porch lights, one piece of candy unless a sign says otherwise, look don't touch, watch for cars…); organizers can replace them with their own (`community.reminders`).
 - Optional city under the community name (`branding.show_locality`), and the logo in the phone header (logo and name link to the map); logos keep a transparent background and a replaced logo shows at once.
-- **Compact list** (☰ next to the count) for neighborhoods with many homes: one row per home with icons instead of tag words; long notes are cut to two lines on cards and shown as 📝 in the compact list (full note in the home's preview).
+- **Compact list** (the list button next to the count) for neighborhoods with many homes: one row per home with icons instead of tag words; long notes are cut to two lines on cards and shown as 📝 in the compact list (full note in the home's preview).
 - Filter buttons have icons, and the Filters button shows how many filters are on.
 - Choosing a phase/zone outlines it, shades the rest and zooms to it.
 - **Zone status**: an organizer can mark a zone "Coming soon" (drawn with that label, homes cannot be listed yet, e.g. no houses built) or "Hidden" (not shown at all).
@@ -457,7 +486,7 @@ Security release. Update now (pull `0.8.0-beta.2` and recreate the stack; no dat
 ### Added
 - Light and dark appearance on every page, following the browser/system setting (semantic colour tokens; dark changes colours only, never layout); the map's tiles are softened in dark mode while pins and outlines keep their colours.
 - Organizer address list pages through results (25 per page).
-- **About page** (`/about`, linked in the navigation and footer) with the organizer's description, event date and hours, how visitors may reach the homes (open to the public, gated but open for trick-or-treating, residents and guests, residents only), access notes, and links such as a neighborhood Facebook group; all editable in Organizer → Community. The map's info sheet shows the access status too.
+- **About page** (`/about`, linked in the navigation and footer) with the organizer's description, event date and hours, how visitors may reach the homes (open to the public, gated but open for trick-or-treating, residents and guests, residents only), access notes, and links such as a neighborhood Facebook group; all editable in Organizer > Community. The map's info sheet shows the access status too.
 - Privacy notice, terms of use and accessibility statement, linked from every page, with a "Clear saved data on this device" control. Public pages set no cookies and load no third-party scripts (tested).
 - Automated WCAG 2.1 AA checks (axe-core) on every public page type in light and dark.
 - Brand colours chosen by an organizer are turned into contrast-checked text and button-ink colours automatically, in both themes; support for high-contrast and forced-colour modes.
@@ -480,7 +509,7 @@ First release whose whole history is free of private deployment data, so the rep
 
 ### Added
 - Real-data example **Ventura Reserve (Orlando, FL)**: the three official Orange County recorded-subdivision plats (Phases 1–3) imported with the generic importer, provenance manifest and review map. The boundary imports pending review; address points are fetched locally from Orange County's open data into the git-ignored `deploy/private/` and never committed.
-- Generic ArcGIS importers `scripts/fetch_arcgis_boundaries.py` (plat polygons → zones, boundary, manifest, review map) and `scripts/fetch_arcgis_addresses.py` (address points inside the boundary → private CSV), driven by a JSON source config (`examples/gis-sources.example.json`).
+- Generic ArcGIS importers `scripts/fetch_arcgis_boundaries.py` (plat polygons > zones, boundary, manifest, review map) and `scripts/fetch_arcgis_addresses.py` (address points inside the boundary > private CSV), driven by a JSON source config (`examples/gis-sources.example.json`).
 
 ### Changed
 - The repository no longer contains any data about the first real deployment (configuration, geometry, street names, reports, screenshots, host names); deployments keep that in git-ignored `deploy/private/<id>/`.

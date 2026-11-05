@@ -113,9 +113,9 @@ test('tags carry words, never only colour, and never promise safety; pins follow
   assert.deepEqual(lights.tags(home(2, { viewing_mode: 'walk_up_welcome', flashing_warning: true })).map((x) => x.text), ['Classic', 'Walk-up', 'Flashing lights']);
   for (const x of t) assert.doesNotMatch(x.text, /\bsafe\b/i);
   for (const w of Object.values(lights.copy)) assert.doesNotMatch(w, /\bsafe\b/i);
-  assert.deepEqual([lights.symbol(home(1, { styles: ['classic'], music_enabled: true })), lights.pinClass(home(1, { styles: ['synchronized_music'] }))], ['🎵', 'music']);
-  assert.deepEqual([lights.symbol(home(1, { styles: ['inflatables', 'walkthrough'] })), lights.pinClass(home(1, { styles: ['inflatables'] }))], ['🎄', 'inflatable']);
-  assert.equal(lights.symbol(home(1, { styles: ['animated'] })), '✨');
+  assert.deepEqual([lights.symbol(home(1, { styles: ['classic'], music_enabled: true })), lights.pinClass(home(1, { styles: ['synchronized_music'] }))], ['i-music', 'music']);
+  assert.deepEqual([lights.symbol(home(1, { styles: ['inflatables', 'walkthrough'] })), lights.pinClass(home(1, { styles: ['inflatables'] }))], ['i-walkthrough', 'inflatable']);
+  assert.equal(lights.symbol(home(1, { styles: ['animated'] })), 'i-c9-red');
 });
 
 test('hours on the card: tonight, the next night or the last; one suffix when both times share it', () => {
@@ -140,7 +140,7 @@ test('cards, the selected home and pins: the status chip once the season is on, 
   assert.match(card, /card-status not_tonight">Not tonight</, 'during the season a dark home says so');
   assert.doesNotMatch(cardHtml(evil, before, { saved: false, active: false, focus: {} }), /card-status/, 'before the season no chip repeats "not tonight"');
   assert.match(cardHtml(evil, ctxAt('2026-12-05', '19:00'), { saved: true, active: false, focus: {} }), /card-status lights_on">Lights on</);
-  assert.match(selectedHtml(evil, during, false), /♡ Save this stop/);
+  assert.match(selectedHtml(evil, during, false), / Save this stop/);
   assert.match(pinHtml(evil, { focus: {}, type: lights, ctx: during }), /class="pin lights inactive"/);
   assert.match(pinHtml(evil, { focus: {}, type: lights, ctx: ctxAt('2026-12-05', '19:00') }), /class="pin lights"/);
   assert.doesNotMatch(tagsHtml(home(1, { fm_frequency: '<script>' , music_enabled: true }), lights), /<script>/i);

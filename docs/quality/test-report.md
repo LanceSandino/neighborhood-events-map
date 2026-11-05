@@ -1,6 +1,39 @@
 # Test and verification report
 
-## Latest run — 2026-11-05, release 0.18.0-beta.1
+## Latest run — 2026-11-05, release 0.19.0-beta.1
+
+Drawn art, the C9 garland, a logo per event and logos in the database (D-20261105-01 to -07, ADR 0013; CU-20261105-02 to -05), on
+PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.11. Application code is the same from commit `c015187` on; later commits change tests, documents
+and screenshots only. The last row is the full browser run on the final tests, with nothing failing.
+
+| Gate | Result |
+|---|---|
+| Baseline at branch start | **not run**; the branch started from 0.18.0-beta.1, which has its own report |
+| PHPUnit 13.4.5 (`sh bin/test.sh --coverage-text`) | **OK — 717 tests, 18095 assertions** on `c015187` (new: NoEmojiInSourcesTest, NoEmojiOnPagesTest, LogoStorageTest) |
+| Coverage (pcov) | Lines **95.55 %** (4472/4680), Methods 84.33 % (662/785), Classes 46.09 % (59/128), branches n/a |
+| PHPStan level 6 · `lint:twig` · `lint:yaml` · `lint:container` | No errors (`c015187`) · 84 files OK · 21 files OK · OK (lints on `4c17a9c`) |
+| `composer audit --locked` | **No advisories** (`4c17a9c`; the lock came from main, not changed here) |
+| Node tests (`tests/js`) | **68 of 68** (`4c17a9c`) |
+| Python tests (`scripts/tests`) | **OK — 49 tests** (`4c17a9c`) |
+| `scripts/smoke_session.py` | **13 of 13** (`c015187`) |
+| `docker build --target prod`, `--target nginx` | Both built (`c015187`) |
+| `bin/smoke-prod-image.sh` | **Passed** (`c015187`): health, map page, 54 versioned assets, multipart rules, FPM pools, console, automatic close |
+| `bin/drill-event-upgrade.sh` | **Passed** against the published 0.9.0-beta.1 (`c015187`), now with a logo: a volume logo becomes the community's and the Halloween's in the database, the file and key stay, next year's hidden event keeps it and answers visitors 404, and 0.9 still shows it after both rollback paths and after the automatic close |
+| Playwright (`./bin/e2e.sh`, tiles allowed) | Whole suite on `c015187`: **227 passed, 2 failed, 2 skipped, 8 did not run** in 25.2 min. The failures were one test on two browsers, a selector that no longer told two buttons apart without its emoji; the 8 are the season project, which depends on the others. After fixing the tests: `public.spec:324` on both browsers **passed**; the season project alone (`--no-deps`) **7 passed, 1 failed**, a check for the console's old initial; that test **passed** after updating it. Every test has passed, not all in one run || Playwright (`./bin/e2e.sh`, tiles allowed) | Whole suite on `c015187`: **227 passed, 2 failed, 2 skipped, 8 did not run** in 25.2 min. The failures were one test on two browsers, a selector that no longer told two buttons apart without its emoji; the 8 are the season project, which depends on the others. After fixing the tests: `public.spec:324` on both browsers **passed**; the season project alone (`--no-deps`) **7 passed, 1 failed**, a check for the console's old initial; that test **passed** after updating it. Every test has passed, not all in one run |
+| Playwright, full run on the final tests (`E2E_BLOCK_TILES=1 ./bin/e2e.sh`, fresh stacks, commit `67c517c`) | **237 passed, 2 skipped, none failed** (16.0 min), and the e2e job in CI passed on the same commit. The run before it on `d7cb74c` had 1 failure, locally and in CI: art.spec and events.spec used one organizer address and went over the limit of 3 sign-in links per email in 15 minutes, so art.spec now has its own address; the limit itself is unchanged |
+| Screenshots | 40 refreshed from those runs, with real map tiles; lights-1440 and demo-390 and lights-390 looked at |
+
+An earlier browser run in this session (65 failed) is **not counted**: its stacks had started with another worktree's compose files, because a
+relative `COMPOSE_FILE` resolves against the shell's directory, so the demo's Halloween closed by itself and took the tests that need its homes
+with it. The runner was changed to absolute paths and the stacks recreated.
+
+**Looked at by eye** (viewport screenshots, `c015187` or the commit before): lights at 1440 light, 768 dark and 375 light; sale at 1440 light and
+430 dark; Halloween at 1440 light and 375 light, its About at 1440 dark; console Overview and the event form at 1440 light; My house at 375 dark before its
+fix; lights at 390 in Safari's engine. **Not looked at by eye**: every type at every width in both themes. Those are covered only by automated checks:
+no horizontal overflow in `types.spec` and the garland's checks in `art.spec`, at 375–1440 in light and dark; no glyph on the rendered pages in
+NoEmojiOnPagesTest (whole documents) and `art.spec` (page text at one width).
+
+## Run — 2026-11-05, release 0.18.0-beta.1
 
 Events close by themselves, past events, the default rule and each event's access (D-20261104-01 to -06; CU-20261104-01 to
 -07), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10, then Symfony 8.1.11 for the security update (CU-20261105-01). The

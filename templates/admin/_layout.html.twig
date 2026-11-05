@@ -1,8 +1,8 @@
 {# Organizer console shell: reuses the public design tokens with the console's own neutral colours (admin.css); data
-   via /api/admin/* (CSRF header). The chrome is the community's: its name and logo, else its initial, and a neutral
-   icon — never an event's emoji, words or colours (no /theme.css here). An event's branding shows only where that event
+   via /api/admin/* (CSRF header). The chrome is the community's: its name and logo, else a neutral drawn mark, and a neutral
+   icon — never an event's mark, words or colours (no /theme.css here). An event's branding shows only where that event
    is in focus: Organizer → Events and the draft preview (D-20261031-52). #}
-{%- set logo = c.branding.logo_url ?? null -%}
+{%- set logo = c.branding.community_logo_url ?? null -%}
 <!doctype html>
 <html lang="en">
 <head>
@@ -23,7 +23,7 @@
 <body class="admin">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="admin-top">
-  <a class="brand" href="/admin"><div class="brand-icon community-mark{{ logo ? ' has-logo' }}" aria-hidden="true">{% if logo %}<img src="{{ logo }}" alt="">{% else %}{{ c.community.name|first|upper }}{% endif %}</div><div><div class="brand-name">{{ c.community.name }}</div><div class="brand-sub">Organizer console</div></div></a>
+  <a class="brand" href="/admin"><div class="brand-icon community-mark{{ logo ? ' has-logo' }}" aria-hidden="true">{% if logo %}<img src="{{ logo }}" alt="">{% else %}{{ brand_mark('brand-community') }}{% endif %}</div><div><div class="brand-name">{{ c.community.name }}</div><div class="brand-sub">Organizer console</div></div></a>
   <nav class="admin-tabs" aria-label="Organizer sections">
     {% for key, label in pages %}
       <a href="{{ {'overview': '/admin', 'events': '/admin/events', 'community': '/admin/community', 'map': '/admin/community/map', 'addresses': '/admin/addresses', 'disputes': '/admin/disputes', 'audit': '/admin/audit'}[key] }}" {% if key == page %}aria-current="page" class="active"{% endif %}>{{ label }}</a>

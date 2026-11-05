@@ -29,7 +29,6 @@ event:
   ends_at: "21:00"
 branding:
   logo: null
-  brand_emoji: "🎃"
   primary_color: "#F07936"
   accent_color: "#524077"
   headline: "Little ghosts."

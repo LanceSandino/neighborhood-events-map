@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Audit\AuditLog;
 use App\Community\CommunityRepository;
+use App\Community\LogoStore;
 use App\Event\EventAccess;
 use App\Event\EventOccurrence;
 use App\Event\EventBranding;
@@ -51,6 +52,7 @@ final class EventsAdminApiController
         private readonly AuditLog $audit,
         private readonly CommunityRepository $community,
         private readonly ClockInterface $clock,
+        private readonly LogoStore $logos,
     ) {
     }
 
@@ -59,7 +61,7 @@ final class EventsAdminApiController
     {
         $today = $this->community->current()->localDate($this->clock->now());
         $events = array_map(function (array $e): array {
-            $view = $e + ['type_name' => $this->typeName($e['type']), 'type_offered' => $this->types->isEnabled($e['type']), 'type_icon' => $this->typeIcon($e['type'])];
+            $view = $e + ['type_name' => $this->typeName($e['type']), 'type_offered' => $this->types->isEnabled($e['type']), 'type_icon' => $this->typeIcon($e['type']), 'logo_url' => $this->logos->url((int) $e['id'])];
             if (EventOccurrence::OPEN === $e['state'] && $view['type_offered']) {
                 $view['close_preview'] = $this->lifecycle->closePreview($this->lifecycle->get((int) $e['id']));
             }
@@ -76,7 +78,7 @@ final class EventsAdminApiController
                 'new_dates' => $t->newEventDates($today), 'closing_template' => (string) ($t->copy()['page_closing_message'] ?? ''),
                 'access_options' => EventAccess::options($t),
                 // The type's branding, shown as the placeholders of an event's own (ADR 0012).
-                'branding' => EventBranding::look($t, []) + ['about' => (string) ($t->copy()['about'] ?? '')]], $this->types->enabled()),
+                'branding' => array_diff_key(EventBranding::look($t, []), ['brand_emoji' => true]) + ['about' => (string) ($t->copy()['about'] ?? '')]], $this->types->enabled()),
             'default_id' => $default,
             'today' => $today,
         ], 200, ['Cache-Control' => 'no-store']);

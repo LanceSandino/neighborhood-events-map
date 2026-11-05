@@ -342,16 +342,16 @@ test('overlapping zone names are moved apart; the more important name keeps its 
 
 test('pins show the kind you filter by; without a filter: spooky, then sensory-friendly, then 21+, then treats', () => {
   const both = home({ adult_drinks: true, low_noise: true, candy: true });
-  assert.equal(symbolOf(home({ adult_drinks: true, low_noise: false })), '🍺', 'a 21+ home is marked as such');
-  assert.equal(symbolOf(both), '🧩', 'sensory-friendly comes before 21+');
-  assert.equal(symbolOf(home({ jump_scares: true, adult_drinks: true })), '👻');
-  assert.equal(symbolOf(home({ low_noise: false })), '🍬');
+  assert.equal(symbolOf(home({ adult_drinks: true, low_noise: false })), 'i-adult', 'a 21+ home is marked as such');
+  assert.equal(symbolOf(both), 'i-sensory', 'sensory-friendly comes before 21+');
+  assert.equal(symbolOf(home({ jump_scares: true, adult_drinks: true })), 'i-ghost');
+  assert.equal(symbolOf(home({ low_noise: false })), 'i-candy');
   // With a quick filter on, the homes that match show its symbol.
-  assert.equal(symbolOf(both, { adult: true }), '🍺');
-  assert.equal(symbolOf(both, { lowSensory: true }), '🧩');
-  assert.equal(symbolOf(both, { candy: true }), '🍬');
-  assert.equal(symbolOf(home({ low_noise: false, adult_drinks: false }), { adult: true }), '🍬', 'a home without 21+ keeps its own symbol');
-  assert.match(pinHtml(both, { focus: { adult: true } }), /class="pin adult"[^>]*><span>🍺<\/span>/);
+  assert.equal(symbolOf(both, { adult: true }), 'i-adult');
+  assert.equal(symbolOf(both, { lowSensory: true }), 'i-sensory');
+  assert.equal(symbolOf(both, { candy: true }), 'i-candy');
+  assert.equal(symbolOf(home({ low_noise: false, adult_drinks: false }), { adult: true }), 'i-candy', 'a home without 21+ keeps its own symbol');
+  assert.match(pinHtml(both, { focus: { adult: true } }), /class="pin adult"[^>]*><span><svg class="icon"[^>]*><use href="[^"]*#i-adult"/);
   const css = readFileSync(new URL('../../public/assets/css/app.css', import.meta.url), 'utf8');
   assert.match(css, /\.pin\.adult \{ background: var\(--pin-adult\); \}/);
   assert.match(css, /\.legend-bullet\.adult \{ background: var\(--pin-adult\); \}/);

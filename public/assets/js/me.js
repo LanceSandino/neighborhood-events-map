@@ -14,6 +14,7 @@
  */
 import { api, ApiError, friendlyError, withEvent as forEvent } from './lib/api.js';
 import { esc } from './lib/render.js';
+import { icon } from './lib/icons.js';
 import { time12 } from './lib/time.js';
 import { toast } from './lib/modal.js';
 import { eventType } from './events/index.js';
@@ -204,9 +205,9 @@ async function load() {
       const o = me.claim_outcome;
       out.className = o.status === 'published' || o.status === 'pending_review' ? 'success' : 'notice';
       out.innerHTML = o.status === 'published'
-        ? `🎉 <b>${esc(o.address)}</b> is on the map now. ${esc(T.copy.published)}`
+        ? `${icon('i-party')} <b>${esc(o.address)}</b> is on the map now. ${esc(T.copy.published)}`
         : o.status === 'pending_review'
-          ? `📝 <b>${esc(o.address)}</b> is saved. Because it is a new address, an organizer approves it before it appears on the map.`
+          ? `${icon('i-note')} <b>${esc(o.address)}</b> is saved. Because it is a new address, an organizer approves it before it appears on the map.`
           : o.status === 'already_claimed'
           ? `This home was already claimed by another neighbor, so nothing was changed. <a href="/#list-my-house">Request a review</a> if you think this is a mistake.`
           : esc(o.message || 'Your listing request could not be completed.');

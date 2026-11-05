@@ -36,10 +36,10 @@ test('the sale theme, hero, sale row and words', async ({ page, request }) => {
   await expect(page.locator('.schedule-row')).toContainText('Sat–Sun, April 10–11, 2027');
   await expect(page.locator('.schedule-row')).toContainText('Most homes: 8 AM–2 PM · Individual hours vary · Early birds: not before 7:30 AM');
   await expect(page.locator('#seasonPill')).toHaveText('Today');
-  await expect(page.locator('.event-pill')).toHaveText('🏷️ Apr 10–11');
+  await expect(page.locator('.event-pill')).toHaveText('Apr 10–11');
   await expect(page.locator('.side-panel b')).toHaveText('Having a sale?');
-  await expect(page.locator('#routeTitle')).toHaveText('🏷️ Your sale stops');
-  await expect(page.locator('.list-head h2')).toHaveText('🏷️ Sales around you');
+  await expect(page.locator('#routeTitle')).toHaveText('Your sale stops');
+  await expect(page.locator('.list-head h2')).toHaveText('Sales around you');
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(246, 245, 240)'); // off-white
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toUpperCase())).toBe('#178D80');
   expect((await page.locator('body').innerText()).toLowerCase()).not.toMatch(/\$\d|add to cart|checkout|buy now/);
@@ -102,7 +102,7 @@ test('quick filters and the Filters panel: categories, open now, each sale day, 
   await first.locator('.card-main').click();
   await expect(page.locator('#mapSelected')).toHaveClass(/open/);
   await expect(page.locator('#mapSelected b')).toHaveText(await first.locator('.card-line b').textContent());
-  await expect(page.locator('#mapSelected [data-save]')).toHaveText('♡ Save this stop');
+  await expect(page.locator('#mapSelected [data-save]')).toHaveText('Save this stop');
   await page.reload();
   await expect(page.getByRole('button', { name: 'Open Saturday', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#btnReset').click();
@@ -159,7 +159,7 @@ test('saved stops belong to this event; without a provider the route is an order
   expect(await page.locator('#btnShareRoute').getAttribute('data-url')).toContain(`e=${event.id}`);
   await page.goto(SALE + '/about');
   await expect(page.locator('main')).toContainText('This map sells nothing: prices and payment stay between you and the seller.');
-  await expect(page.locator('main')).toContainText('🐦 Early birds: not before 7:30 AM');
+  await expect(page.locator('main')).toContainText('Early birds: not before 7:30 AM');
   guard.assertClean();
 });
 
@@ -246,7 +246,7 @@ test('a resident lists a sale: days with their own hours, categories, payment ki
   const box = await page.locator('#pinMap .leaflet-overlay-pane path').first().boundingBox();
   // Somewhere in the empty south-east of the outline, never on top of a demo home.
   await page.mouse.click(box.x + box.width * (0.62 + Math.random() * 0.2), box.y + box.height * (0.62 + Math.random() * 0.2));
-  await page.getByRole('button', { name: 'Next: your stop →' }).click();
+  await page.getByRole('button', { name: 'Next: your stop' }).click();
   const form = page.locator('#registerForm');
   await expect(form.locator('fieldset[data-step="2"]')).toBeVisible();
   await expect(form.locator('#regStart')).toHaveCount(0); // each sale day has its own hours
@@ -256,7 +256,7 @@ test('a resident lists a sale: days with their own hours, categories, payment ki
   for (const chip of await form.locator('fieldset[data-step="2"] .check-chip').all()) {
     if (await chip.isVisible()) expect((await chip.boundingBox()).height).toBeGreaterThanOrEqual(44);
   }
-  await page.getByRole('button', { name: 'Next: confirm by email →' }).click();
+  await page.getByRole('button', { name: 'Next: confirm by email' }).click();
   await expect(form.locator('[data-error="categories"]')).toHaveText('Choose at least one category.');
   await form.locator('label', { hasText: 'Toys' }).click();
   await form.locator('label', { hasText: 'Furniture' }).click();
@@ -265,9 +265,9 @@ test('a resident lists a sale: days with their own hours, categories, payment ki
   await form.locator('select[name="day_start"][data-day="2027-04-11"]').selectOption('09:00');
   await form.locator('select[name="day_end"][data-day="2027-04-11"]').selectOption('13:00');
   await form.locator('label', { hasText: 'Multi-family sale' }).click();
-  await form.locator('label', { hasText: '💵 Cash' }).click();
+  await form.locator('label', { hasText: 'Cash' }).click();
   await form.locator('#regNote').fill('Toys and a sofa. Questions? Call 555-123-4567');
-  await page.getByRole('button', { name: 'Next: confirm by email →' }).click();
+  await page.getByRole('button', { name: 'Next: confirm by email' }).click();
   await page.locator('#regEmail').fill(email);
   const since = Date.now() - 1000;
   await page.getByRole('button', { name: /Email me the confirmation link/ }).click();
@@ -280,7 +280,7 @@ test('a resident lists a sale: days with their own hours, categories, payment ki
   const address = new RegExp(`^${house} Birch Ln$`, 'i');
   expect((await (await request.get(SALE + '/api/homes')).json()).homes.some((h) => address.test(h.address)), 'nothing stored').toBe(false);
   await form.locator('#regNote').fill('Toys and a sofa; everything must go.');
-  await page.getByRole('button', { name: 'Next: confirm by email →' }).click();
+  await page.getByRole('button', { name: 'Next: confirm by email' }).click();
   await page.getByRole('button', { name: /Email me the confirmation link/ }).click();
   await expect(page.locator('#registerSuccess')).toContainText('Check your email', { timeout: 60_000 });
   await page.goto(SALE + await linkFor(request, email, since));
@@ -299,15 +299,15 @@ test('a resident lists a sale: days with their own hours, categories, payment ki
   await expect(home.locator('[data-f="error"]')).toContainText('Please remove the payment username or handle');
   expect((await (await request.get(`${SALE}/api/homes/${mine.id}`)).json()).home.note, 'the refused edit is not stored').toBe('Toys and a sofa; everything must go.');
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
-  for (const [label, status] of [['⏸️ Paused today', 'paused'], ['📦 Sold out today', 'sold_out']]) {
+  for (const [label, status] of [['Paused today', 'paused'], ['Sold out today', 'sold_out']]) {
     await page.locator('.dash-home', { has: page.locator('h2', { hasText: address }) }).getByRole('button', { name: label }).click();
     await expect(page.locator('.dash-home', { has: page.locator('h2', { hasText: address }) }).getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true');
     const api = (await (await request.get(`${SALE}/api/homes/${mine.id}`)).json()).home;
     expect([api.status, api.status_date]).toEqual([status, today]);
   }
   const mineNow = page.locator('.dash-home', { has: page.locator('h2', { hasText: address }) });
-  await mineNow.getByRole('button', { name: '🔒 Closed' }).click();
-  await expect(mineNow.getByRole('button', { name: '🔒 Closed' })).toHaveAttribute('aria-pressed', 'true');
+  await mineNow.getByRole('button', { name: 'Closed', exact: true }).click();
+  await expect(mineNow.getByRole('button', { name: 'Closed', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const closed = (await (await request.get(`${SALE}/api/homes/${mine.id}`)).json()).home;
   expect([closed.status, closed.status_date, closed.display_status]).toEqual(['closed', null, 'closed']);
   await page.screenshot({ path: `${SHOTS}/sale-me-390.png` });

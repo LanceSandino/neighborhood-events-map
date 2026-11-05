@@ -25,12 +25,12 @@ event:
   date: "2026-10-31"
   starts_at: "17:00"
   ends_at: "21:00"
-# The logo and show_locality are the community's (every event). The emoji, colours, headline and intro (and
+# show_locality is the community's. A logo here is the community's and the first event's (later events: Organizer, Events).
+# The colours, headline and intro (and
 # community.about above) are the FIRST event's own branding (ADR 0012): later events start from their own type's look
 # and are branded in Organizer → Events. Leave a field out for the type's default.
 branding:
   logo: null                        # optional path to SVG/PNG next to this file (≤ 512 KB)
-  brand_emoji: "🎃"
   primary_color: "#F07936"
   accent_color: "#524077"
   headline: "Little ghosts."

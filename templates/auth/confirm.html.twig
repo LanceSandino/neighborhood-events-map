@@ -5,7 +5,7 @@
 {% block body %}
 <div class="page-card">
   {% if token %}
-    <div class="eyebrow">✅ One more tap</div>
+    <div class="eyebrow">{{ icon("i-check") }} One more tap</div>
     {% if claim %}
       <h1>Confirm and publish your house</h1>
       <p>Press confirm to sign in and publish <b>{{ claim.address }}</b> on the {{ c.community.name }} {{ c.event.name }} map. Your street address and these listing details will be public; your email stays private.</p>
@@ -29,7 +29,7 @@
     </form>
     <p class="form-caption">This link works once. Opening this page did not sign you in.</p>
   {% else %}
-    <div class="eyebrow">⏳ Link problem</div>
+    <div class="eyebrow">{{ icon('i-hourglass') }} Link problem</div>
     <h1>{{ state == 'used' ? 'This link was already used' : (state == 'expired' ? 'This link has expired' : 'This link is not valid') }}</h1>
     <p>Sign-in links work once and expire after a few minutes. You can request a fresh one.</p>
     <div class="modal-actions"><a class="secondary" href="/">Back to map</a><a class="primary" href="/login">Email me a new link</a></div>

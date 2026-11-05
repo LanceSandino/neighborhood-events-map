@@ -139,6 +139,9 @@ services:
     tmpfs: ["/tmp:size=16m,mode=1777"]
     mem_limit: 256m
     cpus: 0.25
+    # It may move what the previous release shows (an event closing), which includes the logo file.
+    volumes:
+      - branding:/app/var/branding
     healthcheck: { disable: true }
 
   nginx:

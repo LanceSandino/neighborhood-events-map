@@ -17,15 +17,20 @@ use Doctrine\DBAL\Connection;
  *     stored settings mirror — the Halloween the legacy `listings` table mirrors (the newest open or closed one), else
  *     the default event —, that event's branding as the community branding keys the previous release shows (emoji,
  *     headline, accent part, intro, colours: its own values over its type's defaults) and its About text as
- *     `community.about` (else the community's general text; ADR 0012), and the write of all of it into the stored
- *     settings after an organizer changed events. This release never shows those keys for an event.
+ *     `community.about` (else the community's general text; ADR 0012), its logo (else the community's) as the settings'
+ *     `branding.logo` and the volume file that key names (D-20261105-03), and the write of all of it into the stored
+ *     settings after an organizer changed events or logos. This release never shows those keys for an event.
  *
- * @dependencies Event/EventOccurrence, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Event/EventBranding, Community/EventBrandingView, DBAL
+ * @dependencies Event/EventOccurrence, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Event/EventBranding, Community/EventBrandingView, Community/LogoStore, Community/BrandingStore, DBAL
  */
 final class EventBlockMirror
 {
-    public function __construct(private readonly EventOccurrenceRepository $occurrences, private readonly EventTypeRegistry $types)
-    {
+    public function __construct(
+        private readonly EventOccurrenceRepository $occurrences,
+        private readonly EventTypeRegistry $types,
+        private readonly LogoStore $logos,
+        private readonly BrandingStore $files,
+    ) {
     }
 
     /** @return array{name:string,date:string,starts_at:string,ends_at:string,type:string,starts_on:?string,ends_on:?string} */
@@ -58,8 +63,24 @@ final class EventBlockMirror
             $settings['branding'][$k] = $shown['branding'][$k];
         }
         $settings['community']['about'] = $shown['community']['about'];
+        $settings['branding']['logo'] = $this->mirrorLogo($settings['branding']['logo'] ?? null, $event->id);
 
         return $settings;
+    }
+
+    /**
+     * The logo the previous release shows: the event's, else the community's. Writes the volume file and gives its name.
+     * Before the logos table exists the stored name stays.
+     */
+    private function mirrorLogo(mixed $stored, ?int $eventId): mixed
+    {
+        if (!$this->logos->available()) {
+            return $stored;
+        }
+        $logo = (null !== $eventId ? $this->logos->load($eventId) : null) ?? $this->logos->load(null);
+        $this->files->mirror($logo['extension'] ?? null, $logo['bytes'] ?? null);
+
+        return null === $logo ? null : 'logo.'.$logo['extension'];
     }
 
     /** Writes that event into the stored settings' event block, branding keys and About text (nothing to write without one). */
@@ -77,7 +98,7 @@ final class EventBlockMirror
                 '{branding}', COALESCE(settings->'branding', '{}'::jsonb) || CAST(:b AS JSONB)),
                 '{community,about}', to_jsonb(CAST(:a AS TEXT))) WHERE id = 1", [
             'e' => json_encode(self::block($event, (string) ($stored['event']['date'] ?? '')), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE),
-            'b' => json_encode(array_intersect_key((array) $mirrored['branding'], array_flip(EventBranding::LOOK)), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE),
+            'b' => json_encode(array_intersect_key((array) $mirrored['branding'], array_flip([...EventBranding::LOOK, 'logo'])), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE),
             'a' => (string) ($mirrored['community']['about'] ?? ''),
         ]);
     }

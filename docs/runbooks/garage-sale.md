@@ -44,7 +44,7 @@ or from their own details of the last sale. This page is the organizer's checkli
    closes by itself after its last day (or **Close** it earlier): the next sale is created hidden, with its dates to be
    announced. A sale often differs from the neighborhood's usual rule: set **Who may come** to "Open to the public" if it
    is open to everyone.
-4. Optional: in the sale's **Branding of this event** (Organizer → Events → Edit), set its own emoji, headline, intro,
+4. Optional: in the sale's **Branding of this event** (Organizer → Events → Edit), set its own logo, headline, intro,
    colours or About text. Empty fields keep the sale's look (teal and coral, "Good finds. Close to home."); another
    event's branding never shows on the sale ([ADR 0012](../adr/0012-community-and-event-branding.md)). Teal buttons
    carry dark text so they stay readable ([D-20261031-32](../../DECISIONS.md)).

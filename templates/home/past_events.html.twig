@@ -8,13 +8,13 @@
 {% block body %}
 {% set events = past_events() %}
 <section class="page-card past-events" aria-labelledby="pastTitle">
-  <div class="eyebrow">✦ {{ c.community.name }}</div>
+  <div class="eyebrow">{{ icon("i-house") }} {{ c.community.name }}</div>
   <h1 id="pastTitle">Past events</h1>
   {% if events %}
   <p>Events that are over, newest first. Thank you to everyone who took part.</p>
   <ul class="past-list">
     {%- for e in events %}
-    <li><a href="{{ e.href }}"><span class="past-icon" aria-hidden="true">{{ e.icon }}</span><span><span class="past-name">{{ e.label }}</span><span class="past-dates">{{ e.dates }}</span></span></a></li>
+    <li><a href="{{ e.href }}"><span class="past-icon" aria-hidden="true">{{ icon(e.icon) }}</span><span><span class="past-name">{{ e.label }}</span><span class="past-dates">{{ e.dates }}</span></span></a></li>
     {%- endfor %}
   </ul>
   {% else %}

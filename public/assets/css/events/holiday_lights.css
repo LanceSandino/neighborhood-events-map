@@ -24,7 +24,7 @@
   --season-before-bg: #e6f3ec; --season-before-fg: #2a6a4a; --season-during-bg: #f8efd9; --season-during-fg: #74560f;
   --season-after-bg: #eeedf0; --season-after-fg: #5d6170;
   --notice-bg: #fbf6ea; --notice-fg: #74560f;
-  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #ce9d3d33; --side-hover: #2d3552; --side-line: #3a4362;
+  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --side-hover: #2d3552; --side-line: #3a4362;
 }
 /* Dark: deep navy instead of app.css's plum-grey; must stay identical to the [data-theme="dark"] block below. */
 @media (prefers-color-scheme: dark) {
@@ -41,7 +41,7 @@
     --season-before-bg: #1c3528; --season-before-fg: #95d8b3; --season-during-bg: #383021; --season-during-fg: #f0cf86;
     --season-after-bg: #2a3146; --season-after-fg: #c3c9d8;
     --notice-bg: #2c2820; --notice-fg: #f0cf86;
-    --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29; --side-hover: #232b45; --side-line: #2f3855;
+    --side-action-bg: #e3b552; --side-action-fg: #1f2738; --side-hover: #232b45; --side-line: #2f3855;
   }
 }
 :root[data-event-type="holiday_lights"][data-theme="dark"] {
@@ -57,7 +57,7 @@
   --season-before-bg: #1c3528; --season-before-fg: #95d8b3; --season-during-bg: #383021; --season-during-fg: #f0cf86;
   --season-after-bg: #2a3146; --season-after-fg: #c3c9d8;
   --notice-bg: #2c2820; --notice-fg: #f0cf86;
-  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --hero-glow: #e0b65a29; --side-hover: #232b45; --side-line: #2f3855;
+  --side-action-bg: #e3b552; --side-action-fg: #1f2738; --side-hover: #232b45; --side-line: #2f3855;
 }
 /* "More contrast" (system or Appearance) keeps winning over this type's tokens. */
 @media (prefers-contrast: more) {
@@ -69,13 +69,6 @@
 [data-event-type="holiday_lights"] .nav a.active, [data-event-type="holiday_lights"] .nav a:hover { background: var(--side-hover); }
 [data-event-type="holiday_lights"] .side-panel { border-color: var(--side-line); }
 [data-event-type="holiday_lights"] .side-action { background: var(--side-action-bg); color: var(--side-action-fg); min-height: 44px; }
-[data-event-type="holiday_lights"] .hero-illustration { background: transparent; color: inherit; overflow: visible; }
-[data-event-type="holiday_lights"] .hero-glow { position: absolute; inset: 12px 40px; border-radius: 50%; background: radial-gradient(circle, var(--hero-glow), transparent 70%); }
-[data-event-type="holiday_lights"] .hero-tree { position: relative; font-size: 82px; line-height: 1; transform: translateX(-22px); filter: drop-shadow(0 8px 10px #0b10201f); }
-[data-event-type="holiday_lights"] .hero-spark { position: absolute; line-height: 1; color: var(--focus); }
-[data-event-type="holiday_lights"] .hero-spark.one { font-size: 52px; right: 44px; top: 18px; }
-[data-event-type="holiday_lights"] .hero-spark.two { font-size: 22px; right: 116px; top: 10px; }
-[data-event-type="holiday_lights"] .hero-spark.three { font-size: 18px; right: 30px; bottom: 16px; }
 
 /* ---- Cards, tags, status chips and pins ---- */
 [data-event-type="holiday_lights"] .tag { white-space: normal; max-width: 100%; }
@@ -103,11 +96,7 @@
 
 /* ---- Phones: a smaller hero picture beside the headline (the mockup), the season row stacked ---- */
 @media (max-width: 850px), (max-height: 500px) and (orientation: landscape) {
-  [data-event-type="holiday_lights"] .hero-illustration { display: flex; width: 96px; min-width: 96px; height: 96px; }
-  [data-event-type="holiday_lights"] .hero-tree { font-size: 54px; transform: translateX(-14px); }
-  [data-event-type="holiday_lights"] .hero-spark.one { font-size: 34px; right: 2px; top: 4px; }
-  [data-event-type="holiday_lights"] .hero-spark.two { font-size: 16px; right: 40px; top: 0; }
-  [data-event-type="holiday_lights"] .hero-spark.three { display: none; }
+  [data-event-type="holiday_lights"] .hero-illustration { display: block; width: 96px; min-width: 96px; height: 96px; }
 }
 /* Phones: one card per row (as in the mockup); lights cards carry more and longer tags than Halloween's. */
 @media (max-width: 560px) {
@@ -118,3 +107,15 @@
 }
 /* My house: "Visible on the map" takes the row the lights form has no half-width neighbour for. */
 [data-event-type="holiday_lights"] .dash-home .form-grid > .field:has(select[name="published"]) { grid-column: 1 / -1; max-width: 360px; }
+
+/* The drawn C9 garland (templates/event/holiday_lights/_decor.html.twig): a row of its own along the top of the page, so
+   it never covers a control. A background image repeats inside the page's width, so it cannot cause sideways scrolling. Static. */
+[data-event-type="holiday_lights"] .garland { height: 60px; background: url("../../icons/garland-lights.svg") repeat-x center top / auto 60px; pointer-events: none; user-select: none; }
+[data-event-type="holiday_lights"] .garland + .content { padding-top: 6px; }
+@media (prefers-color-scheme: dark) {
+  [data-event-type="holiday_lights"]:not([data-theme="light"]) .garland { background-image: url("../../icons/garland-lights-dark.svg"); }
+}
+[data-event-type="holiday_lights"][data-theme="dark"] .garland { background-image: url("../../icons/garland-lights-dark.svg"); }
+@media (max-width: 660px) {
+  [data-event-type="holiday_lights"] .garland { height: 42px; background-size: auto 42px; }
+}

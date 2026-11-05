@@ -1641,4 +1641,54 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/past-events"
   author: "Lance Sandino"
   timestamp: "2026-11-05T14:45:00Z"
+- id: CU-20261105-02
+  type: feature
+  title: "Drawn art replaces every emoji and decorative glyph the product draws"
+  description: "Merge of feature/drawn-icons, then Twig/IconExtension and lib/icons.js draw the sprites; pins, legend, filters, tags, nav, hero art, status chips, console, emails and favicons (drawn from brand.svg, with bitmap copies for email). Types name icon ids in icon, event_icon and cta_icon; copy adds brand_mark, list_icon and route_icon; built-in reminders are text with their icons beside them; branding.brand_emoji leaves the public answers and stays stored for the 0.9 mirror. Stored organizer text is left as written. D-20261105-01, ADR 0013."
+  impact: medium
+  affected_modules: ["templates/", "public/assets/js/", "public/assets/css/", "public/assets/img/", "src/Twig/IconExtension.php", "src/Event/Type/", "src/Community/CommunityPresenter.php", "src/Mail/Notifier.php", "CHANGELOG.md"]
+  related_tests: ["tests/Unit/Shared/NoEmojiInSourcesTest.php", "tests/Integration/NoEmojiOnPagesTest.php", "tests/Integration/GoldenApiParityTest.php", "tests/js/events.test.mjs: 400 seeded homes", "tests/e2e/specs/art.spec.mjs"]
+  commit_ref: "feature/event-art"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T10:00:00Z"
+- id: CU-20261105-03
+  type: feature
+  title: "The C9 garland on Christmas lights pages"
+  description: "A decor fragment every type provides; the lights' draws a row under the top bar from the garland SVGs, light and dark, aria-hidden, no pointer events, no motion. D-20261105-02."
+  impact: low
+  affected_modules: ["templates/base.html.twig", "templates/event/", "public/assets/css/events/holiday_lights.css", "src/Event/Type/"]
+  related_tests: ["tests/e2e/specs/art.spec.mjs: the garland is on Christmas lights pages only"]
+  commit_ref: "feature/event-art"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T10:10:00Z"
+- id: CU-20261105-04
+  type: feature
+  title: "A logo per event, logos in the database, the 0.9 mirror kept in step"
+  description: "Migration Version20261105000001 adds logos (event_id NULL for the community) and copies a volume logo named by the settings into the community and every Halloween, leaving the file. Community/LogoStore keeps and serves them, Community/BrandingStore::check keeps the upload checks, POST /api/admin/community/logo takes an optional event. Display order per D-20261105-03; next year's event keeps the logo; a non-public event's logo is 404 to visitors. Community/EventBlockMirror keeps branding.logo and the volume file equal to what the 0.9 image should show; the maintenance container mounts the volume. Upgrade: back up first; rollback paths in docs/runbooks/upgrade-rollback.md. D-20261105-03 to -05."
+  impact: high
+  affected_modules: ["migrations/Version20261105000001.php", "src/Community/LogoStore.php", "src/Community/BrandingStore.php", "src/Community/EventBlockMirror.php", "src/Community/CommunityPresenter.php", "src/Community/CommunityBootstrapper.php", "src/Controller/PageController.php", "src/Controller/Api/AdminApiController.php", "src/Controller/Api/EventsAdminApiController.php", "src/Event/EventLifecycle.php", "src/Event/OccurrenceInput.php", "src/Mail/Notifier.php", "templates/email/magic_link.html.twig", "public/assets/js/admin/events.js", "public/assets/js/admin/community.js", "compose.yaml", "bin/drill-event-upgrade.sh"]
+  related_tests: ["tests/Integration/LogoStorageTest.php", "tests/Integration/AdminConsoleTest.php: testLogoUploadIsValidatedAndServedSandboxed", "tests/Integration/OrganizerConsoleNeutralTest.php", "tests/Integration/EventBrandingMigrationTest.php", "tests/Unit/Deploy/RollbackDrillTest.php: testTheDrillChecksTheLogoAcrossTheRollback", "tests/e2e/specs/art.spec.mjs: an organizer gives an event a logo"]
+  commit_ref: "feature/event-art"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T10:20:00Z"
+- id: CU-20261105-05
+  type: fix
+  title: "A built-in subtitle names the event; Past events no longer clips the tabs on a phone; My house's actions wrap"
+  description: "TypeDefaults::subtitle names an event with a name of its own in the public payload only; a sale's About and share text and the lights' share text no longer name the kind; the switcher row wraps. My house's action row and the Addresses pager wrap, so an organizer's page no longer scrolls sideways at 390 px. D-20261105-06 and -07."
+  impact: low
+  affected_modules: ["src/Community/TypeDefaults.php", "src/Community/CommunityPresenter.php", "src/Event/Type/GarageSaleCopy.php", "public/assets/js/events/garage_sale.js", "public/assets/js/events/holiday_lights.js", "public/assets/css/app.css"]
+  related_tests: ["tests/Integration/PerEventBrandingTest.php: testTheEyebrowUsesTheEventsOwnName", "tests/e2e/specs/art.spec.mjs: at phone width the tabs are never clipped", "tests/e2e/specs/art.spec.mjs: an organizer's My house and console pages do not scroll sideways on a phone"]
+  commit_ref: "feature/event-art"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T10:30:00Z"
+- id: CU-20261105-50
+  type: security
+  title: "0.9.1-beta.1, released from maintenance/0.9: Symfony 8.1.11 and libexpat 2.10.0 on the line production runs"
+  description: "Recorded here from the maintenance branch (v0.9.1-beta.1, commit 15a4242). composer update 'symfony/*' clears the 14 advisories reported on 2026-11-04; the 0.9 nginx stage names libexpat 2.10.0 so a build cache cannot reuse the older layer. On that branch the Images workflow publishes only the version tag and never :latest, and the Release workflow checks that branch instead of main (D-20261105-50). No migration. Main already has both fixes: Symfony 8.1.11 since 0.18.0-beta.1, and libexpat 2.10.0 in the images built from it."
+  impact: none
+  affected_modules: ["CHANGELOG.md", "DECISIONS.md", "docs/runbooks/release.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php on maintenance/0.9: testNginxImageNamesTheFixedLibexpat, testMaintenanceReleasesNeverMoveLatest"]
+  commit_ref: "maintenance/0.9"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T15:30:00Z"
 ```

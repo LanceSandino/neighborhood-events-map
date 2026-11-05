@@ -12,7 +12,9 @@ use App\Admin\ClaimAdministration;
 use App\Audit\AuditLog;
 use App\Community\BrandingStore;
 use App\Community\CommunityRepository;
+use App\Community\LogoStore;
 use App\Dispute\DisputeService;
+use App\Event\EventOccurrenceRepository;
 use App\Event\EventType;
 use App\Event\EventTypeRegistry;
 use App\Geo\ZoneResolver;
@@ -25,6 +27,7 @@ use Doctrine\DBAL\Connection;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -50,6 +53,7 @@ final class AdminApiController
         private readonly Connection $db,
         private readonly EventTypeRegistry $types,
         private readonly ListingRepository $listings,
+        private readonly LogoStore $logos,
     ) {
     }
 
@@ -93,7 +97,8 @@ final class AdminApiController
         // The community's own settings only: each event's emoji, headline, intro, colours and About text are edited under
         // Organizer → Events (ADR 0012).
         $settings = $c->settings;
-        $settings['branding'] = array_intersect_key($settings['branding'], array_flip(['logo', 'show_locality']));
+        // The stored `logo` key is the 0.9 image's; the community's own logo is the database's.
+        $settings['branding'] = ['logo' => $this->logos->name(null)] + array_intersect_key($settings['branding'], array_flip(['show_locality']));
         unset($settings['community']['about']);
 
         return new JsonResponse(['settings' => $settings, 'event_types' => array_map(fn (EventType $t) => $this->typeView($t), $this->types->enabled()),
@@ -116,23 +121,33 @@ final class AdminApiController
         return new JsonResponse(['settings' => $saved]);
     }
 
+    /**
+     * The community's logo, or an event's when the form names one (`event`): upload or remove. The one multipart endpoint
+     * for logos (D-20261024-03); every file passes the same checks, whoever it is for.
+     */
     #[Route('/community/logo', methods: ['POST'])]
-    public function logo(#[CurrentUser] User $admin, Request $request, BrandingStore $store): JsonResponse
+    public function logo(#[CurrentUser] User $admin, Request $request, BrandingStore $store, EventOccurrenceRepository $occurrences): JsonResponse
     {
         $file = $request->files->get('logo');
-        $settings = $this->community->current()->settings;
+        $named = (string) $request->request->get('event', '');
+        $event = '' === $named ? null : (ctype_digit($named) && \strlen($named) <= 12 ? $occurrences->find((int) $named) : null);
+        if ('' !== $named && null === $event) {
+            throw new NotFoundHttpException();
+        }
         if ('1' === $request->request->get('remove')) {
-            $settings['branding']['logo'] = null;
+            $this->logos->remove($event?->id);
         } else {
             if (null === $file || !$file->isValid()) {
                 throw new ValidationException(['logo' => 'Choose an SVG, PNG, JPEG or WebP file up to 512 KB.']);
             }
-            $settings['branding']['logo'] = $store->storeLogo($file->getPathname(), $file->getClientOriginalName());
+            $logo = $store->check($file->getPathname(), $file->getClientOriginalName());
+            $this->logos->put($event?->id, $logo['extension'], $logo['bytes']);
         }
-        $saved = $this->community->saveSettings($settings, $admin->id);
-        $this->audit->record($admin->id, 'admin#'.$admin->id, 'community.logo', 'community', null, ['logo' => $saved['branding']['logo']], 'admin');
+        $this->db->transactional(fn (Connection $db) => $this->community->mirrorLegacy($db));
+        $name = $this->logos->name($event?->id);
+        $this->audit->record($admin->id, 'admin#'.$admin->id, null === $event ? 'community.logo' : 'event.logo', null === $event ? 'community' : 'event', null === $event ? null : (string) $event->id, ['logo' => $name], 'admin');
 
-        return new JsonResponse(['logo' => $saved['branding']['logo']]);
+        return new JsonResponse(['logo' => $name, 'url' => $this->logos->url($event?->id)]);
     }
 
     #[Route('/registration', methods: ['POST'])]

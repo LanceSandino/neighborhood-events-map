@@ -66,8 +66,9 @@ Since 0.16 the neighborhood's look and each event's look are separate ([ADR 0012
 
 | Where | What it is | Shown on |
 |---|---|---|
-| **Organizer → Community & branding** | the community's name, subtitle, city (and "Show city under the name"), logo, contact, links and, if you like, a general **About the neighborhood** text | every event |
-| **Organizer → Events → Edit → Branding of this event** | the event's emoji, headline and its accent part, intro text, main and accent colours, and **About this event** (what visitors read on the About page for it) | that event only |
+| **Organizer → Community & branding** | the community's name, subtitle, city (and "Show city under the name"), contact, links and, if you like, a general **About the neighborhood** text | every event |
+| **Organizer → Community & branding → Community logo** | the neighborhood's logo | the organizer console, pages with no event, sign-in emails |
+| **Organizer → Events → Edit → Branding of this event** | the event's logo, headline and its accent part, intro text, main and accent colours, and **About this event** (what visitors read on the About page for it) | that event only |
 
 - Every field of an event's branding is optional. An empty field uses the built-in look of that kind of event — the
   field shows it in grey — so a Christmas lights event is midnight blue and gold with "Holiday nights. / Bright lights."
@@ -82,7 +83,7 @@ Since 0.16 the neighborhood's look and each event's look are separate ([ADR 0012
 - If you gave the map your own Halloween look before 0.16, the upgrade moved it to your Halloween events; your other
   events start from their own built-in look.
 - Your own reminders (Community & branding) still show for every event; leave them empty for each kind of event's list.
-- The organizer console itself is the neighborhood's: its header shows your logo (or the community's initial) and the
+- The organizer console itself is the neighborhood's: its header shows the community logo (or a neutral drawn mark) and the
   console keeps its own neutral colours. An event's look shows only where that event is in focus — its row and form in
   Events, its preview, the Overview's list of events and the Addresses listing column, which names the event it shows
   ([D-20261031-52](../../DECISIONS.md)).

@@ -11,7 +11,8 @@ use App\Event\EventTypeRegistry;
  * @module Community/TypeDefaults
  * @description The community settings as the selected (or previewed) event's type shows them: a subtitle that still
  *     equals another type's built-in default follows the event's type (D-20261031-16), and feature switches the type
- *     offers but the settings lack take the type's defaults. A type's own defaults are never replaced. Since 0.16 the
+ *     offers but the settings lack take the type's defaults. A type's own defaults are never replaced; subtitle() is what
+ *     a page shows of it, naming an event that has a name of its own. Since 0.16 the
  *     emoji, headline, intro and colours are each event's own (Community/EventBrandingView, ADR 0012), with
  *     defaults() as their fallback.
  *
@@ -36,6 +37,22 @@ final class TypeDefaults
         }
 
         return $settings;
+    }
+
+    /**
+     * What the page's eyebrow says: an organizer's own subtitle as written; a built-in one names the event when it has a
+     * name of its own ("Your neighborhood. Your Rummage Sale."), otherwise the type's words.
+     *
+     * @param list<EventType> $types
+     */
+    public static function subtitle(string $subtitle, EventType $type, ?string $eventName, array $types): string
+    {
+        $default = self::isDefaultOf($types, 'subtitle', $subtitle);
+        if (!$default || null === $eventName || '' === trim($eventName) || 0 === strcasecmp(trim($eventName), $type->defaultName())) {
+            return $subtitle;
+        }
+
+        return sprintf('Your neighborhood. Your %s.', trim($eventName));
     }
 
     /** @return array<string,string> a type's default branding with the colours every type falls back to */

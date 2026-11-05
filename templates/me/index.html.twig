@@ -14,7 +14,7 @@
 {% block body %}
 <div class="dash" id="dashboard" data-event="{{ c.event.id ?? '' }}">
   <div class="dash-head">
-    <div><div class="eyebrow">🔑 Signed in</div><h1>My house</h1><p class="session-hint" id="sessionHint">Loading…</p></div>
+    <div><div class="eyebrow">{{ icon('i-key') }} Signed in</div><h1>My house</h1><p class="session-hint" id="sessionHint">Loading…</p></div>
     <div class="bottom-actions"><a class="secondary hide" href="/admin" id="adminLink">Organizer console</a><button type="button" class="secondary" id="btnLogoutAll">Sign out everywhere</button><button type="button" class="secondary" id="btnLogout">Sign out</button></div>
   </div>
   {% if c.event.state == 'hidden' %}<p class="notice" id="eventHiddenNotice">Only residents see {{ c.event.name }} for now. Get your house ready: list it, or use last year’s details. Visitors see it once the organizer announces it, and homes appear on the map when it opens.</p>{% endif %}
@@ -37,7 +37,7 @@
     <div class="copy-previous hide" data-f="copyBox"><p class="introtext">You listed this home last time. Start from those details, check them and save — nothing is shown until you save.</p><button type="button" class="secondary" data-f="copyPrevious">Use last year’s details</button></div>
     <div class="status-row" role="group" aria-label="{{ et.copy.status_group }}">
       {%- for key, s in et.statuses %}
-      <button type="button" class="secondary" data-status="{{ key }}">{{ s.icon }} {{ s.label }}</button>
+      <button type="button" class="secondary" data-status="{{ key }}">{{ icon(s.icon) }} {{ s.label }}</button>
       {%- endfor %}
     </div>
     <form class="form-grid" data-f="form" novalidate>

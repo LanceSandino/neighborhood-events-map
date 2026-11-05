@@ -172,7 +172,7 @@ test('form check chips are compact and aligned (register step 2)', async ({ page
   await page.waitForTimeout(400);
   const box = await page.locator('#pinMap .leaflet-overlay-pane path').first().boundingBox();
   await page.mouse.click(box.x + box.width * 0.4, box.y + box.height * 0.6);
-  await page.getByRole('button', { name: 'Next: your stop →' }).click();
+  await page.getByRole('button', { name: 'Next: your stop' }).click();
   const chips = await page.locator('#registerForm .check-chip').evaluateAll((els) => els.filter((e) => e.offsetParent).map((e) => {
     const r = e.getBoundingClientRect(); const i = e.querySelector('input').getBoundingClientRect();
     return { h: Math.round(r.height), iw: Math.round(i.width), ih: Math.round(i.height), centred: Math.abs((i.top + i.height / 2) - (r.top + r.height / 2)) < 2 };
@@ -304,7 +304,7 @@ test('Appearance panel: Light over a dark system (kept after reload), Auto again
   expect(await lum()).toBeLessThan(40);
   await page.getByRole('button', { name: 'Appearance and accessibility' }).click();
   const panel = page.getByRole('dialog', { name: 'Appearance' });
-  await panel.getByRole('button', { name: '☀️ Light' }).click();
+  await panel.getByRole('button', { name: 'Light', exact: true }).click();
   expect(await lum()).toBeGreaterThan(200);
   await panel.getByLabel(/Larger text/).check();
   await panel.getByLabel(/Reduce motion/).check();
@@ -314,7 +314,7 @@ test('Appearance panel: Light over a dark system (kept after reload), Auto again
   expect(await page.evaluate(() => [document.documentElement.dataset.text, document.documentElement.dataset.motion, getComputedStyle(document.documentElement).scrollBehavior])).toEqual(['large', 'reduce', 'auto']);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 'larger text never scrolls sideways').toBeLessThanOrEqual(0);
   await page.getByRole('button', { name: 'Appearance and accessibility' }).click();
-  await expect(panel.getByRole('button', { name: '☀️ Light' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await panel.getByRole('button', { name: 'Reset' }).click();
   expect(await lum()).toBeLessThan(40);
   expect(await page.evaluate(() => localStorage.getItem('nhm:appearance'))).toBeNull();
@@ -338,7 +338,7 @@ test('route: skip stops, bring them back, add nearby suggestions, switch between
   await page.getByRole('button', { name: 'Bring back' }).click();
   await expect(items).toHaveCount(openHomes.length);
   // One favourite: suggestions nearby can be added; "All matching" shows everything again.
-  await page.getByRole('button', { name: /^🧡 Saved/ }).click();
+  await page.getByRole('button', { name: /^Saved \(/ }).click();
   await page.locator(`.home-card .save[data-save="${openHomes[0].id}"]`).click();
   await expect(items).toHaveCount(1);
   const add = page.locator('[data-add-stop]').first();
@@ -347,7 +347,7 @@ test('route: skip stops, bring them back, add nearby suggestions, switch between
   await expect(items).toHaveCount(2);
   await page.getByRole('button', { name: /^All matching/ }).click();
   await expect(items).toHaveCount(openHomes.length);
-  await page.getByRole('button', { name: /^🧡 Saved/ }).click();
+  await page.getByRole('button', { name: /^Saved \(/ }).click();
   await expect(items).toHaveCount(2);
 });
 
@@ -469,7 +469,7 @@ test('saved routes keep their own homes and filters; switch between them, surviv
 test('bottom tabs are Map, Rules and My house; Rules opens the guide; the map stays on the neighborhood', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(DEMO + '/');
-  await expect(page.locator('.mobile-bottom a')).toHaveText(['🗺️Map', '📋Rules', '🏠My house']);
+  await expect(page.locator('.mobile-bottom a')).toHaveText(['Map', 'Rules', 'My house']);
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect(page.locator('.sidebar .nav a'), 'the desktop sidebar offers the same three places').toHaveText([/Map$/, /Rules$/, /My house$/]);
   await page.setViewportSize({ width: 390, height: 844 });

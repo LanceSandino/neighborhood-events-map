@@ -49,7 +49,7 @@ final class HalloweenType implements EventType
 
     public function copy(): array
     {
-        return HalloweenCopy::TEXT + ['reminders' => HalloweenCopy::REMINDERS];
+        return HalloweenCopy::TEXT + ['reminders' => array_keys(HalloweenCopy::REMINDERS), 'reminder_icons' => HalloweenCopy::REMINDERS];
     }
 
     public function scheduleKind(): string
@@ -70,10 +70,10 @@ final class HalloweenType implements EventType
     public function statuses(): array
     {
         return [
-            'active' => ['label' => 'Handing out', 'icon' => '🎃', 'day_scoped' => false, 'register_label' => 'Handing out'],
-            'paused' => ['label' => 'Paused', 'icon' => '⏸️', 'day_scoped' => false, 'register_label' => 'Paused for now'],
-            'out_of_candy' => ['label' => 'Out of candy', 'icon' => '🍬', 'day_scoped' => false],
-            'done' => ['label' => 'Done for tonight', 'icon' => '✅', 'day_scoped' => false],
+            'active' => ['label' => 'Handing out', 'icon' => 'i-pumpkin', 'day_scoped' => false, 'register_label' => 'Handing out'],
+            'paused' => ['label' => 'Paused', 'icon' => 'i-status-paused', 'day_scoped' => false, 'register_label' => 'Paused for now'],
+            'out_of_candy' => ['label' => 'Out of candy', 'icon' => 'i-candy', 'day_scoped' => false],
+            'done' => ['label' => 'Done for tonight', 'icon' => 'i-status-done', 'day_scoped' => false],
         ];
     }
 
@@ -161,24 +161,24 @@ final class HalloweenType implements EventType
     public function filters(): array
     {
         return [
-            ['key' => 'candy', 'label' => 'Candy', 'icon' => '🍬', 'quick' => true, 'feature' => 'candy', 'id' => 'btnCandy'],
-            ['key' => 'lowSensory', 'label' => 'Sensory-friendly', 'icon' => '🧩', 'quick' => true, 'feature' => 'sensory_filters', 'id' => 'btnQuiet'],
-            ['key' => 'adult', 'label' => '21+ refreshments', 'icon' => '🍺', 'quick' => true, 'feature' => 'adult_refreshments'],
-            ['key' => 'noScares', 'label' => 'No big scares', 'icon' => '😱', 'quick' => false, 'feature' => 'sensory_filters', 'title' => 'No jump scares or intense setups'],
-            ['key' => 'noFlashing', 'label' => 'No flashing lights', 'icon' => '🔦', 'quick' => false, 'feature' => 'sensory_filters'],
-            ['key' => 'noLoud', 'label' => 'No loud audio', 'icon' => '🔊', 'quick' => false, 'feature' => 'sensory_filters'],
-            ['key' => 'nonfood', 'label' => 'Non-food treats', 'icon' => '🎃', 'quick' => false, 'feature' => 'nonfood_treats', 'icon_class' => 'teal-pumpkin'],
-            ['key' => 'stroller', 'label' => 'Kid-friendly', 'icon' => '👶', 'quick' => false, 'feature' => null],
+            ['key' => 'candy', 'label' => 'Candy', 'icon' => 'i-candy', 'quick' => true, 'feature' => 'candy', 'id' => 'btnCandy'],
+            ['key' => 'lowSensory', 'label' => 'Sensory-friendly', 'icon' => 'i-sensory', 'quick' => true, 'feature' => 'sensory_filters', 'id' => 'btnQuiet'],
+            ['key' => 'adult', 'label' => '21+ refreshments', 'icon' => 'i-adult', 'quick' => true, 'feature' => 'adult_refreshments'],
+            ['key' => 'noScares', 'label' => 'No big scares', 'icon' => 'i-scare-gentle', 'quick' => false, 'feature' => 'sensory_filters', 'title' => 'No jump scares or intense setups'],
+            ['key' => 'noFlashing', 'label' => 'No flashing lights', 'icon' => 'i-no-flashing', 'quick' => false, 'feature' => 'sensory_filters'],
+            ['key' => 'noLoud', 'label' => 'No loud audio', 'icon' => 'i-low-noise', 'quick' => false, 'feature' => 'sensory_filters'],
+            ['key' => 'nonfood', 'label' => 'Non-food treats', 'icon' => 'i-pumpkin-teal', 'quick' => false, 'feature' => 'nonfood_treats'],
+            ['key' => 'stroller', 'label' => 'Kid-friendly', 'icon' => 'i-stroller', 'quick' => false, 'feature' => null],
         ];
     }
 
     public function legend(): array
     {
         return [
-            ['cls' => 'candy', 'icon' => '🍬', 'label' => 'Treats', 'feature' => null],
-            ['cls' => 'gentle', 'icon' => '🧩', 'label' => 'Sensory-friendly', 'feature' => null],
-            ['cls' => 'spooky', 'icon' => '👻', 'label' => 'Spooky', 'feature' => null],
-            ['cls' => 'adult', 'icon' => '🍺', 'label' => '21+', 'feature' => 'adult_refreshments'],
+            ['cls' => 'candy', 'icon' => 'i-candy', 'label' => 'Treats', 'feature' => null],
+            ['cls' => 'gentle', 'icon' => 'i-sensory', 'label' => 'Sensory-friendly', 'feature' => null],
+            ['cls' => 'spooky', 'icon' => 'i-ghost', 'label' => 'Spooky', 'feature' => null],
+            ['cls' => 'adult', 'icon' => 'i-adult', 'label' => '21+', 'feature' => 'adult_refreshments'],
         ];
     }
 
@@ -201,7 +201,7 @@ final class HalloweenType implements EventType
 
     public function fragments(): array
     {
-        $names = ['head', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_hours', 'form_fields', 'manage_hours',
+        $names = ['head', 'decor', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_hours', 'form_fields', 'manage_hours',
             'manage_half', 'manage_full', 'listing_checks', 'route_rules', 'rule_lines'];
 
         return array_combine($names, array_map(static fn (string $n) => 'event/'.self::KEY.'/_'.$n.'.html.twig', $names));

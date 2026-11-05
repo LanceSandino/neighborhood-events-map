@@ -4,9 +4,10 @@
  *     value from the page or API data (resident text and ids alike) goes through esc(). Mirrors templates/home/_card.html.twig.
  *     The event type (ctx.type or the `type` argument; Halloween when absent) supplies the symbol, pin class, tags, the
  *     card's hours, whether the status chip shows and whether a pin is greyed.
- * @dependencies lib/time.js, events/index.js
+ * @dependencies lib/time.js, lib/icons.js, events/index.js
  */
 import { statusOf } from './time.js';
+import { icon } from './icons.js';
 import { eventType } from '../events/index.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,7 +20,7 @@ export const pinClass = (h, focus, type = eventType()) => type.pinClass(h, focus
 
 export function tagsHtml(h, type = eventType()) {
   // Icon and words are separate so the compact list can show icons only (the words stay for screen readers).
-  return type.tags(h).map(({ icon, text, cls, iconCls }) => `<span class="tag ${esc(cls)}" title="${esc(text)}"><span aria-hidden="true"${iconCls ? ` class="${esc(iconCls)}"` : ''}>${esc(icon)}</span><span class="tag-text"> ${esc(text)}</span></span>`).join('');
+  return type.tags(h).map(({ icon: name, text, cls }) => `<span class="tag ${esc(cls)}" title="${esc(text)}">${icon(name)}<span class="tag-text"> ${esc(text)}</span></span>`).join('');
 }
 
 export function metaLine(h, ctx) {
@@ -31,11 +32,11 @@ export function cardHtml(h, ctx, { saved, active, focus }) {
   const st = statusOf(h, ctx);
   const statusChip = typeOf(ctx).statusChipShown(st, ctx) ? `<span class="card-status ${st.key}">${esc(st.label)}</span>` : '';
   return `<li class="home-card${active ? ' active' : ''}" data-id="${esc(h.id)}" tabindex="0" aria-label="${esc(h.address)}">
-    <div class="card-symbol" aria-hidden="true">${symbolOf(h, focus, typeOf(ctx))}</div>
+    <div class="card-symbol" aria-hidden="true">${icon(symbolOf(h, focus, typeOf(ctx)))}</div>
     <div class="card-main">
-      <div class="card-line"><b>${esc(h.address)}</b><button type="button" class="save" data-save="${esc(h.id)}" aria-pressed="${saved}" aria-label="${saved ? 'Remove from' : 'Save to'} my stops: ${esc(h.address)}">${saved ? '♥' : '♡'}</button></div>
+      <div class="card-line"><b>${esc(h.address)}</b><button type="button" class="save" data-save="${esc(h.id)}" aria-pressed="${saved}" aria-label="${saved ? 'Remove from' : 'Save to'} my stops: ${esc(h.address)}">${icon(saved ? 'i-heart-filled' : 'i-heart')}</button></div>
       <div class="card-meta">${metaLine(h, ctx)} ${statusChip}</div>
-      <div class="tags">${tagsHtml(h, typeOf(ctx))}${h.note ? '<span class="tag note-icon" title="Has a note — open the home to read it"><span aria-hidden="true">📝</span><span class="tag-text"> Note</span></span>' : ''}</div>
+      <div class="tags">${tagsHtml(h, typeOf(ctx))}${h.note ? `<span class="tag note-icon" title="Has a note — open the home to read it">${icon('i-note')}<span class="tag-text"> Note</span></span>` : ''}</div>
       ${h.note ? `<p class="card-note">${esc(h.note)}</p>` : ''}
     </div>
   </li>`;
@@ -43,17 +44,17 @@ export function cardHtml(h, ctx, { saved, active, focus }) {
 
 export function selectedHtml(h, ctx, saved) {
   const st = statusOf(h, ctx);
-  return `<button type="button" class="x" data-close-selected aria-label="Close">×</button>
+  return `<button type="button" class="x" data-close-selected aria-label="Close">${icon('i-close')}</button>
     <b>${esc(h.address)}</b>
     <p>${metaLine(h, ctx)}${typeOf(ctx).statusChipShown(st, ctx) ? ` · <span class="card-status ${st.key}">${esc(st.label)}</span>` : ''}</p>
     ${h.note ? `<p>${esc(h.note)}</p>` : ''}
     <div class="tags">${tagsHtml(h, typeOf(ctx))}</div>
-    <button type="button" class="primary" data-save="${esc(h.id)}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save this stop'}</button>
+    <button type="button" class="primary" data-save="${esc(h.id)}" aria-pressed="${saved}">${saved ? `${icon('i-heart-filled')} Saved` : `${icon('i-heart')} Save this stop`}</button>
     <p><button type="button" class="link-button" data-report="${esc(h.id)}">Report this listing</button></p>`;
 }
 
 export function pinHtml(h, { dim, number, focus, type = eventType(), ctx = null }) {
-  return `<div class="pin ${pinClass(h, focus, type)}${dim ? ' dim' : ''}${type.inactive(h, ctx) ? ' inactive' : ''}"><span>${symbolOf(h, focus, type)}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
+  return `<div class="pin ${pinClass(h, focus, type)}${dim ? ' dim' : ''}${type.inactive(h, ctx) ? ' inactive' : ''}"><span>${icon(symbolOf(h, focus, type))}</span>${number ? `<i class="pin-number">${number}</i>` : ''}</div>`;
 }
 
 /** Leaflet style for a zone outline; with a selected zone, it stands out and the others recede. */

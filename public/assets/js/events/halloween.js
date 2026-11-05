@@ -80,11 +80,11 @@ export const displayRules = Object.freeze({
 });
 
 /**
- * One vocabulary everywhere (pins, legend, cards, filters): 👻 Spooky, 🧩 Sensory-friendly, 🍺 21+, 🍬 Treats, in that
+ * One vocabulary everywhere (pins, legend, cards, filters): Spooky, Sensory-friendly, 21+, Treats, in that
  * order. With a quick filter on (focus: the filters object), the homes that match show that filter's symbol, so the
  * map shows what the visitor picked.
  */
-const KINDS = { spooky: ['👻', 'scary'], sensory: ['🧩', 'quiet'], adult: ['🍺', 'adult'], treats: ['🍬', ''] };
+const KINDS = { spooky: ['i-ghost', 'scary'], sensory: ['i-sensory', 'quiet'], adult: ['i-adult', 'adult'], treats: ['i-candy', ''] };
 function kindOf(h, focus = {}) {
   if (focus.adult && h.adult_drinks) return 'adult';
   if (focus.lowSensory && isLowSensory(h)) return 'sensory';
@@ -97,16 +97,16 @@ export const pinClass = (h, focus) => KINDS[kindOf(h, focus)][1];
 /** Card tags in display order; the icon is decorative and the words always present (never colour only). */
 export function tags(h) {
   const t = [];
-  if (h.candy) t.push({ icon: '🍬', text: 'Candy', cls: 'candy' });
-  if (isLowSensory(h)) t.push({ icon: '🧩', text: 'Sensory-friendly', cls: 'quiet' });
-  if (h.nonfood) t.push({ icon: '🎃', text: 'Non-food', cls: 'teal', iconCls: 'teal-pumpkin' }); // Teal Pumpkin Project: non-food treats
+  if (h.candy) t.push({ icon: 'i-candy', text: 'Candy', cls: 'candy' });
+  if (isLowSensory(h)) t.push({ icon: 'i-sensory', text: 'Sensory-friendly', cls: 'quiet' });
+  if (h.nonfood) t.push({ icon: 'i-pumpkin-teal', text: 'Non-food', cls: 'teal' }); // Teal Pumpkin Project: non-food treats
   // Visitors see one "big scares" idea for jump scares or an intense setup.
-  if (isBigScare(h)) t.push({ icon: '😱', text: 'Big scares', cls: 'spooky' });
-  else if (h.scare_level === 'mild') t.push({ icon: '🎃', text: 'Mild scares', cls: 'spooky' });
-  if (h.flashing_lights) t.push({ icon: '🔦', text: 'Flashing lights', cls: 'strobe' });
-  if (h.loud_audio) t.push({ icon: '🔊', text: 'Loud audio', cls: 'strobe' });
-  if (h.adult_drinks) t.push({ icon: '🍺', text: '21+', cls: 'drinks' });
-  if (h.stroller_friendly) t.push({ icon: '👶', text: 'Kid-friendly', cls: 'quiet' });
+  if (isBigScare(h)) t.push({ icon: 'i-scare-big', text: 'Big scares', cls: 'spooky' });
+  else if (h.scare_level === 'mild') t.push({ icon: 'i-scare-mild', text: 'Mild scares', cls: 'spooky' });
+  if (h.flashing_lights) t.push({ icon: 'i-flashing', text: 'Flashing lights', cls: 'strobe' });
+  if (h.loud_audio) t.push({ icon: 'i-loud', text: 'Loud audio', cls: 'strobe' });
+  if (h.adult_drinks) t.push({ icon: 'i-adult', text: '21+', cls: 'drinks' });
+  if (h.stroller_friendly) t.push({ icon: 'i-stroller', text: 'Kid-friendly', cls: 'quiet' });
   return t;
 }
 
@@ -120,13 +120,13 @@ export const statusChipShown = (st) => !(st.key === 'later' && !st.label.startsW
 export const inactive = (h) => h.status !== 'active';
 
 /** What a stop line of the route adds after the hours. */
-export const routeNote = (h) => `${isLowSensory(h) ? ' · 🧩 Sensory-friendly' : ''}${isBigScare(h) ? ' · 👻 Big scares' : ''}`;
+export const routeNote = (h) => `${isLowSensory(h) ? ' · Sensory-friendly' : ''}${isBigScare(h) ? ' · Big scares' : ''}`;
 
 /** Plain-text words the core modules show for this type (they escape them). */
 export const copy = {
   notOpen: 'not handing out right now',
   noneOpen: 'No matching homes are handing out right now.',
-  routeEvery: 'Every home handing out that matches your filters. Skip any with ✕.',
+  routeEvery: 'Every home handing out that matches your filters. Skip any you don’t want.',
   routeShowingAll: 'Showing every home handing out.',
   routeNotOpen: 'not handing out now',
   shareText: 'My trick-or-treat stops',

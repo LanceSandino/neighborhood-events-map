@@ -1,7 +1,7 @@
 # ADR 0012 — Community branding and each event's own branding
 
 **Status.** Accepted (owner request, 2026-10-31). Decisions D-20261031-46 to -52. Supersedes the branding clause of
-D-20261031-16.
+D-20261031-16. Refined by ADR 0013: drawn marks replace the emoji, and each event may have its own logo.
 
 **Context.** Until 0.15 the community kept one branding for every event: emoji, headline and its accent part, intro, the
 two brand colours and the About text. A value that still held a type's built-in default followed the event's type

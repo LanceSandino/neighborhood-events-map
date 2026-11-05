@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Community\LogoStore;
 use App\Tests\Support\AppTestCase;
 use App\Tests\Support\CustomHalloweenCommunity;
 
@@ -32,7 +33,7 @@ final class OrganizerConsoleNeutralTest extends AppTestCase
             $page = $this->client->request('GET', $path);
             self::assertSame(200, $this->code(), $path);
             $html = (string) $page->html();
-            self::assertSame('F', trim($page->filter('.admin-top .brand-icon')->text()), "$path: the community's mark (its initial, no logo set)");
+            self::assertStringEndsWith('#brand-community', (string) $page->filter('.admin-top .brand-icon svg use')->attr('href'), "$path: the community's neutral drawn mark (no logo set)");
             self::assertStringNotContainsString('/theme.css', $html, "$path: no event's colours in the console");
             self::assertSame('/assets/img/favicon-community.svg', $page->filter('link[rel="icon"]')->attr('href'), "$path: the community's icon");
             preg_match_all(self::HALLOWEEN, (string) preg_replace('~<script.*?</script>~s', '', $html), $m);
@@ -40,14 +41,12 @@ final class OrganizerConsoleNeutralTest extends AppTestCase
             self::assertStringEndsWith(' · Organizer · Fernbrook Glen', $page->filter('title')->text());
         }
         // A logo, when the community has one, is its mark.
-        $this->db()->executeStatement("UPDATE community_settings SET settings = jsonb_set(settings, '{branding,logo}', '\"logo.svg\"')");
-        @mkdir(static::getContainer()->getParameter('kernel.project_dir').'/var/branding', 0o775, true);
-        file_put_contents(static::getContainer()->getParameter('kernel.project_dir').'/var/branding/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+        static::getContainer()->get(LogoStore::class)->put(null, 'svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
         $this->repo()->reset();
         $page = $this->client->request('GET', '/admin');
         self::assertStringStartsWith('/branding/logo.svg?v=', (string) $page->filter('.admin-top .brand-icon img')->attr('src'));
         self::assertStringStartsWith('/branding/logo.svg?v=', (string) $page->filter('link[rel="icon"]')->attr('href'));
-        unlink(static::getContainer()->getParameter('kernel.project_dir').'/var/branding/logo.svg');
+        static::getContainer()->get(LogoStore::class)->remove(null);
 
         // The draft preview is the event's own page: its type, its icon and its own colours (not the default event's).
         $h = ['X-CSRF-Token' => $this->csrf];
@@ -70,13 +69,13 @@ final class OrganizerConsoleNeutralTest extends AppTestCase
         $ids = $this->community();
         $events = $this->json('GET', '/api/admin/events');
         $byId = array_column($events['events'], null, 'id');
-        self::assertSame(['🎃', '✨', '🏷️'], [$byId[$ids['halloween']]['type_icon'], $byId[$ids['lights']]['type_icon'], $byId[$ids['sale']]['type_icon']], 'each event\'s type mark');
+        self::assertSame(['i-pumpkin', 'i-c9-red', 'i-tag'], [$byId[$ids['halloween']]['type_icon'], $byId[$ids['lights']]['type_icon'], $byId[$ids['sale']]['type_icon']], 'each event\'s type mark');
         $home = $this->addAddress('31', 'Lantern Way', 40.006, -75.004, 'west');
         $this->client->getCookieJar()->clear();
         $this->confirm($this->requestLink('resident@example.test', ['address' => $this->byId($home), 'listing' => self::listing()]));
         $this->signIn('org@example.test');
         $r = $this->json('GET', '/api/admin/addresses?q=31%20Lantern');
-        self::assertSame(['id' => $ids['halloween'], 'name' => 'Halloween', 'type' => 'halloween', 'icon' => '🎃'], $r['event'], 'the event whose listings the list shows');
+        self::assertSame(['id' => $ids['halloween'], 'name' => 'Halloween', 'type' => 'halloween', 'icon' => 'i-pumpkin'], $r['event'], 'the event whose listings the list shows');
         self::assertSame(['active', 'Handing out'], [$r['addresses'][0]['listing']['status'], $r['addresses'][0]['listing']['status_label']], 'its type\'s words for the status');
     }
 

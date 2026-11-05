@@ -110,12 +110,18 @@ h1, h2, h3, .brand-name, .big-number { font-family: Nunito, 'DM Sans', system-ui
 .skip-link:focus { top: 8px; }
 
 /* ---- Shell ---------------------------------------------------------------- */
+/* Drawn art (public/assets/icons): an icon sizes with the words around it; shapes take currentColor and the soft second
+   tone comes from --icon-accent. Art is decorative: aria-hidden beside the words or inside a labelled control. */
+.icon { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: -.24em; flex-shrink: 0; pointer-events: none; }
+.mark { display: block; width: 100%; height: 100%; pointer-events: none; }
+button > .icon:only-child, a > .icon:only-child { vertical-align: middle; }
 .app { display: flex; min-height: 100vh; }
 .sidebar { width: 226px; flex-shrink: 0; background: var(--night); color: #fff; min-height: 100vh; padding: 31px 18px; display: flex; flex-direction: column; gap: 30px; position: sticky; top: 0; height: 100vh; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 9px; color: #fff; text-decoration: none; }
 .brand-icon { background: #ef8a45; background: var(--orange); border-radius: 13px; width: 42px; height: 42px; display: grid; place-items: center; font-size: 24px; transform: rotate(-5deg); flex-shrink: 0; overflow: hidden; }
 .brand-icon img { width: 100%; height: 100%; object-fit: contain; transform: rotate(5deg); }
 .brand-icon.has-logo { background: transparent; transform: none; }
+.brand-icon:not(.has-logo):not(.community-mark) { background: transparent; transform: none; }
 .brand-icon.has-logo img { transform: none; }
 .brand-name { font-weight: 900; font-size: 17px; line-height: 1.05; letter-spacing: -.5px; }
 .brand-sub { font-size: 12px; color: #b9b9d0; text-transform: uppercase; letter-spacing: 1.9px; margin-top: 4px; font-weight: 800; }
@@ -152,7 +158,7 @@ a.crumb:hover strong { color: var(--link); }
    control of links (the Appearance panel's look), 44 px targets, scrolling inside its own box when it is wider than
    the screen. The current event is raised and outlined; an event that is not open says so in words. */
 .topline.has-switch { border-bottom: 0; }
-.event-switch-bar { display: flex; align-items: center; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 38px 12px; }
+.event-switch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 38px 12px; }
 .event-switch { display: flex; gap: 4px; width: max-content; max-width: 100%; min-width: 0; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-3); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .event-switch::-webkit-scrollbar { display: none; }
 /* A soft edge where more events are (a mask: only the opacity counts). */
@@ -190,7 +196,7 @@ a.crumb:hover strong { color: var(--link); }
 .copy-previous { margin: 4px 0 12px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-2); }
 .copy-previous .introtext { margin: 0 0 8px; }
 .event-pill { text-decoration: none; }
-.demo-pill, .event-pill, .top-add { height: 32px; display: inline-flex; align-items: center; padding-top: 0; padding-bottom: 0; }
+.demo-pill, .event-pill, .top-add { height: 32px; display: inline-flex; align-items: center; gap: 5px; padding-top: 0; padding-bottom: 0; }
 .event-pill { background: var(--warm); color: var(--warm-text); border: 1px solid var(--warm-border); font-size: 12px; font-weight: 900; letter-spacing: .7px; padding: 8px 12px; border-radius: 30px; white-space: nowrap; }
 .demo-pill { background: var(--pill-bg); color: var(--pill-fg); padding: 6px 10px; border-radius: 50px; font-size: 12px; font-weight: 900; letter-spacing: .6px; white-space: nowrap; }
 .demo-pill.warn { background: var(--notice-bg); color: var(--notice-fg); }
@@ -203,12 +209,8 @@ a.crumb:hover strong { color: var(--link); }
 .intro h1 { font-size: clamp(27px, 3.5vw, 42px); line-height: 1.15; letter-spacing: -1.7px; font-weight: 900; }
 .intro h1 span { color: var(--brand-text); }
 .intro p { margin-top: 11px; color: var(--muted); font-size: 13px; max-width: 630px; }
-.hero-illustration { min-width: 265px; width: 275px; position: relative; border-radius: 19px; background: radial-gradient(circle at 70% 0%, #6c5b8f, #343049 72%); height: 137px; overflow: hidden; color: #fff; display: flex; align-items: center; justify-content: center; }
-.hero-moon { font-size: 72px; position: absolute; right: 17px; top: -24px; opacity: .9; }
-.hero-ghost { font-size: 61px; z-index: 1; transform: rotate(-15deg); filter: drop-shadow(0 10px 8px #100a2155); }
-.hero-star { position: absolute; font-size: 20px; color: #f4c889; }
-.hero-star.one { top: 20px; left: 18px; }
-.hero-star.two { bottom: 17px; right: 78px; }
+.hero-illustration { min-width: 206px; width: 206px; height: 137px; flex-shrink: 0; align-self: center; }
+.hero-art { display: block; width: 100%; height: 100%; }
 
 /* ---- Controls ------------------------------------------------------------- */
 .controls { background: var(--surface); padding: 16px 17px; border-radius: 15px 15px 0 0; border: 1px solid var(--line); border-bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -228,8 +230,6 @@ a.crumb:hover strong { color: var(--link); }
 #explore { margin-top: 20px; }
 .fi { display: inline-flex; align-items: center; justify-content: center; width: 1.25em; font-size: 1.05em; line-height: 1; flex-shrink: 0; }
 .filter-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--orange); color: var(--brand-ink); font-size: 12px; font-weight: 900; }
-/* Teal Pumpkin Project sign for non-food treats: the pumpkin emoji tinted teal. */
-.teal-pumpkin { display: inline-block; filter: hue-rotate(150deg) saturate(1.3); }
 .fcount { margin-left: 2px; min-width: 20px; padding: 1px 6px; border-radius: 9px; background: var(--surface-3); color: var(--muted); font-size: 12px; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
 [aria-pressed="true"] > .fcount { background: var(--surface); color: var(--warm-text); }
 .filter-button[aria-pressed="true"] { background: var(--warm); color: var(--warm-text); border-color: var(--warm-border); background: color-mix(in srgb, var(--orange) 10%, var(--surface)); color: color-mix(in srgb, var(--orange) 65%, var(--text)); border-color: color-mix(in srgb, var(--orange) 40%, var(--surface)); }
@@ -279,11 +279,11 @@ a.crumb:hover strong { color: var(--link); }
 .card-status.paused, .card-status.out { background: var(--tag-drinks-bg); color: var(--paused-fg); }
 .card-status.done { background: var(--done-bg); color: var(--muted); }
 .card-note { font-size: 12px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-/* The 📝 marker is for the compact list only; cards show the note itself (.tag would otherwise show it, as it did). */
+/* The note marker is for the compact list only; cards show the note itself (.tag would otherwise show it, as it did). */
 .tag.note-icon { display: none; }
 .cards.compact .tag.note-icon { display: inline-flex; }
 .tags { display: flex; gap: 4px; flex-wrap: wrap; }
-.tag { display: inline-flex; align-items: center; padding: 4px 7px; border-radius: 6px; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 6px; font-size: 11px; font-weight: 900; white-space: nowrap; }
 .tag.candy { background: var(--tag-candy-bg); color: var(--tag-candy-fg); }
 .tag.quiet { background: var(--tag-quiet-bg); color: var(--tag-quiet-fg); }
 .tag.spooky { background: var(--tag-spooky-bg); color: var(--tag-spooky-fg); }
@@ -333,7 +333,7 @@ html .leaflet-container img.leaflet-tile { mix-blend-mode: normal; width: 256.5p
 /* Leaflet pin (DOM icon): same shape as the prototype pins */
 .pin-icon { background: transparent; border: 0; }
 .pin { position: relative; height: 37px; width: 37px; border-radius: 50% 50% 50% 7px; transform: rotate(-45deg); background: var(--pin-candy); border: 3px solid #fff; display: grid; place-items: center; color: #fff; box-shadow: 0 4px 10px #583d3350; transition: transform .15s, opacity .15s; }
-.pin span { transform: rotate(45deg); display: block; font-size: 16px; line-height: 1; }
+.pin span { transform: rotate(45deg); display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--pin-ink, #fff); --icon-accent: var(--pin-ink, #fff); --icon-accent-opacity: .35; --bulb-edge: #fff; }
 .pin.scary { background: var(--pin-spooky); }
 .pin.quiet { background: var(--pin-gentle); }
 .pin.adult { background: var(--pin-adult); }
@@ -369,7 +369,7 @@ html .leaflet-container img.leaflet-tile { mix-blend-mode: normal; width: 256.5p
 .outside-mask { fill: var(--bg); fill-opacity: .62; }
 .route-btn, .primary { background: #f07b3c; background: var(--orange); border-radius: 10px; color: var(--brand-ink); font-weight: 900; padding: 13px 20px; box-shadow: 0 5px 13px #f07b3c33; min-height: 44px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .primary[disabled], .secondary[disabled] { opacity: .55; cursor: not-allowed; }
-.bottom-actions { display: flex; align-items: center; gap: 10px; }
+.bottom-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .bottom-actions a, .bottom-actions button { white-space: nowrap; }
 .secondary { border: 1px solid var(--border); color: var(--text-2); background: var(--surface); border-radius: 10px; font-weight: 800; padding: 12px 16px; min-height: 44px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .danger { border: 1px solid var(--danger-border); color: var(--danger-fg); background: var(--surface); border-radius: 10px; font-weight: 800; padding: 12px 16px; min-height: 44px; }
@@ -469,6 +469,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .release ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; color: var(--text-2); display: grid; gap: 5px; }
 .release-date { color: var(--muted); font-size: 12px; font-weight: 600; }
 .release-current { font-size: 12px; font-weight: 900; background: var(--warm); color: var(--warm-text); border-radius: 6px; padding: 2px 7px; }
+.reminder-icon { margin-right: 6px; color: var(--warm-text); }
 .reminders { list-style: none; padding: 0; margin: 8px 0 14px; display: grid; gap: 8px; }
 .reminders li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); font-size: 14px; line-height: 1.45; color: var(--text-2); }
 .reminders.compact li { padding: 8px 10px; font-size: 12px; }
@@ -536,7 +537,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 @media (max-width: 1130px) {
   .sidebar { width: 190px; }
   .content { padding: 26px 23px; }
-  .hero-illustration { width: 200px; min-width: 200px; }
+  .hero-illustration { width: 180px; min-width: 180px; height: 120px; }
   .workarea { grid-template-columns: 315px minmax(0, 1fr); }
 }
 /* Tablets, and phones in landscape (short screens): no rail; bottom navigation instead. */

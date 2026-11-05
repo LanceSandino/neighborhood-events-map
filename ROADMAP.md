@@ -123,6 +123,11 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - Each event may have its own access (a rummage sale open to the public, the lights not).
    - Status: shipped in 0.18.0-beta.1 ([D-20261104-01](DECISIONS.md) to [-06](DECISIONS.md), [event types](docs/architecture/event-types.md), [organizer guide](docs/runbooks/organizer-events.md#when-an-event-is-over)).
 
+11. **Stage 10 — drawn art and logos (done in 0.19.0-beta.1; the owner's request of 2026-11-05).**
+   - Every emoji the product drew is now its own drawn icon, mark or scene, and Christmas lights pages hang the C9 garland.
+   - Each event may have a logo; logos live in the database, so backups carry them, and the 0.9 image still shows one after a rollback.
+   - Status: shipped in 0.19.0-beta.1 ([D-20261105-01](DECISIONS.md) to [-07](DECISIONS.md), [ADR 0013](docs/adr/0013-drawn-art-and-logos-in-the-database.md)).
+
 ## What remains
 
 These are known, deliberate gaps, each tracked here (there are no TODO notes in the code):

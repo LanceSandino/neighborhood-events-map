@@ -17,8 +17,10 @@
 #   Halloween closes at start, next year's is hidden, its thank-you page is under Past events; an image rollback to 0.9
 #   still shows the same homes and headline, and going forward again changes nothing. The demo's Halloween (2026-10-30) is
 #   past on any date from now on and no other step compares with today, so the drill does not depend on the day it runs.
-#   Each event's own access (0.18) never reaches the community's stored value, which is what 0.9 reads. Always tears
-#   the project and its volumes down (down -v).
+#   Each event's own access (0.18) never reaches the community's stored value, which is what 0.9 reads. Logos (0.19): a
+#   logo uploaded on 0.9 (the volume file and the settings key) becomes the community's and the Halloween's in the database,
+#   the file stays, next year's event keeps the logo and hides it from visitors, 0.9 still shows it after an image rollback
+#   and after the restore. Always tears the project and its volumes down (down -v).
 # @dependencies bash, docker compose, curl, openssl, python3 (scripts/drill_listing.py), bin/backup-now.sh, bin/restore.sh
 # Usage: bin/drill-event-upgrade.sh <new-app-image> <new-nginx-image> <tag> [port, default 8198]
 #   e.g. docker build --target prod -t nhm-app:drill . && docker build --target nginx -t nhm-nginx:drill . \
@@ -105,6 +107,9 @@ applog() { "${compose[@]}" logs --no-color app 2>/dev/null || true; } # read who
 headline() { curl -fsS "$base$1" | python3 -c 'import re,sys,html; m=re.search(r"<h1>(.*?)</h1>", sys.stdin.read(), re.S); print(html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip() if m else "")'; }
 custom="Spooky streets. Sweet treats." # the demo's own Halloween headline (examples/demo/community.yaml)
 community_access() { curl -fsS "$base/api/community$1" | python3 -c 'import json,sys; print(json.load(sys.stdin)["community"]["access"])'; }
+# The logo a page's sidebar brand shows ('' when it draws a mark), and a fictional logo as the 0.9 console stores one.
+logo_url() { curl -fsS "$base$1" | python3 -c 'import re,sys,html; m=re.search(r"brand-icon[^>]*>\s*<img src=\"([^\"]+)\"", sys.stdin.read()); print(html.unescape(m.group(1)) if m else "")'; }
+logo_svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#2e7d6b"/></svg>'
 
 step "1. published $old_tag with the fictional demo"
 images "$old_app" "$old_nginx" "$old_tag"
@@ -115,6 +120,9 @@ n=$(printf '%s' "$before" | python3 -c 'import json,sys; print(len(json.load(sys
 pass "$old_tag serves $n fictional homes; version $(curl -fsS "$base/healthz")"
 [ "$(headline /)" = "$custom" ] || fail "$old_tag does not show the demo's custom headline"
 home=$(printf '%s' "$before" | python3 -c 'import json,sys; print(next(h["id"] for h in json.load(sys.stdin) if h["address"] == "100 Pumpkin Patch Ln"))')
+printf '%s' "$logo_svg" | "${compose[@]}" exec -T app sh -c 'cat > /app/var/branding/logo.svg'
+sql "UPDATE community_settings SET settings = jsonb_set(settings, '{branding,logo}', '\"logo.svg\"') WHERE id = 1" >/dev/null
+case "$(logo_url /)" in /branding/logo.svg*) pass "$old_tag shows a logo from the volume: $(logo_url /)" ;; *) fail "$old_tag does not show the volume logo: $(logo_url /)" ;; esac
 
 step "2. backup before the upgrade"
 dump=$(bin/backup-now.sh "${args[@]}" | sed -n 's/^Backup written: \([^ ]*\).*/\1/p')
@@ -126,9 +134,9 @@ images "$new_app" "$new_nginx" "$new_tag"
 up
 log=$(applog)
 # Every migration runs at start, up to the latest (Version20261031000004 per-event branding, then Version20261101000001
-# hidden events): Doctrine names the target and how many it executed (5 from 0.9: 0.10, 0.11, 0.15, 0.16, 0.17).
-grep -q 'Migrating up to DoctrineMigrations\\Version20261101000001' <<<"$log" || fail "the event migrations did not run at start"
-grep -q '5 migrations executed' <<<"$log" || fail "not every event migration ran at start: $(grep -o '[0-9]* migrations executed' <<<"$log" | head -1)"
+# hidden events, Version20261105000001 logos): Doctrine names the target and how many it executed (6 from 0.9: 0.10, 0.11, 0.15, 0.16, 0.17, 0.19).
+grep -q 'Migrating up to DoctrineMigrations\\Version20261105000001' <<<"$log" || fail "the event migrations did not run at start"
+grep -q '6 migrations executed' <<<"$log" || fail "not every event migration ran at start: $(grep -o '[0-9]* migrations executed' <<<"$log" | head -1)"
 after=$(homes | view09)
 [ "$after" = "$before" ] || fail "/api/homes changed across the upgrade"
 [ "$(sql "SELECT state || '/' || is_default FROM event_occurrences")" = "open/true" ] || fail "the Halloween is not the open default event"
@@ -136,6 +144,14 @@ pass "same $n homes, keys and values after the upgrade; $(sql "SELECT COUNT(*) |
 [ "$(sql "SELECT settings->'branding'->>'headline' FROM event_occurrences")" = "Spooky streets." ] || fail "the Halloween did not take the community's custom branding"
 [ "$(headline /)" = "$custom" ] || fail "the Halloween page lost its custom headline across the upgrade"
 pass "the Halloween keeps its custom branding, now its own: \"$(headline /)\""
+# The volume logo is now in the database as the community's and the Halloween's; the file and the key stay for 0.9.
+[ "$(sql "SELECT COUNT(*) || '/' || COUNT(event_id) FROM logos")" = "2/1" ] || fail "the logo did not reach the database: $(sql "SELECT COUNT(*) || '/' || COUNT(event_id) FROM logos")"
+url=$(logo_url /)
+case "$url" in /branding/event-*/logo.svg\?v=*) ;; *) fail "the upgraded Halloween does not show its logo: $url" ;; esac
+[ "$(curl -fsS "$base$url")" = "$logo_svg" ] || fail "the Halloween's logo URL does not serve the logo"
+[ "$("${compose[@]}" exec -T app cat /app/var/branding/logo.svg)" = "$logo_svg" ] || fail "the upgrade removed the volume file"
+[ "$(sql "SELECT settings->'branding'->>'logo' FROM community_settings")" = "logo.svg" ] || fail "the upgrade changed the key the 0.9 image reads"
+pass "the volume logo is the community's and the Halloween's in the database ($url); the file and its key stay"
 
 step "4. edit and create a listing on the new release"
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" edit --home-id "$home" --note "Edited on $new_tag" || fail "edit"
@@ -180,6 +196,11 @@ python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$r
 [ "$(curl -fsS "$base/api/homes?e=$closed_id" | count)" = 0 ] || fail "a closed event shows homes"
 pass "closed event $closed_id of $closed_day (no homes on the map), next year's $next_id hidden on 2027-10-31 (tentative); the default moved to the lights; the legacy row keeps the closed Halloween's listing"
 
+next_logo=$(sql "SELECT MAX(event_id) FROM logos")
+[ "$(sql "SELECT e.state FROM event_occurrences e WHERE e.id = $next_logo")" = "hidden" ] || fail "next year's event did not keep the logo"
+[ "$(curl -s -o /dev/null -w '%{http_code}' "$base/branding/event-$next_logo/logo.svg")" = 404 ] || fail "a hidden event's logo answers visitors"
+pass "next year's hidden event keeps the logo and visitors get 404 for it"
+
 step "5. path (a): images back to $old_tag, database kept"
 images "$old_app" "$old_nginx" "$old_tag"
 up
@@ -193,6 +214,10 @@ rolled=$(homes | view09)
 pass "$old_tag shows the same $((n + 1)) homes, the edit and the new home (bridged legacy rows)"
 [ "$(headline /)" = "$custom" ] || fail "$old_tag does not show the Halloween's custom headline after the image rollback: $(headline /)"
 pass "$old_tag shows the Halloween's custom headline: \"$(headline /)\""
+url=$(logo_url /)
+case "$url" in /branding/logo.svg*) ;; *) fail "$old_tag does not show the logo after the image rollback: $url" ;; esac
+[ "$(curl -fsS "$base$url")" = "$logo_svg" ] || fail "$old_tag does not serve the logo after the image rollback"
+pass "$old_tag still shows the logo after the image rollback ($url)"
 [ "$(community_access "")" = "$stored_access" ] || fail "$old_tag does not show the community's own access"
 pass "$old_tag shows the community's own access ($stored_access), unaffected by the events' own"
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" edit --home-id "$home" --note "Edited on $old_tag" || fail "edit on $old_tag"
@@ -223,6 +248,7 @@ restored=$(homes | view09)
 [ "$restored" = "$before" ] || fail "the restored homes differ from the pre-upgrade ones"
 [ -z "$(sql "SELECT to_regclass('event_occurrences')")" ] || fail "event tables survived the restore"
 pass "restored: exactly the $n pre-upgrade homes; no event tables; $(sql "SELECT COUNT(*) FROM doctrine_migration_versions") migrations recorded"
+case "$(logo_url /)" in /branding/logo.svg*) pass "the restored $old_tag still shows the logo" ;; *) fail "the restored $old_tag lost the logo: $(logo_url /)" ;; esac
 
 step "8. the restored database upgrades again as production does: the past-dated Halloween closes by itself"
 custom="Spooky streets. Sweet treats." # the restored database has the demo's own headline again
@@ -250,6 +276,7 @@ up
 [ "$(homes | view09)" = "$before" ] || fail "$old_tag does not show the same homes after the automatic close"
 [ "$(headline /)" = "$custom" ] || fail "$old_tag does not show the Halloween's headline after the automatic close: $(headline /)"
 pass "$old_tag shows the same $n homes and \"$(headline /)\""
+case "$(logo_url /)" in /branding/logo.svg*) pass "$old_tag shows the logo after the automatic close" ;; *) fail "$old_tag lost the logo after the automatic close: $(logo_url /)" ;; esac
 
 step "10. forward again: nothing closes twice; the maintenance loop finds nothing to do"
 images "$new_app" "$new_nginx" "$new_tag" 1

@@ -6,7 +6,7 @@
 {%- set season = today < days|first ? 'before' : (today > days|last ? 'after' : (today in days ? 'during' : 'between')) -%}
 {%- set before = et.copy.season_before|format(season_of(days|first, c.map.center.lat ?? null)) -%}
 <section class="schedule-row" aria-label="Sale days and hours">
-  <span class="schedule-icon" aria-hidden="true">{{ et.copy.event_icon }}</span>
+  <span class="schedule-icon" aria-hidden="true">{{ icon(et.copy.event_icon) }}</span>
   <div class="schedule-text">
     <b>{{ day_list(days) }}</b>
     <span>{{ et.copy.most_homes }}: {{ c.event.starts_at|time_span(c.event.ends_at) }} · {{ et.copy.times_vary }}{% if c.event.early_bird_time ?? null %} · {{ et.copy.early_bird_rule }} {{ c.event.early_bird_time|time12 }}{% endif %}</span>

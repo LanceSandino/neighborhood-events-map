@@ -54,7 +54,7 @@ final class HolidayLightsType implements EventType, EventSettingsType
 
     public function copy(): array
     {
-        return HolidayLightsCopy::TEXT + ['reminders' => HolidayLightsCopy::REMINDERS];
+        return HolidayLightsCopy::TEXT + ['reminders' => array_keys(HolidayLightsCopy::REMINDERS), 'reminder_icons' => HolidayLightsCopy::REMINDERS];
     }
 
     public function scheduleKind(): string
@@ -75,9 +75,9 @@ final class HolidayLightsType implements EventType, EventSettingsType
     public function statuses(): array
     {
         return [
-            'active' => ['label' => 'Lights on', 'icon' => '✨', 'day_scoped' => false],
-            'off_tonight' => ['label' => 'Off tonight', 'icon' => '🌙', 'day_scoped' => true],
-            'finished' => ['label' => 'Done for the season', 'icon' => '✅', 'day_scoped' => false],
+            'active' => ['label' => 'Lights on', 'icon' => 'i-c9-red', 'day_scoped' => false],
+            'off_tonight' => ['label' => 'Off tonight', 'icon' => 'i-moon', 'day_scoped' => true],
+            'finished' => ['label' => 'Done for the season', 'icon' => 'i-status-done', 'day_scoped' => false],
         ];
     }
 
@@ -181,21 +181,21 @@ final class HolidayLightsType implements EventType, EventSettingsType
     public function filters(): array
     {
         return [
-            ['key' => 'driveBy', 'label' => 'Drive-by', 'icon' => '🚗', 'quick' => true, 'feature' => null, 'title' => 'Drive-by homes: enjoy them from the street'],
-            ['key' => 'noFlashing', 'label' => 'No flashing reported', 'icon' => '🕯️', 'quick' => true, 'feature' => null, 'title' => 'No flashing reported (self-reported by residents)'],
-            ['key' => 'music', 'label' => 'Music', 'icon' => '🎵', 'quick' => true, 'feature' => null],
-            ['key' => 'walkUp', 'label' => 'Walk-up welcome', 'icon' => '🚶', 'quick' => false, 'feature' => null],
-            ['key' => 'openTonight', 'label' => 'Open tonight', 'icon' => '🌙', 'quick' => false, 'feature' => null, 'title' => 'Lights on now or later tonight'],
+            ['key' => 'driveBy', 'label' => 'Drive-by', 'icon' => 'i-car', 'quick' => true, 'feature' => null, 'title' => 'Drive-by homes: enjoy them from the street'],
+            ['key' => 'noFlashing', 'label' => 'No flashing reported', 'icon' => 'i-no-flashing', 'quick' => true, 'feature' => null, 'title' => 'No flashing reported (self-reported by residents)'],
+            ['key' => 'music', 'label' => 'Music', 'icon' => 'i-music', 'quick' => true, 'feature' => null],
+            ['key' => 'walkUp', 'label' => 'Walk-up welcome', 'icon' => 'i-walk', 'quick' => false, 'feature' => null],
+            ['key' => 'openTonight', 'label' => 'Open tonight', 'icon' => 'i-moon', 'quick' => false, 'feature' => null, 'title' => 'Lights on now or later tonight'],
         ];
     }
 
     public function legend(): array
     {
         return [
-            ['cls' => 'lights', 'icon' => '✨', 'label' => 'Lights', 'feature' => null],
-            ['cls' => 'music', 'icon' => '🎵', 'label' => 'Music', 'feature' => null],
-            ['cls' => 'inflatable', 'icon' => '⛄', 'label' => 'Inflatables', 'feature' => null],
-            ['cls' => 'walkthrough', 'icon' => '🎄', 'label' => 'Walk-through', 'feature' => null],
+            ['cls' => 'lights', 'icon' => 'i-c9-red', 'label' => 'Lights', 'feature' => null],
+            ['cls' => 'music', 'icon' => 'i-music', 'label' => 'Music', 'feature' => null],
+            ['cls' => 'inflatable', 'icon' => 'i-inflatable', 'label' => 'Inflatables', 'feature' => null],
+            ['cls' => 'walkthrough', 'icon' => 'i-walkthrough', 'label' => 'Walk-through', 'feature' => null],
         ];
     }
 
@@ -217,7 +217,7 @@ final class HolidayLightsType implements EventType, EventSettingsType
 
     public function fragments(): array
     {
-        $names = ['head', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_hours', 'form_fields', 'manage_hours',
+        $names = ['head', 'decor', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_hours', 'form_fields', 'manage_hours',
             'manage_half', 'manage_full', 'listing_checks', 'route_rules', 'rule_lines'];
 
         return array_combine($names, array_map(static fn (string $n) => 'event/'.self::KEY.'/_'.$n.'.html.twig', $names));

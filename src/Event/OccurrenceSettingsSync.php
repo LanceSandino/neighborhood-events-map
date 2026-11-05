@@ -11,11 +11,11 @@ use Doctrine\DBAL\Connection;
 /**
  * @module Event/OccurrenceSettingsSync
  * @description The community settings' `event` block is a view of the default event (D-20261031-07, ADR 0011). When
- *     settings are saved (community.yaml bootstrap, Organizer → Community → Event) this writes the block to that
+ *     settings are saved (community.yaml bootstrap, Organizer, Community, Event) this writes the block to that
  *     event: with no event at all it creates the first one, open and the default, with the branding the settings give in
  *     their 0.9 shape (Event/EventBranding::fromLegacy, ADR 0012); otherwise it updates the default
  *     event's name and default hours, and its dates only while no home is listed for it and it has dates (moving a
- *     season's listings is an explicit step under Organizer → Events, and the next season is a new event). An event's
+ *     season's listings is an explicit step under Organizer, Events, and the next season is a new event). An event's
  *     type never changes. Takes the same lock as every life-cycle change, so a save never interleaves with one.
  *
  * @dependencies DBAL, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Event/EventSettingsType, Community/EventBlockSchema, Community/ConfigException
@@ -36,7 +36,7 @@ final class OccurrenceSettingsSync
      * @param array<string,mixed>  $event         the normalized settings block (Community/EventBlockSchema)
      * @param array<string,string> $firstBranding the branding of the install's first event, if this creates it
      *
-     * @throws ConfigException when the change must go through Organizer → Events
+     * @throws ConfigException when the change must go through Organizer, Events
      */
     public function apply(array $event, array $firstBranding = []): void
     {
@@ -57,13 +57,13 @@ final class OccurrenceSettingsSync
                     $this->occurrences->insert($db, $fields + ['settings' => $settings], EventOccurrence::OPEN, true);
                 }
 
-                return; // between events the block is only the last event's view; Organizer → Events starts the next one
+                return; // between events the block is only the last event's view; Organizer, Events starts the next one
             }
             if (!$this->types->isEnabled($active->type)) {
                 return; // a type this release does not offer: left as it is for the organizer to archive
             }
             if ($fields['type'] !== $active->type) {
-                throw new ConfigException(['event.type cannot change for the current event; prepare an event of another type under Organizer → Events.']);
+                throw new ConfigException(['event.type cannot change for the current event; prepare an event of another type under Organizer, Events.']);
             }
             if (!$active->hasDates() || EventOccurrence::CLOSED === $active->state) {
                 // dates to be announced, or a closed event: only its name and hours follow the block
@@ -76,14 +76,14 @@ final class OccurrenceSettingsSync
             $moved = $fields['starts_on'] !== $active->startsOn || $fields['ends_on'] !== $active->endsOn;
             $listed = $moved ? $this->occurrences->listingCount($active->id, $db) : 0;
             if ($listed > 0) {
-                throw new ConfigException([sprintf('event.date: %d home(s) are listed for this event. To start the next season, prepare a new event under Organizer → Events (this season\'s listings stay with this season); to move this event and its homes to other dates, edit it there.', $listed)]);
+                throw new ConfigException([sprintf('event.date: %d home(s) are listed for this event. To start the next season, prepare a new event under Organizer, Events (this season\'s listings stay with this season); to move this event and its homes to other dates, edit it there.', $listed)]);
             }
             $settings = $active->settings;
             $type = $this->types->get($active->type);
             if ($moved && $type instanceof EventSettingsType) {
                 [$settings, $errors] = $type->finishSettings($settings, $fields['starts_on'], $fields['ends_on']); // e.g. a sale's days must stay inside
                 if ([] !== $errors) {
-                    throw new ConfigException(array_values(array_map(static fn (string $msg) => 'event.date: '.$msg.' Change the event under Organizer → Events.', $errors)));
+                    throw new ConfigException(array_values(array_map(static fn (string $msg) => 'event.date: '.$msg.' Change the event under Organizer, Events.', $errors)));
                 }
             }
             $this->occurrences->updateFields($db, $active->id, $fields + ['settings' => $settings]);

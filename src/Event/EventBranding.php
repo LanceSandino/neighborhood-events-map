@@ -9,7 +9,8 @@ use App\Shared\TextInput;
 
 /**
  * @module Event/EventBranding
- * @description One event's own branding (ADR 0012), kept in its settings as `branding`: the emoji, the headline and
+ * @description One event's own branding (ADR 0012), kept in its settings as `branding`: the emoji (never drawn since 0.19, kept
+ *     only for the 0.9 mirror, ADR 0013), the headline and
  *     its accent part, the intro, the two brand colours and the event's About text (what visitors read on About and in
  *     the Rules for that event). Every field is optional: empty means the event type's default, so a Christmas lights
  *     event shows the lights' words and colours unless its organizer set its own. The checks are strict (unknown keys,

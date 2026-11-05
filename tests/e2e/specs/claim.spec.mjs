@@ -17,9 +17,9 @@ async function startClaim(page, house, email) {
   const n = Number(house);
   await page.mouse.click(box.x + box.width * (0.15 + (n % 29) / 100), box.y + box.height * (0.45 + (n % 23) / 100));
   await expect(page.locator('#pinMap .leaflet-marker-icon')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Next: your stop →' }).click();
+  await page.getByRole('button', { name: 'Next: your stop' }).click();
   await page.locator('#regNote').fill('E2E test listing <script>alert(1)</script>');
-  await page.getByRole('button', { name: 'Next: confirm by email →' }).click();
+  await page.getByRole('button', { name: 'Next: confirm by email' }).click();
   await page.locator('#regEmail').fill(email);
   await page.getByRole('button', { name: /Email me the confirmation link/ }).click();
 }
@@ -60,7 +60,7 @@ test('first verified claimant publishes immediately; second sees already-claimed
   expect(JSON.stringify(homes)).not.toContain('@example.test');
 
   // Owner marks "Out of candy"; public map reflects it.
-  await page.getByRole('button', { name: '🍬 Out of candy' }).click();
+  await page.getByRole('button', { name: 'Out of candy' }).click();
   await expect(page.locator('.toast')).toContainText('Status updated');
   const after = await (await request.get(DEMO + `/api/homes/${mine.id}`)).json();
   expect(after.home.status).toBe('out_of_candy');

@@ -30,8 +30,8 @@ export const filters = [
 
 /** Item categories in canonical order: [icon, words] (GarageSaleCopy::CATEGORIES). */
 export const CATEGORIES = {
-  kids_baby: ['🍼', 'Kids & baby'], toys: ['🧸', 'Toys'], furniture: ['🪑', 'Furniture'], clothing: ['👕', 'Clothing'], tools: ['🛠️', 'Tools'],
-  books_media: ['📚', 'Books & media'], electronics: ['🔌', 'Electronics'], sports: ['⚽', 'Sports'], household: ['🧺', 'Household'], free: ['🆓', 'Free items'],
+  kids_baby: ['i-kids-baby', 'Kids & baby'], toys: ['i-toys', 'Toys'], furniture: ['i-furniture', 'Furniture'], clothing: ['i-clothing', 'Clothing'], tools: ['i-tools', 'Tools'],
+  books_media: ['i-books', 'Books & media'], electronics: ['i-electronics', 'Electronics'], sports: ['i-sports', 'Sports'], household: ['i-household', 'Household'], free: ['i-free', 'Free items'],
 };
 export const PAYMENTS = { cash: 'Cash', card: 'Card', apps: 'Apps' };
 
@@ -168,11 +168,11 @@ export function statusChipShown(st, ctx) {
 }
 
 /** The pin and card symbol: the first category's icon; with a quick filter on, the homes that match show its icon. */
-const FOCUS = { kidsToys: ['🧸', (h) => PREDICATES.kidsToys(h)], furniture: ['🪑', (h) => has(h, 'furniture')], tools: ['🛠️', (h) => has(h, 'tools')] };
+const FOCUS = { kidsToys: ['i-toys', (h) => PREDICATES.kidsToys(h)], furniture: ['i-furniture', (h) => has(h, 'furniture')], tools: ['i-tools', (h) => has(h, 'tools')] };
 export function symbol(h, focus = {}) {
   for (const [k, [icon, test]] of Object.entries(FOCUS)) if (focus && focus[k] && test(h)) return icon;
   const first = Object.keys(CATEGORIES).find((c) => has(h, c));
-  return first ? CATEGORIES[first][0] : '🏷️';
+  return first ? CATEGORIES[first][0] : 'i-tag';
 }
 export const pinClass = () => 'sale';
 
@@ -180,28 +180,28 @@ export const pinClass = () => 'sale';
 export function tags(h) {
   const x = d(h);
   const t = Object.keys(CATEGORIES).filter((c) => has(h, c)).map((c) => ({ icon: CATEGORIES[c][0], text: CATEGORIES[c][1], cls: 'cat' }));
-  if (x.multi_family) t.push({ icon: '🏘️', text: 'Multi-family', cls: 'family' });
-  if (x.early_birds_allowed) t.push({ icon: '🐦', text: 'Early birds welcome', cls: 'early' });
+  if (x.multi_family) t.push({ icon: 'i-multi-family', text: 'Multi-family', cls: 'family' });
+  if (x.early_birds_allowed) t.push({ icon: 'i-bird', text: 'Early birds welcome', cls: 'early' });
   const pay = (x.payment_types || []).filter((p) => PAYMENTS[p]).map((p) => PAYMENTS[p]);
-  if (pay.length) t.push({ icon: '💵', text: pay.join(' · '), cls: 'pay' });
+  if (pay.length) t.push({ icon: 'i-cash', text: pay.join(' · '), cls: 'pay' });
   return t;
 }
 
 /** What a stop line of the route adds after the hours. */
-export const routeNote = (h) => `${d(h).multi_family ? ' · 🏘️ Multi-family' : ''}${d(h).early_birds_allowed ? ' · 🐦 Early birds' : ''}`;
+export const routeNote = (h) => `${d(h).multi_family ? ' · Multi-family' : ''}${d(h).early_birds_allowed ? ' · Early birds' : ''}`;
 
 /** Plain-text words the core modules show for this type (they escape them). */
 export const copy = {
   notOpen: 'with no sale hours left',
   noneOpen: 'No matching sales have hours left.',
-  routeEvery: 'Every sale that matches your filters, in a suggested order. Skip any with ✕.',
+  routeEvery: 'Every sale that matches your filters, in a suggested order. Skip any you don’t want.',
   routeShowingAll: 'Showing every sale with hours left.',
   routeNotOpen: 'with no sale hours left',
-  shareText: 'My garage sale stops',
+  shareText: 'My sale stops',
   published: 'Thanks for holding a sale!',
   noDays: 'Choose at least one sale day.',
-  drivingTour: '🚗 Drive between sales',
-  walking: '🚶 Walk',
+  drivingTour: 'Drive between sales',
+  walking: 'Walk',
 };
 
 const FLAGS = ['multi_family', 'early_birds_allowed'];

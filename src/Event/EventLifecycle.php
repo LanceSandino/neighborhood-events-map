@@ -6,6 +6,7 @@ namespace App\Event;
 
 use App\Audit\AuditLog;
 use App\Community\CommunityRepository;
+use App\Community\LogoStore;
 use App\Listing\LegacyListingBridge;
 use App\Shared\ValidationException;
 use Doctrine\DBAL\Connection;
@@ -26,7 +27,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
  *     release (settings block and legacy rows of the bridged Halloween, D-20261031-41). Nothing is copied from an earlier
  *     event's listings.
  *
- * @dependencies DBAL, Event/* (Event/NextEvent: next year's event; Event/DefaultEventRule: where the default goes; Event/EventDateChange: new dates and listed days), Community/CommunityRepository, Listing/LegacyListingBridge, Audit/AuditLog
+ * @dependencies DBAL, Event/* (Event/NextEvent: next year's event; Event/DefaultEventRule: where the default goes; Event/EventDateChange: new dates and listed days), Community/CommunityRepository, Community/LogoStore, Listing/LegacyListingBridge, Audit/AuditLog
  */
 final class EventLifecycle
 {
@@ -40,6 +41,7 @@ final class EventLifecycle
         private readonly NextEvent $next,
         private readonly DefaultEventRule $defaults,
         private readonly EventDateChange $dateChange,
+        private readonly LogoStore $logos,
     ) {
     }
 
@@ -242,6 +244,7 @@ final class EventLifecycle
             }
             $this->occurrences->setState($db, $e->id, EventOccurrence::CLOSED);
             $nextId = $this->occurrences->insert($db, $this->next->fields($e), EventOccurrence::HIDDEN);
+            $this->logos->copy($e->id, $nextId); // next year's event keeps the event's logo, like its branding
 
             return ['next_id' => $nextId] + (null !== $endedBefore ? ['automatic' => true, 'last_day' => $e->lastDay()] : []);
         });

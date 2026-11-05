@@ -111,7 +111,7 @@ final class DemoSeedCommand extends Command
         }
         $event = $c->event;
         if (null === $event) {
-            $output->writeln('<error>No event is active; start one under Organizer → Events first.</error>');
+            $output->writeln('<error>No event is active; start one under Organizer, Events first.</error>');
 
             return Command::FAILURE;
         }

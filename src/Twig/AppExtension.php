@@ -84,10 +84,10 @@ final class AppExtension extends AbstractExtension
     public function accessInfo(?string $access, array $copy = []): ?array
     {
         return match ($access) {
-            'public' => ['icon' => '🚶', 'title' => 'Open to the public', 'text' => 'Public streets: visitors from anywhere are welcome to walk the neighborhood.'],
-            'gated_open' => ['icon' => '🚪', 'title' => (string) ($copy['access_gated_open'] ?? 'Gated — open during the event'), 'text' => 'The gates are opened for visitors during the suggested hours. Follow posted rules and any gate staff.'],
-            'gated_guests' => ['icon' => '🔐', 'title' => 'Gated — residents and guests', 'text' => 'Only residents and their invited guests can enter. This map does not grant gate access.'],
-            'private' => ['icon' => '🏡', 'title' => 'Residents only', 'text' => 'A private event for residents of the neighborhood.'],
+            'public' => ['icon' => 'i-walk', 'title' => 'Open to the public', 'text' => 'Public streets: visitors from anywhere are welcome to walk the neighborhood.'],
+            'gated_open' => ['icon' => 'i-gate', 'title' => (string) ($copy['access_gated_open'] ?? 'Gated — open during the event'), 'text' => 'The gates are opened for visitors during the suggested hours. Follow posted rules and any gate staff.'],
+            'gated_guests' => ['icon' => 'i-lock', 'title' => 'Gated — residents and guests', 'text' => 'Only residents and their invited guests can enter. This map does not grant gate access.'],
+            'private' => ['icon' => 'i-house', 'title' => 'Residents only', 'text' => 'A private event for residents of the neighborhood.'],
             default => null,
         };
     }

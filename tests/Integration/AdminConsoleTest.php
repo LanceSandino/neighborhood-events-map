@@ -86,11 +86,11 @@ final class AdminConsoleTest extends AppTestCase
         $ok = $this->upload('logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="orange"/></svg>', 'image/svg+xml');
         $this->client->request('POST', '/api/admin/community/logo', ['_csrf' => $this->csrf], ['logo' => $ok]);
         self::assertSame(200, $this->code(), (string) $this->client->getResponse()->getContent());
-        $url = $this->json('GET', '/api/community')['branding']['logo_url'];
+        $url = $this->json('GET', '/api/community')['branding']['community_logo_url'];
         self::assertMatchesRegularExpression('~^/branding/logo\.svg\?v=[0-9a-f]{10}$~', $url, 'versioned so a new logo is never served from a cache');
         $replaced = $this->upload('logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3" fill="purple"/></svg>', 'image/svg+xml');
         $this->client->request('POST', '/api/admin/community/logo', ['_csrf' => $this->csrf], ['logo' => $replaced]);
-        self::assertNotSame($url, $this->json('GET', '/api/community')['branding']['logo_url'], 'a replaced logo gets a new URL');
+        self::assertNotSame($url, $this->json('GET', '/api/community')['branding']['community_logo_url'], 'a replaced logo gets a new URL');
         $this->client->request('GET', '/branding/logo.svg');
         self::assertSame(200, $this->code());
         self::assertStringContainsString('sandbox', (string) $this->client->getResponse()->headers->get('Content-Security-Policy'));
@@ -98,7 +98,7 @@ final class AdminConsoleTest extends AppTestCase
         self::assertSame(404, $this->code());
 
         $this->client->request('POST', '/api/admin/community/logo', ['_csrf' => $this->csrf, 'remove' => '1']);
-        self::assertNull($this->json('GET', '/api/community')['branding']['logo_url']);
+        self::assertNull($this->json('GET', '/api/community')['branding']['community_logo_url']);
     }
 
     public function testAddressesAddEditSearchAndCsvUpload(): void

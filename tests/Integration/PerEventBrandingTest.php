@@ -57,12 +57,31 @@ final class PerEventBrandingTest extends AppTestCase
         self::assertSame('/assets/img/favicon.svg', $home->filter('link[rel="icon"]')->attr('href'), 'Halloween keeps its icon');
         self::assertSame('👻 Tiny ghosts. Big adventures.', $home->filter('section.intro h1')->text(), 'Halloween keeps its own headline');
         self::assertStringContainsString('find the candy stops of Fernbrook Glen', $home->filter('section.intro p')->text());
-        self::assertSame('🎃', $home->filter('.brand-icon')->text());
+        self::assertStringEndsWith('#brand-halloween', (string) $home->filter('.brand-icon svg use')->attr('href'), 'its type\'s drawn mark');
         self::assertStringContainsString("Fernbrook Glen's trick-or-treat night", $this->client->request('GET', '/about')->filter('#aboutTitle')->closest('section')->text());
         $this->client->request('GET', '/theme.css');
         self::assertStringContainsString('--brand:#D9652B', (string) $this->client->getResponse()->getContent());
         $tabs = $this->client->request('GET', '/?e='.$ids['lights'])->filter('.event-switch a')->each(static fn (Crawler $a) => $a->text());
-        self::assertSame(['🎃Halloween', '✨Christmas Lights', '🏷️Yard Sale'], $tabs, 'the switcher names every event (its tab labels are the one place another event shows)');
+        self::assertSame(['Halloween', 'Christmas Lights', 'Yard Sale'], $tabs, 'the switcher names every event (its tab labels are the one place another event shows)');
+    }
+
+    /** The eyebrow names the event: "Your Rummage Sale", not the type's "Your garage sale"; the type's words only for a default name. */
+    public function testTheEyebrowUsesTheEventsOwnName(): void
+    {
+        $ids = $this->freshCustomHalloween();
+        $this->db()->executeStatement("UPDATE event_occurrences SET name = 'Community Rummage Sale' WHERE id = :id", ['id' => $ids['sale']]);
+        $this->repo()->reset();
+        $page = $this->client->request('GET', '/?e='.$ids['sale']);
+        self::assertStringEndsWith('Your neighborhood. Your Community Rummage Sale.', $page->filter('section.intro .eyebrow')->text());
+        $this->db()->executeStatement("UPDATE event_occurrences SET name = 'Garage Sale' WHERE id = :id", ['id' => $ids['sale']]);
+        $this->repo()->reset();
+        self::assertSame('Your neighborhood. Your garage sale.', $this->json('GET', '/api/community?e='.$ids['sale'])['community']['subtitle'], 'a default name keeps the type\'s words');
+
+        // An organizer's own subtitle is theirs, whatever the event is called; the console never stores the named form.
+        $this->db()->executeStatement("UPDATE community_settings SET settings = jsonb_set(settings, '{community,subtitle}', '\"Our street, our way\"')");
+        $this->db()->executeStatement("UPDATE event_occurrences SET name = 'Community Rummage Sale' WHERE id = :id", ['id' => $ids['sale']]);
+        $this->repo()->reset();
+        self::assertSame('Our street, our way', $this->json('GET', '/api/community?e='.$ids['sale'])['community']['subtitle']);
     }
 
     public function testEmailsNameTheEventTheyConcernAndCarryNoOtherEventsWords(): void
@@ -81,7 +100,9 @@ final class PerEventBrandingTest extends AppTestCase
         self::assertSame(202, $this->code(), json_encode($r));
         $claim = self::lastMail();
         self::assertSame('Confirm your Fernbrook Glen Christmas Lights listing for 31 Lantern Way', $claim->getSubject(), 'the event of the listing, and its address');
-        self::assertStringContainsString('✨ FERNBROOK GLEN CHRISTMAS LIGHTS', (string) $claim->getHtmlBody(), 'the lights\' own emoji');
+        self::assertStringContainsString('FERNBROOK GLEN CHRISTMAS LIGHTS', (string) $claim->getHtmlBody());
+        self::assertStringContainsString('/assets/img/email/brand-lights.png', (string) $claim->getHtmlBody(), 'the lights\' own drawn mark');
+        self::assertStringContainsString('background:#38597F', (string) $claim->getHtmlBody(), 'and its colour on the button');
         self::assertSame([], self::halloweenText($claim->getSubject().' '.$claim->getTextBody().' '.strip_tags((string) $claim->getHtmlBody())));
 
         // A review request from the sale's page names the sale (a home claimed by someone else).
@@ -102,7 +123,7 @@ final class PerEventBrandingTest extends AppTestCase
         $this->organizer();
         $h = ['X-CSRF-Token' => $this->csrf];
         $types = array_column($this->json('GET', '/api/admin/events')['types'], null, 'key');
-        self::assertSame(['brand_emoji' => '✨', 'headline' => 'Holiday nights.', 'headline_accent' => 'Bright lights.',
+        self::assertSame(['headline' => 'Holiday nights.', 'headline_accent' => 'Bright lights.',
             'intro' => 'Find festive displays, discover quiet viewing options and plan an evening route at your own pace.', 'primary_color' => '#38597F', 'accent_color' => '#CE9D3D',
             'about' => 'A neighborhood map of homes with holiday light displays: their nights, hours and viewing notes, and a suggested viewing order for walking or a drive-by tour.'],
             $types['holiday_lights']['branding'], 'the type\'s defaults, the placeholders of an event\'s branding');
@@ -287,7 +308,7 @@ final class PerEventBrandingTest extends AppTestCase
             fwrite(\STDERR, implode("\n", $ctx[0])."\n");
         }
         if ('holiday_lights' === $type) {
-            $text = str_replace(['🍬 Treats', 'Music, flashing and treats'], '', $text); // the lights' listing option and its group
+            $text = str_replace(['Music, flashing and treats', 'Treats'], '', $text); // the lights' listing option and its group
         }
 
         return self::halloweenText($text);

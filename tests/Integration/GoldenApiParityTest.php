@@ -8,6 +8,7 @@ use App\Command\DemoSeedCommand;
 use App\Community\CommunityBootstrapper;
 use App\Shared\RuntimeConfig;
 use App\Tests\Support\AppTestCase;
+use App\Tests\Support\Glyphs;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
@@ -19,7 +20,9 @@ use Symfony\Component\Console\Tester\CommandTester;
  *   command, demo seed) and requires every key of the baseline, with the same value and in the same relative
  *   order; keys may only be added (event.type in 0.10, the event-scoped keys in 0.11, which the 0.11 fixtures pin in
  *   full; the event's state, tentative and default flags in 0.15, which the 0.15 fixtures pin in full). Environment values are
- *   compared by kind only: the app version, the APP_DEMO switch and each home's updated_at (seed time).
+ *   compared by kind only: the app version, the APP_DEMO switch and each home's updated_at (seed time). One deliberate
+ *   change of values (0.19, D-20261105-01): the baselines' emoji are gone: an `icon` is now a drawn icon's id, words lose
+ *   their glyph, and `branding.brand_emoji` (never drawn again) leaves the answers; everything else stays compared.
  * @dependencies tests/Support/AppTestCase, Community/CommunityBootstrapper, Command/DemoSeedCommand
  */
 final class GoldenApiParityTest extends AppTestCase
@@ -114,6 +117,8 @@ final class GoldenApiParityTest extends AppTestCase
             }
             $expected = json_decode((string) file_get_contents($file), true, 64, \JSON_THROW_ON_ERROR);
             self::assertParity($expected, $actual, $uri);
+            // The event's copy adds its drawn art's ids and the branding the community's logo (0.19); the emoji setting is gone.
+            unset($expected['branding']['brand_emoji'], $actual['branding']['community_logo_url'], $actual['event']['copy']['brand_mark'], $actual['event']['copy']['list_icon']);
             self::assertSame(self::keysDeep($expected), self::keysDeep($actual), "$uri has exactly the 0.15 keys");
         }
         $event011 = array_keys(json_decode((string) file_get_contents(self::GOLDEN_011.'/demo-event.json'), true, 64, \JSON_THROW_ON_ERROR)['event']);
@@ -181,8 +186,15 @@ final class GoldenApiParityTest extends AppTestCase
         $positions = [];
         foreach ($expected as $key => $value) {
             $at = $path.'.'.$key;
+            if ('brand_emoji' === $key) {
+                continue; // the emoji setting no longer leaves the server (D-20261105-01)
+            }
             self::assertArrayHasKey($key, $actual, "$at is still there");
             $positions[] = array_search($key, array_keys($actual), true);
+            if (\in_array($key, ['icon', 'event_icon', 'cta_icon'], true)) {
+                self::assertMatchesRegularExpression('~^i-[a-z0-9-]+$~', (string) $actual[$key], "$at is a drawn icon's id");
+                continue;
+            }
             if (self::isVolatile((string) $key)) {
                 self::assertSame(get_debug_type($value), get_debug_type($actual[$key]), "$at keeps its type");
                 if ('updated_at' === $key) {
@@ -194,7 +206,7 @@ final class GoldenApiParityTest extends AppTestCase
                 self::assertIsArray($actual[$key], "$at is still a list or object");
                 self::assertParity($value, $actual[$key], $at);
             } else {
-                self::assertSame($value, $actual[$key], $at);
+                self::assertSame(\is_string($value) ? trim((string) preg_replace(Glyphs::PATTERN, '', $value)) : $value, $actual[$key], $at);
             }
         }
         $sorted = $positions;

@@ -5,19 +5,19 @@
 <fieldset class="field full">
   <legend class="label">Display styles *</legend>
   <div class="checks">
-    <label class="check-chip"><input type="checkbox" name="styles" value="classic"> ✨ Classic</label>
-    <label class="check-chip"><input type="checkbox" name="styles" value="animated"> 🌟 Animated</label>
-    <label class="check-chip"><input type="checkbox" name="styles" value="synchronized_music"> 🎵 Light show to music</label>
-    <label class="check-chip"><input type="checkbox" name="styles" value="inflatables"> ⛄ Inflatables</label>
-    <label class="check-chip"><input type="checkbox" name="styles" value="walkthrough"> 🎄 Walk-through</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="classic"> {{ icon("i-c9-red") }} Classic</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="animated"> {{ icon('i-animated') }} Animated</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="synchronized_music"> {{ icon("i-synchronized") }} Light show to music</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="inflatables"> {{ icon('i-inflatable') }} Inflatables</label>
+    <label class="check-chip"><input type="checkbox" name="styles" value="walkthrough"> {{ icon('i-walkthrough') }} Walk-through</label>
   </div>
   <span class="error" data-error="styles"></span>
 </fieldset>
 <fieldset class="field full">
   <legend class="label">How visitors may view it</legend>
   <div class="checks">
-    <label class="check-chip"><input type="radio" name="viewing_mode" value="drive_by_only" checked> 🚗 Drive-by only</label>
-    <label class="check-chip"><input type="radio" name="viewing_mode" value="walk_up_welcome"> 🚶 Walk-up welcome</label>
+    <label class="check-chip"><input type="radio" name="viewing_mode" value="drive_by_only" checked> {{ icon('i-car') }} Drive-by only</label>
+    <label class="check-chip"><input type="radio" name="viewing_mode" value="walk_up_welcome"> {{ icon('i-walk') }} Walk-up welcome</label>
   </div>
   <span class="form-caption">{{ et.copy.drive_by_help }}</span>
   <span class="error" data-error="viewing_mode"></span>
@@ -25,10 +25,10 @@
 <fieldset class="field full">
   <legend class="label">Music, flashing and treats</legend>
   <div class="checks">
-    <label class="check-chip"><input type="checkbox" name="music_enabled"> 🎵 Music</label>
-    <label class="check-chip"><input type="checkbox" name="flashing_warning"> ⚡ Flashing or strobing effects</label>
-    <label class="check-chip"><input type="checkbox" name="treats"> 🍬 Treats</label>
-    <label class="check-chip"><input type="checkbox" name="cocoa"> ☕ Hot cocoa</label>
+    <label class="check-chip"><input type="checkbox" name="music_enabled"> {{ icon('i-music') }} Music</label>
+    <label class="check-chip"><input type="checkbox" name="flashing_warning"> {{ icon('i-flashing') }} Flashing or strobing effects</label>
+    <label class="check-chip"><input type="checkbox" name="treats"> {{ icon("i-candy-cane") }} Treats</label>
+    <label class="check-chip"><input type="checkbox" name="cocoa"> {{ icon('i-cocoa') }} Hot cocoa</label>
   </div>
   <span class="form-caption">{{ et.copy.flashing_help }}</span>
 </fieldset>

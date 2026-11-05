@@ -35,8 +35,8 @@ event:
       - "Drive-by homes: please stay in your car."
     route_modes: [walking]          # add driving for a drive-by tour; it needs a configured routing provider too
 # branding: leave it out to get the lights defaults (midnight blue and warm gold, "Holiday nights. Bright lights.");
-# anything you set here (brand_emoji, headline, headline_accent, intro, primary_color, accent_color) is this first
-# event's own branding (ADR 0012); logo and show_locality are the community's. Later events: Organizer → Events.
+# anything you set here (headline, headline_accent, intro, primary_color, accent_color) is this first event's own
+# branding (ADR 0012); a logo is the community's and this event's, show_locality the community's. Later events: Organizer, Events.
 map:
   boundary_file: null               # a reviewed GeoJSON next to this file, or draw it in Organizer → Boundary & zones
   zoom: 16

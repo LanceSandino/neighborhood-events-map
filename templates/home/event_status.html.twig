@@ -13,7 +13,7 @@
 {% block body %}
 <section class="intro">
   <div>
-    <div class="eyebrow">✦ {{ c.community.subtitle }}</div>
+    <div class="eyebrow">{{ icon(et.copy.event_icon) }} {{ c.community.subtitle }}</div>
     <h1>{{ c.branding.headline }} <span>{{ c.branding.headline_accent }}</span></h1>
     <p>{{ c.branding.intro }}{% if c.community.name %} All across {{ c.community.name }}.{% endif %}</p>
   </div>
@@ -21,7 +21,7 @@
 </section>
 
 <section class="event-status{{ closed ? ' is-closed' : ' is-upcoming' }}" aria-labelledby="eventStatusTitle">
-  <span class="event-status-icon" aria-hidden="true">{{ closed ? '🎉' : et.copy.event_icon }}</span>
+  <span class="event-status-icon" aria-hidden="true">{{ icon(closed ? 'i-party' : et.copy.event_icon) }}</span>
   <div class="event-status-body">
     {% if closed %}
     <div class="eyebrow">{{ c.event.name }} · Ended</div>

@@ -26,7 +26,7 @@ export const filters = [
   { key: 'walkUp', quick: false }, { key: 'openTonight', quick: false },
 ];
 
-export const STYLES = { classic: ['✨', 'Classic'], animated: ['🌟', 'Animated'], synchronized_music: ['🎵', 'Light show to music'], inflatables: ['⛄', 'Inflatables'], walkthrough: ['🎄', 'Walk-through'] };
+export const STYLES = { classic: ['i-c9-red', 'Classic'], animated: ['i-animated', 'Animated'], synchronized_music: ['i-synchronized', 'Light show to music'], inflatables: ['i-inflatable', 'Inflatables'], walkthrough: ['i-walkthrough', 'Walk-through'] };
 
 const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
 /** Filter choices besides the toggles: one night of the season ('' = any) and a display style. */
@@ -140,10 +140,10 @@ export function statusChipShown(st, ctx) {
 }
 
 /**
- * One vocabulary for pins, legend and cards: 🎵 Music, 🎄 Walk-through, ⛄ Inflatables, ✨ Lights, in that order. With
- * the Music filter on, music homes show 🎵 first.
+ * One vocabulary for pins, legend and cards: Music, Walk-through, Inflatables, Lights, in that order. With
+ * the Music filter on, music homes show the music icon first.
  */
-const KINDS = { music: ['🎵', 'music'], walkthrough: ['🎄', 'walkthrough'], inflatable: ['⛄', 'inflatable'], lights: ['✨', 'lights'] };
+const KINDS = { music: ['i-music', 'music'], walkthrough: ['i-walkthrough', 'walkthrough'], inflatable: ['i-inflatable', 'inflatable'], lights: ['i-c9-red', 'lights'] };
 function kindOf(h) {
   const styles = d(h).styles || [];
   if (isMusic(h)) return 'music';
@@ -157,29 +157,29 @@ export const pinClass = (h) => KINDS[kindOf(h)][1];
 export function tags(h) {
   const x = d(h);
   const t = (x.styles || []).filter((s) => STYLES[s]).map((s) => ({ icon: STYLES[s][0], text: STYLES[s][1], cls: 'lights' }));
-  t.push(x.viewing_mode === 'walk_up_welcome' ? { icon: '🚶', text: 'Walk-up', cls: 'quiet' } : { icon: '🚗', text: 'Drive-by', cls: 'drive' });
-  t.push(x.flashing_warning ? { icon: '⚡', text: 'Flashing lights', cls: 'strobe' } : { icon: '🕯️', text: 'No flashing reported', cls: 'candy' });
-  if (x.music_enabled) t.push({ icon: '🎵', text: x.fm_frequency ? `Music ${x.fm_frequency} FM` : 'Music', cls: 'music' });
-  if (x.treats) t.push({ icon: '🍬', text: 'Treats', cls: 'drinks' });
-  if (x.cocoa) t.push({ icon: '☕', text: 'Cocoa', cls: 'drinks' });
+  t.push(x.viewing_mode === 'walk_up_welcome' ? { icon: 'i-walk', text: 'Walk-up', cls: 'quiet' } : { icon: 'i-car', text: 'Drive-by', cls: 'drive' });
+  t.push(x.flashing_warning ? { icon: 'i-flashing', text: 'Flashing lights', cls: 'strobe' } : { icon: 'i-no-flashing', text: 'No flashing reported', cls: 'candy' });
+  if (x.music_enabled) t.push({ icon: 'i-music', text: x.fm_frequency ? `Music ${x.fm_frequency} FM` : 'Music', cls: 'music' });
+  if (x.treats) t.push({ icon: 'i-candy-cane', text: 'Treats', cls: 'drinks' });
+  if (x.cocoa) t.push({ icon: 'i-cocoa', text: 'Cocoa', cls: 'drinks' });
   return t;
 }
 
 /** What a stop line of the route adds after the hours. */
-export const routeNote = (h) => `${d(h).viewing_mode === 'walk_up_welcome' ? ' · 🚶 Walk-up' : ' · 🚗 Drive-by'}${d(h).flashing_warning ? ' · ⚡ Flashing' : ''}`;
+export const routeNote = (h) => `${d(h).viewing_mode === 'walk_up_welcome' ? ' · Walk-up' : ' · Drive-by'}${d(h).flashing_warning ? ' · Flashing' : ''}`;
 
 /** Plain-text words the core modules show for this type (they escape them). */
 export const copy = {
   notOpen: 'with no nights left',
   noneOpen: 'No matching homes have nights left this season.',
-  routeEvery: 'Every home that matches your filters, in a suggested order. Skip any with ✕.',
+  routeEvery: 'Every home that matches your filters, in a suggested order. Skip any you don’t want.',
   routeShowingAll: 'Showing every home with nights left.',
   routeNotOpen: 'with no nights left',
-  shareText: 'My Christmas lights tour',
+  shareText: 'My lights tour',
   published: 'Thanks for lighting up the neighborhood!',
   noDays: 'Choose at least one night.',
-  drivingTour: '🚗 Drive-by tour',
-  walking: '🚶 Walk',
+  drivingTour: 'Drive-by tour',
+  walking: 'Walk',
 };
 
 const FLAGS = ['flashing_warning', 'music_enabled', 'treats', 'cocoa'];

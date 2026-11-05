@@ -5,7 +5,7 @@
 {# Cloudflare Web Analytics works only on a site Cloudflare delivers, so either setting means Cloudflare is in front. #}
 {% set cloudflare = cloudflare_proxy or cloudflare_web_analytics %}
 <article class="page-card legal">
-  <div class="eyebrow">🔒 Privacy</div>
+  <div class="eyebrow">{{ icon('i-lock') }} Privacy</div>
   <h1>Privacy notice</h1>
   {% if cloudflare_web_analytics %}
   <p class="legal-lead">This is a free, volunteer-run neighborhood map. It has <b>no advertising and no tracking</b>, counts visits with cookie-free statistics (below), and never sells or shares personal information.</p>

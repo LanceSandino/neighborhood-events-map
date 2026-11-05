@@ -40,8 +40,8 @@ event:
       - "No recalled or prohibited items."
     route_modes: [walking]          # add driving for a driving tour; it needs a configured routing provider too
 # branding: leave it out to get the sale defaults (teal and coral, "Good finds. Close to home."); anything you set here
-# (brand_emoji, headline, headline_accent, intro, primary_color, accent_color) is this first event's own branding
-# (ADR 0012); logo and show_locality are the community's. Later events: Organizer → Events.
+# (headline, headline_accent, intro, primary_color, accent_color) is this first event's own branding
+# (ADR 0012); a logo is the community's and this event's, show_locality the community's. Later events: Organizer, Events.
 map:
   boundary_file: null
   zoom: 16

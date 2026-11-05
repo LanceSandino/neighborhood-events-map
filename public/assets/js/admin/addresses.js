@@ -6,6 +6,7 @@
  *     listings and names that event with its type's mark and status words; the page itself names no event (D-20261031-52).
  */
 import { $, call, esc, flash } from './common.js';
+import { icon } from '../lib/icons.js';
 
 let zones = [];
 let event = null; // the event whose listings the list shows: { id, name, type, icon }
@@ -14,7 +15,7 @@ function shell() {
   $('#admin-addresses').innerHTML = `
     <div class="panel"><div class="toolbar"><input type="search" id="q" placeholder="Search address or owner email" aria-label="Search addresses"><button type="button" class="secondary" id="btnSearch">Search</button><span id="total" class="form-caption"></span></div>
       <div class="table-wrap"><table class="data"><thead><tr><th>Address</th><th>Zone</th><th>Location</th><th>Owner (private)</th><th id="listingHead">Listing</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
-      <div class="pager"><button type="button" class="secondary" id="btnPrev">← Previous</button><span id="pageInfo" class="form-caption"></span><button type="button" class="secondary" id="btnNext">Next →</button></div></div>
+      <div class="pager"><button type="button" class="secondary" id="btnPrev">${icon('i-arrow-left')} Previous</button><span id="pageInfo" class="form-caption"></span><button type="button" class="secondary" id="btnNext">Next ${icon('i-arrow-right')}</button></div></div>
     <div class="panel"><h2>Add an address</h2><form id="addForm" class="form-grid" novalidate>
       <div class="field full"><label for="aAddr">Address</label><input id="aAddr" placeholder="123 Main St"></div>
       <div class="field"><label for="aLat">Latitude</label><input id="aLat" inputmode="decimal"></div>
@@ -61,7 +62,7 @@ async function search() {
   rows = res.addresses;
   event = res.event || null;
   // The listings are one event's: the column names it with its type's mark.
-  $('#listingHead').innerHTML = event ? `<span data-event-section="${esc(event.type)}"><span aria-hidden="true">${esc(event.icon)}</span> ${esc(event.name)} listing</span>` : 'Listing';
+  $('#listingHead').innerHTML = event ? `<span data-event-section="${esc(event.type)}">${icon(event.icon)} ${esc(event.name)} listing</span>` : 'Listing';
   page = 0;
   $('#total').textContent = `${res.total} addresses${rows.length < res.total ? ` · first ${rows.length} shown — refine the search` : ''}`;
   renderPage();

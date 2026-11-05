@@ -199,7 +199,7 @@ test('an organizer closes the season; last season disappears, next year is creat
   await expect(view.locator('html')).toHaveAttribute('data-event-type', 'holiday_lights');
   // Its own look, not the demo's Halloween branding (ADR 0012).
   await expect(view.locator('section.intro h1')).toHaveText('Holiday nights. Bright lights.');
-  await expect(view.locator('.brand-icon')).toHaveText('✨');
+  await expect(view.locator('.brand-icon svg use')).toHaveAttribute('href', /#brand-lights$/);
   await expect(view.locator('#listCount')).toHaveText('0 showing');
   await expect(view.getByRole('navigation', { name: 'Events' }).getByRole('link'), 'the two current events').toHaveCount(2);
   await expect(view.locator('a.past-link')).toBeVisible();
@@ -293,7 +293,7 @@ test('an organizer closes the season; last season disappears, next year is creat
   await page.locator('#evTo').fill(before.ends_at);
   // The Branding section shows Halloween's defaults as placeholders; the demo's own values go in.
   await expect(page.locator('#evHeadline')).toHaveAttribute('placeholder', 'Little ghosts.');
-  for (const [id, key] of [['#evEmoji', 'brand_emoji'], ['#evHeadline', 'headline'], ['#evHeadlineAccent', 'headline_accent'], ['#evPrimary', 'primary_color'],
+  for (const [id, key] of [['#evHeadline', 'headline'], ['#evHeadlineAccent', 'headline_accent'], ['#evPrimary', 'primary_color'],
     ['#evAccent', 'accent_color'], ['#evIntro', 'intro'], ['#evAbout', 'about']]) await page.locator(id).fill(branding[key] || '');
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(page.locator('#flash')).toContainText('Draft saved');
@@ -304,6 +304,6 @@ test('an organizer closes the season; last season disappears, next year is creat
   const restored = (await (await request.get(DEMO + '/api/event')).json()).event;
   expect([restored.type, restored.date, restored.is_default]).toEqual(['halloween', before.date, true]);
   const look = (await (await request.get(DEMO + '/api/community')).json()).branding;
-  expect([look.brand_emoji, look.headline, look.primary_color], 'the demo\'s Halloween branding is back').toEqual([branding.brand_emoji, branding.headline, branding.primary_color]);
+  expect([look.headline, look.primary_color], 'the demo\'s Halloween branding is back').toEqual([branding.headline, branding.primary_color]);
   guard.assertClean();
 });
