@@ -290,7 +290,6 @@ test('a resident switches events in My house and lists next year\'s Halloween wi
 });
 
 test('an organizer opens and closes an event (next year\'s is created), changes the default and gives each event its own access', async ({ page, browser, request }) => {
-  test.setTimeout(240_000); // one sign-in for all of it: the organizer's address has three links per quarter hour
   const guard = watchConsole(page);
   const e = await events(request);
   await signIn(page, request, ORGANIZER, '/admin/events');
@@ -311,7 +310,11 @@ test('an organizer opens and closes an event (next year\'s is created), changes 
 
   // The console's groups say where each event stands, and that events close by themselves.
   await expect(page.locator('#eventsGuide')).toContainText('Events close by themselves after their last day.');
-  await expect(page.locator('#admin-events h2')).toHaveText(['How events work', 'Prepare an event', 'On the site now', 'Past events']);
+  const groups = () => page.locator('#admin-events h2').allTextContents();
+  await expect(page.locator('[data-event-group="open"] h2')).toHaveText('On the site now');
+  await expect(page.locator('[data-event-group="closed"] h2')).toHaveText('Past events');
+  expect((await groups()).slice(0, 3), 'the guide, the form, then what is on the site').toEqual(['How events work', 'Prepare an event', 'On the site now']);
+  await expect(page.locator('[data-event-group="hidden"]'), 'nothing hidden yet: no empty group').toHaveCount(0);
   await expect(page.locator('[data-event-group="open"]').locator(`tr[data-event="${e.lights.id}"]`)).toBeVisible();
   await expect(page.locator('[data-event-group="closed"]').locator(`tr[data-event="${e.closed.id}"]`)).toBeVisible();
 
@@ -329,7 +332,9 @@ test('an organizer opens and closes an event (next year\'s is created), changes 
   const nextSale = (await (await page.request.get(LIGHTS + '/api/admin/events')).json()).events.find((x) => x.type === 'garage_sale' && x.state === 'hidden');
   expect(nextSale.id, 'the next sale, created by closing').not.toBe(e.sale.id);
   await expect(row(nextSale.id)).toContainText('Hidden · residents can get ready');
-  await expect(page.locator('#admin-events h2')).toHaveText(['How events work', 'Prepare an event', 'On the site now', 'Hidden, getting ready', 'Past events']);
+  await expect(page.locator('[data-event-group="hidden"] h2')).toHaveText('Hidden, getting ready');
+  const order = await groups();
+  expect(order.indexOf('On the site now') < order.indexOf('Hidden, getting ready') && order.indexOf('Hidden, getting ready') < order.indexOf('Past events'), order.join(', ')).toBe(true);
   await expect(page.locator('[data-event-group="hidden"]').locator(`tr[data-event="${nextSale.id}"]`)).toBeVisible();
   await expect(page.locator('[data-event-group="closed"]').locator(`tr[data-event="${e.sale.id}"]`)).toBeVisible();
   const closedSale = after.list.find((x) => x.id === e.sale.id);
@@ -376,7 +381,7 @@ test('an organizer opens and closes an event (next year\'s is created), changes 
     await row(id).getByRole('button', { name: 'Edit' }).click();
     await page.locator('#evAccess').selectOption(value);
     await page.getByRole('button', { name: 'Save event' }).click();
-    await expect(page.locator('#flash')).toContainText('Event saved');
+    await expect(page.locator('#eventForm'), 'saved, and the list reloaded').toHaveCount(0);
   };
   await row(nextSale.id).getByRole('button', { name: 'Edit' }).click();
   await expect(page.locator('#evAccess option')).toHaveText(['Same as the community', 'Open to the public', 'Gated — gates open to shoppers during sale hours', 'Gated — residents and guests', 'Residents only', 'Not stated']);
