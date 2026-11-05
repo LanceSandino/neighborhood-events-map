@@ -65,6 +65,9 @@ final class LogoStorageTest extends AppTestCase
         $this->client->request('GET', $newUrl);
         self::assertSame(200, $this->code());
         self::assertSame(self::SVG2, $this->client->getResponse()->getContent());
+        self::assertStringContainsString('immutable', (string) $this->client->getResponse()->headers->get('Cache-Control'), 'its URL changes with its content');
+        $this->client->request('GET', $url);
+        self::assertStringNotContainsString('immutable', (string) $this->client->getResponse()->headers->get('Cache-Control'), 'an old version in the URL is not kept for long');
         self::assertStringContainsString('image/svg+xml', (string) $this->client->getResponse()->headers->get('Content-Type'));
         self::assertStringContainsString('sandbox', (string) $this->client->getResponse()->headers->get('Content-Security-Policy'));
 

@@ -125,9 +125,9 @@ final class PageController extends AbstractController
 
     /** The community's logo, from the database; its URL's ?v= changes with its content. */
     #[Route('/branding/logo.{extension}', name: 'branding', requirements: ['extension' => 'svg|png|jpg|webp'], methods: ['GET'])]
-    public function branding(string $extension, LogoStore $logos): Response
+    public function branding(string $extension, Request $request, LogoStore $logos): Response
     {
-        return $this->logoResponse($logos->load(null), $extension, 'public, max-age=3600');
+        return $this->logoResponse($logos->load(null), $extension, $request, true);
     }
 
     /**
@@ -135,7 +135,7 @@ final class PageController extends AbstractController
      * (D-20261101-01), though residents may see it in My house, and drafts and archived events are organizers' only.
      */
     #[Route('/branding/event-{id}/logo.{extension}', name: 'branding_event', requirements: ['id' => '\d{1,12}', 'extension' => 'svg|png|jpg|webp'], methods: ['GET'])]
-    public function eventBranding(int $id, string $extension, LogoStore $logos, EventOccurrenceRepository $occurrences): Response
+    public function eventBranding(int $id, string $extension, Request $request, LogoStore $logos, EventOccurrenceRepository $occurrences): Response
     {
         $event = $occurrences->find($id);
         $public = null !== $event && $event->isPublic();
@@ -143,15 +143,21 @@ final class PageController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        return $this->logoResponse($logos->load($id), $extension, $public ? 'public, max-age=3600' : 'private, no-store');
+        return $this->logoResponse($logos->load($id), $extension, $request, $public);
     }
 
-    /** @param array{extension:string, type:string, bytes:string}|null $logo */
-    private function logoResponse(?array $logo, string $extension, string $cache): Response
+    /**
+     * A logo with its sandboxing policy. A request with the current version in its URL is cached for a long time, since a
+     * changed logo has another URL; anything else only briefly, and a logo that is not public never.
+     *
+     * @param array{extension:string, type:string, bytes:string, sha256:string}|null $logo
+     */
+    private function logoResponse(?array $logo, string $extension, Request $request, bool $public): Response
     {
         if (null === $logo || $logo['extension'] !== $extension) {
             throw $this->createNotFoundException();
         }
+        $cache = !$public ? 'private, no-store' : (substr($logo['sha256'], 0, 10) === $request->query->get('v') ? 'public, max-age=31536000, immutable' : 'public, max-age=300');
         $r = new Response($logo['bytes'], 200, ['Content-Type' => $logo['type'], 'Cache-Control' => $cache]);
         $r->headers->set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
 

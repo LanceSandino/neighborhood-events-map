@@ -100,6 +100,11 @@ test('an organizer gives an event a logo under Events, its page shows it, and re
   const open = (await (await request.get(LIGHTS + '/api/event')).json()).event;
   await page.locator(`[data-edit="${open.id}"]`).click();
   await expect(page.locator('#evEmoji')).toHaveCount(0);
+  await page.waitForLoadState('networkidle'); // one upload at a time per network (nginx), as for the other uploads
+  if (await page.locator('#evLogoRemove').count()) { // a run that failed halfway left its logo
+    await page.locator('#evLogoRemove').click();
+    await expect(page.locator('#flash')).toContainText('Logo removed');
+  }
   await page.locator('#evLogo').setInputFiles({ name: 'event-logo.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(LOGO) });
   await expect(page.locator('#flash')).toContainText('Logo saved');
   await expect(page.locator('#evLogoField img')).toBeVisible();
@@ -110,6 +115,7 @@ test('an organizer gives an event a logo under Events, its page shows it, and re
   expect(await img.evaluate((el) => el.complete && el.naturalWidth > 0), 'the image draws under the strict policy').toBe(true);
   await page.goto(LIGHTS + '/admin/events');
   await page.locator(`[data-edit="${open.id}"]`).click();
+  await page.waitForLoadState('networkidle');
   await page.locator('#evLogoRemove').click();
   await expect(page.locator('#flash')).toContainText('Logo removed');
   await expect(page.locator('#evLogoField img')).toHaveCount(0);

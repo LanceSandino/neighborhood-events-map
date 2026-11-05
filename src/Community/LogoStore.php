@@ -57,11 +57,11 @@ final class LogoStore
         return null === $meta ? null : 'logo.'.$meta['extension'];
     }
 
-    /** @return array{extension:string, type:string, bytes:string}|null */
+    /** @return array{extension:string, type:string, bytes:string, sha256:string}|null */
     public function load(?int $eventId): ?array
     {
         try {
-            $row = $this->db->fetchAssociative("SELECT extension, encode(content, 'base64') AS content FROM logos WHERE event_id IS NOT DISTINCT FROM CAST(:e AS BIGINT)", ['e' => $eventId]);
+            $row = $this->db->fetchAssociative("SELECT extension, sha256, encode(content, 'base64') AS content FROM logos WHERE event_id IS NOT DISTINCT FROM CAST(:e AS BIGINT)", ['e' => $eventId]);
         } catch (TableNotFoundException) {
             return null;
         }
@@ -70,7 +70,7 @@ final class LogoStore
         }
         $extension = (string) $row['extension'];
 
-        return ['extension' => $extension, 'type' => self::TYPES[$extension], 'bytes' => (string) base64_decode((string) $row['content'], true)];
+        return ['extension' => $extension, 'type' => self::TYPES[$extension], 'bytes' => (string) base64_decode((string) $row['content'], true), 'sha256' => (string) $row['sha256']];
     }
 
     /** Stores a checked logo (Community/BrandingStore::check), replacing the owner's. */
