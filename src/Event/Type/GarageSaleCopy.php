@@ -102,7 +102,7 @@ final class GarageSaleCopy
         'note_help' => 'Notes are public. Phone numbers, emails, payment usernames and web addresses are refused.',
         'publish_help' => 'Listing publishes your street address, sale days, hours, categories and these details on the map. Your email is never shown.',
         // About page
-        'about' => 'A neighborhood map of homes holding a garage sale: their days, hours and categories, and a suggested order of stops for walking or driving. No prices, photos or payments.',
+        'about' => 'A neighborhood map of homes holding a sale: their days, hours and categories, and a suggested order of stops for walking or driving. No prices, photos or payments.',
         'reminders_heading' => 'Sale etiquette',
         // How visitors may reach the homes: the title of the "gated, open during the event" choice.
         'access_gated_open' => 'Gated — open for the sale',

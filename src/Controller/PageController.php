@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\About\ChangelogReader;
-use App\Community\BrandingStore;
+use App\Community\LogoStore;
 use App\Community\BrandPalette;
 use App\Community\CommunityPresenter;
 use App\Community\CommunityRepository;
+use App\Event\EventOccurrenceRepository;
 use App\Event\EventTypeRegistry;
 use App\Listing\ListingRepository;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -123,14 +123,36 @@ final class PageController extends AbstractController
         return new Response(BrandPalette::css($b['primary_color'], $b['accent_color']), 200, ['Content-Type' => 'text/css; charset=utf-8', 'Cache-Control' => 'no-store, private']);
     }
 
-    #[Route('/branding/{name}', name: 'branding', requirements: ['name' => 'logo\.(svg|png|jpg|webp)'], methods: ['GET'])]
-    public function branding(string $name, BrandingStore $store): Response
+    /** The community's logo, from the database; its URL's ?v= changes with its content. */
+    #[Route('/branding/logo.{extension}', name: 'branding', requirements: ['extension' => 'svg|png|jpg|webp'], methods: ['GET'])]
+    public function branding(string $extension, LogoStore $logos): Response
     {
-        $file = $store->find($name);
-        if (null === $file) {
+        return $this->logoResponse($logos->load(null), $extension, 'public, max-age=3600');
+    }
+
+    /**
+     * An event's logo. A visitor gets one only for a public event; a hidden event is exactly an unknown id to them
+     * (D-20261101-01), though residents may see it in My house, and drafts and archived events are organizers' only.
+     */
+    #[Route('/branding/event-{id}/logo.{extension}', name: 'branding_event', requirements: ['id' => '\d{1,12}', 'extension' => 'svg|png|jpg|webp'], methods: ['GET'])]
+    public function eventBranding(int $id, string $extension, LogoStore $logos, EventOccurrenceRepository $occurrences): Response
+    {
+        $event = $occurrences->find($id);
+        $public = null !== $event && $event->isPublic();
+        if (null === $event || (!$public && !$this->isGranted($event->isForResidents() ? 'ROLE_USER' : 'ROLE_ADMIN'))) {
             throw $this->createNotFoundException();
         }
-        $r = new BinaryFileResponse($file['path'], 200, ['Content-Type' => $file['type'], 'Cache-Control' => 'public, max-age=3600']);
+
+        return $this->logoResponse($logos->load($id), $extension, $public ? 'public, max-age=3600' : 'private, no-store');
+    }
+
+    /** @param array{extension:string, type:string, bytes:string}|null $logo */
+    private function logoResponse(?array $logo, string $extension, string $cache): Response
+    {
+        if (null === $logo || $logo['extension'] !== $extension) {
+            throw $this->createNotFoundException();
+        }
+        $r = new Response($logo['bytes'], 200, ['Content-Type' => $logo['type'], 'Cache-Control' => $cache]);
         $r->headers->set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
 
         return $r;

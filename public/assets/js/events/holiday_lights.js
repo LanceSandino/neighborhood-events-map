@@ -175,7 +175,7 @@ export const copy = {
   routeEvery: 'Every home that matches your filters, in a suggested order. Skip any you don’t want.',
   routeShowingAll: 'Showing every home with nights left.',
   routeNotOpen: 'with no nights left',
-  shareText: 'My Christmas lights tour',
+  shareText: 'My lights tour',
   published: 'Thanks for lighting up the neighborhood!',
   noDays: 'Choose at least one night.',
   drivingTour: 'Drive-by tour',

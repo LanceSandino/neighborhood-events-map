@@ -15,7 +15,7 @@ const dates = (e) => (!e.starts_on ? 'dates to be announced' : (e.starts_on === 
 /** One public event, in its own section: its type mark, name, state, dates and homes. */
 function eventRow(e) {
   const homes = e.state === 'open' ? `${e.public} of ${e.opted_in} listed homes on the map` : `${e.opted_in} homes listed`;
-  return `<li data-event-section="${esc(e.type)}"><span aria-hidden="true">${esc(e.type_icon || '')}</span> <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''} · ${esc(STATE[e.state] || e.state)} · ${esc(dates(e))} · ${esc(homes)}</li>`;
+  return `<li data-event-section="${esc(e.type)}">${icon(e.type_icon)} <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''} · ${esc(STATE[e.state] || e.state)} · ${esc(dates(e))} · ${esc(homes)}</li>`;
 }
 
 async function load() {

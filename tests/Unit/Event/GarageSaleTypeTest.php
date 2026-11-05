@@ -140,7 +140,7 @@ final class GarageSaleTypeTest extends TestCase
         self::assertSame([], $t->features());
         $b = $t->defaultBranding();
         self::assertSame(['Good finds.', 'Close to home.', '#178D80', '#E77C5D'], [$b['headline'], $b['headline_accent'], $b['primary_color'], $b['accent_color']]);
-        self::assertSame(['Having a sale?', '🏷️ Your sale stops'], [$t->copy()['cta_title'], $t->copy()['route_title']]);
+        self::assertSame(['Having a sale?', 'Your sale stops'], [$t->copy()['cta_title'], $t->copy()['route_title']]);
         $homes = [['details' => ['categories' => ['free', 'toys'], 'multi_family' => true, 'early_birds_allowed' => false]],
             ['details' => ['categories' => ['tools'], 'multi_family' => false, 'early_birds_allowed' => true]]];
         self::assertSame(['multi_family' => 1, 'early_birds' => 1, 'free' => 1], $t->stats($homes));

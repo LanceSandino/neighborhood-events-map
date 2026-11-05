@@ -158,7 +158,7 @@ a.crumb:hover strong { color: var(--link); }
    control of links (the Appearance panel's look), 44 px targets, scrolling inside its own box when it is wider than
    the screen. The current event is raised and outlined; an event that is not open says so in words. */
 .topline.has-switch { border-bottom: 0; }
-.event-switch-bar { display: flex; align-items: center; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 38px 12px; }
+.event-switch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 38px 12px; }
 .event-switch { display: flex; gap: 4px; width: max-content; max-width: 100%; min-width: 0; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-3); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .event-switch::-webkit-scrollbar { display: none; }
 /* A soft edge where more events are (a mask: only the opacity counts). */

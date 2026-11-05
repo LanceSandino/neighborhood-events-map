@@ -34,9 +34,9 @@ test('the lights theme, hero, season row and words; no safety promise', async ({
   await expect(page.locator('.schedule-row')).toContainText('Dec 1, 2026 – Jan 3, 2027');
   await expect(page.locator('.schedule-row')).toContainText('Most homes: 6–10 PM · Times vary by house');
   await expect(page.locator('#seasonPill')).toHaveText('Tonight');
-  await expect(page.locator('.event-pill')).toHaveText('✨ Dec 1 – Jan 3');
+  await expect(page.locator('.event-pill')).toHaveText('Dec 1 – Jan 3');
   await expect(page.locator('.side-panel b')).toHaveText('Putting up lights?');
-  await expect(page.locator('#routeTitle')).toHaveText('✨ Your lights tour');
+  await expect(page.locator('#routeTitle')).toHaveText('Your lights tour');
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(247, 245, 239)'); // calm cream
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toUpperCase())).toBe('#38597F');
   expect((await page.locator('body').innerText()).toLowerCase()).not.toMatch(/\bsafe for\b|\bseizure.safe\b/);
@@ -94,7 +94,7 @@ test('quick filters and the Filters panel: drive-by, no flashing reported, music
   await expect(page.locator('#mapSelected')).toHaveClass(/open/);
   await expect(page.locator('#mapSelected b')).toHaveText(await card.locator('.card-line b').textContent());
   await expect(page.locator('#mapSelected .card-status')).toHaveText(await card.locator('.card-status').textContent());
-  await expect(page.locator('#mapSelected [data-save]')).toHaveText('♡ Save this stop');
+  await expect(page.locator('#mapSelected [data-save]')).toHaveText('Save this stop');
   await page.reload();
   await expect(page.locator('#style')).toHaveValue('inflatables');
   await page.locator('#btnReset').click();
@@ -236,7 +236,7 @@ test('a resident lists a display: nights, styles, viewing mode, music and statio
   const box = await page.locator('#pinMap .leaflet-overlay-pane path').first().boundingBox();
   // Somewhere in the empty south-east of the outline, never on top of a demo home.
   await page.mouse.click(box.x + box.width * (0.62 + Math.random() * 0.2), box.y + box.height * (0.62 + Math.random() * 0.2));
-  await page.getByRole('button', { name: 'Next: your stop →' }).click();
+  await page.getByRole('button', { name: 'Next: your stop' }).click();
   const form = page.locator('#registerForm');
   await expect(form.locator('fieldset[data-step="2"]')).toBeVisible();
   await expect(form).toContainText('Drive-by only means please do not approach');
@@ -246,13 +246,13 @@ test('a resident lists a display: nights, styles, viewing mode, music and statio
   for (const chip of await form.locator('fieldset[data-step="2"] .check-chip').all()) {
     if (await chip.isVisible()) expect((await chip.boundingBox()).height).toBeGreaterThanOrEqual(44);
   }
-  await page.getByRole('button', { name: 'Next: confirm by email →' }).click();
+  await page.getByRole('button', { name: 'Next: confirm by email' }).click();
   await expect(form.locator('[data-error="styles"]')).toHaveText('Choose at least one display style.');
   await form.locator('label', { hasText: 'Classic' }).first().click();
   await form.locator('input[name="fm_frequency"]').fill('88.7');
-  await page.getByRole('button', { name: 'Next: confirm by email →' }).click();
+  await page.getByRole('button', { name: 'Next: confirm by email' }).click();
   await expect(form.locator('[data-error="fm_frequency"]')).toHaveText('Turn on music to add its radio station, or leave the station empty.');
-  await form.locator('label', { hasText: '🎵 Music' }).click();
+  await form.locator('label', { hasText: /^\s*Music\s*$/ }).click();
   await form.locator('label', { hasText: 'Walk-up welcome' }).click();
   await form.locator('label', { hasText: 'Hot cocoa' }).click();
   await form.locator('label', { hasText: 'Only some nights' }).click();
@@ -262,7 +262,7 @@ test('a resident lists a display: nights, styles, viewing mode, music and statio
   for (const night of await grid.locator('input[name="night"]').all()) {
     if (!['2026-12-24', '2026-12-31', '2027-01-01'].includes(await night.getAttribute('value'))) await night.uncheck();
   }
-  await page.getByRole('button', { name: 'Next: confirm by email →' }).click();
+  await page.getByRole('button', { name: 'Next: confirm by email' }).click();
   await page.locator('#regEmail').fill(email);
   const since = Date.now() - 1000;
   await page.getByRole('button', { name: /Email me the confirmation link/ }).click();
@@ -279,8 +279,8 @@ test('a resident lists a display: nights, styles, viewing mode, music and statio
   // My house fills the nights it picked, then "Off tonight" and "Done for the season".
   await expect(card.locator('input[name="nights_mode"][value="pick"]')).toBeChecked();
   await expect(card.locator('input[name="night"]:checked')).toHaveCount(3);
-  await card.getByRole('button', { name: '🌙 Off tonight' }).click();
-  await expect(card.getByRole('button', { name: '🌙 Off tonight' })).toHaveAttribute('aria-pressed', 'true');
+  await card.getByRole('button', { name: 'Off tonight' }).click();
+  await expect(card.getByRole('button', { name: 'Off tonight' })).toHaveAttribute('aria-pressed', 'true');
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
   let api = (await (await request.get(`${LIGHTS}/api/homes/${mine.id}`)).json()).home;
   expect([api.status, api.status_date]).toEqual(['off_tonight', today]);

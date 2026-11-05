@@ -83,6 +83,10 @@ final class OccurrenceInput
         if (\array_key_exists('settings', $in) && !\array_key_exists('branding', (array) $in['settings']) && [] !== ($current->settings['branding'] ?? [])) {
             $settings['branding'] = $current->settings['branding']; // kept: the client did not send the event's branding
         }
+        if (\array_key_exists('settings', $in) && \array_key_exists('branding', (array) $in['settings']) && \is_string($current->settings['branding']['brand_emoji'] ?? null) && !isset($settings['branding']['brand_emoji'])) {
+            // The console no longer offers the emoji (0.19 draws a mark per type); it stays only for the 0.9 mirror.
+            $settings['branding']['brand_emoji'] = $current->settings['branding']['brand_emoji'];
+        }
         if (\array_key_exists('settings', $in) && !\array_key_exists('access', (array) $in['settings']) && null !== EventAccess::own($current)) {
             $settings['access'] = EventAccess::own($current); // kept likewise
         }

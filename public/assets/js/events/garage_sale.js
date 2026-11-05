@@ -197,7 +197,7 @@ export const copy = {
   routeEvery: 'Every sale that matches your filters, in a suggested order. Skip any you don’t want.',
   routeShowingAll: 'Showing every sale with hours left.',
   routeNotOpen: 'with no sale hours left',
-  shareText: 'My garage sale stops',
+  shareText: 'My sale stops',
   published: 'Thanks for holding a sale!',
   noDays: 'Choose at least one sale day.',
   drivingTour: 'Drive between sales',

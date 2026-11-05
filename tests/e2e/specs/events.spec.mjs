@@ -54,7 +54,7 @@ test('the switcher: the default event at "/", current events by mouse and keyboa
   await page.goto(LIGHTS + '/');
   await expect(page.locator('html')).toHaveAttribute('data-event-type', 'holiday_lights');
   const tabs = page.getByRole('navigation', { name: 'Events' }).getByRole('link');
-  await expect(tabs, 'only current events are tabs').toHaveText(['✨Christmas Lights', '🎃HalloweenSoon', '🏷️Community Rummage SaleSoon']);
+  await expect(tabs, 'only current events are tabs').toHaveText(['Christmas Lights', 'HalloweenSoon', 'Community Rummage SaleSoon']);
   await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
   for (const t of await tabs.all()) expect((await t.boundingBox()).height, 'a 44 px target').toBeGreaterThanOrEqual(44);
   const past = page.locator('a.past-link');
@@ -123,7 +123,7 @@ const visibleWords = (page) => page.evaluate((src) => {
   const doc = document.documentElement.cloneNode(true);
   doc.querySelectorAll('script, style, .event-switch, .event-status-message, #homeCards, #map, #mapSelected, #routeItems').forEach((n) => n.remove());
   const attrs = [...doc.querySelectorAll('[title], [aria-label], [placeholder], [alt]')].map((n) => ['title', 'aria-label', 'placeholder', 'alt'].map((a) => n.getAttribute(a) || '').join(' '));
-  const text = `${doc.textContent} ${attrs.join(' ')}`.replace(/🍬\s*Treats|Music, flashing and treats/g, ''); // the lights' own listing option
+  const text = `${doc.textContent} ${attrs.join(' ')}`.replace(/Treats|Music, flashing and treats/g, ''); // the lights' own listing option
   return [...new Set(text.match(new RegExp(src, 'giu')) || [])];
 }, HALLOWEEN.source);
 
@@ -134,8 +134,8 @@ test('each event has its own branding: the Halloween look stays on Halloween\'s 
     await page.setViewportSize({ width, height: 900 });
     for (const halloween of [e.closed, e.next]) {
       await page.goto(`${LIGHTS}/?e=${halloween.id}`);
-      await expect(page.locator('.intro h1')).toHaveText('👻 Hollow haunts. Big adventures.');
-      await expect(page.locator('.brand-icon')).toHaveText('🎃');
+      await expect(page.locator('.intro h1')).toHaveText('Hollow haunts. Big adventures.');
+      await expect(page.locator('.brand-icon svg use')).toHaveAttribute('href', /#brand-halloween$/);
       expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toUpperCase())).toBe('#E0702B');
     }
     for (const [path, headline, color] of [['/', 'Holiday nights. Bright lights.', '#38597F'], [`/?e=${e.sale.id}`, 'Good finds. Close to home.', '#178D80']]) {
@@ -157,7 +157,7 @@ test('each event has its own branding: the Halloween look stays on Halloween\'s 
 
 // The organizer console is the community's (D-20261031-52): outside an event's own section (data-event-section: its
 // row, summary or form in Events, its listing column, its audit rows) no page shows an event's words, emoji or colours —
-// not the default event's (here the lights: ✨, midnight blue) and not the Halloween's own branding (🎃, 👻, orange).
+// not the default event's (here the lights' midnight blue) and not the Halloween's own branding (its headline, orange).
 const CONSOLE_FORBIDDEN = /ghost|trick[- ]?or[- ]?treat|\btreats?\b|candy|candies|scare|pumpkin|halloween|holiday nights|hollow haunts|🎃|👻|✨/giu;
 test('the organizer console names the community and uses its own colours; event branding stays in each event\'s own section', async ({ page, request }) => {
   const guard = watchConsole(page);
@@ -184,9 +184,9 @@ test('the organizer console names the community and uses its own colours; event 
   }
   // Where an event is in focus it shows: its row in Events with its type's mark, its listing column in Addresses.
   await page.goto(LIGHTS + '/admin/events');
-  await expect(page.locator('.events-table [data-event-section="halloween"]').first()).toContainText('🎃');
+  await expect(page.locator('.events-table [data-event-section="halloween"]').first().locator('svg use').first()).toHaveAttribute('href', /#i-pumpkin$/);
   await page.goto(LIGHTS + '/admin/addresses');
-  await expect(page.locator('#listingHead')).toHaveText('✨ Christmas Lights listing');
+  await expect(page.locator('#listingHead')).toHaveText('Christmas Lights listing');
   guard.assertClean();
 });
 

@@ -216,8 +216,7 @@
    "default_end": "21:00",
    "settings": {
     "branding": {
-     "brand_emoji": "🎃",
-     "headline": "👻 Hollow haunts.",
+     "headline": "Hollow haunts.",
      "intro": "Find the candy, dodge the scares and plan your Maple Hollow route, one porch light at a time.",
      "primary_color": "#E0702B",
      "accent_color": "#5B3F8C",

@@ -112,7 +112,7 @@ final class GarageSaleSeasonTest extends AppTestCase
         self::assertStringContainsString('--brand:#178D80', $this->page('/theme.css'));
         $about = $this->page('/about');
         self::assertStringContainsString('Park on one side of the street', $about);
-        self::assertStringContainsString('🐦 Early birds: not before 7:30 AM', $about);
+        self::assertStringContainsString('Early birds: not before 7:30 AM', $about);
         self::assertStringContainsString('This map sells nothing: prices and payment stay between you and the seller.', $about);
 
         // The organizer enables a provider: the driving tour is offered.

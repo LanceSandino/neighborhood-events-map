@@ -37,6 +37,7 @@ final class CommunityBootstrapper
         private readonly EventTypeRegistry $types,
         private readonly EventOccurrenceRepository $occurrences,
         private readonly Connection $db,
+        private readonly LogoStore $logos,
     ) {
     }
 
@@ -64,13 +65,22 @@ final class CommunityBootstrapper
         }
 
         $logo = null;
+        $checked = null;
         if (\is_string($raw['branding']['logo'] ?? null) && '' !== $raw['branding']['logo']) {
             $logoPath = $this->resolve($dir, $raw['branding']['logo']);
-            $logo = null !== $logoPath ? $this->branding->storeLogo($logoPath) : null;
+            $checked = null !== $logoPath ? $this->branding->check($logoPath) : null;
+            $logo = null !== $checked ? 'logo.'.$checked['extension'] : null;
             $raw['branding']['logo'] = $logo;
+        }
+        // The file's logo is the community's and, like the rest of its 0.9-shape branding, the first event's.
+        if (null !== $checked) {
+            $this->logos->put(null, $checked['extension'], $checked['bytes']);
         }
         $settings = $this->repo->saveSettings($raw, null);
         $first = null !== $eventSettings ? $this->occurrences->defaultEvent() : null;
+        if (null !== $checked && null !== $first) {
+            $this->logos->put($first->id, $checked['extension'], $checked['bytes']);
+        }
         if (null !== $first) {
             // The branding the file gives in its 0.9 shape (top-level branding, community.about) is the first event's
             // (the settings save gave it); event.settings.branding names fields of it explicitly and wins.

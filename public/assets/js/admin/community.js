@@ -3,7 +3,7 @@
  * @description The community's own settings — name, place, access, contact, its branding for every event (logo, the
  *     city under the name) and an optional general About text —, features, zones, registration and routing
  *     (PUT /api/admin/community; the server validates everything) plus logo upload. Each event's name, dates, hours
- *     and branding (emoji, headline, intro, colours, its About text) are edited under Organizer → Events (ADR 0012), so
+ *     and branding (logo, headline, intro, colours, its About text) are edited under Organizer, Events (ADR 0012), so
  *     this page only names the default event (in a section of its own) and sends no event block. Its words are the
  *     community's for every event; the switches only some kinds of event have are grouped under that kind's name
  *     (D-20261031-52).
@@ -73,11 +73,11 @@ function render() {
     </div></div>
     <div class="panel"><h2>Community branding (all events)</h2><div class="form-grid">
       <div class="field"><span class="label">Name</span><label class="check-chip"><input type="checkbox" id="bPlace" ${s.branding.show_locality ? 'checked' : ''}> Show city under the name</label></div>
-      <div class="field"><span class="label">Logo</span><input type="file" id="bLogo" accept=".svg,.png,.jpg,.jpeg,.webp"> ${s.branding.logo ? `<span class="form-caption">Current: ${esc(s.branding.logo)} <button type="button" class="link-button" id="bLogoRemove">Remove</button></span>` : ''}</div>
-    </div><p class="form-caption">The name, subtitle, city, logo, contact and links above show for every event. Each event’s emoji, headline, intro, colours and About text are its own: set them in its Branding section under <a href="/admin/events">Organizer → Events</a>.</p></div>
+      <div class="field"><label for="bLogo">Community logo</label><input type="file" id="bLogo" accept=".svg,.png,.jpg,.jpeg,.webp"> ${s.branding.logo ? `<span class="form-caption">Current: ${esc(s.branding.logo)} <button type="button" class="link-button" id="bLogoRemove">Remove</button></span>` : ''}</div>
+    </div><p class="form-caption">The name, subtitle, city, contact and links above show for every event. The community logo shows in this console, on pages with no event and in sign-in emails. Each event’s logo, headline, intro, colours and About text are its own: set them in its Branding section under <a href="/admin/events">Events</a>.</p></div>
     <div class="panel" data-event-section="default"><h2>Events</h2><div class="form-grid">
       <div class="field"><label for="eType">Event type</label><select id="eType" aria-describedby="eDefault" disabled>${types.map((t) => `<option value="${esc(t.key)}" ${t.key === type.key ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>
-    </div><p class="form-caption" id="eDefault">The front page shows <b>${esc(s.event.name)}</b>${s.event.name === type.name ? '' : ` (${esc(type.name)})`}: ${s.event.starts_on === null ? 'dates to be announced' : `${esc(s.event.starts_on || s.event.date)}${s.event.ends_on && s.event.ends_on !== (s.event.starts_on || s.event.date) ? ` – ${esc(s.event.ends_on)}` : ''}`}, ${esc(s.event.starts_at)}–${esc(s.event.ends_at)}. Change its name, dates, hours and branding, and prepare, open, close or choose the default event, under <a href="/admin/events">Organizer → Events</a>; this version offers ${esc(types.map((t) => t.name).join(', '))}.</p></div>
+    </div><p class="form-caption" id="eDefault">The front page shows <b>${esc(s.event.name)}</b>${s.event.name === type.name ? '' : ` (${esc(type.name)})`}: ${s.event.starts_on === null ? 'dates to be announced' : `${esc(s.event.starts_on || s.event.date)}${s.event.ends_on && s.event.ends_on !== (s.event.starts_on || s.event.date) ? ` – ${esc(s.event.ends_on)}` : ''}`}, ${esc(s.event.starts_at)}–${esc(s.event.ends_at)}. Change its name, dates, hours and branding, and prepare, open, close or choose the default event, under <a href="/admin/events">Events</a>; this version offers ${esc(types.map((t) => t.name).join(', '))}.</p></div>
     <div class="panel"><h2>Features</h2><div class="checks">
       ${SHARED_FEATURES.map(([k, label, id]) => check(id, label, s.features[k])).join('')}
     </div>${types.filter((t) => t.features.length).map((t) => `<fieldset class="type-features" data-event-section="${esc(t.key)}"><legend class="label">${esc(t.name)} maps</legend><div class="checks">
@@ -139,7 +139,7 @@ async function save(e) {
     postal_code: $('#cPostal').value, timezone: $('#cTz').value, gate_notice: $('#cGate').value, contact_url: $('#cContact').value || null,
     access: $('#cAccess').value, general_about: $('#cAbout').value, reminders: lines('#cReminders'),
     links: $$('#linkRows .link-row').map((r) => ({ label: $('[data-l=label]', r).value.trim(), url: $('[data-l=url]', r).value.trim() })).filter((l) => l.label || l.url) });
-  // No event block: the default event keeps its own values (Organizer → Events edits them).
+  // No event block: the default event keeps its own values (Events edits them).
   delete s.event;
   Object.assign(s.branding, { show_locality: $('#bPlace').checked });
   for (const t of types) for (const f of t.features) s.features[f.key] = $(`#feature-${f.key}`).checked;

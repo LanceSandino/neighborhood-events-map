@@ -6,11 +6,12 @@ namespace App\Community;
 
 /**
  * @module Community/BrandingStore
- * @description Stores an organizer-supplied logo (SVG/PNG/JPEG/WebP, ≤ 512 KB) under var/branding
- *     and serves it back with a safe content type. SVGs are served with a sandboxing CSP.
+ * @description Checks an organizer-supplied logo (SVG/PNG/JPEG/WebP, ≤ 512 KB; Community/LogoStore keeps the checked bytes
+ *     in the database) and keeps the file the previous release reads in the `branding` volume (var/branding,
+ *     D-20261105-03): mirror() writes it only when it differs and never fails a request over it.
  *
  * @input file path or uploaded bytes
- * @output stored file name ("logo.svg") or null
+ * @output a checked logo, the stored file name ("logo.svg") or null
  */
 final class BrandingStore
 {
@@ -21,7 +22,14 @@ final class BrandingStore
     {
     }
 
-    public function storeLogo(string $sourcePath, ?string $originalName = null): string
+    /**
+     * Checks a logo file: its extension, size, SVG safety, and that a bitmap is what its extension says with no markup riding along.
+     *
+     * @return array{extension:string, bytes:string}
+     *
+     * @throws ConfigException when the file is refused
+     */
+    public function check(string $sourcePath, ?string $originalName = null): array
     {
         $ext = strtolower(pathinfo($originalName ?? $sourcePath, \PATHINFO_EXTENSION));
         if (!isset(self::TYPES[$ext])) {
@@ -45,16 +53,48 @@ final class BrandingStore
                 throw new ConfigException(['Logo content does not match its file type.']);
             }
         }
+
+        return ['extension' => 'jpeg' === $ext ? 'jpg' : $ext, 'bytes' => $bytes];
+    }
+
+    public function storeLogo(string $sourcePath, ?string $originalName = null): string
+    {
+        $logo = $this->check($sourcePath, $originalName);
         if (!is_dir($this->directory) && !mkdir($this->directory, 0775, true) && !is_dir($this->directory)) {
             throw new \RuntimeException('Cannot create branding directory.');
         }
         foreach (glob($this->directory.'/logo.*') ?: [] as $old) {
             @unlink($old);
         }
-        $name = 'logo.'.('jpeg' === $ext ? 'jpg' : $ext);
-        file_put_contents($this->directory.'/'.$name, $bytes);
+        $name = 'logo.'.$logo['extension'];
+        file_put_contents($this->directory.'/'.$name, $logo['bytes']);
 
         return $name;
+    }
+
+    /**
+     * Keeps the volume file the previous release reads equal to a logo (null: no file). Only a difference writes. A
+     * container without the volume, or a volume it cannot write, leaves things as they are: the database is what this
+     * release shows, and the next change tries again.
+     */
+    public function mirror(?string $extension, ?string $bytes): void
+    {
+        $name = null === $extension ? null : 'logo.'.$extension;
+        foreach (glob($this->directory.'/logo.*') ?: [] as $file) {
+            if (basename($file) !== $name) {
+                @unlink($file);
+            }
+        }
+        if (null === $name || null === $bytes) {
+            return;
+        }
+        $path = $this->directory.'/'.$name;
+        if (is_file($path) && hash_file('sha256', $path) === hash('sha256', $bytes)) {
+            return;
+        }
+        if (is_dir($this->directory) || @mkdir($this->directory, 0775, true)) {
+            @file_put_contents($path, $bytes);
+        }
     }
 
     /** Public URL of a stored logo with a content version, so a replaced logo is never served from a cache. */

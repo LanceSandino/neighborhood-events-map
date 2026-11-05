@@ -81,7 +81,7 @@ final class HolidayLightsTest extends AppTestCase
         self::assertSame(['best_night' => null, 'quiet_hours' => '', 'route_modes' => ['walking']], array_intersect_key($event, ['best_night' => 1, 'quiet_hours' => 1, 'route_modes' => 1]),
             'no drive-by tour without a provider and the event\'s choice');
         self::assertSame('timezone', array_keys($event)[14], 'the shared keys keep their order; the type\'s keys follow');
-        self::assertSame('Your lights tour', trim(str_replace('✨', '', $event['copy']['route_title'])));
+        self::assertSame('Your lights tour', $event['copy']['route_title']);
         $c = $this->json('GET', '/api/community');
         self::assertSame(['Holiday nights.', 'Bright lights.', '#38597F', '#CE9D3D'], [$c['branding']['headline'], $c['branding']['headline_accent'], $c['branding']['primary_color'], $c['branding']['accent_color']]);
         self::assertSame(['homes' => 1, 'music' => 1, 'drive_by' => 0, 'no_flashing' => 1], array_intersect_key($c['stats'], ['homes' => 1, 'music' => 1, 'drive_by' => 1, 'no_flashing' => 1]));
@@ -94,9 +94,9 @@ final class HolidayLightsTest extends AppTestCase
         self::assertStringContainsString('Dec 1, 2026 – Jan 3, 2027', $html, 'the season row');
         self::assertStringContainsString('Most homes: 6–10 PM · Times vary by house', $html);
         self::assertStringContainsString('>Tonight</span>', $html, 'the season pill on Dec 11');
-        self::assertStringContainsString('✨ Dec 1 – Jan 3</a>', $html, 'the top bar badge');
-        self::assertStringContainsString('🎵 Music 88.7 FM', $html);
-        self::assertStringContainsString('🕯️ No flashing reported', $html);
+        self::assertStringContainsString(' Dec 1 – Jan 3</a>', $html, 'the top bar badge');
+        self::assertStringContainsString('Music 88.7 FM', $html);
+        self::assertStringContainsString('No flashing reported', $html);
         self::assertStringNotContainsString('safe for', strtolower(strip_tags($html)), 'no safety promise');
     }
 

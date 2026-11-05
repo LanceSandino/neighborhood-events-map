@@ -73,7 +73,7 @@ final class GarageSaleTest extends AppTestCase
         self::assertSame(['kidsToys', 'furniture', 'tools', 'household', 'electronics', 'free', 'openNow', 'multiFamily', 'earlyBirds'], array_column($event['filters'], 'key'));
         self::assertSame(['timezone', 'days', 'categories', 'early_bird_time', 'route_modes', 'state', 'dates_tentative', 'is_default'], \array_slice(array_keys($event), 14), 'the shared keys keep their order; the type\'s keys follow, then the event\'s state (0.15)');
         self::assertSame([['2027-04-10', '2027-04-11'], 10, null, ['walking']], [$event['days'], \count($event['categories']), $event['early_bird_time'], $event['route_modes']], 'a weekend sale takes its days');
-        self::assertSame('🏷️ Your sale stops', $event['copy']['route_title']);
+        self::assertSame(['Your sale stops', 'i-tag'], [$event['copy']['route_title'], $event['copy']['route_icon']]);
         $c = $this->json('GET', '/api/community');
         self::assertSame(['Good finds.', 'Close to home.', '#178D80', '#E77C5D'], [$c['branding']['headline'], $c['branding']['headline_accent'], $c['branding']['primary_color'], $c['branding']['accent_color']]);
         self::assertSame(['homes' => 1, 'multi_family' => 1, 'early_birds' => 0, 'free' => 0], array_intersect_key($c['stats'], ['homes' => 1, 'multi_family' => 1, 'early_birds' => 1, 'free' => 1]));
@@ -86,14 +86,14 @@ final class GarageSaleTest extends AppTestCase
         self::assertStringContainsString('Most homes: 8 AM–2 PM · Individual hours vary', $html);
         self::assertStringContainsString('>Today</span>', $html, 'the pill on a sale day');
         self::assertStringContainsString('data-before="Coming this spring"', $html);
-        self::assertStringContainsString('🏷️ Apr 10–11</a>', $html, 'the top bar badge');
+        self::assertStringContainsString(' Apr 10–11</a>', $html, 'the top bar badge');
         self::assertStringContainsString('Having a sale?', $html);
         self::assertStringContainsString('Good finds. <span>Close to home.</span>', $html);
         self::assertStringContainsString('data-filter="day1"', $html);
         self::assertStringContainsString('Open Saturday</button>', $html);
         self::assertStringContainsString('Open Sunday</button>', $html);
-        self::assertStringContainsString('🍼 Kids &amp; baby', $html, 'category tags with words');
-        self::assertStringContainsString('🏘️ Multi-family', $html);
+        self::assertStringContainsString('Kids &amp; baby', $html, 'category tags with words');
+        self::assertStringContainsString('Multi-family', $html);
         self::assertStringNotContainsString('data-filter="candy"', $html);
 
         $this->clock->modify('-200 days'); // September: the sale is coming

@@ -24,7 +24,7 @@ body.admin {
 }
 body.admin .primary { box-shadow: 0 5px 13px var(--console-glow); }
 /* The community's mark: its logo, else its initial (never an event's emoji). */
-.admin-top .community-mark { background: var(--orange); color: var(--brand-ink); font-family: Nunito, 'DM Sans', system-ui, sans-serif; font-weight: 900; font-size: 21px; transform: none; }
+.admin-top .community-mark { background: transparent; transform: none; }
 .admin-top .community-mark.has-logo { background: transparent; }
 .admin-top { background: var(--night); color: #fff; display: flex; align-items: center; gap: 18px; padding: 12px 22px; flex-wrap: wrap; }
 .admin-top .brand { padding: 0; }
@@ -89,7 +89,9 @@ pre.json { background: var(--surface-3); border: 1px solid var(--border); border
 /* Organizer → Events: the default event's mark and the list of public events (ADR 0011). */
 .badge { display: inline-block; padding: 1px 8px; border: 1px solid var(--warm-border); border-radius: 999px; background: var(--warm-soft); color: var(--warm-text); font-size: 11px; font-weight: 900; letter-spacing: .3px; vertical-align: 1px; }
 .event-summary { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 4px; }
-/* Organizer → Events: an event's own branding (ADR 0012); a colour is a text field (empty: the type's default) and a picker. */
+/* Organizer, Events: an event's own branding (ADR 0012); a colour is a text field (empty: the type's default) and a picker. */
+.logo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.logo-thumb { width: 48px; height: 48px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); padding: 4px; }
 .brand-fields { border-top: 1px solid var(--border-soft); padding-top: 12px; margin-top: 4px; }
 .brand-fields > legend.label { font-size: 14px; padding-right: 8px; margin-bottom: 0; }
 .color-row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; align-items: center; }

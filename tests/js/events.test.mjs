@@ -1,6 +1,7 @@
 // Event-type modules in the browser (ROADMAP Stage 1): the registry by key, and Halloween parity — filters, tags,
 // symbols, pins, cards, statuses and filter normalization through the Halloween module give exactly what the 0.9
-// libraries gave (frozen in tests/js/legacy/) for 400 seeded random homes, filters and moments.
+// libraries gave (frozen in tests/js/legacy/) for 400 seeded random homes, filters and moments, with the drawn icons of
+// 0.19 where 0.9 had an emoji (drawn() maps one to the other; D-20261105-01).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { eventType, eventTypeKeys, DEFAULT_EVENT_TYPE } from '../../public/assets/js/events/index.js';
@@ -11,6 +12,15 @@ import { tagsHtml, symbolOf, pinClass, pinHtml, cardHtml, selectedHtml } from '.
 import * as old from './legacy/filters.js';
 import * as oldTime from './legacy/time.js';
 import * as oldRender from './legacy/render.js';
+import { icon } from '../../public/assets/js/lib/icons.js';
+
+const ICON = { '👻': 'i-ghost', '🧩': 'i-sensory', '🍺': 'i-adult', '🍬': 'i-candy', '🔦': 'i-flashing', '🔊': 'i-loud', '👶': 'i-stroller', '😱': 'i-scare-big', '🎃': 'i-scare-mild', '♥': 'i-heart-filled', '♡': 'i-heart', '📝': 'i-note', '×': 'i-close' };
+const GLYPH = new RegExp(`[${Object.keys(ICON).join('')}]`, 'gu');
+/** 0.9's markup with the 0.19 art: an icon is its own aria-hidden element, so the span that hid the emoji is gone. */
+const drawn = (html) => String(html)
+  .replace(/<span aria-hidden="true" class="teal-pumpkin">🎃<\/span>/gu, icon('i-pumpkin-teal'))
+  .replace(/<span aria-hidden="true">(\p{Extended_Pictographic})<\/span>/gu, (m, g) => (ICON[g] ? icon(ICON[g]) : m))
+  .replace(GLYPH, (g) => icon(ICON[g]));
 
 /** A small seeded generator (mulberry32), so every run checks the same cases. */
 function rng(seed) {
@@ -71,14 +81,14 @@ test('400 seeded homes: filters, statuses, symbols, tags, pins and cards match 0
     if (old.matches(h, f, ctx)) shown += 1;
     assert.deepEqual(statusOf(h, typed), oldTime.statusOf(h, ctx));
     assert.deepEqual(statusOf(h), oldTime.statusOf(h));
-    assert.equal(symbolOf(h, focus, halloween), oldRender.symbolOf(h, focus));
+    assert.equal(symbolOf(h, focus, halloween), ICON[oldRender.symbolOf(h, focus)]);
     assert.equal(pinClass(h, focus, halloween), oldRender.pinClass(h, focus));
-    assert.equal(tagsHtml(h, halloween), oldRender.tagsHtml(h));
+    assert.equal(tagsHtml(h, halloween), drawn(oldRender.tagsHtml(h)));
     const pin = { dim: coin(), number: pick([undefined, 3]), focus };
-    assert.equal(pinHtml(h, { ...pin, type: halloween }), oldRender.pinHtml(h, pin));
+    assert.equal(pinHtml(h, { ...pin, type: halloween }), drawn(oldRender.pinHtml(h, pin)));
     const opts = { saved: coin(), active: coin(), focus };
-    assert.equal(cardHtml(h, typed, opts), oldRender.cardHtml(h, ctx, opts), `card #${i}`);
-    assert.equal(selectedHtml(h, typed, opts.saved), oldRender.selectedHtml(h, ctx, opts.saved), `selected #${i}`);
+    assert.equal(cardHtml(h, typed, opts), drawn(oldRender.cardHtml(h, ctx, opts)), `card #${i}`);
+    assert.equal(selectedHtml(h, typed, opts.saved), drawn(oldRender.selectedHtml(h, ctx, opts.saved)), `selected #${i}`);
   }
   assert.ok(shown > 20 && shown < 400, `the matrix shows some homes and hides others (${shown})`);
 });
@@ -87,8 +97,8 @@ test('pins match 0.9 for every dim, number and focus', () => {
   for (let i = 1; i <= 100; i++) {
     const h = randomHome(i);
     for (const dim of [false, true]) for (const number of [undefined, 7]) for (const focus of [{}, { adult: true }, { lowSensory: true }, { candy: true }]) {
-      assert.equal(pinHtml(h, { dim, number, focus, type: halloween }), oldRender.pinHtml(h, { dim, number, focus }));
-      assert.equal(pinHtml(h, { dim, number, focus }), oldRender.pinHtml(h, { dim, number, focus }));
+      assert.equal(pinHtml(h, { dim, number, focus, type: halloween }), drawn(oldRender.pinHtml(h, { dim, number, focus })));
+      assert.equal(pinHtml(h, { dim, number, focus }), drawn(oldRender.pinHtml(h, { dim, number, focus })));
     }
   }
 });
@@ -116,8 +126,8 @@ test('choice counts per toggle and zone are the 0.9 counts', () => {
 });
 
 test('route notes, open and visit-at rules come from the module', () => {
-  assert.equal(halloween.routeNote({ low_noise: true, flashing_lights: false, loud_audio: false, jump_scares: false, scare_level: 'gentle' }), ' · 🧩 Sensory-friendly');
-  assert.equal(halloween.routeNote({ low_noise: false, jump_scares: false, scare_level: 'intense' }), ' · 👻 Big scares');
+  assert.equal(halloween.routeNote({ low_noise: true, flashing_lights: false, loud_audio: false, jump_scares: false, scare_level: 'gentle' }), ' · Sensory-friendly');
+  assert.equal(halloween.routeNote({ low_noise: false, jump_scares: false, scare_level: 'intense' }), ' · Big scares');
   assert.equal(halloween.isOpen({ status: 'active' }), true);
   assert.equal(halloween.isOpen({ status: 'out_of_candy' }), false);
   assert.equal(halloween.offForTheDay({ status: 'done' }), true);

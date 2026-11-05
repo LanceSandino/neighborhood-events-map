@@ -26,7 +26,7 @@ use App\Shared\RuntimeConfig;
  *     event's effective access, and an event with its own access names it (`event.access`); the community's access notes
  *     are written for its own access, so an event with a different one leaves them out (D-20261104-05).
  *
- * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Event/EventSettingsType, Event/EventAccess, Event/PublicEvents,
+ * @dependencies Community/CommunityConfig, Community/LogoStore, Event/EventTypeRegistry, Event/EventType, Event/EventSettingsType, Event/EventAccess, Event/PublicEvents,
  *     Routing/RoutingProviderInterface, Shared/RuntimeConfig
  */
 final class CommunityPresenter
@@ -35,7 +35,7 @@ final class CommunityPresenter
         private readonly RuntimeConfig $config,
         private readonly RoutingProviderInterface $routing,
         private readonly string $appVersion,
-        private readonly BrandingStore $branding,
+        private readonly LogoStore $logos,
         private readonly EventTypeRegistry $types,
         private readonly PublicEvents $events,
     ) {
@@ -62,6 +62,9 @@ final class CommunityPresenter
         $community = array_intersect_key($s['community'] + ['about' => '', 'access' => 'unspecified', 'links' => [], 'contact_url' => null, 'gate_notice' => ''],
             array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links']));
         $community['access'] = $c->access();
+        if (isset($community['subtitle']) && \is_string($community['subtitle'])) {
+            $community['subtitle'] = TypeDefaults::subtitle($community['subtitle'], $type, $c->event?->name, $this->types->enabled());
+        }
         if ($c->access() !== $c->communityAccess()) {
             $community['gate_notice'] = ''; // never "residents only past the gate" under "open to the public"
         }
@@ -71,8 +74,10 @@ final class CommunityPresenter
             'community' => $community + ['reminders' => ($s['community']['reminders'] ?? []) ?: $type->copy()['reminders']],
             'event' => $this->event($c, $type),
             'branding' => [
-                'logo_url' => $this->branding->url($s['branding']['logo']),
-            ] + array_intersect_key($s['branding'], array_flip(['primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality'])),
+                // An event's page shows its own logo (else its type's drawn mark); without an event, the community's.
+                'logo_url' => $this->logos->url($c->event?->id),
+            ] + array_intersect_key($s['branding'], array_flip(['primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality']))
+              + ['community_logo_url' => $this->logos->url(null)],
             // Nothing of a boundary that is not approved yet is published, not even its extent: until then the
             // map opens on the configured center (or the boundary's middle) and zoom.
             'map' => [

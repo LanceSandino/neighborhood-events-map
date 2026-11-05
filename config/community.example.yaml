@@ -30,7 +30,6 @@ event:
 # and are branded in Organizer → Events. Leave a field out for the type's default.
 branding:
   logo: null                        # optional path to SVG/PNG next to this file (≤ 512 KB)
-  brand_emoji: "🎃"
   primary_color: "#F07936"
   accent_color: "#524077"
   headline: "Little ghosts."

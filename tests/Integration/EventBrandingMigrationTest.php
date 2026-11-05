@@ -13,8 +13,9 @@ use App\Tests\Support\RunsMigrations;
  * @description Per-event branding (migrations/Version20261031000004, ADR 0012) on the upgrade paths production takes.
  *   From a 0.15 database whose community kept its own Halloween branding with Halloween, Christmas lights and a yard
  *   sale open: every Halloween event takes the custom values (only those: built-in defaults stay defaults), the
- *   Halloween pages render exactly as 0.15.0-beta.1 rendered them (tests/fixtures/golden/0.15.0-beta.1/branding-halloween.json,
- *   captured from that release on the same data), the lights and the sale show their type's own words and colours, and
+ *   Halloween pages render as 0.15.0-beta.1 rendered them with the drawn art of 0.19 in place of its emoji
+ *   (tests/fixtures/golden/0.19.0-beta.1/branding-halloween.json, written from the same data; NHM_WRITE_GOLDEN=1 rewrites
+ *   it after a deliberate change), the lights and the sale show their type's own words and colours, and
  *   the stored community keys the 0.9 image reads still hold the Halloween branding; down restores the community keys
  *   from the Halloween the 0.9 image shows (the newest open or closed one) and removes the events' branding, and up
  *   again gives the same result. From a 0.9 database
@@ -28,7 +29,7 @@ final class EventBrandingMigrationTest extends AppTestCase
 
     private const V015 = 'DoctrineMigrations\Version20261031000003';
     private const V09 = 'DoctrineMigrations\Version20261021000001';
-    private const GOLDEN = __DIR__.'/../fixtures/golden/0.15.0-beta.1/branding-halloween.json';
+    private const GOLDEN = __DIR__.'/../fixtures/golden/0.19.0-beta.1/branding-halloween.json';
     /** The event branding the migration gives the Halloween events: the custom values of CUSTOM_BRANDING and the About text. */
     private const MOVED = ['headline' => '👻 Tiny ghosts.', 'intro' => 'Grab a bucket, follow the porch lights and find the candy stops of Fernbrook Glen — skip the scares if you like.',
         'primary_color' => '#D9652B', 'about' => self::CUSTOM_ABOUT];
@@ -81,13 +82,44 @@ final class EventBrandingMigrationTest extends AppTestCase
         self::assertSame(self::sorted(self::MOVED), $this->branding($halloween), 'every migration in order: the open Halloween has the custom branding');
         $golden = json_decode((string) file_get_contents(self::GOLDEN), true, 64, \JSON_THROW_ON_ERROR);
         $home = $this->client->request('GET', '/');
-        self::assertSame($golden['home']['intro'], $home->filter('section.intro')->outerHtml());
-        self::assertSame($golden['home']['brand'], $home->filter('a.brand')->outerHtml());
+        self::assertSame($golden['home']['intro'], self::stable($home->filter('section.intro')->outerHtml()));
+        self::assertSame($golden['home']['brand'], self::stable($home->filter('a.brand')->outerHtml()));
         $this->client->request('GET', '/theme.css');
         self::assertSame($golden['theme_css'], (string) $this->client->getResponse()->getContent());
         $stored = $this->storedSettings();
         self::assertSame(self::sorted(self::CUSTOM_BRANDING), self::sorted(array_intersect_key($stored['branding'], self::CUSTOM_BRANDING)), 'the keys the 0.9 image reads keep the Halloween branding');
         self::assertSame(self::CUSTOM_ABOUT, $stored['community']['about']);
+    }
+
+    /** Rendered markup without the asset fingerprint, which changes with every file. */
+    private static function stable(string $html): string
+    {
+        return (string) preg_replace('~/assets/v[A-Za-z0-9._+-]+/~', '/assets/vX/', $html);
+    }
+
+    /**
+     * The fixture of the upgraded Halloween's pages, written from this data with NHM_WRITE_GOLDEN=1 after a deliberate change.
+     *
+     * @return array<string,mixed>
+     */
+    private function renderedGolden(): array
+    {
+        if ('1' === getenv('NHM_WRITE_GOLDEN')) {
+            $home = $this->client->request('GET', '/');
+            $golden = ['home' => ['title' => $home->filter('title')->text(), 'description' => $home->filter('meta[name="description"]')->attr('content'),
+                'brand' => self::stable($home->filter('a.brand')->outerHtml()), 'intro' => self::stable($home->filter('section.intro')->outerHtml()), 'side_panel' => $home->filter('.side-panel')->text()]];
+            $about = $this->client->request('GET', '/about');
+            $golden['about'] = ['title' => $about->filter('title')->text(), 'eyebrow' => self::stable($about->filter('article.about .eyebrow')->outerHtml()),
+                'lead' => $about->filter('article.about .legal-lead')->outerHtml(), 'about_section' => $about->filter('#aboutTitle')->closest('section')->outerHtml()];
+            $this->client->request('GET', '/theme.css');
+            $golden['theme_css'] = (string) $this->client->getResponse()->getContent();
+            $api = $this->json('GET', '/api/community');
+            $golden['api'] = ['branding' => $api['branding'], 'about' => $api['community']['about'], 'subtitle' => $api['community']['subtitle']];
+            @mkdir(\dirname(self::GOLDEN), 0o755, true);
+            file_put_contents(self::GOLDEN, json_encode($golden, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE)."\n");
+        }
+
+        return json_decode((string) file_get_contents(self::GOLDEN), true, 64, \JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -104,17 +136,17 @@ final class EventBrandingMigrationTest extends AppTestCase
         self::assertNull($this->branding($ids['sale']));
         self::assertSame($stored, $this->storedSettings(), 'the community keys stay as the 0.9 image reads them');
 
-        // Halloween renders exactly as 0.15.0-beta.1 did.
-        $golden = json_decode((string) file_get_contents(self::GOLDEN), true, 64, \JSON_THROW_ON_ERROR);
+        // Halloween renders as 0.15.0-beta.1 did, with the drawn art of 0.19.
+        $golden = $this->renderedGolden();
         $home = $this->client->request('GET', '/');
         self::assertSame($golden['home']['title'], $home->filter('title')->text());
         self::assertSame($golden['home']['description'], $home->filter('meta[name="description"]')->attr('content'));
-        self::assertSame($golden['home']['brand'], $home->filter('a.brand')->outerHtml());
-        self::assertSame($golden['home']['intro'], $home->filter('section.intro')->outerHtml());
+        self::assertSame($golden['home']['brand'], self::stable($home->filter('a.brand')->outerHtml()));
+        self::assertSame($golden['home']['intro'], self::stable($home->filter('section.intro')->outerHtml()));
         self::assertSame($golden['home']['side_panel'], $home->filter('.side-panel')->text());
         $about = $this->client->request('GET', '/about');
         self::assertSame($golden['about']['title'], $about->filter('title')->text());
-        self::assertSame($golden['about']['eyebrow'], $about->filter('article.about .eyebrow')->outerHtml());
+        self::assertSame($golden['about']['eyebrow'], self::stable($about->filter('article.about .eyebrow')->outerHtml()));
         self::assertSame($golden['about']['lead'], $about->filter('article.about .legal-lead')->outerHtml());
         self::assertSame($golden['about']['about_section'], $about->filter('#aboutTitle')->closest('section')->outerHtml());
         $this->client->request('GET', '/theme.css');
@@ -123,9 +155,9 @@ final class EventBrandingMigrationTest extends AppTestCase
         self::assertSame($golden['api'], ['branding' => $api['branding'], 'about' => $api['community']['about'], 'subtitle' => $api['community']['subtitle']], '/api/community: same values in the same order');
 
         // The lights and the sale show their own type's branding and About text.
-        foreach (['lights' => ['✨', 'Holiday nights.', 'Bright lights.', '#38597F', 'holiday light displays'], 'sale' => ['🏷️', 'Good finds.', 'Close to home.', '#178D80', 'holding a garage sale']] as $name => [$emoji, $headline, $accent, $color, $words]) {
+        foreach (['lights' => ['Holiday nights.', 'Bright lights.', '#38597F', 'holiday light displays'], 'sale' => ['Good finds.', 'Close to home.', '#178D80', 'holding a sale']] as $name => [$headline, $accent, $color, $words]) {
             $c = $this->json('GET', '/api/community?e='.$ids[$name]);
-            self::assertSame([$emoji, $headline, $accent, $color], [$c['branding']['brand_emoji'], $c['branding']['headline'], $c['branding']['headline_accent'], $c['branding']['primary_color']], $name);
+            self::assertSame([$headline, $accent, $color], [$c['branding']['headline'], $c['branding']['headline_accent'], $c['branding']['primary_color']], $name);
             self::assertSame('', $c['community']['about'], "$name: no About text of its own and no general one");
             self::assertStringContainsString($words, (string) $this->client->request('GET', '/about?e='.$ids[$name])->filter('#aboutTitle')->closest('section')->text(), "$name: the type's built-in About text");
             $this->client->request('GET', '/theme.css?e='.$ids[$name]);

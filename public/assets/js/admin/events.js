@@ -6,7 +6,7 @@
  *     Christmas lights November 1 to January 1, a sale's dates to be announced), edit (name, dates or "to be
  *     announced", tentative, hours, who may come — the event's own access in its type's words, or the community's,
  *     D-20261104-05 —, rules, the thank-you message, the type's own settings and the event's own branding —
- *     emoji, headline, intro, colours and About text, each optional with the type's default as its placeholder, ADR 0012),
+ *     its logo (upload and remove, saved at once, D-20261105-03), headline, intro, colours and About text, each optional with the type's default as its placeholder, ADR 0012),
  *     preview a draft or a hidden event (a public event: its page), hide a draft or an upcoming event (residents get
  *     ready in My house, visitors see nothing; D-20261101-01) or create one hidden, announce a draft or a hidden event
  *     (upcoming), open, close (the confirmation shows the thank-you text, that next year's event is created hidden and
@@ -15,10 +15,11 @@
  *     archived event's listings. Several events may be on at once, one of each kind. Each event's row, summary and form
  *     is its own section (data-event-section) with its type's mark: the one place in the console an event's words and
  *     branding show (D-20261031-52). The server checks everything.
- * @dependencies admin/common.js, lib/api.js
+ * @dependencies admin/common.js, lib/api.js, lib/icons.js
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
 import { csrfToken } from '../lib/api.js';
+import { icon } from '../lib/icons.js';
 
 let data = null;
 let editing = null; // the event whose form is open (null: a new draft)
@@ -71,11 +72,17 @@ function form(e) {
       <span class="form-caption">Leave it empty for the default, which names next year's dates. Shown instead of homes once the event is closed.</span></div>
     <div class="field full">${typeFields(type, e)}</div>
     <fieldset class="field full brand-fields" aria-describedby="evBrandHelp"><legend class="label">Branding of this event</legend>
-      <p class="form-caption" id="evBrandHelp">Every field is optional: an empty field uses the built-in look of this kind of event, shown in grey. The community’s name, logo and links are the same for every event (Community &amp; branding).</p>
+      <p class="form-caption" id="evBrandHelp">Every field is optional: an empty field uses the built-in look of this kind of event, shown in grey. The community’s name and links are the same for every event (Community &amp; branding).</p>
       <div class="form-grid" id="evBrandFields">${brandFields(type, e)}</div>
       <p class="form-caption">${previewLink(e)}</p></fieldset>
     <div class="field full"><div class="modal-actions"><button type="button" class="secondary" id="evCancel">Cancel</button><button type="submit" class="primary">${e ? 'Save event' : 'Save draft'}</button></div></div>
   </form>`;
+}
+
+/** The event's logo: shown on its pages and emails instead of the type's drawn mark. Saved as soon as it is chosen; a new event is saved first. */
+function logoField(e) {
+  if (!e) return '<div class="field full" id="evLogoField"><span class="label">Logo</span><span class="form-caption">Save the draft first, then add its logo. Until then its pages show the drawn mark of this kind of event.</span></div>';
+  return `<div class="field full" id="evLogoField"><label for="evLogo">Logo</label><div class="logo-row">${e.logo_url ? `<img class="logo-thumb" src="${esc(e.logo_url)}" alt="Current logo">` : ''}<input type="file" id="evLogo" data-event="${e.id}" accept=".svg,.png,.jpg,.jpeg,.webp">${e.logo_url ? `<button type="button" class="link-button" id="evLogoRemove" data-event="${e.id}">Remove</button>` : ''}</div><span class="form-caption">SVG, PNG, JPEG or WebP, up to 512 KB. Without one, this event’s pages show the drawn mark of its kind. Saved as soon as you choose it.</span></div>`;
 }
 
 /** The event's own branding; each field shows the type's default as its placeholder (an empty field keeps it). */
@@ -84,7 +91,7 @@ function brandFields(type, e) {
   const d = (typeOf(type) || {}).branding || {};
   const text = (id, key, label, max) => `<div class="field"><label for="${id}">${label}</label><input id="${id}" data-brand="${key}" maxlength="${max}" value="${esc(b[key] || '')}" placeholder="${esc(d[key] || '')}"></div>`;
   const color = (id, key, label) => `<div class="field"><label for="${id}">${label}</label><div class="color-row"><input id="${id}" data-brand="${key}" maxlength="7" spellcheck="false" autocomplete="off" value="${esc(b[key] || '')}" placeholder="${esc(d[key] || '')}" aria-describedby="${id}Help"><input type="color" id="${id}Pick" value="${esc((b[key] || d[key] || '#000000').toLowerCase())}" aria-label="Pick the ${label.toLowerCase()}"></div><span class="form-caption" id="${id}Help">Like ${esc(d[key] || '#38597F')}; text on it stays readable.</span></div>`;
-  return [text('evEmoji', 'brand_emoji', 'Emoji', 8), text('evHeadline', 'headline', 'Headline', 40), text('evHeadlineAccent', 'headline_accent', 'Headline (accent part)', 40),
+  return [logoField(e), text('evHeadline', 'headline', 'Headline', 40), text('evHeadlineAccent', 'headline_accent', 'Headline (accent part)', 40),
     color('evPrimary', 'primary_color', 'Main colour'), color('evAccent', 'accent_color', 'Accent colour'),
     `<div class="field full"><label for="evIntro">Intro text</label><textarea id="evIntro" data-brand="intro" maxlength="280" placeholder="${esc(d.intro || '')}">${esc(b.intro || '')}</textarea></div>`,
     `<div class="field full"><label for="evAbout">About this event</label><textarea id="evAbout" data-brand="about" maxlength="1500" placeholder="${esc(d.about || '')}">${esc(b.about || '')}</textarea><span class="form-caption">Shown on the event’s About page; empty: the neighborhood’s general text, or the built-in one. Blank lines start a new paragraph.</span></div>`].join('');
@@ -144,7 +151,7 @@ function row(e) {
   if (e.state !== 'archived') a.push(`<button type="button" class="secondary" data-archive="${e.id}">Archive</button>`);
   a.push(`<form class="inline-form" method="post" action="/api/admin/events/${e.id}/export"><input type="hidden" name="_csrf" value="${esc(csrfToken())}"><button type="submit" class="secondary">Export CSV</button></form>`);
   if (e.state === 'archived' && e.opted_in > 0) a.push(`<button type="button" class="danger" data-purge="${e.id}">Delete listings</button>`);
-  return `<tr data-event="${e.id}" data-event-section="${esc(e.type)}"><td><span aria-hidden="true">${esc(e.type_icon || '')}</span> <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''}<br><span class="form-caption">${esc(e.type_name)}${offered ? '' : ' · not offered by this version'}${ownAccess(e) ? ` · ${esc(ownAccess(e))}` : ''}</span></td>
+  return `<tr data-event="${e.id}" data-event-section="${esc(e.type)}"><td>${icon(e.type_icon)} <b>${esc(e.name)}</b>${e.is_default ? ' <span class="badge">Default</span>' : ''}<br><span class="form-caption">${esc(e.type_name)}${offered ? '' : ' · not offered by this version'}${ownAccess(e) ? ` · ${esc(ownAccess(e))}` : ''}</span></td>
     <td class="nowrap">${esc(dates(e))}<br><span class="form-caption">${esc(e.default_start)}–${esc(e.default_end)}</span></td>
     <td>${esc(STATE[e.state] || e.state)}${e.state === 'open' && e.activated_at ? `<br><span class="form-caption">since ${esc(fmtDate(e.activated_at))}</span>` : ''}${e.state === 'closed' && e.closed_at ? `<br><span class="form-caption">since ${esc(fmtDate(e.closed_at))}</span>` : ''}</td>
     <td>${e.opted_in}</td><td>${e.state === 'open' ? e.public : '—'}</td><td><div class="row-actions">${a.join('')}</div></td></tr>`;
@@ -249,6 +256,29 @@ function syncDates() {
   $('#evStart').previousElementSibling.textContent = oneDay(type) ? 'Date *' : 'First day *';
 }
 
+/** Choosing or removing a logo saves it at once and redraws only its own field, so what is typed elsewhere in the form stays. */
+function bindLogo() {
+  const send = async (fd, done) => {
+    fd.append('event', String(editing.id));
+    const r = await call('/api/admin/community/logo', { method: 'POST', body: fd });
+    editing.logo_url = r.url;
+    $('#evLogoField').outerHTML = logoField(editing);
+    flash(done);
+  };
+  $('#evBrandFields').addEventListener('change', (ev) => {
+    if (ev.target.id !== 'evLogo' || !ev.target.files[0]) return;
+    const fd = new FormData();
+    fd.append('logo', ev.target.files[0]);
+    send(fd, 'Logo saved.');
+  });
+  $('#evBrandFields').addEventListener('click', (ev) => {
+    if (ev.target.id !== 'evLogoRemove') return;
+    const fd = new FormData();
+    fd.append('remove', '1');
+    send(fd, 'Logo removed.');
+  });
+}
+
 function bindForm() {
   const f = $('#eventForm');
   if (!f) return;
@@ -266,6 +296,7 @@ function bindForm() {
     syncDates();
   });
   bindColors();
+  bindLogo();
   $('#evTbd').addEventListener('change', syncDates);
   syncDates();
   $('#evCancel').addEventListener('click', () => { editing = false; render(); });
