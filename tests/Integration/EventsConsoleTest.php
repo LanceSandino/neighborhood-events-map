@@ -10,7 +10,7 @@ use App\Tests\Support\AppTestCase;
  * @module tests/Integration/EventsConsoleTest
  * @description Organizer → Events (D-20261031-05/-07, ADR 0011): drafts of offered types only, strict input, an
  *   organizer-only preview without homes, one current event of a kind, closing (the thank-you message, next year's
- *   upcoming event with a tentative date, nothing republished, never reopened), season isolation for residents ("List
+ *   hidden event with a tentative date, nothing republished, never reopened, the default moving to an announced event), season isolation for residents ("List
  *   for <event>" starts empty, a closed event is read-only), opening and the default, archive, CSRF-checked export,
  *   retention purge, moving the event on the map, the Community → Event block as a view of the default event, and a
  *   type this release does not offer. Every change is audited and mirrored for the previous release.
@@ -77,7 +77,7 @@ final class EventsConsoleTest extends AppTestCase
         self::assertSame(422, $this->code(), 'closing is confirmed');
         $r = $this->json('POST', '/api/admin/events/'.$current['id'].'/close', ['confirm' => true, 'closing_message' => 'Thanks, Testville! See you next October.'], $this->h());
         self::assertSame(200, $this->code(), json_encode($r));
-        self::assertSame(['closed', true], [$r['event']['state'], $r['event']['is_default']], 'the closed event stays the default until the organizer changes it');
+        self::assertSame(['closed', true], [$r['event']['state'], $r['event']['is_default']], 'with nothing else current, the closed event stays the default');
         $next = $r['next'];
         self::assertSame(['halloween', 'Halloween', '2027-10-31', '2027-10-31', true, 'hidden', '17:00', '21:00'],
             [$next['type'], $next['name'], $next['starts_on'], $next['ends_on'], $next['dates_tentative'], $next['state'], $next['default_start'], $next['default_end']]);
@@ -89,20 +89,26 @@ final class EventsConsoleTest extends AppTestCase
         $this->json('POST', '/api/admin/events/'.$next['id'].'/announce', ['confirm' => true], $this->h());
         self::assertSame(200, $this->code(), 'announced: visitors see it with its dates');
 
-        // The closed season's homes leave the map at once; visitors see the thank-you text and next year's event.
+        // The closed season's homes leave the map at once; visitors find the thank-you text under Past events, and "/"
+        // moves to next year's event now that it is announced (D-20261104-03).
         $this->client->getCookieJar()->clear();
-        self::assertSame([], $this->json('GET', '/api/homes')['homes']);
-        $this->json('GET', '/api/homes/'.$home);
-        self::assertSame(404, $this->code());
-        $event = $this->json('GET', '/api/event')['event'];
+        foreach (['', '?e='.$current['id']] as $query) {
+            self::assertSame([], $this->json('GET', '/api/homes'.$query)['homes']);
+            $this->json('GET', '/api/homes/'.$home.$query);
+            self::assertSame(404, $this->code());
+        }
+        $event = $this->json('GET', '/api/event?e='.$current['id'])['event'];
         self::assertSame([$current['id'], 'closed', 'Thanks, Testville! See you next October.'], [$event['id'], $event['state'], $event['closing_message']]);
-        self::assertSame([[$current['id'], 'closed', true], [$next['id'], 'upcoming', false]],
+        self::assertSame([[$next['id'], 'upcoming', true], [$current['id'], 'closed', false]],
             array_map(static fn (array $e) => [$e['id'], $e['state'], $e['is_default']], $this->json('GET', '/api/events')['events']));
-        $crawler = $this->client->request('GET', '/');
+        self::assertSame($next['id'], $this->json('GET', '/api/event')['event']['id']);
+        $crawler = $this->client->request('GET', '/?e='.$current['id']);
         self::assertSame('Thanks, Testville! See you next October.', $crawler->filter('.event-status-message')->text());
         self::assertCount(0, $crawler->filter('script[src*="home.js"]'), 'no homes, no map');
-        self::assertSame([['Halloween 2026', 'Ended', 'page', '/'], ['Halloween 2027', 'Soon', null, '/?e='.$next['id']]], $crawler->filter('.event-switch a')->each(
-            static fn ($a) => [$a->filter('.event-tab-name')->text(), $a->filter('.event-tab-state')->text(), $a->attr('aria-current'), $a->attr('href')]), 'the switcher names both seasons, in words');
+        self::assertCount(0, $crawler->filter('.event-switch'), 'one current event: no switcher, and never a tab for the closed one');
+        self::assertSame(['/past-events', 'true'], [$crawler->filter('a.past-link')->attr('href'), $crawler->filter('a.past-link')->attr('aria-current')]);
+        self::assertSame([['Halloween 2026', 'Oct 31, 2026', '/?e='.$current['id']]], $this->client->request('GET', '/past-events')->filter('.past-list a')->each(
+            static fn ($a) => [$a->filter('.past-name')->text(), $a->filter('.past-dates')->text(), $a->attr('href')]), 'Past events names the closed season, with its year');
         self::assertSame([], $this->json('GET', '/api/homes?e='.$next['id'])['homes'], 'an upcoming event shows no homes');
         self::assertTrue((bool) $this->db()->fetchOne('SELECT published FROM listings WHERE address_id = ?', [$home]), 'the previous release still shows the closed Halloween (the newest open or closed one)');
         self::assertSame('2026-10-31', json_decode((string) $this->db()->fetchOne('SELECT settings FROM community_settings'), true)['event']['date'], 'the settings mirror names it');
@@ -115,10 +121,10 @@ final class EventsConsoleTest extends AppTestCase
         self::assertSame([true, true], [$me['homes'][0]['can_list'], $me['homes'][0]['can_copy_previous']]);
         self::assertSame(['id' => $next['id'], 'name' => 'Halloween', 'type' => 'halloween', 'active' => true, 'state' => 'upcoming'],
             array_intersect_key($me['event'], ['id' => 1, 'name' => 1, 'type' => 1, 'active' => 1, 'state' => 1]));
-        self::assertSame([[$current['id'], true], [$next['id'], false]], array_map(static fn (array $x) => [$x['event_id'], $x['listed']], $me['homes'][0]['events']));
+        self::assertSame([[$next['id'], false], [$current['id'], true]], array_map(static fn (array $x) => [$x['event_id'], $x['listed']], $me['homes'][0]['events']), 'the default first');
         $this->json('PATCH', "/api/me/homes/$home?e=".$next['id'], ['note' => 'Revived?'], ['X-CSRF-Token' => $csrf]);
         self::assertSame(404, $this->code(), 'an old listing cannot be revived by editing it');
-        $this->json('PATCH', "/api/me/homes/$home", ['note' => 'Edited after the end'], ['X-CSRF-Token' => $csrf]);
+        $this->json('PATCH', "/api/me/homes/$home?e=".$current['id'], ['note' => 'Edited after the end'], ['X-CSRF-Token' => $csrf]);
         self::assertSame(403, $this->code(), 'a closed event\'s listing is read-only');
         $r = $this->json('POST', "/api/me/homes/$home/listing?e=".$next['id'], ['details' => ['candy' => true], 'event_id' => $current['id']], ['X-CSRF-Token' => $csrf]);
         self::assertSame(422, $this->code(), 'the event is named by e only');
@@ -144,7 +150,7 @@ final class EventsConsoleTest extends AppTestCase
         self::assertSame(200, $this->code());
         self::assertSame([$home], array_column($this->json('GET', '/api/homes')['homes'], 'id'));
         self::assertSame('2027-10-31', json_decode((string) $this->db()->fetchOne('SELECT settings FROM community_settings'), true)['event']['date'], 'the previous release now mirrors next year\'s event');
-        self::assertSame(['event.created', 'event.archived', 'event.closed', 'event.announced', 'event.opened', 'event.default'], $this->db()->fetchFirstColumn("SELECT action FROM audit_events WHERE target_type = 'event' ORDER BY id"));
+        self::assertSame(['event.created', 'event.archived', 'event.closed', 'event.announced', 'event.default_moved', 'event.opened', 'event.default'], $this->db()->fetchFirstColumn("SELECT action FROM audit_events WHERE target_type = 'event' ORDER BY id"));
     }
 
     public function testEndingTheEventLeavesANeutralMapAndRetentionDeletesItsListings(): void

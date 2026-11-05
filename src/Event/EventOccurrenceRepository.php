@@ -13,7 +13,8 @@ use Psr\Clock\ClockInterface;
  * @description Rows of event_occurrences: one by id, the public events (upcoming, open, closed; the default first,
  *     then by date), the events residents see in My house (the public ones and hidden ones), the default event — the
  *     flagged one, else the newest open event, else the newest public one —, the current (hidden, upcoming or open) event
- *     of a type, the event the legacy `listings` table mirrors (the newest open or
+ *     of a type, the public current events by how soon they happen (Event/DefaultEventRule), the open events whose last
+ *     day has passed (Event/EndedEvents), the event the legacy `listings` table mirrors (the newest open or
  *     closed one-day Halloween, D-20261031-41), all events with their opted-in and public listing counts (organizer
  *     view), inserts and field updates. Life-cycle changes (open, close, default, archive, purge) and their side
  *     effects live in Event/EventLifecycle; this class only reads and writes rows.
@@ -74,6 +75,42 @@ final class EventOccurrenceRepository
             ORDER BY is_default DESC, (state = 'open') DESC, ".self::NEWEST.' LIMIT 1');
 
         return false === $row ? null : EventOccurrence::fromRow($row);
+    }
+
+    /** The event flagged as the default, whatever its state (null: none is flagged). */
+    public function flaggedDefault(?Connection $db = null): ?EventOccurrence
+    {
+        $row = ($db ?? $this->db)->fetchAssociative('SELECT '.self::COLUMNS.' FROM event_occurrences WHERE is_default');
+
+        return false === $row ? null : EventOccurrence::fromRow($row);
+    }
+
+    /**
+     * The upcoming and open events by how soon they happen (D-20261104-03): open events whose dates include today, then
+     * the other open events by first day, then upcoming events by first day (dates to be announced last).
+     *
+     * @return list<EventOccurrence>
+     */
+    public function currentBySoonest(string $today, ?Connection $db = null): array
+    {
+        return array_map(EventOccurrence::fromRow(...), ($db ?? $this->db)->fetchAllAssociative(
+            'SELECT '.self::COLUMNS." FROM event_occurrences WHERE state IN ('upcoming', 'open')
+             ORDER BY COALESCE(state = 'open' AND CAST(:today AS DATE) BETWEEN starts_on AND ends_on, FALSE) DESC, (state = 'open') DESC, starts_on ASC NULLS LAST, id ASC",
+            ['today' => $today],
+        ));
+    }
+
+    /**
+     * The open events whose last day is before a local date, the oldest first (dates to be announced have no last day).
+     *
+     * @return list<EventOccurrence>
+     */
+    public function openEndedBefore(string $today): array
+    {
+        return array_map(EventOccurrence::fromRow(...), $this->db->fetchAllAssociative(
+            'SELECT '.self::COLUMNS." FROM event_occurrences WHERE state = 'open' AND ends_on < CAST(:today AS DATE) ORDER BY ends_on ASC, id ASC",
+            ['today' => $today],
+        ));
     }
 
     /** The current (hidden, upcoming or open) event of a type; the database allows at most one. */

@@ -24,6 +24,8 @@ parameters:
     env(ROUTING_PROVIDER): 'none'
     env(ROUTING_BASE_URL): 'https://api.openrouteservice.org'
     env(APP_DEMO): '0'
+    # Open events close by themselves after their last day (compose.dev.yaml and the test environment turn it off).
+    env(EVENTS_AUTO_CLOSE): '1'
     env(ROUTING_API_KEY): ''
     env(AUTH_SESSION_IDLE_MINUTES): ''
     env(MAGIC_LINK_MINUTES): ''
@@ -85,6 +87,10 @@ services:
             $routingApiKey: '%env(ROUTING_API_KEY)%'
             $routingBaseUrl: '%env(ROUTING_BASE_URL)%'
             $demoMode: '%env(bool:APP_DEMO)%'
+
+    App\Command\EventsCloseEndedCommand:
+        arguments:
+            $enabled: '%env(bool:EVENTS_AUTO_CLOSE)%'
 
     App\Security\SessionPolicy:
         arguments:

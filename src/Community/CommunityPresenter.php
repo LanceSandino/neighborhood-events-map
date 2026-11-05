@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventAccess;
 use App\Event\EventOccurrence;
 use App\Event\EventSettingsType;
 use App\Event\EventType;
@@ -21,9 +22,11 @@ use App\Shared\RuntimeConfig;
  *     it is the default and, once closed, its thank-you text); the type supplies the default reminders and its own
  *     stats counts.
  *     A type with settings of its own adds their public part (the lights' best night and quiet hours) and, when it
- *     allows driving, the route modes visitors can use; Halloween's event keeps exactly its keys.
+ *     allows driving, the route modes visitors can use; Halloween's event keeps exactly its keys. `community.access` is the
+ *     event's effective access, and an event with its own access names it (`event.access`); the community's access notes
+ *     are written for its own access, so an event with a different one leaves them out (D-20261104-05).
  *
- * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Event/EventSettingsType, Event/PublicEvents,
+ * @dependencies Community/CommunityConfig, Community/BrandingStore, Event/EventTypeRegistry, Event/EventType, Event/EventSettingsType, Event/EventAccess, Event/PublicEvents,
  *     Routing/RoutingProviderInterface, Shared/RuntimeConfig
  */
 final class CommunityPresenter
@@ -55,13 +58,17 @@ final class CommunityPresenter
             'geometry' => $approved && isset($c->zoneShapes[$z['key']]) ? $c->zoneShapes[$z['key']]->toGeometry() : null,
         ], array_filter($c->zones(), static fn (array $z) => 'hidden' !== $z['status']))) : [];
         $state = $c->registrationState();
+        // Defaults keep settings saved by older versions valid (fields added later are optional).
+        $community = array_intersect_key($s['community'] + ['about' => '', 'access' => 'unspecified', 'links' => [], 'contact_url' => null, 'gate_notice' => ''],
+            array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links']));
+        $community['access'] = $c->access();
+        if ($c->access() !== $c->communityAccess()) {
+            $community['gate_notice'] = ''; // never "residents only past the gate" under "open to the public"
+        }
 
         return [
             'configured' => $c->configured,
-            // Defaults keep settings saved by older versions valid (fields added later are optional).
-            'community' => array_intersect_key($s['community'] + ['about' => '', 'access' => 'unspecified', 'links' => [], 'contact_url' => null, 'gate_notice' => ''],
-                array_flip(['id', 'name', 'subtitle', 'locality', 'region', 'postal_code', 'country', 'gate_notice', 'contact_url', 'about', 'access', 'links']))
-                + ['reminders' => ($s['community']['reminders'] ?? []) ?: $type->copy()['reminders']],
+            'community' => $community + ['reminders' => ($s['community']['reminders'] ?? []) ?: $type->copy()['reminders']],
             'event' => $this->event($c, $type),
             'branding' => [
                 'logo_url' => $this->branding->url($s['branding']['logo']),
@@ -130,7 +137,8 @@ final class CommunityPresenter
         ] + (null !== $o && $type instanceof EventSettingsType ? $type->publicSettings($o->settings) : [])
           + (null !== $o && [] !== array_diff($type->routeProfiles(), ['walking']) ? ['route_modes' => $this->routeModes($c, $type)] : [])
           + ['state' => $o?->state, 'dates_tentative' => (bool) $o?->datesTentative, 'is_default' => (bool) $o?->isDefault]
-          + (EventOccurrence::CLOSED === $o?->state ? ['closing_message' => $this->events->closingMessage($o)] : []);
+          + (EventOccurrence::CLOSED === $o?->state ? ['closing_message' => $this->events->closingMessage($o)] : [])
+          + (null !== EventAccess::own($o) ? ['access' => EventAccess::own($o)] : []);
     }
 
     /**

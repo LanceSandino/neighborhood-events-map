@@ -138,13 +138,14 @@ final class HiddenNextEventTest extends AppTestCase
         self::assertSame([409, 'not_announceable'], [$this->code(), $r['error']['code']]);
 
         $this->client->getCookieJar()->clear();
-        self::assertSame([[1, 'closed'], [$next, 'upcoming']], array_map(static fn (array $e) => [$e['id'], $e['state']], $this->json('GET', '/api/events')['events']));
+        self::assertSame([[$next, 'upcoming', true], [1, 'closed', false]], array_map(static fn (array $e) => [$e['id'], $e['state'], $e['is_default']], $this->json('GET', '/api/events')['events']), 'announced: it is public and "/" moves to it');
         self::assertSame([200, []], [200, $this->json('GET', "/api/homes?e=$next")['homes']], 'announced: its dates, no homes');
-        $closed = $this->client->request('GET', '/');
+        $closed = $this->client->request('GET', '/?e=1');
         self::assertSame(["/me?e=$next", "/?e=$next"], $closed->filter('.event-status-actions a')->each(static fn ($a) => $a->attr('href')));
         self::assertSame('See Halloween 2027', $closed->filter('.event-status-actions a.secondary')->text());
         self::assertStringContainsString('(Oct 31, 2027, tentative)', $closed->filter('.event-status-message')->text());
-        self::assertCount(2, $closed->filter('.event-switch a'), 'the tab appears');
+        self::assertCount(1, $closed->filter('a.past-link'), 'the closed event is under Past events, not a tab');
+        self::assertCount(1, $this->client->request('GET', '/')->filter('.event-status.is-upcoming'), '"/" shows the announced event');
 
         $this->organizer();
         $r = $this->json('POST', "/api/admin/events/$next/hide", [], $this->h());
@@ -169,8 +170,8 @@ final class HiddenNextEventTest extends AppTestCase
         self::assertSame([409, 'not_hideable'], [$this->code(), $r['error']['code']], 'an open event is closed, never hidden');
         $this->client->getCookieJar()->clear();
         self::assertSame([$home], array_column($this->json('GET', "/api/homes?e=$next")['homes'], 'id'), 'its homes are on the map');
-        self::assertSame(['event.closed', 'event.announced', 'event.hidden', 'event.opened'],
-            $this->db()->fetchFirstColumn("SELECT action FROM audit_events WHERE target_type = 'event' ORDER BY id"));
+        self::assertSame(['event.closed', 'event.announced', 'event.default_moved', 'event.hidden', 'event.default_moved', 'event.opened', 'event.default_moved'],
+            $this->db()->fetchFirstColumn("SELECT action FROM audit_events WHERE target_type = 'event' ORDER BY id"), 'the default follows: to it when announced, away when hidden, to it again when opened');
     }
 
     public function testAnEventCanBeCreatedOrDraftedHiddenAndOneCurrentPerTypeCountsHiddenEvents(): void

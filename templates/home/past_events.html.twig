@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+{# Past events: the closed events, newest first, each leading to its thank-you page (D-20261104-02). Plain links, no
+   scripts. Archived and hidden events are never listed. #}
+{% set nav = 'map' %}
+{% set switch_path = '/' %}
+{% set past_page = true %}
+{% block title %}Past events · {{ c.community.name }}{% endblock %}
+{% block body %}
+{% set events = past_events() %}
+<section class="page-card past-events" aria-labelledby="pastTitle">
+  <div class="eyebrow">✦ {{ c.community.name }}</div>
+  <h1 id="pastTitle">Past events</h1>
+  {% if events %}
+  <p>Events that are over, newest first. Thank you to everyone who took part.</p>
+  <ul class="past-list">
+    {%- for e in events %}
+    <li><a href="{{ e.href }}"><span class="past-icon" aria-hidden="true">{{ e.icon }}</span><span><span class="past-name">{{ e.label }}</span><span class="past-dates">{{ e.dates }}</span></span></a></li>
+    {%- endfor %}
+  </ul>
+  {% else %}
+  <p class="past-empty">No past events yet.</p>
+  {% endif %}
+  <p><a class="secondary" href="/">Back to the map</a></p>
+</section>
+{% endblock %}

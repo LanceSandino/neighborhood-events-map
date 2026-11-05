@@ -1,13 +1,15 @@
 {% extends 'base.html.twig' %}
 {# An event that is public but shows no homes (ADR 0011): an upcoming one — its dates (tentative, or to be announced);
    residents may list their home once it has dates — or a closed one — its thank-you message, and a way for residents to
-   get ready for the next one. No map scripts; the switcher above leads to the other public events. #}
+   get ready for the next one and a way back to the current default event. No map scripts; the switcher above leads to
+   the current events, Past events to the closed ones. #}
 {% set nav = 'map' %}
 {% set switch_path = '/' %}
 {% set et = event_type(c.event.type) %}
 {% set closed = c.event.state == 'closed' %}
 {# The next event of the type is named only once it is public; a hidden one (residents get ready, D-20261101-01) never is. #}
 {% set next = closed ? next_public_event(c.event) : null %}
+{% set way_back = closed ? default_way_back(c.event) : null %}
 {% block body %}
 <section class="intro">
   <div>
@@ -28,6 +30,7 @@
     <div class="event-status-actions">
       <a class="primary" href="/me{{ next ? '?e=' ~ next.id }}">Get my house ready</a>
       {% if next %}<a class="secondary" href="/?e={{ next.id }}">See {{ next.label }}</a>{% endif %}
+      {% if way_back and way_back.id != next.id|default(0) %}<a class="secondary" href="/">Back to {{ way_back.label }}</a>{% endif %}
     </div>
     {% else %}
     <div class="eyebrow">{{ c.event.name }} · Coming soon</div>

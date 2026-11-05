@@ -10,11 +10,13 @@ use App\Community\CommunityRepository;
  * @module Event/PublicEvents
  * @description The events visitors may see (upcoming, open, closed; of types this release offers), the default first:
  *     their public description for GET /api/events — id, type, name, state, dates, tentative, default and, for a
- *     closed event, its thank-you text — and the event switcher's tabs (emoji and name, the year when two events
- *     share a name, the state in words for an event that is not open, the link and whether it is the selected one).
- *     Drafts, hidden and archived events are never described to visitors (ADR 0011, D-20261031-40); My house's
- *     switcher also has a tab for a hidden event residents get ready for ("Getting ready", D-20261101-01), and a
- *     closed event's thank-you text and card name the next event of its type only once it is public.
+ *     closed event, its thank-you text —, the event switcher's tabs (emoji and name, the year when two events
+ *     share a name, the state in words for an event that is not open, the link and whether it is the selected one) and
+ *     the list of past events. The map's tabs are the current events (open and upcoming); closed events are listed under
+ *     Past events, newest first (D-20261104-02). Drafts, hidden and archived events are never described to visitors (ADR
+ *     0011, D-20261031-40); My house's switcher keeps closed events as read-only tabs and also has a tab for a hidden event
+ *     residents get ready for ("Getting ready", D-20261101-01). A closed event's thank-you text and card name the next
+ *     event of its type only once it is public, and lead back to the current default event.
  *
  * @dependencies Community/CommunityRepository, Event/EventOccurrenceRepository, Event/EventTypeRegistry, Event/ClosingMessage, Event/EventDates
  */
@@ -67,6 +69,46 @@ final class PublicEvents
         return ['id' => $next->id, 'label' => $labels[$next->id] ?? $next->name];
     }
 
+    /**
+     * The way back from a closed event's thank-you page: the default event while it is another one and current.
+     *
+     * @param array<string,mixed>|EventOccurrence $closed the public event payload (c.event) or the event
+     *
+     * @return array{id:int, label:string}|null
+     */
+    public function wayBack(array|EventOccurrence $closed): ?array
+    {
+        $id = $closed instanceof EventOccurrence ? $closed->id : (int) ($closed['id'] ?? 0);
+        $events = $this->community->publicEvents();
+        $labels = self::labels($events);
+        foreach ($events as $e) {
+            if ($e->isDefault) {
+                return $e->id !== $id && $e->isOnSiteNow() ? ['id' => $e->id, 'label' => $labels[$e->id]] : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The past events visitors can open: the closed ones, newest first, each with its year and dates.
+     *
+     * @return list<array{id:int, label:string, icon:string, dates:string, href:string}>
+     */
+    public function past(): array
+    {
+        $closed = array_filter($this->community->publicEvents(), static fn (EventOccurrence $e) => EventOccurrence::CLOSED === $e->state);
+        usort($closed, static fn (EventOccurrence $a, EventOccurrence $b) => [$b->startsOn ?? '', $b->id] <=> [$a->startsOn ?? '', $a->id]);
+
+        return array_map(fn (EventOccurrence $e) => [
+            'id' => $e->id,
+            'label' => ClosingMessage::nameWithYear($e),
+            'icon' => (string) ($this->types->get($e->type)->copy()['event_icon'] ?? ''),
+            'dates' => EventDates::words($e),
+            'href' => '/?e='.$e->id,
+        ], $closed);
+    }
+
     /** The current event of a closed one's type while it is public and of a type this release offers. */
     private function publicNext(EventOccurrence $closed): ?EventOccurrence
     {
@@ -94,15 +136,16 @@ final class PublicEvents
     }
 
     /**
-     * The switcher's tabs for a page ('/' or '/me'): shown only when at least two events are public (one event needs no
-     * switcher, so a single-event install looks exactly as before). My house (signed-in residents only) counts and shows
-     * hidden events too.
+     * The switcher's tabs for a page ('/' or '/me'): the map's are the current events and show only when at least two are
+     * current (one event needs no switcher, so a single-event install looks exactly as before). My house (signed-in
+     * residents only) counts and shows its closed and hidden events too.
      *
      * @return list<array{id:int, type:string, label:string, icon:string, state:string, state_words:string, href:string, current:bool}>
      */
     public function tabs(string $path): array
     {
-        $events = '/me' === $path ? $this->community->residentEvents() : $this->community->publicEvents();
+        $events = '/me' === $path ? $this->community->residentEvents()
+            : array_values(array_filter($this->community->publicEvents(), static fn (EventOccurrence $e) => $e->isOnSiteNow()));
         if (\count($events) < 2) {
             return [];
         }
