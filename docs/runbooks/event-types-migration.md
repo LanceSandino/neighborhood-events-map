@@ -1,4 +1,4 @@
-# Event migrations: upgrade to 0.11, 0.15, 0.16 and 0.17 and both rollback paths
+# Event migrations: upgrade to 0.11, 0.15, 0.16, 0.17 and 0.18 and both rollback paths
 
 0.11.0-beta.1 gives every event its own listings (ROADMAP Stage 2, [DECISIONS](../../DECISIONS.md) D-20261031-05 to
 -14). This runbook says what the upgrade changes in the database, how to check it, and how to go back — with the
@@ -12,6 +12,28 @@ runs `Version20261031000001` (0.10, `listings.details`), `Version20261031000002`
 `Version20261101000001` (0.17, hidden events) in that order when the app starts; everything
 below applies, and the drill starts from the published 0.9.0-beta.1 images for exactly that path. Set `APP_IMAGE_TAG`
 to the release you deploy wherever this page says 0.11.0-beta.1.
+
+## 0.18: events close by themselves
+
+0.18.0-beta.1 has **no migration** ([D-20261104-01](../../DECISIONS.md)). What changes on the upgrade is what happens at
+start: after the migrations and the community bootstrap, `app:events:close-ended` closes every open event whose last day
+has passed in the community's time zone. So an install on 0.9 whose Halloween is over goes, in one start:
+
+1. the five event migrations, in order (the Halloween becomes the open default event, with its homes and branding);
+2. the Halloween closes, as an organizer's Close does: next year's event is created **hidden**, the audit log shows `cli`,
+   "/" shows the thank-you message (or moves to a current event, if one exists), and it is listed under Past events.
+
+**Rollback.** Nothing else changes for either path. Path (a): the legacy `listings` rows and the settings block keep
+mirroring the closed Halloween, so the 0.9 image shows the same homes and headline. Writes on 0.9 reach the closed
+Halloween as before, and going forward again closes nothing twice. Path (b) is unchanged: restoring the pre-upgrade backup
+on 0.9 brings back the open Halloween's data, and upgrading again closes it again. Hold the close with `EVENTS_AUTO_CLOSE=0`
+if you want to compare first. The drill's steps 8 to 10 script all of this, but they had not been run when this was written:
+read [the test report](../quality/test-report.md) before relying on it. They are written not to depend on the day they run: the
+demo's Halloween (October 30, 2026) is past on any date from now on, and no other step compares with today.
+
+**Limit of path (a).** An event's own access (`settings.access`, [D-20261104-05](../../DECISIONS.md)) is new: 0.9 reads only
+the community's stored `community.access`, which an event never changes, so after an image rollback 0.9 shows the
+community's access even for a Halloween with its own.
 
 ## 0.17: hidden events
 
@@ -223,24 +245,31 @@ bin/drill-event-upgrade.sh nhm-app nhm-nginx drill
 
 1. starts the **published** `0.9.0-beta.1` images and checks the demo's homes;
 2. takes a backup with `bin/backup-now.sh`;
-3. upgrades to the given images (every startup migration runs, up to `Version20261101000001`) and checks that
-   `/api/homes` shows the same homes, keys and values and that the Halloween is the open default event;
+3. upgrades to the given images with automatic closing off (`EVENTS_AUTO_CLOSE=0`, so an organizer can work with the
+   open Halloween; steps 8 to 10 run as production does; every startup migration runs, up to
+   `Version20261101000001`) and checks that `/api/homes` shows the same homes, keys and values and that the Halloween is
+   the open default event;
 4. signs a fictional resident in (real proof-of-work, link from the drill's Mailpit), edits a listing and lists a new
    self-entered home (`scripts/drill_listing.py`);
    4a. (per-event branding) checks the Halloween kept the demo's custom headline ("Spooky streets.", now its own), an
    organizer opens Christmas lights next to it — they show "Holiday nights. Bright lights.", not Halloween's — and
-   changes the Halloween's headline, which also reaches the keys the 0.9 image reads;
+   changes the Halloween's headline, which also reaches the keys the 0.9 image reads; each event gets its own access, and
+   the community's stored value stays;
    4b. (several events) an organizer closes the Halloween — next year's is created hidden on October 31: not in
-   `/api/events`, 404 on `/api/event?e=`, not named by the thank-you page —, the resident lists the home for next
-   year, and the legacy row keeps the closed Halloween's listing;
+   `/api/events`, 404 on `/api/event?e=`, not named by the thank-you page; the default moves to the open lights —, the
+   resident lists the home for next year, and the legacy row keeps the closed Halloween's listing;
 5. path (a): rolls the images back to `0.9.0-beta.1`, checks it starts, reports the newer migrations and shows the
-   bridged homes (the closed Halloween's, with the edit and the new home) and the Halloween's custom headline (the one
-   changed in step 4a); a resident edits on 0.9;
+   bridged homes (the closed Halloween's, with the edit and the new home), the Halloween's custom headline (the one
+   changed in step 4a) and the community's own access; a resident edits on 0.9;
 6. goes forward again and checks the edit made on 0.9 reached the closed Halloween, next year's listing is untouched
    and its event still hidden; then an organizer announces it, `/api/events` lists it as upcoming and the thank-you
    card links it;
 7. path (b): restores the pre-upgrade backup with `bin/restore.sh` on `0.9.0-beta.1` and checks the homes are exactly
    the pre-upgrade ones and the event tables are gone;
-8. upgrades the restored database once more and checks the homes again and the custom headline (moved again).
+8. upgrades the restored database as production does, automatic closing on: the past-dated Halloween closes at start
+   (audited as `cli`), next year's is hidden, "/" shows the thank-you page with the custom headline (moved again) and it is
+   listed under Past events;
+9. path (a) again: images back to `0.9.0-beta.1`, the same homes and headline as before the upgrade;
+10. forward again: nothing closes twice, and the maintenance loop finds nothing to do.
 
 The latest result is in [docs/quality/test-report.md](../quality/test-report.md).

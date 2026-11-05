@@ -117,6 +117,14 @@ final class CommunityRepository
         return array_values(array_filter($this->occurrences->publicEvents(), fn (EventOccurrence $e) => $this->types->isEnabled($e->type)));
     }
 
+    /** Today's date in the community's time zone, on the app's clock (UTC before a community is configured). */
+    public function localToday(): string
+    {
+        $zone = $this->settings()['community']['timezone'] ?? 'UTC';
+
+        return $this->clock->now()->setTimezone(new \DateTimeZone(\is_string($zone) ? $zone : 'UTC'))->format('Y-m-d');
+    }
+
     public function reset(): void
     {
         $this->cached = [];

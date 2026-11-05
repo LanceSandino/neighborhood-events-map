@@ -33,6 +33,7 @@ event:
                                     # the categories residents may list (all ten when left out); the map offers
                                     # filters only for these
     early_bird_time: "07:30"        # optional: "Early birds: not before 7:30 AM" in the sale row and the rules
+    # access: public                # optional: this event's own access (same values as community.access); left out, the community's
     rules:                          # up to 8 lines of up to 160 characters
       - "No early birds before 7:30 AM."
       - "Park on one side of the street; keep driveways clear."

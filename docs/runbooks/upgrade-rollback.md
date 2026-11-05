@@ -40,6 +40,22 @@ CI verifies every migration on a blank database up → down to zero → up again
 What each release needs from whoever runs the site. `CHANGELOG.md` (and the app's "What's new") is written for
 residents and organizers and leaves this out; the engineering records are in `CHANGES.md`.
 
+### 0.18.0-beta.1 (automatic close, past events, each event's access; D-20261104-01 to -06)
+
+- Pull `0.18.0-beta.1` and recreate the stack; back up first. **No migration.** An install on 0.9 runs the same five event
+  migrations as for 0.17, in order.
+- **An event whose last day has passed closes when the new image starts**: an open Halloween of last week closes, next
+  year's is created hidden, and the default moves to a current event if there is one. That is the point of the release;
+  to hold it (say, to look around first), set `EVENTS_AUTO_CLOSE=0` in `.env`, and remove it when you are done. Watch for
+  `Closed “<event>”` in `docker compose logs app`; the maintenance container repeats the check hourly
+  (`PURGE_INTERVAL_SECONDS`). A failure logs `WARN: closing ended events failed` and never stops the app.
+- Image rollback to 0.9.0-beta.1 and the full restore are meant to work as before: the bridge keeps mirroring the closed
+  Halloween, so 0.9 should show the same homes and headline. The drill's steps 8 to 10 check it; they had not been run when
+  this was written, so read [the test report](../quality/test-report.md) before relying on it. The 0.15 to 0.17 images should
+  also run on this schema, since nothing changed (not tested); they show closed events as tabs again. After an image rollback 0.9 shows the community's
+  own access, not an event's ([event-types-migration.md](event-types-migration.md#018-events-close-by-themselves)).
+- New public route `/past-events`: no proxy rule needed. New optional environment variable `EVENTS_AUTO_CLOSE`.
+
 ### 0.17.0-beta.1 (hidden events, D-20261101-01)
 
 - Pull `0.17.0-beta.1` and recreate the stack; back up first. One additive migration runs at start,

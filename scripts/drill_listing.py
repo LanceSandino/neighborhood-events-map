@@ -7,8 +7,9 @@
     other home, list a claimed home for another event (POST /api/me/homes/{id}/listing?e=<event>, 0.15) or, as an
     organizer, close an event (POST /api/admin/events/{id}/close, 0.15: next year's event is created; 0.17: hidden),
     announce one (POST /api/admin/events/{id}/announce, 0.17: a hidden event becomes upcoming), prepare and open
-    an event of another type (POST /api/admin/events, then its open step) or change an event's headline (its branding,
-    PUT /api/admin/events/{id} with every other setting kept, 0.16). edit and claim work against the 0.9 and later APIs
+    an event of another type (POST /api/admin/events, then its open step; optionally with its own access, 0.18) or change
+    an event's headline (its branding, PUT /api/admin/events/{id} with every other setting kept, 0.16; optionally its
+    own access too, 0.18). edit and claim work against the 0.9 and later APIs
     (the same endpoints). Prints one JSON line with the outcome.
 @dependencies Python 3 standard library only
 Usage:
@@ -17,8 +18,8 @@ Usage:
   python3 scripts/drill_listing.py ... list-for --home-id 1 --event-id 2 --note "Next year"
   python3 scripts/drill_listing.py ... close --event-id 1
   python3 scripts/drill_listing.py ... announce --event-id 2
-  python3 scripts/drill_listing.py ... open-event --type holiday_lights --name "Christmas Lights" --starts-on 2026-11-27 --ends-on 2027-01-01
-  python3 scripts/drill_listing.py ... brand --event-id 1 --headline "Drill streets."
+  python3 scripts/drill_listing.py ... open-event --type holiday_lights --name "Christmas Lights" --starts-on 2026-11-27 --ends-on 2027-01-01 [--access gated_guests]
+  python3 scripts/drill_listing.py ... brand --event-id 1 --headline "Drill streets." [--access gated_open]
 """
 import argparse
 import hashlib
@@ -82,10 +83,12 @@ def pick_pin(ring: list, homes: list, steps: int = 40) -> tuple:
     return best
 
 
-def with_headline(settings: dict, headline: str) -> dict:
-    """An event's settings with its branding's headline changed; every other setting and branding field kept."""
+def with_headline(settings: dict, headline: str, access: str = None) -> dict:
+    """An event's settings with its branding's headline changed (and its own access, if given); every other setting and branding field kept."""
     out = dict(settings or {})
     out["branding"] = {**(out.get("branding") or {}), "headline": headline}
+    if access is not None:
+        out["access"] = access
     return out
 
 
@@ -173,9 +176,11 @@ def main() -> int:
     o.add_argument("--name", required=True)
     o.add_argument("--starts-on", required=True)
     o.add_argument("--ends-on", required=True)
+    o.add_argument("--access")
     b = sub.add_parser("brand")
     b.add_argument("--event-id", type=int, required=True)
     b.add_argument("--headline", required=True)
+    b.add_argument("--access")
     a = ap.parse_args()
 
     client = Client(a.base)
@@ -199,7 +204,8 @@ def main() -> int:
         print(json.dumps({"step": "announce", "status": st, "event_id": a.event_id, "state": state}))
         return 0 if st == 200 and state == "upcoming" else 1
     if a.cmd == "open-event":
-        st, body = client.req("POST", "/api/admin/events", {"type": a.type, "name": a.name, "starts_on": a.starts_on, "ends_on": a.ends_on})
+        fields = {"type": a.type, "name": a.name, "starts_on": a.starts_on, "ends_on": a.ends_on}
+        st, body = client.req("POST", "/api/admin/events", {**fields, "settings": {"access": a.access}} if a.access else fields)
         event_id = (body.get("event") or {}).get("id") if isinstance(body, dict) else None
         if st != 201 or not event_id:
             print(json.dumps({"step": "open-event", "status": st}))
@@ -210,7 +216,7 @@ def main() -> int:
     if a.cmd == "brand":
         _, listing = client.req("GET", "/api/admin/events")
         event = next(e for e in listing["events"] if e["id"] == a.event_id)
-        st, body = client.req("PUT", f"/api/admin/events/{a.event_id}", {"settings": with_headline(event["settings"], a.headline)})
+        st, body = client.req("PUT", f"/api/admin/events/{a.event_id}", {"settings": with_headline(event["settings"], a.headline, a.access)})
         headline = ((body.get("event") or {}).get("settings") or {}).get("branding", {}).get("headline") if isinstance(body, dict) else None
         print(json.dumps({"step": "brand", "status": st, "headline": headline}))
         return 0 if st == 200 and headline == a.headline else 1

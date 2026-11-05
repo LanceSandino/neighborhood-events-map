@@ -8,7 +8,8 @@ their claimed homes from one event to the next; each event has its own listings,
 from an empty form — or, if the resident chooses, from their own details of last time ("Use last year's details",
 [D-20261031-42](../../DECISIONS.md)). Nothing is copied or shown again by itself.
 
-Everything here happens in **Organizer → Events** (`/admin/events`). The checklists for each kind of event are
+Everything here happens in **Organizer → Events** (`/admin/events`), which groups your events: **On the site now**,
+**Hidden, getting ready**, **Drafts**, **Past events** and **Archived**. The checklists for each kind of event are
 [christmas-lights.md](christmas-lights.md) and [garage-sale.md](garage-sale.md); Halloween night is
 [event-day.md](event-day.md).
 
@@ -20,7 +21,7 @@ Everything here happens in **Organizer → Events** (`/admin/events`). The check
 | **Hidden · residents can get ready** | residents in My house and organizers (preview); visitors see nothing — no tab, no page | residents list their homes (or use last year's details) once it has dates; you edit it, preview it, announce it or open it. Closing an event creates next year's in this state ([D-20261101-01](../../DECISIONS.md)) |
 | **Upcoming** | everyone: a tab with its dates ("tentative" or "dates to be announced"), no homes | residents list their homes once it has dates; you edit it, open it, make it the default, or hide it again |
 | **Open** | everyone: the map with its homes | residents list and update their homes; you edit its name, hours and settings (its dates while nobody has listed, or move them explicitly), make it the default, close it |
-| **Closed** | everyone: a tab with the thank-you message, no homes | edit its name and thank-you message; make it the default (for example right after the event); archive it. Its listings are read-only |
+| **Closed** | everyone: under **Past events**, with the thank-you message, no homes | edit its name and thank-you message; archive it. Its listings are read-only; residents still read them from its tab in My house |
 | **Archived** | organizers only (export) | export its listings; delete its listings for retention |
 
 A closed event never opens again, and archived is final: next year's event is a new event (closing creates it for you).
@@ -86,13 +87,20 @@ Since 0.16 the neighborhood's look and each event's look are separate ([ADR 0012
   Events, its preview, the Overview's list of events and the Addresses listing column, which names the event it shows
   ([D-20261031-52](../../DECISIONS.md)).
 
-## Close an event when it is over
+## When an event is over
 
-**Close** asks for confirmation and shows the thank-you text visitors will see and next year's dates it will create;
-it says that next year's event is created hidden and that residents can get ready for it.
-In one step:
+**Events close by themselves after their last day**, at midnight in the community's time zone (within the hour: the check
+runs hourly, and when the app starts, so an upgrade after the last day closes the event at once). A Christmas lights
+season of November 1 – January 1 stays open across New Year and closes on January 2. Only open events close this way:
+hidden, upcoming and draft events never do, even when their dates have passed. To keep an event going, change its last
+day before it ends. The audit log shows the automatic close with the actor `cli`.
 
-- the event's homes leave the map (also by direct link) and its tab shows the thank-you message, for example "Halloween
+**Close** ends an open event earlier. It asks for confirmation and shows the thank-you text visitors will see, next year's
+dates it will create, that next year's event is created hidden and residents can get ready for it, and where "/" goes.
+Either way, in one step:
+
+- the event's homes leave the map (also by direct link), it leaves the tabs and goes under **Past events** (a small link
+  at the end of the tabs and in the footer) with the thank-you message, for example "Halloween
   2026 was a success — thank you! Come back next year (dates to be announced). Residents: sign in to get your house
   ready for next year." with a **Get my house ready** button to My house;
 - next year's event of the same kind is created **hidden**: Halloween on October 31 of next year, Christmas lights on
@@ -102,14 +110,23 @@ In one step:
   until you **Announce** it. Then its tab appears, the default thank-you text names its dates ("Come back next year (Oct
   31, 2027, tentative)") and the thank-you card adds **See Halloween 2027** ([D-20261101-02](../../DECISIONS.md)).
 
-Two organizers closing at the same moment cannot both succeed (the second gets "changed" or "not open" and reloads).
+Two organizers closing at the same moment, or an organizer and the automatic close, cannot both succeed (the organizer
+gets "changed" or "not open" and reloads).
+
+A thank-you page offers a way back to the current default event. Past events lists closed events, newest first; archive
+one to take it off the public site.
 
 ## The default event
 
-**Make default** on any upcoming, open or closed event (never a draft or a hidden one): "/" shows it (Community & branding names it). A typical year:
-Halloween open and default in October; closed (still default, showing its thank-you) on November 1; the Christmas lights
-opened and made default in December; the sale announced months ahead. If you archive the default event, the newest
-open event (else the newest public one) becomes the default.
+**Make default** on an upcoming or open event (never a draft, a hidden or a closed one): "/" shows it (Community &
+branding names it), and it stays the default as long as it is on the site.
+
+When the default event closes, is archived or is hidden, the default moves by itself to the current event happening
+soonest: an open event whose dates include today, then the earliest starting open event, then the earliest announced
+upcoming one. With none on the site, "/" keeps showing the closed event's thank-you message, and moves as soon as you
+announce or open another event. Next year's hidden event is never the default. A typical year: Halloween open and default
+in October, closing by itself on November 1 with the default moving to the Christmas lights (announced or open) and the
+rummage sale announced as a second tab. The audit log shows each move as `event.default_moved`.
 
 **Residents are not emailed automatically.** Inviting them to list for an event is manual for now: tell them through
 your usual neighborhood channels (newsletter, group chat, flyer). Emailing residents from the app is planned work
@@ -119,6 +136,19 @@ your usual neighborhood channels (newsletter, group chat, flyer). Emailing resid
 
 If you archive every public event, the public site says "No event on the map right now", listing is closed and no
 homes are shown. Announce or open an event when you are ready.
+
+## Who may come: each event's access
+
+Under **Who may come** in an event's form, choose how visitors may reach the homes during this event, in the words of its
+kind: open to the public; gated, with the gates open during the event ("Gated — gates open to shoppers during sale hours"
+for a sale); gated for residents and guests; residents only; or not stated. **Same as the community** is the empty choice
+and follows Organizer → Community & branding. For example, a rummage sale open to the public next to Christmas lights for
+residents and guests.
+
+The event's map (its Rules sheet), its About page and the public API show the event's own access. The community's access
+notes (gates, entrances, parking) are written for the community's access, so they do not show on an event whose access is
+different; put what visitors need in that event's rules instead. Next year's event keeps the access. `community.yaml`
+can set it for the install's first event (`event.settings.access`). The site never grants gate access.
 
 ## Export and retention
 

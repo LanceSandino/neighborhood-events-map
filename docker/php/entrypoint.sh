@@ -1,6 +1,6 @@
 #!/bin/sh
 # App container entrypoint: refuse unsafe secrets and debug mode in prod, wait for PostgreSQL,
-# apply migrations (MIGRATE_ON_START=1), then exec the given command.
+# apply migrations (MIGRATE_ON_START=1), close events whose last day has passed, then exec the given command.
 set -eu
 
 if [ "${APP_ENV:-prod}" = "prod" ]; then
@@ -41,6 +41,9 @@ if [ "$1" = "php-fpm" ] || [ "${WAIT_FOR_DB:-0}" = "1" ]; then
     php bin/console app:community:bootstrap "$COMMUNITY_BOOTSTRAP_FILE" $approve || echo "WARN: community bootstrap failed" >&2
     if [ "${APP_DEMO:-0}" = "1" ]; then php bin/console app:demo:seed || true; fi
   fi
+  # An upgrade or a restart after an event's last day closes it right away (EVENTS_AUTO_CLOSE=0 turns this off). A
+  # failure or a stuck database lock never stops the app: the maintenance loop tries again.
+  timeout 60 php bin/console app:events:close-ended --no-interaction || echo "WARN: closing ended events failed; the maintenance loop tries again" >&2
 fi
 
 exec docker-php-entrypoint "$@"

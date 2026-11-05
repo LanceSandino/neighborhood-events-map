@@ -20,6 +20,9 @@ x-app-env: &app-env
   COMMUNITY_BOOTSTRAP_FILE: ${COMMUNITY_BOOTSTRAP_FILE:-}
   COMMUNITY_BOOTSTRAP_APPROVE: ${COMMUNITY_BOOTSTRAP_APPROVE:-0}
   APP_DEMO: ${APP_DEMO:-0}
+  # Open events close by themselves after their last day (at app start and in the maintenance loop). 0 only for
+  # fixed-date demo communities: compose.dev.yaml sets it off (docs/runbooks/organizer-events.md).
+  EVENTS_AUTO_CLOSE: ${EVENTS_AUTO_CLOSE:-1}
   AUTH_SESSION_IDLE_MINUTES: ${AUTH_SESSION_IDLE_MINUTES:-}
   AUTH_SESSION_MAX_HOURS: ${AUTH_SESSION_MAX_HOURS:-12}
   MAGIC_LINK_MINUTES: ${MAGIC_LINK_MINUTES:-}
@@ -109,7 +112,8 @@ services:
     cpus: 1.5
 
   # Hourly cleanup of expired links, proof-of-work challenges, claim intents, throttle events,
-  # stale route-cache rows and idle sessions (app:maintenance:purge). Same image, no published ports.
+  # stale route-cache rows and idle sessions (app:maintenance:purge), and closing the events whose last day has
+  # passed (app:events:close-ended). Same image, no published ports.
   maintenance:
     # Same image as app, built (or pulled) once for both: two builds of one image name collide on Docker's
     # containerd image store ("image already exists").
@@ -124,7 +128,7 @@ services:
       MAILER_DSN: null://null
       ROUTING_API_KEY: ""
       ORGANIZER_EMAILS: ""
-    entrypoint: ["/bin/sh", "-c", "while true; do php bin/console app:maintenance:purge --no-interaction || echo 'purge failed' >&2; sleep \"$${PURGE_INTERVAL_SECONDS:-3600}\"; done"]
+    entrypoint: ["/bin/sh", "-c", "while true; do php bin/console app:maintenance:purge --no-interaction || echo 'purge failed' >&2; php bin/console app:events:close-ended --no-interaction || echo 'closing ended events failed' >&2; sleep \"$${PURGE_INTERVAL_SECONDS:-3600}\"; done"]
     depends_on:
       app: { condition: service_healthy }   # migrations have run
     networks: [backend]

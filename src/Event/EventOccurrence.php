@@ -76,6 +76,12 @@ final class EventOccurrence
         return \in_array($this->state, self::PUBLIC_STATES, true);
     }
 
+    /** Visitors see it as a current event: a tab of the switcher, and it may be the default (not closed, not hidden). */
+    public function isOnSiteNow(): bool
+    {
+        return self::UPCOMING === $this->state || self::OPEN === $this->state;
+    }
+
     /** Hidden from visitors; residents get ready for it in My house. */
     public function isHidden(): bool
     {

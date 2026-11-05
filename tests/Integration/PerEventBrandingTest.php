@@ -130,7 +130,8 @@ final class PerEventBrandingTest extends AppTestCase
         $closed = $this->json('POST', '/api/admin/events/'.$ids['halloween'].'/close', ['confirm' => true], $h);
         self::assertSame(200, $this->code(), json_encode($closed));
         self::assertSame('👻 Tiny ghosts.', $closed['next']['settings']['branding']['headline'], 'next year\'s Halloween keeps the branding');
-        self::assertSame('👻 Tiny ghosts. Big adventures.', $this->client->request('GET', '/?e='.$closed['next']['id'])->filter('.intro h1')->text());
+        self::assertSame('👻 Tiny ghosts. Big adventures.', $this->client->request('GET', '/admin/events/'.$closed['next']['id'].'/preview')->filter('.intro h1')->text(), 'its preview shows it (hidden: visitors do not see it)');
+        self::assertSame('👻 Tiny ghosts. Big adventures.', $this->client->request('GET', '/?e='.$ids['halloween'])->filter('.intro h1')->text(), 'the closed Halloween keeps it');
 
         // A draft's preview shows the draft's own branding.
         $draft = $this->json('POST', '/api/admin/events', ['type' => 'garage_sale', 'name' => 'Fall Swap', 'starts_on' => '2027-09-11', 'ends_on' => '2027-09-11',

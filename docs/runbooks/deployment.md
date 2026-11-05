@@ -85,7 +85,9 @@ Already using Cloudflare for your domain? [docs/examples/cloudflare.md](../examp
 - Sign in as organizer, review and approve the boundary, import addresses, open listings.
 - List a test home with a real email, confirm, edit, release it.
 - Confirm a backup file appears in `./backups` (mode `0600`) and practice a restore (see backup-restore runbook).
-- `docker compose logs maintenance` shows an hourly `Purged: …` line.
+- `docker compose logs maintenance` shows an hourly `Purged: …` line, and the automatic close of events whose last day has
+  passed (`No event has ended: nothing changed.` or `Closed “<event>”`; `EVENTS_AUTO_CLOSE=0` turns it off, for a fixed-date
+  demo only).
 - `curl -s -o /dev/null -w '%{http_code}' -H 'Host: other.example' http://127.0.0.1:8087/` returns `400` (only the `APP_BASE_URL` host is accepted).
 
 ## Troubleshooting

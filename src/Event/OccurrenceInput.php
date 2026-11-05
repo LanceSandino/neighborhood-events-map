@@ -15,13 +15,13 @@ use App\Shared\ValidationException;
  *     the dates are tentative, default hours, and the settings every type shares — rules (up to 8 short plain-text lines,
  *     shown with the event), route_modes (walking, plus the type's other profiles), the closing message (the thank-you
  *     text of a closed event, plain text up to 400 characters) and, for a type with several days, max_days (the
- *     organizer's cap of days per listing) and the event's own branding (Event/EventBranding: emoji, headline, intro,
- *     colours, About text; settings sent without it keep the event's branding, so a client that does not know it never
- *     clears it). A type with settings of its own (Event/EventSettingsType, e.g. the lights' best night, a sale's days)
+ *     organizer's cap of days per listing), the event's own access (Event/EventAccess; empty follows the community) and
+ *     the event's own branding (Event/EventBranding: emoji, headline, intro, colours, About text); settings sent without
+ *     branding or access keep the event's, so a client that does not know them never clears them. A type with settings of its own (Event/EventSettingsType, e.g. the lights' best night, a sale's days)
  *     checks those against the event's dates and completes them as a whole; an event without dates has none of the
  *     settings that depend on them. Unknown fields are refused.
  *
- * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Event/EventBranding, Community/EventBlockSchema, Shared/TextInput,
+ * @dependencies Event/EventType, Event/EventSettingsType, Event/EventOccurrence, Event/EventBranding, Event/EventAccess, Community/EventBlockSchema, Shared/TextInput,
  *     Shared/ValidationException
  */
 final class OccurrenceInput
@@ -83,6 +83,9 @@ final class OccurrenceInput
         if (\array_key_exists('settings', $in) && !\array_key_exists('branding', (array) $in['settings']) && [] !== ($current->settings['branding'] ?? [])) {
             $settings['branding'] = $current->settings['branding']; // kept: the client did not send the event's branding
         }
+        if (\array_key_exists('settings', $in) && !\array_key_exists('access', (array) $in['settings']) && null !== EventAccess::own($current)) {
+            $settings['access'] = EventAccess::own($current); // kept likewise
+        }
         if ($tbd && $type instanceof EventSettingsType) {
             // Without dates there is nothing for a best night or sale days to lie in.
             foreach ($type->dateBoundSettings() as $key) {
@@ -128,6 +131,13 @@ final class OccurrenceInput
                     continue;
                 }
                 $out[$k] = self::own($type, $k, $v, $startsOn, $endsOn, $e);
+                continue;
+            }
+            if ('access' === $k) {
+                $access = EventAccess::normalize($v, $e);
+                if (null !== $access) {
+                    $out['access'] = $access;
+                }
                 continue;
             }
             match ($k) {

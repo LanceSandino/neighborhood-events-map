@@ -9,6 +9,9 @@ services:
       APP_ENV: dev
       APP_DEBUG: 1
       MAILER_DSN: smtp://mailpit:1025
+      # The fictional demos have fixed dates, so development stacks do not close events by date. Try it with
+      # EVENTS_AUTO_CLOSE=1 in the env file, or once: docker compose exec app php bin/console app:events:close-ended --force
+      EVENTS_AUTO_CLOSE: ${EVENTS_AUTO_CLOSE:-0}
     volumes:
       - .:/app
       - appvar:/app/var          # per-stack cache/logs (two dev stacks can share one checkout)
@@ -45,6 +48,8 @@ services:
 
   maintenance:
     profiles: [maintenance]   # dev stacks purge on demand: docker compose exec app php bin/console app:maintenance:purge
+    environment:
+      EVENTS_AUTO_CLOSE: ${EVENTS_AUTO_CLOSE:-0}
 
 volumes:
   appvar: {}

@@ -1,6 +1,6 @@
 #!/bin/bash
 # @module bin/drill-event-upgrade
-# @description Rollback drill for the event migrations (0.10, 0.11, 0.15, 0.16 and 0.17; docs/runbooks/event-types-migration.md)
+# @description Rollback drill for the event migrations (0.10, 0.11, 0.15, 0.16 and 0.17) and the automatic close (0.18; docs/runbooks/event-types-migration.md)
 #   on a disposable Compose project and port, with the fictional Maple Hollow demo (its Halloween has its own branding,
 #   "Spooky streets."). Starts the PUBLISHED 0.9.0-beta.1 images, takes a backup (bin/backup-now.sh), upgrades to the
 #   given images (every startup migration runs in order) and checks that /api/homes shows the same homes, the Halloween
@@ -12,7 +12,12 @@
 #   makes a write on 0.9 and upgrades again to check it reached the closed Halloween and left next year's listing alone
 #   and next year's event still hidden, then announces it (upcoming: now public),
 #   then restores the pre-upgrade backup with bin/restore.sh on 0.9.0-beta.1 (path b) and checks the homes are exactly
-#   the pre-upgrade ones, and finally upgrades the restored database once more (the branding moves again). Always tears
+#   the pre-upgrade ones. Those steps keep the Halloween open by EVENTS_AUTO_CLOSE=0, so an organizer can work with it.
+#   Finally the restored database upgrades again as production does, with automatic closing on (0.18): the demo's past-dated
+#   Halloween closes at start, next year's is hidden, its thank-you page is under Past events; an image rollback to 0.9
+#   still shows the same homes and headline, and going forward again changes nothing. The demo's Halloween (2026-10-30) is
+#   past on any date from now on and no other step compares with today, so the drill does not depend on the day it runs.
+#   Each event's own access (0.18) never reaches the community's stored value, which is what 0.9 reads. Always tears
 #   the project and its volumes down (down -v).
 # @dependencies bash, docker compose, curl, openssl, python3 (scripts/drill_listing.py), bin/backup-now.sh, bin/restore.sh
 # Usage: bin/drill-event-upgrade.sh <new-app-image> <new-nginx-image> <tag> [port, default 8198]
@@ -57,11 +62,12 @@ step() { echo "--- $*"; }
 
 secret=$(openssl rand -hex 24)
 password=$(openssl rand -hex 24)
-images() { # app image, nginx image, tag
+images() { # app image, nginx image, tag, automatic closing (default off: only the last steps run as production does)
   cat > "$env_file" <<EOF
 APP_IMAGE=$1
 NGINX_IMAGE=$2
 APP_IMAGE_TAG=$3
+EVENTS_AUTO_CLOSE=${4:-0}
 HTTP_PORT=$port
 APP_BASE_URL=$base
 APP_SECRET=$secret
@@ -98,6 +104,7 @@ applog() { "${compose[@]}" logs --no-color app 2>/dev/null || true; } # read who
 # The text of the hero headline of a page (the community's or event's branding), e.g. "Spooky streets. Sweet treats.".
 headline() { curl -fsS "$base$1" | python3 -c 'import re,sys,html; m=re.search(r"<h1>(.*?)</h1>", sys.stdin.read(), re.S); print(html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip() if m else "")'; }
 custom="Spooky streets. Sweet treats." # the demo's own Halloween headline (examples/demo/community.yaml)
+community_access() { curl -fsS "$base/api/community$1" | python3 -c 'import json,sys; print(json.load(sys.stdin)["community"]["access"])'; }
 
 step "1. published $old_tag with the fictional demo"
 images "$old_app" "$old_nginx" "$old_tag"
@@ -144,14 +151,18 @@ organizer=drill-organizer@example.invalid
 "${compose[@]}" exec -T app php bin/console app:admin:grant "$organizer" >/dev/null
 closed_id=$(sql "SELECT id FROM event_occurrences WHERE state = 'open'")
 lights=$(python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" open-event --type holiday_lights --name "Christmas Lights" \
-  --starts-on 2026-11-27 --ends-on 2027-01-01) || fail "open the lights"
+  --starts-on 2026-11-27 --ends-on 2027-01-01 --access gated_guests) || fail "open the lights"
 lights_id=$(printf '%s' "$lights" | python3 -c 'import json,sys; print(json.load(sys.stdin)["event_id"])')
 [ "$(headline "/?e=$lights_id")" = "Holiday nights. Bright lights." ] || fail "the lights show Halloween's branding: $(headline "/?e=$lights_id")"
-python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" brand --event-id "$closed_id" --headline "Drill streets." >/dev/null || fail "brand"
+python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer" brand --event-id "$closed_id" --headline "Drill streets." --access gated_open >/dev/null || fail "brand"
 custom="Drill streets. Sweet treats."
 [ "$(headline /)" = "$custom" ] || fail "the Halloween's new headline is not shown"
 [ "$(sql "SELECT settings->'branding'->>'headline' FROM community_settings")" = "Drill streets." ] || fail "the 0.9 keys did not follow the Halloween's branding"
 pass "lights $lights_id: \"$(headline "/?e=$lights_id")\"; Halloween: \"$(headline /)\" (and in the keys the 0.9 image reads)"
+stored_access=$(sql "SELECT settings->'community'->>'access' FROM community_settings")
+[ "$stored_access" = public ] || fail "the demo community's stored access: $stored_access"
+[ "$(community_access "?e=$lights_id")/$(community_access "?e=$closed_id")" = gated_guests/gated_open ] || fail "the events do not show their own access"
+pass "each event shows its own access (lights gated_guests, Halloween gated_open); the community's stored value stays $stored_access"
 
 step "4b. several events: the Halloween closes, next year's is created hidden, a resident lists for it"
 closed_day=$(sql "SELECT starts_on FROM event_occurrences WHERE id = $closed_id")
@@ -159,14 +170,15 @@ closing=$(python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" -
 next_id=$(printf '%s' "$closing" | python3 -c 'import json,sys; print(json.load(sys.stdin)["next_id"])')
 [ "$(sql "SELECT state || ' ' || starts_on || ' ' || dates_tentative FROM event_occurrences WHERE id = $next_id")" = "hidden 2027-10-31 true" ] || fail "next year's Halloween"
 public_states() { curl -fsS "$base/api/events" | python3 -c 'import json,sys; print(",".join(e["state"] for e in json.load(sys.stdin)["events"]))'; }
-[ "$(public_states)" = "closed,open" ] || fail "next year's hidden Halloween is listed for visitors: $(public_states)"
+[ "$(sql "SELECT id FROM event_occurrences WHERE is_default")" = "$lights_id" ] || fail "the default did not move from the closed Halloween to the open lights"
+[ "$(public_states)" = "open,closed" ] || fail "next year's hidden Halloween is listed for visitors: $(public_states)"
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$base/api/event?e=$next_id")" = 404 ] || fail "the hidden event answers the public API"
 curl -fsS "$base/?e=$closed_id" | grep -q "e=$next_id" && fail "the thank-you page names the hidden event"
 pass "next year's Halloween $next_id is hidden: not in /api/events, 404 on /api/event?e=, not named by the thank-you page"
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" list-for --home-id "$home" --event-id "$next_id" --note "Next year on $new_tag" || fail "list for next year"
 [ "$(sql "SELECT event_date || ' ' || note FROM listings WHERE address_id = $home")" = "$closed_day Edited on $new_tag" ] || fail "next year's listing reached the legacy table"
-[ "$(homes | count)" = 0 ] || fail "a closed event shows homes"
-pass "closed event $closed_id of $closed_day (no homes on the map), next year's $next_id hidden on 2027-10-31 (tentative); the legacy row keeps the closed Halloween's listing"
+[ "$(curl -fsS "$base/api/homes?e=$closed_id" | count)" = 0 ] || fail "a closed event shows homes"
+pass "closed event $closed_id of $closed_day (no homes on the map), next year's $next_id hidden on 2027-10-31 (tentative); the default moved to the lights; the legacy row keeps the closed Halloween's listing"
 
 step "5. path (a): images back to $old_tag, database kept"
 images "$old_app" "$old_nginx" "$old_tag"
@@ -181,6 +193,8 @@ rolled=$(homes | view09)
 pass "$old_tag shows the same $((n + 1)) homes, the edit and the new home (bridged legacy rows)"
 [ "$(headline /)" = "$custom" ] || fail "$old_tag does not show the Halloween's custom headline after the image rollback: $(headline /)"
 pass "$old_tag shows the Halloween's custom headline: \"$(headline /)\""
+[ "$(community_access "")" = "$stored_access" ] || fail "$old_tag does not show the community's own access"
+pass "$old_tag shows the community's own access ($stored_access), unaffected by the events' own"
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$resident" edit --home-id "$home" --note "Edited on $old_tag" || fail "edit on $old_tag"
 pass "a resident edits on $old_tag"
 
@@ -189,14 +203,14 @@ images "$new_app" "$new_nginx" "$new_tag"
 up
 [ "$(sql "SELECT note FROM event_listings WHERE event_id = $closed_id AND address_id = $home")" = "Edited on $old_tag" ] || fail "the write made on $old_tag was lost"
 [ "$(sql "SELECT note FROM event_listings WHERE event_id = $next_id AND address_id = $home")" = "Next year on $new_tag" ] || fail "next year's listing changed"
-[ "$(public_states)" = "closed,open" ] || fail "/api/events after the forward: $(public_states)"
+[ "$(public_states)" = "open,closed" ] || fail "/api/events after the forward: $(public_states)"
 # A second organizer: the first one has used its three sign-in links of the quarter hour (open-event, brand, close).
 organizer2=drill-organizer-2@example.invalid
 "${compose[@]}" exec -T app php bin/console app:admin:grant "$organizer2" >/dev/null
 python3 scripts/drill_listing.py --base "$base" --mailpit "$mailpit" --email "$organizer2" announce --event-id "$next_id" >/dev/null || fail "announce"
-[ "$(public_states)" = "closed,open,upcoming" ] || fail "/api/events after the announcement: $(public_states)"
+[ "$(public_states)" = "open,closed,upcoming" ] || fail "/api/events after the announcement: $(public_states)"
 [ "$(curl -fsS "$base/?e=$closed_id" | grep -c "href=\"/?e=$next_id\"")" -ge 1 ] || fail "the thank-you card does not link the announced event"
-[ "$(headline /)" = "$custom" ] || fail "the closed Halloween lost its headline"
+[ "$(headline "/?e=$closed_id")" = "$custom" ] || fail "the closed Halloween lost its headline"
 [ "$(headline "/?e=$lights_id")" = "Holiday nights. Bright lights." ] || fail "the lights changed their look"
 pass "$new_tag keeps the note written on $old_tag in the closed Halloween (bridge trigger); next year's listing is untouched and its event was still hidden until announced (now upcoming, linked from the thank-you card); each event keeps its look"
 
@@ -210,10 +224,45 @@ restored=$(homes | view09)
 [ -z "$(sql "SELECT to_regclass('event_occurrences')")" ] || fail "event tables survived the restore"
 pass "restored: exactly the $n pre-upgrade homes; no event tables; $(sql "SELECT COUNT(*) FROM doctrine_migration_versions") migrations recorded"
 
-step "8. the restored database upgrades again"
-images "$new_app" "$new_nginx" "$new_tag"
+step "8. the restored database upgrades again as production does: the past-dated Halloween closes by itself"
+custom="Spooky streets. Sweet treats." # the restored database has the demo's own headline again
+images "$new_app" "$new_nginx" "$new_tag" 1
 up
-[ "$(homes | view09)" = "$before" ] || fail "upgrading the restored database changed /api/homes"
-[ "$(headline /)" = "Spooky streets. Sweet treats." ] || fail "the restored Halloween lost its custom headline on the upgrade"
-pass "upgraded again: same $n homes; the Halloween's custom headline moved again: \"$(headline /)\""
+log=$(applog)
+grep -q 'Closed “Halloween”' <<<"$log" || fail "the past-dated Halloween did not close at start"
+closed_id=$(sql "SELECT id FROM event_occurrences WHERE state = 'closed'")
+[ -n "$closed_id" ] || fail "no closed event"
+[ "$(sql "SELECT state || ' ' || starts_on || ' ' || dates_tentative FROM event_occurrences WHERE id <> $closed_id")" = "hidden 2027-10-31 true" ] || fail "next year's Halloween is not hidden"
+next_id=$(sql "SELECT id FROM event_occurrences WHERE state = 'hidden'")
+[ "$(sql "SELECT actor_label || ' ' || source FROM audit_events WHERE action = 'event.closed'")" = "cli cli" ] || fail "the automatic close is not audited as cli"
+[ "$(public_states)" = "closed" ] || fail "visitors see: $(public_states)"
+[ "$(curl -s -o /dev/null -w '%{http_code}' "$base/api/event?e=$next_id")" = 404 ] || fail "the hidden event answers the public API"
+[ "$(homes | count)" = 0 ] || fail "a closed event shows homes"
+[ "$(headline /)" = "$custom" ] || fail "the restored Halloween lost its custom headline on the upgrade"
+curl -fsS "$base/" | grep -q 'event-status is-closed' || fail "'/' does not show the thank-you page"
+curl -fsS "$base/" | grep -q "e=$next_id" && fail "the thank-you page names the hidden event"
+curl -fsS "$base/past-events" | grep -q "href=\"/?e=$closed_id\"" || fail "Past events does not list the closed Halloween"
+pass "closed by itself at start (audited as cli); next year's $next_id hidden on 2027-10-31; '/' shows the thank-you page, listed under Past events; the custom headline moved again: \"$(headline /)\""
+
+step "9. path (a) after the automatic close: images back to $old_tag"
+images "$old_app" "$old_nginx" "$old_tag" 1
+up
+[ "$(homes | view09)" = "$before" ] || fail "$old_tag does not show the same homes after the automatic close"
+[ "$(headline /)" = "$custom" ] || fail "$old_tag does not show the Halloween's headline after the automatic close: $(headline /)"
+pass "$old_tag shows the same $n homes and \"$(headline /)\""
+
+step "10. forward again: nothing closes twice; the maintenance loop finds nothing to do"
+images "$new_app" "$new_nginx" "$new_tag" 1
+up
+"${compose[@]}" up -d maintenance >/dev/null
+for _ in $(seq 1 30); do
+  log=$("${compose[@]}" logs --no-color maintenance 2>/dev/null || true)
+  grep -q 'No event has ended' <<<"$log" && break
+  sleep 2
+done
+grep -q 'No event has ended' <<<"$log" || fail "the maintenance loop did not run the automatic close"
+[ "$(sql "SELECT COUNT(*) FROM audit_events WHERE action = 'event.closed'")" = 1 ] || fail "the event closed twice"
+[ "$(sql "SELECT string_agg(state, ',' ORDER BY id) FROM event_occurrences")" = "closed,hidden" ] || fail "the events changed: $(sql "SELECT string_agg(state, ',' ORDER BY id) FROM event_occurrences")"
+[ "$(public_states)" = "closed" ] || fail "visitors see: $(public_states)"
+pass "one closed Halloween, one hidden next year, one audit row; the maintenance loop: \"$(grep -o -m1 'No event has ended[^"]*' <<<"$log")\""
 echo "event-types upgrade and rollback drill passed: $old_tag ⇄ $new_app:$new_tag"

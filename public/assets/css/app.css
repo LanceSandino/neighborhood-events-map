@@ -152,8 +152,8 @@ a.crumb:hover strong { color: var(--link); }
    control of links (the Appearance panel's look), 44 px targets, scrolling inside its own box when it is wider than
    the screen. The current event is raised and outlined; an event that is not open says so in words. */
 .topline.has-switch { border-bottom: 0; }
-.event-switch-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 38px 12px; }
-.event-switch { display: flex; gap: 4px; width: max-content; max-width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-3); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.event-switch-bar { display: flex; align-items: center; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 38px 12px; }
+.event-switch { display: flex; gap: 4px; width: max-content; max-width: 100%; min-width: 0; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-3); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .event-switch::-webkit-scrollbar { display: none; }
 /* A soft edge where more events are (a mask: only the opacity counts). */
 .event-switch.more-after { mask-image: linear-gradient(90deg, var(--text) calc(100% - 36px), transparent); }
@@ -165,6 +165,17 @@ a.crumb:hover strong { color: var(--link); }
 .event-tab:focus-visible { outline-offset: -2px; }
 .event-tab-icon { font-size: 16px; line-height: 1; }
 .event-tab-state { padding: 2px 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+/* Past events (closed events): a small link at the end of the switcher's row, outside the strip that scrolls, and a
+   plain list on their own page. */
+.past-link { flex: 0 0 auto; margin-left: auto; display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: var(--text-2); font-size: 13px; font-weight: 800; white-space: nowrap; }
+.past-link:hover { color: var(--text-strong); background: var(--surface-2); }
+.past-link.current { color: var(--text-strong); background: var(--surface-3); outline: 1px solid var(--warm-border); }
+.past-list { list-style: none; display: grid; gap: 8px; margin: 14px 0 18px; padding: 0; }
+.past-list a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--text-strong); text-decoration: none; }
+.past-list a:hover { border-color: var(--warm-border); }
+.past-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+.past-name { display: block; font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+.past-dates { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
 /* An upcoming or closed event's page: one card where the map would be, then the event's rules. */
 .event-status { display: flex; align-items: flex-start; gap: 16px; margin-top: 20px; padding: 22px 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 15px; }
 .event-status-icon { font-size: 34px; line-height: 1; flex-shrink: 0; }

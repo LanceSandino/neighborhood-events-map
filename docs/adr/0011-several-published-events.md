@@ -7,6 +7,11 @@ one-active-event part of [ADR 0010](0010-generic-event-types.md) and of D-202610
 event hidden — residents get ready in My house, visitors see nothing until the organizer announces it — and counts as
 the current event of its type. The rest of this record is unchanged.
 
+**Amended in 0.18** (D-20261104-01 to -05): events close by themselves after their last day, through the same Close. The
+map's switcher shows only current events (open and upcoming); closed events are listed under Past events, and My house
+keeps them as read-only tabs. When the default stops being current it moves to the current event happening soonest, and a
+closed event can no longer be chosen as the default. An event may have its own access.
+
 **Context.** Since 0.11 every event is a row of its own and listings belong to one event, but only one event could be
 on the map: an organizer switched seasons by archiving the event on the map. Neighborhoods run their events side by
 side — the Christmas lights season starts while Halloween's thank-you is still up, and a rummage sale is announced

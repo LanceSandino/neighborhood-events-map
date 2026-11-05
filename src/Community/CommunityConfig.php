@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Community;
 
+use App\Event\EventAccess;
 use App\Event\EventOccurrence;
 use App\Event\EventTypeRegistry;
 use App\Geo\PolygonSet;
@@ -16,11 +17,12 @@ use App\Geo\ZoneResolver;
  *     rest of the app asks ("is registration open?", "which zone contains this point?"). The event the request is about
  *     (the selected or the default one, Event/EventOccurrence) comes with it and its settings `event` block is a view of
  *     that event: only an open event shows homes; residents may list for an upcoming or open event with dates; without a
- *     public event of a type this release offers, nothing is listed and registration is closed.
+ *     public event of a type this release offers, nothing is listed and registration is closed. Access is the event's own,
+ *     else the community's (the stored settings keep the community's, D-20261104-05).
  *
  * @input normalized settings (CommunitySchema) and geometry rows
  * @output typed getters
- * @dependencies Geo/PolygonSet, Geo/ZoneResolver, Event/EventTypeRegistry (default type key), Event/EventOccurrence
+ * @dependencies Geo/PolygonSet, Geo/ZoneResolver, Event/EventTypeRegistry (default type key), Event/EventOccurrence, Event/EventAccess
  */
 final class CommunityConfig
 {
@@ -70,6 +72,18 @@ final class CommunityConfig
     public function timezone(): \DateTimeZone
     {
         return new \DateTimeZone($this->settings['community']['timezone']);
+    }
+
+    /** How visitors may reach the homes during this event: its own access, else the community's. */
+    public function access(): string
+    {
+        return EventAccess::own($this->event) ?? $this->communityAccess();
+    }
+
+    /** The community's own access, which the community console edits (settings saved before access existed: not stated). */
+    public function communityAccess(): string
+    {
+        return (string) ($this->settings['community']['access'] ?? 'unspecified');
     }
 
     /** The first day of the event (the settings' event block mirrors it; the block's last date while it is to be announced). */

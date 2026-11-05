@@ -19,9 +19,9 @@ function eventRow(e) {
 
 async function load() {
   const [o, ev] = await Promise.all([call('/api/admin/overview'), call('/api/admin/events')]);
-  // The public events as visitors' tabs order them: the default first, then by date (dates to be announced last).
+  // The public events as visitors' tabs order them: the default first, then by date (dates to be announced last); past events follow.
   const shown = ev.events.filter((e) => ['upcoming', 'open', 'closed'].includes(e.state))
-    .sort((a, b) => (b.is_default - a.is_default) || String(a.starts_on || '9999').localeCompare(String(b.starts_on || '9999')));
+    .sort((a, b) => (b.is_default - a.is_default) || ((a.state === 'closed') - (b.state === 'closed')) || String(a.starts_on || '9999').localeCompare(String(b.starts_on || '9999')));
   const item = (ok, text, hint = '') => `<li><span class="${ok === true ? 'ok' : ok === 'warn' ? 'warn' : 'todo'}">${ok === true ? '✓' : ok === 'warn' ? '!' : '○'}</span><div>${text}${hint ? `<br><span class="form-caption">${hint}</span>` : ''}</div></li>`;
   const b = o.boundary;
   $('#admin-overview').innerHTML = `

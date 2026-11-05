@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Audit\AuditLog;
 use App\Community\CommunityRepository;
+use App\Event\EventAccess;
 use App\Event\EventOccurrence;
 use App\Event\EventBranding;
 use App\Event\EventConflictException;
@@ -29,9 +30,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 /**
  * @module Controller/Api/EventsAdminApiController
  * @description Organizer API for events (ROLE_ADMIN, CSRF and idle timeout enforced first; ADR 0011): list events with
- *     their type's name and mark and their opted-in and public counts (an open event also with what closing it will do: the thank-you text and next
- *     year's dates), the types with the dates a new event gets and their default branding (the placeholders of an
- *     event's own branding, ADR 0012), prepare a draft of an offered type (or a hidden event: residents can get ready),
+ *     their type's name and mark and their opted-in and public counts (an open event also with what closing it will do: the thank-you text, next
+ *     year's dates and where "/" goes), the types with the dates a new event gets, their access choices and their default branding (the placeholders of an
+ *     event's own branding, ADR 0012), today's local date, prepare a draft of an offered type (or a hidden event: residents can get ready),
  *     edit an event (its branding too), hide a draft or an upcoming event (D-20261101-01), announce a draft or a hidden
  *     event (upcoming), open, close (confirmed; creates next year's event, hidden), make an event the default,
  *     archive, export one event's listings (a CSRF-checked form POST, like the claims export) and delete an archived
@@ -73,9 +74,11 @@ final class EventsAdminApiController
                 'route_profiles' => $t->routeProfiles(), 'settings' => $t instanceof EventSettingsType ? $t->settingKeys() : [],
                 'setting_options' => $t instanceof EventSettingsType ? (object) $t->settingOptions() : (object) [],
                 'new_dates' => $t->newEventDates($today), 'closing_template' => (string) ($t->copy()['page_closing_message'] ?? ''),
+                'access_options' => EventAccess::options($t),
                 // The type's branding, shown as the placeholders of an event's own (ADR 0012).
                 'branding' => EventBranding::look($t, []) + ['about' => (string) ($t->copy()['about'] ?? '')]], $this->types->enabled()),
             'default_id' => $default,
+            'today' => $today,
         ], 200, ['Cache-Control' => 'no-store']);
     }
 

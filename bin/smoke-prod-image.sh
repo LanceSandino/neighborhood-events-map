@@ -4,7 +4,8 @@
 #   prod PHP settings, read-only containers) with compose.yaml, a throwaway project and random secrets, then
 #   checks what the development stack cannot: /healthz and the home page (the fictional demo's map) answer 200 through nginx, every
 #   versioned asset on the page answers 200, a multipart body is refused (415) except on an upload endpoint
-#   (which reaches PHP), all three PHP-FPM pools answer, and the console works in the prod image. Always tears
+#   (which reaches PHP), all three PHP-FPM pools answer, and the console works in the prod image, closing the demo's
+#   past-dated event when forced (the demo's date is fixed, so the stack runs with EVENTS_AUTO_CLOSE=0). Always tears
 #   the stack and its volumes down. Run before publishing or deploying any image (CI and the Images workflow
 #   run it; docs/runbooks/release.md).
 # @dependencies bash, docker compose, curl, openssl
@@ -48,6 +49,8 @@ trap cleanup EXIT
   # an install without an active event would show the neutral "no event right now" page instead.
   echo "COMMUNITY_BOOTSTRAP_FILE=/app/examples/demo/community.yaml"
   echo "COMMUNITY_BOOTSTRAP_APPROVE=1"
+  # Its date is fixed and past: closing it at start would replace the map page this test checks. Forced at the end.
+  echo "EVENTS_AUTO_CLOSE=0"
 } > "$env_file"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -88,5 +91,14 @@ pass "PHP-FPM pools www, mail and upload answer"
 "${compose[@]}" exec -T app php bin/console app:maintenance:purge --no-interaction >/dev/null \
   || fail "the maintenance purge does not run in the prod image"
 pass "console commands run in the prod image"
+
+"${compose[@]}" exec -T app php bin/console app:events:close-ended --no-interaction | grep -q 'EVENTS_AUTO_CLOSE=0' \
+  || fail "the automatic close does not honour EVENTS_AUTO_CLOSE=0"
+closing=$("${compose[@]}" exec -T app php bin/console app:events:close-ended --force --no-interaction) || fail "the automatic close does not run in the prod image"
+case "$closing" in *'Closed “'*) ;; *) fail "the demo's past-dated event did not close: $closing" ;; esac
+[ "$(code "$base/past-events")" = 200 ] || fail "/past-events did not answer 200"
+page=$(curl -fsS -H "Host: localhost:$port" "$base/") || fail "the home page did not answer 200 after closing"
+case "$page" in *'is-closed'*) ;; *) fail "the home page does not show the closed event's thank-you message" ;; esac
+pass "the automatic close runs in the prod image: $closing"
 
 echo "production image smoke test passed: $app_image:$tag + $nginx_image:$tag"

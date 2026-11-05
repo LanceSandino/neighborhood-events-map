@@ -40,8 +40,10 @@ or from their own details of the last sale. This page is the organizer's checkli
    - **Offer a driving tour** — directions need a routing provider (below).
 2. **Preview** the draft: it shows the sale theme, words, days and filters (and no homes).
 3. **Announce** it (residents can list once it has dates), then **Open** it (it needs its dates and days) and **Make
-   default** if the front page should show it. Residents see "List for Community Rummage Sale" in My house. When the
-   sale is over, **Close** it: the next sale is created with its dates to be announced.
+   default** if the front page should show it. Residents see "List for Community Rummage Sale" in My house. The sale
+   closes by itself after its last day (or **Close** it earlier): the next sale is created hidden, with its dates to be
+   announced. A sale often differs from the neighborhood's usual rule: set **Who may come** to "Open to the public" if it
+   is open to everyone.
 4. Optional: in the sale's **Branding of this event** (Organizer → Events → Edit), set its own emoji, headline, intro,
    colours or About text. Empty fields keep the sale's look (teal and coral, "Good finds. Close to home."); another
    event's branding never shows on the sale ([ADR 0012](../adr/0012-community-and-event-branding.md)). Teal buttons

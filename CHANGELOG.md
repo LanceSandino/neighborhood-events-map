@@ -6,6 +6,32 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.18.0-beta.1] - 2026-11-04
+
+Events now end by themselves. The day after an event's last day it closes on its own, moves under "Past events" with its thank-you message, and the front page goes to the event happening next. Each event can also say who may come.
+
+### New for visitors
+- **Past events.** Events that are over no longer take up a tab. A small "Past events" link, at the end of the tabs and in the footer, lists them newest first, each with its thank-you message.
+- **Only what is on now in the tabs.** The tabs show events that are open or announced. A thank-you page has a link back to the current event.
+- **Who may come, per event.** An event can have its own access, so a rummage sale can be open to the public while the Christmas lights are for residents and guests. The event's rules and About page say which.
+
+### New for organizers
+- **Events close by themselves after their last day**, at midnight in your community's time zone (within the hour). Homes leave the map, visitors find the thank-you message under Past events, and next year's event is created hidden, exactly as when you press Close. A season from November 1 to January 1 stays open across New Year and closes on January 2. Hidden, upcoming and draft events never close by the date. You can still press Close to end an event earlier, or change its last day to keep it going.
+- **The default event follows what is on.** When the default event closes, the front page moves to the event happening soonest: one on today, then the next open event, then the next announced one. With nothing on, it keeps showing the thank-you message until you announce or open another event. Next year's hidden event is never the default. If you choose a default yourself, it stays while that event is on the site.
+- **Closed events can no longer be made the default**; they are under Past events.
+- **Organizer → Events is grouped**: On the site now, Hidden and getting ready, Drafts, Past events and Archived, with a short explanation of how events close. The Close confirmation says where the front page goes.
+- **"Who may come" in each event's form**, in the words of its kind of event, with "Same as the community" as the usual choice. Next year's event keeps it.
+
+### Changed
+- An event with its own access does not show the community's access notes if they are for a different access. Put what visitors need in that event's rules.
+- My house still has a tab for ended events, so residents can read their listings there.
+
+### Security
+- Symfony 8.1.11, with the fixes published on 2026-11-04.
+
+### Known limitations
+- An event closes within an hour after midnight, not at the exact minute; until then it stays on the map.
+
 ## [0.17.0-beta.1] - 2026-11-01
 
 Next year's event now stays hidden until you are ready to show it. When you close an event, next year's is created without appearing to visitors, so residents can get their houses ready first.

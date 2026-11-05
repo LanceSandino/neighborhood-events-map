@@ -3,7 +3,9 @@
    community or event name gets the compact brand, and a long name wraps in the footer instead of widening a phone page.
    <html data-event-type> names the type of the event the page shows (the selected or the default one), whose head
    fragment may add its theme tokens (organizer colours from /theme.css still win). A page that sets switch_path ('/' or
-   '/me') shows the event switcher while several events are public (ADR 0011); links keep the page's event (event_query).
+   '/me') shows the event switcher while several events are current (ADR 0011); links keep the page's event (event_query).
+   While a closed event exists, the map's pages end that row with a "Past events" link and every footer has one
+   (D-20261104-02); without one nothing changes.
    The browser-tab icon is the community's logo, else the type's icon; the theme stylesheet (block theme) is the page's
    event's colours (the draft preview names its draft's). #}
 {%- set community = c.community -%}
@@ -12,6 +14,9 @@
 {%- set listing_on = event_on and (c.event.state ?? 'open') != 'closed' -%}
 {%- set q = event_query() -%}
 {%- set tabs = (switch_path ?? '') ? event_tabs(switch_path) : [] -%}
+{%- set past = past_events() -%}
+{%- set show_past = past and (switch_path ?? '') == '/' -%}
+{%- set past_page = past_page ?? false -%}
 {%- set year = c.event.date|slice(0, 4) -%}
 {%- set event_name = event_on ? c.event.name : '' -%}
 {%- set et = event_type(c.event.type ?? null) -%}
@@ -68,7 +73,7 @@
     </div>
   </aside>
   <div class="main">
-    <header class="topline{{ tabs ? ' has-switch' }}">
+    <header class="topline{{ tabs or show_past ? ' has-switch' }}">
       <a class="crumb" href="/{{ q }}">{% if branding.logo_url %}<img class="crumb-logo" src="{{ branding.logo_url }}" alt="">{% else %}📍{% endif %} {% if place and not show_place %}<span class="crumb-loc">{{ place }} <span class="sep">/</span> </span>{% endif %}<span class="crumb-name"><strong>{{ community.name }} Community</strong>{% if show_place %}<small class="crumb-sub">{{ place }}</small>{% endif %}</span></a>
       <div class="topright">
         {% if c.demo %}<span class="demo-pill">FICTIONAL DEMO</span>{% elseif c.map.boundary_status == 'pending_review' %}<span class="demo-pill warn" title="House listings open after the organizer approves the boundary">SETUP IN REVIEW</span>{% endif %}
@@ -77,13 +82,16 @@
         {% if listing_on %}<a class="top-add" href="/{{ q }}#list-my-house" data-action="register">+ List your home</a>{% endif %}
       </div>
     </header>
-    {% if tabs %}<div class="event-switch-bar"><nav class="event-switch" aria-label="Events">
-      {%- for t in tabs %}<a href="{{ t.href }}" class="event-tab{{ t.current ? ' current' }}"{% if t.current %} aria-current="page"{% endif %}><span class="event-tab-icon" aria-hidden="true">{{ t.icon }}</span><span class="event-tab-name">{{ t.label }}</span>{% if t.state_words %}<span class="event-tab-state">{{ t.state_words }}</span>{% endif %}</a>{% endfor -%}
-    </nav></div>{% endif %}
+    {% if tabs or show_past %}<div class="event-switch-bar">
+      {%- if tabs %}<nav class="event-switch" aria-label="Events">
+      {%- for t in tabs %}{% set here = t.current and not past_page %}<a href="{{ t.href }}" class="event-tab{{ here ? ' current' }}"{% if here %} aria-current="page"{% endif %}><span class="event-tab-icon" aria-hidden="true">{{ t.icon }}</span><span class="event-tab-name">{{ t.label }}</span>{% if t.state_words %}<span class="event-tab-state">{{ t.state_words }}</span>{% endif %}</a>{% endfor -%}
+    </nav>{% endif -%}
+      {%- if show_past %}{% set past_here = past_page or (c.event.state ?? '') == 'closed' %}<a class="past-link{{ past_here ? ' current' }}" href="/past-events"{% if past_here %} aria-current="{{ past_page ? 'page' : 'true' }}"{% endif %}>Past events</a>{% endif -%}
+    </div>{% endif %}
     <main class="content" id="main" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
-    <footer class="site-footer"><a href="/about{{ q }}">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>{{ cloudflare_web_analytics ? 'No ads · Cookie-free visit statistics' : 'No ads · No tracking' }}</span><span class="footer-id">{{ (community.name ~ ' ' ~ event_name)|trim }} · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
+    <footer class="site-footer"><a href="/about{{ q }}">About</a>{% if past %}<a href="/past-events">Past events</a>{% endif %}<a href="/privacy">Privacy</a><a href="/terms">Terms of use</a><a href="/accessibility">Accessibility</a><span>{{ cloudflare_web_analytics ? 'No ads · Cookie-free visit statistics' : 'No ads · No tracking' }}</span><span class="footer-id">{{ (community.name ~ ' ' ~ event_name)|trim }} · <a href="/changelog" data-whats-new>v{{ app_version }} · What’s new</a></span>{% block footer_credit %}{% endblock %}</footer>
   </div>
 </div>
 <nav class="mobile-bottom" aria-label="Primary">

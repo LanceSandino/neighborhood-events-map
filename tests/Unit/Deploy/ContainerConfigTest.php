@@ -48,6 +48,33 @@ final class ContainerConfigTest extends TestCase
         }
     }
 
+    /**
+     * Events close by themselves (D-20261104-01): once at app start, after the migrations, where a failure or a stuck lock
+     * never stops the app, and in the maintenance loop. On by default; off only where the dates are fixed fixtures.
+     */
+    public function testEventsCloseByThemselvesAtStartAndInTheLoopAndOnlyFixedDateStacksTurnItOff(): void
+    {
+        $compose = Yaml::parse(self::read('compose.yaml'));
+        self::assertSame('${EVENTS_AUTO_CLOSE:-1}', $compose['services']['app']['environment']['EVENTS_AUTO_CLOSE'], 'on in production');
+        self::assertSame('${EVENTS_AUTO_CLOSE:-1}', $compose['services']['maintenance']['environment']['EVENTS_AUTO_CLOSE']);
+        self::assertStringContainsString("php bin/console app:events:close-ended --no-interaction || echo 'closing ended events failed' >&2;", implode(' ', $compose['services']['maintenance']['entrypoint']));
+
+        $dev = Yaml::parse(self::read('compose.dev.yaml'), Yaml::PARSE_CUSTOM_TAGS);
+        self::assertSame('${EVENTS_AUTO_CLOSE:-0}', $dev['services']['app']['environment']['EVENTS_AUTO_CLOSE'], 'off on the fixed-date demo stacks, unless asked for');
+        self::assertSame('${EVENTS_AUTO_CLOSE:-0}', $dev['services']['maintenance']['environment']['EVENTS_AUTO_CLOSE']);
+        self::assertStringNotContainsString('EVENTS_AUTO_CLOSE', self::read('compose.staging.yaml'), 'staging is like production');
+        self::assertStringContainsString('EVENTS_AUTO_CLOSE=0', self::read('.env.test'));
+        self::assertStringContainsString("env(EVENTS_AUTO_CLOSE): '1'", self::read('config/services.yaml'), 'on when nothing sets it');
+        self::assertStringContainsString('EVENTS_AUTO_CLOSE=0', self::read('bin/smoke-prod-image.sh'), 'the smoke test checks the demo\'s map page');
+
+        $entry = self::read('docker/php/entrypoint.sh');
+        $close = strpos($entry, 'timeout 60 php bin/console app:events:close-ended --no-interaction || echo "WARN');
+        self::assertNotFalse($close, 'bounded in time, and never fatal under set -e');
+        self::assertLessThan($close, strpos($entry, 'doctrine:migrations:migrate'), 'after the migrations');
+        self::assertLessThan($close, strpos($entry, 'app:community:bootstrap'), 'after the first event exists');
+        self::assertLessThan(strpos($entry, 'exec docker-php-entrypoint'), $close);
+    }
+
     public function testNginxRoutesMailEndpointsToTheirPoolAndNeverToATcpUpstream(): void
     {
         $conf = (string) preg_replace('~#[^\n]*~', '', self::read('docker/nginx/default.conf').self::read('docker/nginx/app-fastcgi.conf'));

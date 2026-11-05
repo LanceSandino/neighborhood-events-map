@@ -2,8 +2,8 @@
 // the default event afterwards; ADR 0011). An organizer closes Halloween: its homes leave the map at once, visitors see
 // the thank-you message (a stop list shared for it opens without its stops), next year's Halloween is created hidden
 // (0.17: no tab, no page, no API for visitors), a resident lists their home for it in My house from an empty form (or
-// from their own details of last time), the organizer announces it and its tab appears. Next year's opens and becomes
-// the default. Christmas lights and a rummage sale are prepared, previewed and
+// from their own details of last time), the organizer announces it and "/" moves to it while the ended Halloween is under
+// Past events (D-20261104-02, -03). Next year's opens and stays the default. Christmas lights and a rummage sale are prepared, previewed and
 // opened next to it — each with its own look, not the demo's Halloween branding —: the same resident lists the same home
 // for each, independent listings, and an ended season's listing is never public again. The demo then gets a Halloween
 // event on October 31 back, as it started, with its branding entered in the event's Branding section.
@@ -128,33 +128,36 @@ test('an organizer closes the season; last season disappears, next year is creat
   await expect(res.locator('.dash-home', { hasText: mine.address }).locator('[data-f="meta"]')).toContainText('Shown when the event opens');
   expect((await request.get(`${DEMO}/api/homes?e=${next.id}`)).status(), 'hidden: not public at all').toBe(404);
 
-  // The organizer announces it: its tab appears with its tentative date, the thank-you card links it, still no homes.
+  // The organizer announces it: "/" moves to it, with its tentative date and still no homes; the ended Halloween is
+  // under Past events, and its thank-you card links the new one.
   await page.goto(DEMO + '/admin/events');
   page.once('dialog', (d) => d.accept());
   await row(next.id).getByRole('button', { name: 'Announce' }).click();
   await expect(page.locator('#flash')).toContainText(`“${name}” is announced.`);
   await expect(row(next.id)).toContainText('Upcoming');
+  await expect(row(next.id)).toContainText('Default');
   const announced = await (await browser.newContext()).newPage();
   await politeTiles(announced);
   await announced.goto(DEMO + '/');
-  const tabs = announced.getByRole('navigation', { name: 'Events' }).getByRole('link');
-  await expect(tabs).toHaveCount(2);
-  await expect(tabs.nth(1)).toContainText(`${name} ${year + 1}`);
-  await expect(tabs.nth(1)).toContainText('Soon');
-  await expect(announced.getByRole('link', { name: `See ${name} ${year + 1}` })).toHaveAttribute('href', `/?e=${next.id}`);
+  await expect(announced.locator('#eventStatusTitle')).toHaveText(`Oct 31, ${year + 1}, tentative`);
+  await expect(announced.locator('.event-switch'), 'one current event: no switcher').toHaveCount(0);
+  await announced.locator('a.past-link').click();
+  await expect(announced).toHaveURL(`${DEMO}/past-events`);
+  await announced.getByRole('link', { name: new RegExp(`${name} ${year}`) }).click();
+  await expect(announced).toHaveURL(`${DEMO}/?e=${before.id}`);
+  await expect(announced.locator('.event-status-message')).toHaveText(new RegExp(`${name} ${year} was a success`));
   await expect(announced.getByRole('link', { name: 'Get my house ready' })).toHaveAttribute('href', `/me?e=${next.id}`);
-  await tabs.nth(1).click();
+  await announced.getByRole('link', { name: `See ${name} ${year + 1}` }).click();
   await expect(announced.locator('#eventStatusTitle')).toHaveText(`Oct 31, ${year + 1}, tentative`);
   await announced.context().close();
   expect((await (await request.get(`${DEMO}/api/homes?e=${next.id}`)).json()).homes, 'announced: not public before it opens').toEqual([]);
 
-  // Next year's opens (its date confirmed) and becomes the default: the home is on the map again, for this event.
+  // Next year's opens (its date confirmed) and stays the default: the home is on the map again, for this event.
   await page.goto(DEMO + '/admin/events');
   page.once('dialog', (d) => d.accept());
   await row(next.id).getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('#flash')).toContainText(`“${name}” is open`);
-  await row(next.id).getByRole('button', { name: 'Make default' }).click();
-  await expect(page.locator('#flash')).toContainText(`“${name}” is the default event now`);
+  await expect(row(next.id)).toContainText('Default');
   const reopened = (await (await request.get(DEMO + '/api/homes')).json()).homes;
   expect(reopened.map((h) => [h.id, h.event_id, h.start, h.end, h.candy, h.nonfood, h.low_noise, h.note]))
     .toEqual([[mine.id, next.id, '17:00', '20:00', true, true, true, 'Teal pumpkin: allergy-friendly treats on the porch.']]);
@@ -198,7 +201,8 @@ test('an organizer closes the season; last season disappears, next year is creat
   await expect(view.locator('section.intro h1')).toHaveText('Holiday nights. Bright lights.');
   await expect(view.locator('.brand-icon')).toHaveText('✨');
   await expect(view.locator('#listCount')).toHaveText('0 showing');
-  await expect(view.getByRole('navigation', { name: 'Events' }).getByRole('link')).toHaveCount(3);
+  await expect(view.getByRole('navigation', { name: 'Events' }).getByRole('link'), 'the two current events').toHaveCount(2);
+  await expect(view.locator('a.past-link')).toBeVisible();
   await view.context().close();
 
   await res.goto(DEMO + '/me');

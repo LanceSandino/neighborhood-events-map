@@ -17,7 +17,8 @@ use PHPUnit\Framework\Attributes\RequiresPhpExtension;
  * @description The event invariants under concurrency (ADR 0011, D-20261031-37; this replaces the one-active-event race
  *   test of 0.11, whose switch no longer exists): organizers in separate OS processes with separate PostgreSQL
  *   connections act at the same instant — opening different events of one type, closing the same event, making
- *   different events the default, closing while a draft of next year is hidden, announcing a hidden event. Exactly one of each conflicting change wins, the others are refused, closing creates
+ *   different events the default, closing while a draft of next year is hidden, announcing a hidden event, and the
+ *   automatic close (D-20261104-01) against the organizer's Close, new dates and "Make default". Exactly one of each conflicting change wins, the others are refused, closing creates
  *   next year's event exactly once, there is always exactly one default, and the partial unique indexes and the check
  *   refuse a second current event of a type, a second default and a default that is not public even without the app.
  * @dependencies tests/Support/AppTestCase, Event/EventLifecycle
@@ -129,6 +130,52 @@ final class EventLifecycleRaceTest extends AppTestCase
         self::assertSame(1, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE action = 'event.announced'"));
     }
 
+    public function testAnOrganizersCloseAndTheAutomaticCloseAtOnceCloseOnce(): void
+    {
+        $this->configureCommunity();
+        $open = (int) $this->db()->fetchOne("SELECT id FROM event_occurrences WHERE state = 'open'");
+        $outcomes = $this->race([['close', $open], ['closeEnded', $open], ['closeEnded', $open], ['close', $open]]);
+        $counts = array_count_values($outcomes);
+        self::assertSame(1, $counts['ok'] ?? 0, json_encode($outcomes));
+        self::assertSame(3, ($counts['not_open'] ?? 0) + ($counts['left_alone'] ?? 0), json_encode($outcomes));
+        self::assertSame('closed', $this->db()->fetchOne('SELECT state FROM event_occurrences WHERE id = ?', [$open]));
+        self::assertSame([['halloween', '2027-10-31', 'hidden']], $this->db()->fetchAllNumeric('SELECT type, starts_on, state FROM event_occurrences WHERE id <> ?', [$open]), 'next year\'s event exactly once');
+        self::assertSame(1, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM audit_events WHERE action = 'event.closed'"));
+        self::assertSame([$open], array_map('intval', $this->db()->fetchFirstColumn('SELECT id FROM event_occurrences WHERE is_default')), 'one default, on the thank-you page');
+    }
+
+    public function testTheAutomaticCloseAndNewDatesAtOnceStayConsistent(): void
+    {
+        $this->configureCommunity();
+        $open = (int) $this->db()->fetchOne("SELECT id FROM event_occurrences WHERE state = 'open'");
+        [$auto, $moved] = $this->race([['closeEnded', $open], ['moveDates', $open]]);
+        $row = $this->db()->fetchAssociative('SELECT state, ends_on FROM event_occurrences WHERE id = ?', [$open]);
+        self::assertNotFalse($row);
+        $closedFirst = ['state' => 'closed', 'ends_on' => '2026-10-31'];
+        $movedFirst = ['state' => 'open', 'ends_on' => '2026-11-07'];
+        if ('ok' === $auto) {
+            self::assertSame([$closedFirst, 'closed'], [$row, $moved], 'it closed first: a closed event keeps its dates');
+            self::assertSame(1, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM event_occurrences WHERE state = 'hidden'"));
+        } else {
+            self::assertSame([$movedFirst, 'ok', 'left_alone'], [$row, $moved, $auto], 'the new dates came first: it is not over');
+            self::assertSame(0, (int) $this->db()->fetchOne("SELECT COUNT(*) FROM event_occurrences WHERE state = 'hidden'"));
+        }
+    }
+
+    public function testTheAutomaticCloseAndMakeDefaultAtOnceKeepTheOrganizersChoice(): void
+    {
+        $this->configureCommunity();
+        $open = (int) $this->db()->fetchOne("SELECT id FROM event_occurrences WHERE state = 'open'");
+        $lights = (int) $this->db()->fetchOne("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at)
+            VALUES ('holiday_lights', 'Lights', '2026-12-01', '2027-01-03', '18:00', '22:00', 'open', NOW()) RETURNING id");
+        $sale = (int) $this->db()->fetchOne("INSERT INTO event_occurrences (type, name, starts_on, ends_on, default_start_local, default_end_local, state, created_at)
+            VALUES ('garage_sale', 'Sale', NULL, NULL, '08:00', '14:00', 'upcoming', NOW()) RETURNING id");
+        self::assertNotSame($lights, $sale);
+        $outcomes = $this->race([['closeEnded', $open], ['makeDefault', $sale], ['makeDefault', $sale]]);
+        self::assertSame(['ok' => 3], array_count_values($outcomes), json_encode($outcomes));
+        self::assertSame([$sale], array_map('intval', $this->db()->fetchFirstColumn('SELECT id FROM event_occurrences WHERE is_default')), 'whichever came first, the organizer\'s choice is the default');
+    }
+
     public function testTheDatabaseRefusesASecondDefaultAndADefaultThatIsNotPublic(): void
     {
         $this->configureCommunity();
@@ -178,7 +225,13 @@ final class EventLifecycleRaceTest extends AppTestCase
                     while (microtime(true) < $startAt) {
                         usleep(500);
                     }
-                    'close' === $method ? $lifecycle->close($id, null, $admin) : $lifecycle->{$method}($id, $admin);
+                    match ($method) {
+                        'close' => $lifecycle->close($id, null, $admin),
+                        // The automatic close on the day after the event's last day; left alone when it no longer qualifies.
+                        'closeEnded' => $lifecycle->closeEnded($id, '2026-11-02') ?? throw new EventConflictException('left_alone', 'Not closed.'),
+                        'moveDates' => $lifecycle->update($id, ['starts_on' => '2026-11-07', 'ends_on' => '2026-11-07'], $admin),
+                        default => $lifecycle->{$method}($id, $admin),
+                    };
                     $status = 'ok';
                 } catch (EventConflictException $e) {
                     $status = $e->reason;

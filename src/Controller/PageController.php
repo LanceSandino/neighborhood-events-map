@@ -25,7 +25,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @description Server-rendered pages: for the selected event (`?e=<id>`) or the default one, the public map shell
  *     with a no-JS readable list of homes (open), the event's dates and a way to list a home (upcoming) or its
  *     thank-you message (closed), each with the event switcher; with no public event a neutral "no event right now"
- *     page; sign-in page, owner dashboard shell, theme CSS from config (the selected event's type; My house's own,
+ *     page; the list of past events; sign-in page, owner dashboard shell, theme CSS from config (the selected event's type; My house's own,
  *     residents only, also for a hidden event it may name, D-20261101-01), uploaded logo, health check.
  *
  * @dependencies Community/*, Listing/ListingRepository, Event/EventTypeRegistry, About/ChangelogReader
@@ -58,6 +58,13 @@ final class PageController extends AbstractController
         $payload = $this->presenter->publicPayload($c, $homes);
 
         return $this->render('home/index.html.twig', ['c' => $payload, 'homes' => $homes, 'boot' => ['community' => $payload, 'homes' => $homes]]);
+    }
+
+    /** The closed events, newest first, each leading to its thank-you page (D-20261104-02). */
+    #[Route('/past-events', name: 'past_events', methods: ['GET'])]
+    public function pastEvents(): Response
+    {
+        return $this->render('home/past_events.html.twig', ['c' => $this->presenter->publicPayload($this->community->current(), [])]);
     }
 
     #[Route('/login', name: 'login', methods: ['GET'])]
