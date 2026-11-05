@@ -284,8 +284,8 @@ test('a resident lists a display: nights, styles, viewing mode, music and statio
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
   let api = (await (await request.get(`${LIGHTS}/api/homes/${mine.id}`)).json()).home;
   expect([api.status, api.status_date]).toEqual(['off_tonight', today]);
-  await card.getByRole('button', { name: '✅ Done for the season' }).click();
-  await expect(card.getByRole('button', { name: '✅ Done for the season' })).toHaveAttribute('aria-pressed', 'true');
+  await card.getByRole('button', { name: 'Done for the season' }).click();
+  await expect(card.getByRole('button', { name: 'Done for the season' })).toHaveAttribute('aria-pressed', 'true');
   api = (await (await request.get(`${LIGHTS}/api/homes/${mine.id}`)).json()).home;
   expect([api.status, api.status_date, api.display_status]).toEqual(['finished', null, 'finished']);
   await page.screenshot({ path: `${SHOTS}/lights-me-390.png` });

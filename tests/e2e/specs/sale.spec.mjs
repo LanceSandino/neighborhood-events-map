@@ -299,15 +299,15 @@ test('a resident lists a sale: days with their own hours, categories, payment ki
   await expect(home.locator('[data-f="error"]')).toContainText('Please remove the payment username or handle');
   expect((await (await request.get(`${SALE}/api/homes/${mine.id}`)).json()).home.note, 'the refused edit is not stored').toBe('Toys and a sofa; everything must go.');
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
-  for (const [label, status] of [['⏸️ Paused today', 'paused'], ['📦 Sold out today', 'sold_out']]) {
+  for (const [label, status] of [['Paused today', 'paused'], ['Sold out today', 'sold_out']]) {
     await page.locator('.dash-home', { has: page.locator('h2', { hasText: address }) }).getByRole('button', { name: label }).click();
     await expect(page.locator('.dash-home', { has: page.locator('h2', { hasText: address }) }).getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true');
     const api = (await (await request.get(`${SALE}/api/homes/${mine.id}`)).json()).home;
     expect([api.status, api.status_date]).toEqual([status, today]);
   }
   const mineNow = page.locator('.dash-home', { has: page.locator('h2', { hasText: address }) });
-  await mineNow.getByRole('button', { name: '🔒 Closed' }).click();
-  await expect(mineNow.getByRole('button', { name: '🔒 Closed' })).toHaveAttribute('aria-pressed', 'true');
+  await mineNow.getByRole('button', { name: 'Closed', exact: true }).click();
+  await expect(mineNow.getByRole('button', { name: 'Closed', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const closed = (await (await request.get(`${SALE}/api/homes/${mine.id}`)).json()).home;
   expect([closed.status, closed.status_date, closed.display_status]).toEqual(['closed', null, 'closed']);
   await page.screenshot({ path: `${SHOTS}/sale-me-390.png` });

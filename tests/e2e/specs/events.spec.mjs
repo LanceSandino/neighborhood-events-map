@@ -169,7 +169,7 @@ test('the organizer console names the community and uses its own colours; event 
       ['/admin/disputes', '#list'], ['/admin/audit', 'table.data'], ['/admin/events', '.events-table']]) {
       await page.goto(LIGHTS + path);
       await expect(page.locator(ready).first()).toBeAttached();
-      await expect(page.locator('.admin-top .brand-icon')).toHaveText('M');
+      await expect(page.locator('.admin-top .brand-icon svg use')).toHaveAttribute('href', /#brand-community$/);
       expect(await page.locator('link[href*="theme.css"]').count(), `${path}: no event's stylesheet`).toBe(0);
       const look = await page.evaluate(() => [getComputedStyle(document.body).getPropertyValue('--orange').trim().toUpperCase(), getComputedStyle(document.querySelector('.admin-top .brand-icon')).backgroundColor]);
       expect(look[0], `${path} (${scheme}): the console's own colour`).toBe(scheme === 'light' ? '#3B5674' : '#93B2D6');

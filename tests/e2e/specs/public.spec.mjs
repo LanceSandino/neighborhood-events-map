@@ -338,7 +338,7 @@ test('route: skip stops, bring them back, add nearby suggestions, switch between
   await page.getByRole('button', { name: 'Bring back' }).click();
   await expect(items).toHaveCount(openHomes.length);
   // One favourite: suggestions nearby can be added; "All matching" shows everything again.
-  await page.getByRole('button', { name: /^Saved/ }).click();
+  await page.getByRole('button', { name: /^Saved \(/ }).click();
   await page.locator(`.home-card .save[data-save="${openHomes[0].id}"]`).click();
   await expect(items).toHaveCount(1);
   const add = page.locator('[data-add-stop]').first();
@@ -347,7 +347,7 @@ test('route: skip stops, bring them back, add nearby suggestions, switch between
   await expect(items).toHaveCount(2);
   await page.getByRole('button', { name: /^All matching/ }).click();
   await expect(items).toHaveCount(openHomes.length);
-  await page.getByRole('button', { name: /^Saved/ }).click();
+  await page.getByRole('button', { name: /^Saved \(/ }).click();
   await expect(items).toHaveCount(2);
 });
 
