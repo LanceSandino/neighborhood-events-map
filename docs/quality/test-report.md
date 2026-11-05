@@ -4,7 +4,7 @@
 
 Drawn art, the C9 garland, a logo per event and logos in the database (D-20261105-01 to -07, ADR 0013; CU-20261105-02 to -05), on
 PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.11. Application code is the same from commit `c015187` on; later commits change tests, documents
-and screenshots only. **There was no single fully green browser run**: see the Playwright row.
+and screenshots only. The last row is the full browser run on the final tests, with nothing failing.
 
 | Gate | Result |
 |---|---|
@@ -19,7 +19,8 @@ and screenshots only. **There was no single fully green browser run**: see the P
 | `docker build --target prod`, `--target nginx` | Both built (`c015187`) |
 | `bin/smoke-prod-image.sh` | **Passed** (`c015187`): health, map page, 54 versioned assets, multipart rules, FPM pools, console, automatic close |
 | `bin/drill-event-upgrade.sh` | **Passed** against the published 0.9.0-beta.1 (`c015187`), now with a logo: a volume logo becomes the community's and the Halloween's in the database, the file and key stay, next year's hidden event keeps it and answers visitors 404, and 0.9 still shows it after both rollback paths and after the automatic close |
-| Playwright (`./bin/e2e.sh`, tiles allowed) | Whole suite on `c015187`: **227 passed, 2 failed, 2 skipped, 8 did not run** in 25.2 min. The failures were one test on two browsers, a selector that no longer told two buttons apart without its emoji; the 8 are the season project, which depends on the others. After fixing the tests: `public.spec:324` on both browsers **passed**; the season project alone (`--no-deps`) **7 passed, 1 failed**, a check for the console's old initial; that test **passed** after updating it. Every test has passed, not all in one run |
+| Playwright (`./bin/e2e.sh`, tiles allowed) | Whole suite on `c015187`: **227 passed, 2 failed, 2 skipped, 8 did not run** in 25.2 min. The failures were one test on two browsers, a selector that no longer told two buttons apart without its emoji; the 8 are the season project, which depends on the others. After fixing the tests: `public.spec:324` on both browsers **passed**; the season project alone (`--no-deps`) **7 passed, 1 failed**, a check for the console's old initial; that test **passed** after updating it. Every test has passed, not all in one run || Playwright (`./bin/e2e.sh`, tiles allowed) | Whole suite on `c015187`: **227 passed, 2 failed, 2 skipped, 8 did not run** in 25.2 min. The failures were one test on two browsers, a selector that no longer told two buttons apart without its emoji; the 8 are the season project, which depends on the others. After fixing the tests: `public.spec:324` on both browsers **passed**; the season project alone (`--no-deps`) **7 passed, 1 failed**, a check for the console's old initial; that test **passed** after updating it. Every test has passed, not all in one run |
+| Playwright, full run on the final tests (`E2E_BLOCK_TILES=1 ./bin/e2e.sh`, fresh stacks, commit `67c517c`) | **237 passed, 2 skipped, none failed** (16.0 min), and the e2e job in CI passed on the same commit. The run before it on `d7cb74c` had 1 failure, locally and in CI: art.spec and events.spec used one organizer address and went over the limit of 3 sign-in links per email in 15 minutes, so art.spec now has its own address; the limit itself is unchanged |
 | Screenshots | 40 refreshed from those runs, with real map tiles; lights-1440 and demo-390 and lights-390 looked at |
 
 An earlier browser run in this session (65 failed) is **not counted**: its stacks had started with another worktree's compose files, because a
