@@ -97,6 +97,7 @@
 
 /* ---- Phones: a smaller hero picture beside the headline (the mockup), one card per row ---- */
 @media (max-width: 850px), (max-height: 500px) and (orientation: landscape) {
+  [data-event-type="garage_sale"] .hero-illustration { display: block; width: 96px; min-width: 96px; height: 96px; }
 }
 @media (max-width: 560px) {
   [data-event-type="garage_sale"] .cards { grid-template-columns: 1fr; }

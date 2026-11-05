@@ -2,6 +2,6 @@
    first viewing etiquette lines; the full list is on the About page. Expects `c` and `et`. #}
 <details class="notice route-rules">
   <summary>{{ et.copy.route_rules_title }}: rules and viewing etiquette</summary>
-  <ul>{% for r in c.event.rules ?? [] %}<li>{{ r }}</li>{% endfor %}{% if c.event.quiet_hours ?? '' %}<li>{{ icon('i-moon') }} {{ c.event.quiet_hours }}</li>{% endif %}{% for r in c.community.reminders|slice(0, 3) %}<li>{{ r }}</li>{% endfor %}</ul>
+  <ul>{% for r in c.event.rules ?? [] %}<li>{{ r }}</li>{% endfor %}{% if c.event.quiet_hours ?? '' %}<li>{{ icon('i-moon') }} {{ c.event.quiet_hours }}</li>{% endif %}{% for r in c.community.reminders|slice(0, 3) %}<li>{{ reminder_icon(r, et.copy) }}{{ r }}</li>{% endfor %}</ul>
   <a href="/about">All viewing etiquette</a>
 </details>

@@ -196,7 +196,7 @@ a.crumb:hover strong { color: var(--link); }
 .copy-previous { margin: 4px 0 12px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-2); }
 .copy-previous .introtext { margin: 0 0 8px; }
 .event-pill { text-decoration: none; }
-.demo-pill, .event-pill, .top-add { height: 32px; display: inline-flex; align-items: center; padding-top: 0; padding-bottom: 0; }
+.demo-pill, .event-pill, .top-add { height: 32px; display: inline-flex; align-items: center; gap: 5px; padding-top: 0; padding-bottom: 0; }
 .event-pill { background: var(--warm); color: var(--warm-text); border: 1px solid var(--warm-border); font-size: 12px; font-weight: 900; letter-spacing: .7px; padding: 8px 12px; border-radius: 30px; white-space: nowrap; }
 .demo-pill { background: var(--pill-bg); color: var(--pill-fg); padding: 6px 10px; border-radius: 50px; font-size: 12px; font-weight: 900; letter-spacing: .6px; white-space: nowrap; }
 .demo-pill.warn { background: var(--notice-bg); color: var(--notice-fg); }

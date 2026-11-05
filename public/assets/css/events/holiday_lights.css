@@ -96,6 +96,7 @@
 
 /* ---- Phones: a smaller hero picture beside the headline (the mockup), the season row stacked ---- */
 @media (max-width: 850px), (max-height: 500px) and (orientation: landscape) {
+  [data-event-type="holiday_lights"] .hero-illustration { display: block; width: 96px; min-width: 96px; height: 96px; }
 }
 /* Phones: one card per row (as in the mockup); lights cards carry more and longer tags than Halloween's. */
 @media (max-width: 560px) {
