@@ -22,28 +22,30 @@ final class HalloweenCopy
         'intro' => 'Find the treats, skip the scares, and plan a route that feels right for you and your crew—one sweet stop at a time.',
     ];
 
-    /** Shown on the About page and in the map's guide when an organizer sets no reminders of their own. */
+    /** Shown on the About page and in the map's guide when an organizer sets no reminders of their own: text => drawn icon. */
     public const REMINDERS = [
-        '💡 Visit homes with a porch light on or someone outside; skip dark houses.',
-        '🍬 Take one piece of candy unless a sign or the resident says otherwise.',
-        '🎃 Look, don’t touch: decorations, props and yards belong to your neighbors.',
-        '🚗 Watch for cars. Cross at corners or marked crossings, never between parked cars.',
-        '🚶 Stay on sidewalks and driveways; don’t cut across lawns or gardens.',
-        '🔦 Carry a flashlight or glow stick and wear something reflective after dark.',
-        '👀 Little ones stay with a grown-up; older kids stay in a group and check in.',
-        '🥜 Check treats before eating, especially for allergies. A teal pumpkin (the Teal Pumpkin Project) means the home offers non-food treats.',
-        '🐶 Some homes have pets: wait at the door and never open gates.',
-        '🙏 Say thank you, be patient with little ones, and be kind to anyone with sensory needs or who isn’t taking part.',
+        'Visit homes with a porch light on or someone outside; skip dark houses.' => 'i-bulb',
+        'Take one piece of candy unless a sign or the resident says otherwise.' => 'i-candy',
+        'Look, don’t touch: decorations, props and yards belong to your neighbors.' => 'i-pumpkin',
+        'Watch for cars. Cross at corners or marked crossings, never between parked cars.' => 'i-car',
+        'Stay on sidewalks and driveways; don’t cut across lawns or gardens.' => 'i-walk',
+        'Carry a flashlight or glow stick and wear something reflective after dark.' => 'i-flashlight',
+        'Little ones stay with a grown-up; older kids stay in a group and check in.' => 'i-eye',
+        'Check treats before eating, especially for allergies. A teal pumpkin (the Teal Pumpkin Project) means the home offers non-food treats.' => 'i-allergy',
+        'Some homes have pets: wait at the door and never open gates.' => 'i-paw',
+        'Say thank you, be patient with little ones, and be kind to anyone with sensory needs or who isn’t taking part.' => 'i-thanks',
     ];
 
     public const TEXT = [
         // Public map
-        'event_icon' => '🎃',
+        'event_icon' => 'i-pumpkin',
+        'brand_mark' => 'brand-halloween',
         'explore_label' => 'Find treat stops',
         'search_placeholder' => 'Search streets, treats, or notes…',
-        'list_heading' => '🍬 Treat stops nearby',
+        'list_icon' => 'i-candy',
+        'list_heading' => 'Treat stops nearby',
         'disclaimer' => 'Listings, hours and sensory details are self-reported by residents and may change.',
-        'cta_icon' => '👻',
+        'cta_icon' => 'i-ghost',
         'cta_title' => 'Handing out treats?',
         'cta_text' => 'Put your home on the map so the neighborhood can find you!',
         'guide_foot' => 'Something wrong with a listing? Open it on the map and choose “Report this listing”. Sensory labels are self-reported.',
@@ -61,11 +63,12 @@ final class HalloweenCopy
         // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
         // The browser-tab icon of the type's pages when the community has no logo (server-rendered only).
         'page_favicon' => '/assets/img/favicon.svg',
+        'page_email_mark' => '/assets/img/email/brand-halloween.png',
         'page_address_example' => '123 Pumpkin Ln',
         // The thank-you text of a closed event (D-20261031-39): {event} is its name with the year, {next} next year's dates.
         'page_closing_message' => '{event} was a success — thank you! Come back next year ({next}). Residents: sign in to get your house ready for next year.',
         'page_coming_soon' => 'Trick-or-treating is coming.',
-        'page_a11y_icons' => '🍬 treats, 🧩 sensory-friendly, 👻 spooky',
+        'page_a11y_icons' => 'treats, sensory-friendly, spooky',
         'page_a11y_filters' => 'Sensory filters (no jump scares, no flashing lights, no loud audio) help plan a calm route.',
         'page_terms_details' => 'treats and sensory details',
         'page_terms_check' => 'Check treats and ingredients yourself, especially for allergies — “non-food” and other labels are only what residents tell us.',

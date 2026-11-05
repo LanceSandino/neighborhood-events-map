@@ -3,7 +3,7 @@
 {%- set today = local_today(c.event.timezone) -%}
 {%- set season = today < c.event.starts_on ? 'before' : (today > c.event.ends_on ? 'after' : 'during') -%}
 <section class="schedule-row" aria-label="Season dates and hours">
-  <span class="schedule-icon" aria-hidden="true">{{ et.copy.event_icon }}</span>
+  <span class="schedule-icon" aria-hidden="true">{{ icon(et.copy.event_icon) }}</span>
   <div class="schedule-text">
     <b>{{ date_range(c.event.starts_on, c.event.ends_on) }}</b>
     <span>{{ et.copy.most_homes }}: {{ c.event.starts_at|time_span(c.event.ends_at) }} · {{ et.copy.times_vary }}{% if c.event.best_night %} · {{ et.copy.best_night }}: {{ date_range(c.event.best_night) }}{% endif %}</span>

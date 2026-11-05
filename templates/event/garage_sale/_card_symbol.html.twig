@@ -1,3 +1,3 @@
 {# Garage sale card symbol: the first category's icon (canonical order), as on the pins. Expects `home`. #}
-{%- set icons = {kids_baby: '🍼', toys: '🧸', furniture: '🪑', clothing: '👕', tools: '🛠️', books_media: '📚', electronics: '🔌', sports: '⚽', household: '🧺', free: '🆓'} -%}
-{{- icons[home.details.categories|first] ?? '🏷️' -}}
+{%- set icons = {kids_baby: 'i-kids-baby', toys: 'i-toys', furniture: 'i-furniture', clothing: 'i-clothing', tools: 'i-tools', books_media: 'i-books', electronics: 'i-electronics', sports: 'i-sports', household: 'i-household', free: 'i-free'} -%}
+{{- icon(icons[home.details.categories|first] ?? 'i-tag') -}}

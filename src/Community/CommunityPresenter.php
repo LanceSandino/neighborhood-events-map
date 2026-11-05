@@ -72,7 +72,7 @@ final class CommunityPresenter
             'event' => $this->event($c, $type),
             'branding' => [
                 'logo_url' => $this->branding->url($s['branding']['logo']),
-            ] + array_intersect_key($s['branding'], array_flip(['brand_emoji', 'primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality'])),
+            ] + array_intersect_key($s['branding'], array_flip(['primary_color', 'accent_color', 'headline', 'headline_accent', 'intro', 'show_locality'])),
             // Nothing of a boundary that is not approved yet is published, not even its extent: until then the
             // map opens on the configured center (or the boundary's middle) and zoom.
             'map' => [

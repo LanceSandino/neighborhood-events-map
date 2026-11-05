@@ -27,39 +27,41 @@ final class HolidayLightsCopy
 
     /** Display styles in canonical order: [label, icon]. Icons are decorative and never animated. */
     public const STYLES = [
-        'classic' => ['Classic', '✨'],
-        'animated' => ['Animated', '🌟'],
-        'synchronized_music' => ['Light show to music', '🎵'],
-        'inflatables' => ['Inflatables', '⛄'],
-        'walkthrough' => ['Walk-through', '🎄'],
+        'classic' => ['Classic', 'i-c9-red'],
+        'animated' => ['Animated', 'i-animated'],
+        'synchronized_music' => ['Light show to music', 'i-synchronized'],
+        'inflatables' => ['Inflatables', 'i-inflatable'],
+        'walkthrough' => ['Walk-through', 'i-walkthrough'],
     ];
 
     /** Viewing modes: [label, icon, explanation]. */
     public const VIEWING = [
-        'drive_by_only' => ['Drive-by', '🚗', 'Drive-by only: please enjoy it from the street or your car, and do not walk up or knock.'],
-        'walk_up_welcome' => ['Walk-up', '🚶', 'Walk-up welcome: visitors may come up the sidewalk for a closer look.'],
+        'drive_by_only' => ['Drive-by', 'i-car', 'Drive-by only: please enjoy it from the street or your car, and do not walk up or knock.'],
+        'walk_up_welcome' => ['Walk-up', 'i-walk', 'Walk-up welcome: visitors may come up the sidewalk for a closer look.'],
     ];
 
     /** Shown on the About page and in the map's guide when an organizer sets no etiquette of their own. */
     public const REMINDERS = [
-        '🚗 Park only where it is legal and never block driveways, mailboxes or fire hydrants.',
-        '🌙 Keep voices, engines and car audio low, especially during quiet hours.',
-        '🚫 Do not knock on or walk up to “Drive-by” homes; enjoy them from the street.',
-        '🚶 Stay on sidewalks and the street: yards, porches and decorations belong to your neighbors.',
-        '⚡ Flashing warnings and “No flashing reported” are self-reported by residents and not checked by anyone. Take care if flashing light affects you.',
-        '🔦 Walking? Wear something reflective, carry a light and cross at corners.',
-        '📻 A display’s music plays on its FM station in your car; keep the volume down outside.',
-        '🙏 Be patient in traffic, thank your neighbors and leave every display as you found it.',
+        'Park only where it is legal and never block driveways, mailboxes or fire hydrants.' => 'i-car',
+        'Keep voices, engines and car audio low, especially during quiet hours.' => 'i-moon',
+        'Do not knock on or walk up to “Drive-by” homes; enjoy them from the street.' => 'i-no',
+        'Stay on sidewalks and the street: yards, porches and decorations belong to your neighbors.' => 'i-walk',
+        'Flashing warnings and “No flashing reported” are self-reported by residents and not checked by anyone. Take care if flashing light affects you.' => 'i-flashing',
+        'Walking? Wear something reflective, carry a light and cross at corners.' => 'i-flashlight',
+        'A display’s music plays on its FM station in your car; keep the volume down outside.' => 'i-radio',
+        'Be patient in traffic, thank your neighbors and leave every display as you found it.' => 'i-thanks',
     ];
 
     public const TEXT = [
         // Public map
-        'event_icon' => '✨',
+        'event_icon' => 'i-c9-red',
+        'brand_mark' => 'brand-lights',
         'explore_label' => 'Find light displays',
         'search_placeholder' => 'Search addresses or display types…',
-        'list_heading' => '✨ Homes lighting up',
+        'list_icon' => 'i-c9-red',
+        'list_heading' => 'Homes lighting up',
         'disclaimer' => 'Nights, hours and display details are self-reported by residents and may change. “No flashing reported” means the resident reported no flashing effects; it is not a safety promise.',
-        'cta_icon' => '🎄',
+        'cta_icon' => 'i-tree',
         'cta_title' => 'Putting up lights?',
         'cta_text' => 'Let your neighbors find your home, with a quick, private email sign-in.',
         'guide_foot' => 'Something wrong with a listing? Open it on the map and choose “Report this listing”. Flashing warnings are self-reported.',
@@ -70,7 +72,8 @@ final class HolidayLightsCopy
         'season_during' => 'Tonight',
         'season_after' => 'Season over',
         'best_night' => 'Best night for a neighborhood walk',
-        'route_title' => '✨ Your lights tour',
+        'route_icon' => 'i-c9-red',
+        'route_title' => 'Your lights tour',
         'route_rules_title' => 'Before you go',
         'night_label' => 'Night',
         'style_label' => 'Display style',
@@ -90,11 +93,12 @@ final class HolidayLightsCopy
         // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
         // The browser-tab icon of the type's pages when the community has no logo (server-rendered only).
         'page_favicon' => '/assets/img/favicon-lights.svg',
+        'page_email_mark' => '/assets/img/email/brand-lights.png',
         'page_address_example' => '123 Main St',
         // The thank-you text of a closed season (D-20261031-39): {event} is its name with the year, {next} next season's dates.
         'page_closing_message' => '{event} was a success — thank you! Come back next season ({next}). Residents: sign in to get your display ready for next season.',
         'page_coming_soon' => 'The lights season is coming.',
-        'page_a11y_icons' => '✨ lights, 🎵 music, ⛄ inflatables',
+        'page_a11y_icons' => 'lights, music, inflatables',
         'page_a11y_filters' => 'Filters for drive-by homes and “No flashing reported” help plan a calm tour; nothing on the page flashes or moves.',
         'page_terms_details' => 'display details and flashing reports',
         'page_terms_check' => '“No flashing reported”, music and the other labels are only what residents tell us; it is not a safety promise.',

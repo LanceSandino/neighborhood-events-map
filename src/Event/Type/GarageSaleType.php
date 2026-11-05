@@ -57,7 +57,7 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
 
     public function copy(): array
     {
-        return GarageSaleCopy::TEXT + ['reminders' => GarageSaleCopy::REMINDERS];
+        return GarageSaleCopy::TEXT + ['reminders' => array_keys(GarageSaleCopy::REMINDERS), 'reminder_icons' => GarageSaleCopy::REMINDERS];
     }
 
     public function scheduleKind(): string
@@ -78,10 +78,10 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
     public function statuses(): array
     {
         return [
-            'active' => ['label' => 'Open', 'icon' => '🏷️', 'day_scoped' => false],
-            'paused' => ['label' => 'Paused today', 'icon' => '⏸️', 'day_scoped' => true],
-            'sold_out' => ['label' => 'Sold out today', 'icon' => '📦', 'day_scoped' => true],
-            'closed' => ['label' => 'Closed', 'icon' => '🔒', 'day_scoped' => false],
+            'active' => ['label' => 'Open', 'icon' => 'i-tag', 'day_scoped' => false],
+            'paused' => ['label' => 'Paused today', 'icon' => 'i-status-paused', 'day_scoped' => true],
+            'sold_out' => ['label' => 'Sold out today', 'icon' => 'i-status-sold-out', 'day_scoped' => true],
+            'closed' => ['label' => 'Closed', 'icon' => 'i-lock', 'day_scoped' => false],
         ];
     }
 
@@ -181,23 +181,23 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
     public function filters(): array
     {
         return [
-            ['key' => 'kidsToys', 'label' => 'Kids & toys', 'icon' => '🧸', 'quick' => true, 'feature' => null, 'title' => 'Kids & baby or toys'],
-            ['key' => 'furniture', 'label' => 'Furniture', 'icon' => '🪑', 'quick' => true, 'feature' => null],
-            ['key' => 'tools', 'label' => 'Tools', 'icon' => '🛠️', 'quick' => true, 'feature' => null],
-            ['key' => 'household', 'label' => 'Household', 'icon' => '🧺', 'quick' => false, 'feature' => null],
-            ['key' => 'electronics', 'label' => 'Electronics', 'icon' => '🔌', 'quick' => false, 'feature' => null],
-            ['key' => 'free', 'label' => 'Free items', 'icon' => '🆓', 'quick' => false, 'feature' => null],
-            ['key' => 'openNow', 'label' => 'Open now', 'icon' => '⏰', 'quick' => false, 'feature' => null, 'title' => 'Open right now, by each home’s own hours today'],
-            ['key' => 'multiFamily', 'label' => 'Multi-family', 'icon' => '🏘️', 'quick' => false, 'feature' => null, 'after_controls' => true],
-            ['key' => 'earlyBirds', 'label' => 'Early birds welcome', 'icon' => '🐦', 'quick' => false, 'feature' => null, 'after_controls' => true],
+            ['key' => 'kidsToys', 'label' => 'Kids & toys', 'icon' => 'i-toys', 'quick' => true, 'feature' => null, 'title' => 'Kids & baby or toys'],
+            ['key' => 'furniture', 'label' => 'Furniture', 'icon' => 'i-furniture', 'quick' => true, 'feature' => null],
+            ['key' => 'tools', 'label' => 'Tools', 'icon' => 'i-tools', 'quick' => true, 'feature' => null],
+            ['key' => 'household', 'label' => 'Household', 'icon' => 'i-household', 'quick' => false, 'feature' => null],
+            ['key' => 'electronics', 'label' => 'Electronics', 'icon' => 'i-electronics', 'quick' => false, 'feature' => null],
+            ['key' => 'free', 'label' => 'Free items', 'icon' => 'i-free', 'quick' => false, 'feature' => null],
+            ['key' => 'openNow', 'label' => 'Open now', 'icon' => 'i-clock', 'quick' => false, 'feature' => null, 'title' => 'Open right now, by each home’s own hours today'],
+            ['key' => 'multiFamily', 'label' => 'Multi-family', 'icon' => 'i-multi-family', 'quick' => false, 'feature' => null, 'after_controls' => true],
+            ['key' => 'earlyBirds', 'label' => 'Early birds welcome', 'icon' => 'i-bird', 'quick' => false, 'feature' => null, 'after_controls' => true],
         ];
     }
 
     public function legend(): array
     {
         return [
-            ['cls' => 'sale', 'icon' => '🏷️', 'label' => 'Open or opening today', 'feature' => null],
-            ['cls' => 'closed', 'icon' => '⏸️', 'label' => 'Not open now', 'feature' => null],
+            ['cls' => 'sale', 'icon' => 'i-tag', 'label' => 'Open or opening today', 'feature' => null],
+            ['cls' => 'closed', 'icon' => 'i-status-paused', 'label' => 'Not open now', 'feature' => null],
         ];
     }
 
@@ -219,7 +219,7 @@ final class GarageSaleType implements EventType, EventSettingsType, ListingTextC
 
     public function fragments(): array
     {
-        $names = ['head', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_hours', 'form_fields', 'manage_hours',
+        $names = ['head', 'decor', 'hero_art', 'schedule_row', 'filter_controls', 'card_symbol', 'card_tags', 'confirm_tags', 'form_hours', 'form_fields', 'manage_hours',
             'manage_half', 'manage_full', 'listing_checks', 'route_rules', 'rule_lines'];
 
         return array_combine($names, array_map(static fn (string $n) => 'event/'.self::KEY.'/_'.$n.'.html.twig', $names));

@@ -6,6 +6,7 @@
  *     (D-20261031-52).
  */
 import { $, call, esc, flash, fmtDate } from './common.js';
+import { icon } from '../lib/icons.js';
 import { csrfToken } from '../lib/api.js';
 
 const STATE = { upcoming: 'Upcoming', open: 'Open — on the map', closed: 'Closed' };
@@ -22,7 +23,7 @@ async function load() {
   // The public events as visitors' tabs order them: the default first, then by date (dates to be announced last); past events follow.
   const shown = ev.events.filter((e) => ['upcoming', 'open', 'closed'].includes(e.state))
     .sort((a, b) => (b.is_default - a.is_default) || ((a.state === 'closed') - (b.state === 'closed')) || String(a.starts_on || '9999').localeCompare(String(b.starts_on || '9999')));
-  const item = (ok, text, hint = '') => `<li><span class="${ok === true ? 'ok' : ok === 'warn' ? 'warn' : 'todo'}">${ok === true ? '✓' : ok === 'warn' ? '!' : '○'}</span><div>${text}${hint ? `<br><span class="form-caption">${hint}</span>` : ''}</div></li>`;
+  const item = (ok, text, hint = '') => `<li><span class="${ok === true ? 'ok' : ok === 'warn' ? 'warn' : 'todo'}">${icon(ok === true ? 'i-check' : ok === 'warn' ? 'i-warning' : 'i-status-later')}</span><div>${text}${hint ? `<br><span class="form-caption">${hint}</span>` : ''}</div></li>`;
   const b = o.boundary;
   $('#admin-overview').innerHTML = `
     <div class="cards-row">
@@ -45,7 +46,7 @@ async function load() {
       ${item(o.counts.addresses > 0 ? true : 'warn', 'Address inventory', o.counts.addresses ? `${o.counts.addresses} addresses (${o.counts.addresses_outside_boundary} outside the boundary)` : 'Import a reviewed CSV or enable self-entry with a street list.')}
       ${item(o.registration.open ? true : 'warn', o.registration.open ? 'House listings are OPEN' : 'House listings are closed', o.registration.reason ? `<span data-event-section="default">${esc(o.registration.reason)}</span>` : '')}
     </ul>
-    ${b.warnings.map((w) => `<div class="notice">⚠️ ${esc(w)}</div>`).join('')}
+    ${b.warnings.map((w) => `<div class="notice">${icon('i-warning')} ${esc(w)}</div>`).join('')}
     <div class="modal-actions"><button type="button" class="${o.registration.enabled ? 'secondary' : 'primary'}" id="btnReg">${o.registration.enabled ? (o.registration.open ? 'Close house listings' : 'Turn off listings (they open after boundary approval)') : 'Allow house listings'}</button><form class="inline-form" method="post" action="/api/admin/export/claims.csv"><input type="hidden" name="_csrf" value="${esc(csrfToken())}"><button type="submit" class="secondary">Export claims (CSV, private)</button></form></div></div>
     <div class="panel"><h2>Geometry versions</h2><div class="table-wrap"><table class="data"><thead><tr><th>Version</th><th>Created</th><th>Zones</th><th>Approved</th><th>Active</th></tr></thead><tbody>
       ${o.versions.map((v) => `<tr><td>v${v.version}</td><td class="nowrap">${esc(fmtDate(v.created_at))}</td><td>${v.zones}</td><td>${v.approved_at ? esc(fmtDate(v.approved_at)) : '—'}</td><td>${v.active ? 'yes' : ''}</td></tr>`).join('') || '<tr><td colspan="5">No geometry yet.</td></tr>'}

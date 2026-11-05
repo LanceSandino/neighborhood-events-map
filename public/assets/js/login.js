@@ -5,6 +5,7 @@
 import { api, ApiError, friendlyError } from './lib/api.js';
 import { solvePow } from './lib/pow.js';
 import { esc } from './lib/render.js';
+import { icon } from './lib/icons.js';
 
 const form = document.getElementById('loginForm');
 // Remember a safe, non-sensitive destination (e.g. /admin/disputes) for after the email link.
@@ -27,7 +28,7 @@ form.addEventListener('submit', async (e) => {
     const res = await api('/api/auth/request-link', { method: 'POST', body: { email, pow, website: $('#loginWebsite')?.value || '' } });
     form.hidden = true;
     const ok = $('#loginSuccess');
-    ok.innerHTML = `<b>📬 Check your email.</b><br>${esc(res.message)}`;
+    ok.innerHTML = `<b>${icon('i-mail')} Check your email.</b><br>${esc(res.message)}`;
     ok.classList.remove('hide');
     ok.focus();
   } catch (ex) {

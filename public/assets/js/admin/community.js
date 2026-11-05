@@ -66,7 +66,7 @@ function render() {
       ${field('cContact', 'Organizer contact (mailto: or https://) *', s.community.contact_url, 'placeholder="mailto:organizer@example.org"')}
     </div></div>
     <div class="panel"><h2>About the neighborhood (all events)</h2><div class="form-grid">
-      ${area('cAbout', 'About the neighborhood (optional)', s.community.general_about, 'Shown on the About page of every event that has no About text of its own (set an event’s own under <a href="/admin/events">Organizer → Events</a>). Blank lines start a new paragraph. Plain text only.')}
+      ${area('cAbout', 'About the neighborhood (optional)', s.community.general_about, 'Shown on the About page of every event that has no About text of its own (set an event’s own under <a href="/admin/events">Events</a>). Blank lines start a new paragraph. Plain text only.')}
       ${area('cReminders', 'Your own reminders for visitors (one per line, up to 12)', (s.community.reminders || []).join('\n'), 'Shown on the About page and in the map guide of every event. Leave empty and each kind of event shows its own built-in list.')}
       <div class="field full"><span class="label">Links (e.g. Facebook group, HOA website, event flyer)</span><div id="linkRows">${(s.community.links || []).map(linkRow).join('')}</div>
         <button type="button" class="secondary" id="btnAddLink">+ Add link</button></div>

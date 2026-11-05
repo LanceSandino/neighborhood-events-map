@@ -28,20 +28,20 @@ final class GarageSaleCopy
 
     /** Item categories in canonical order: [label, icon]. Icons are decorative; the words always show. */
     public const CATEGORIES = [
-        'kids_baby' => ['Kids & baby', '🍼'],
-        'toys' => ['Toys', '🧸'],
-        'furniture' => ['Furniture', '🪑'],
-        'clothing' => ['Clothing', '👕'],
-        'tools' => ['Tools', '🛠️'],
-        'books_media' => ['Books & media', '📚'],
-        'electronics' => ['Electronics', '🔌'],
-        'sports' => ['Sports', '⚽'],
-        'household' => ['Household', '🧺'],
-        'free' => ['Free items', '🆓'],
+        'kids_baby' => ['Kids & baby', 'i-kids-baby'],
+        'toys' => ['Toys', 'i-toys'],
+        'furniture' => ['Furniture', 'i-furniture'],
+        'clothing' => ['Clothing', 'i-clothing'],
+        'tools' => ['Tools', 'i-tools'],
+        'books_media' => ['Books & media', 'i-books'],
+        'electronics' => ['Electronics', 'i-electronics'],
+        'sports' => ['Sports', 'i-sports'],
+        'household' => ['Household', 'i-household'],
+        'free' => ['Free items', 'i-free'],
     ];
 
     /** Payment kinds: [label, icon]. The kind only, never a username, handle or phone number. */
-    public const PAYMENT_TYPES = ['cash' => ['Cash', '💵'], 'card' => ['Card', '💳'], 'apps' => ['Payment apps', '📱']];
+    public const PAYMENT_TYPES = ['cash' => ['Cash', 'i-cash'], 'card' => ['Card', 'i-card'], 'apps' => ['Payment apps', 'i-payment-app']];
 
     /** The field error for each kind of contact detail Shared/ContactDetails finds in a note. */
     public const CONTACT_ERRORS = [
@@ -57,21 +57,23 @@ final class GarageSaleCopy
      * yards, recalled or prohibited items and that the map sells nothing.
      */
     public const REMINDERS = [
-        '🐦 Respect each home’s start time: no early birds before the hours on the map or the organizer’s early-bird time.',
-        '🚗 Park legally and keep the street clear for traffic; never block driveways or mailboxes, and stay on driveways and in garages — yards and houses are private.',
-        '🚫 No recalled, unsafe or prohibited items (weapons, medicines, expired car seats). This map sells nothing: prices and payment stay between you and the seller.',
-        '🧾 Use “Report this listing” for prohibited items or a listing that looks like a business.',
-        '🙏 Be kind to neighbors who are not selling: keep voices low and take your trash with you.',
+        'Respect each home’s start time: no early birds before the hours on the map or the organizer’s early-bird time.' => 'i-bird',
+        'Park legally and keep the street clear for traffic; never block driveways or mailboxes, and stay on driveways and in garages — yards and houses are private.' => 'i-car',
+        'No recalled, unsafe or prohibited items (weapons, medicines, expired car seats). This map sells nothing: prices and payment stay between you and the seller.' => 'i-no',
+        'Use “Report this listing” for prohibited items or a listing that looks like a business.' => 'i-flag',
+        'Be kind to neighbors who are not selling: keep voices low and take your trash with you.' => 'i-thanks',
     ];
 
     public const TEXT = [
         // Public map
-        'event_icon' => '🏷️',
+        'event_icon' => 'i-tag',
+        'brand_mark' => 'brand-sale',
         'explore_label' => 'Find sales',
         'search_placeholder' => 'Search streets, categories or notes…',
-        'list_heading' => '🏷️ Sales around you',
+        'list_icon' => 'i-tag',
+        'list_heading' => 'Sales around you',
         'disclaimer' => 'Sale days, hours, categories and notes are self-reported by residents and may change. Prices and payment are between you and the seller; this map sells nothing.',
-        'cta_icon' => '🏷️',
+        'cta_icon' => 'i-tag',
         'cta_title' => 'Having a sale?',
         'cta_text' => 'Let your neighbors find your home, with a quick, private email sign-in.',
         'guide_foot' => 'Something wrong with a listing, such as a business or prohibited items? Open it on the map and choose “Report this listing”.',
@@ -84,7 +86,8 @@ final class GarageSaleCopy
         'season_during' => 'Today',
         'season_between' => 'More sale days ahead',
         'season_after' => 'Sale over',
-        'route_title' => '🏷️ Your sale stops',
+        'route_icon' => 'i-tag',
+        'route_title' => 'Your sale stops',
         'route_rules_title' => 'Before you go',
         'early_bird_rule' => 'Early birds: not before',
         'days_label' => 'Sale days',
@@ -107,11 +110,12 @@ final class GarageSaleCopy
         // home", the accessibility statement's pin icons and filters, and the terms' self-reported details.
         // The browser-tab icon of the type's pages when the community has no logo (server-rendered only).
         'page_favicon' => '/assets/img/favicon-sale.svg',
+        'page_email_mark' => '/assets/img/email/brand-sale.png',
         'page_address_example' => '123 Main St',
         // The thank-you text of a closed sale (D-20261031-39): {event} is its name with the year, {next} the next sale's dates.
         'page_closing_message' => '{event} was a success — thank you! The next sale: {next}. Residents: sign in to get your sale ready for the next one.',
         'page_coming_soon' => 'The sale is coming.',
-        'page_a11y_icons' => '🧸 toys, 🪑 furniture, 🛠️ tools',
+        'page_a11y_icons' => 'toys, furniture, tools',
         'page_a11y_filters' => 'Filters by category, sale day and opening hours help plan a short route.',
         'page_terms_details' => 'categories, payment kinds and notes',
         'page_terms_check' => 'Check items yourself before you buy — categories and the other labels are only what residents tell us, and this map sells nothing.',

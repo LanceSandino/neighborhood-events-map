@@ -13,6 +13,7 @@ import { api, ApiError, friendlyError, withEvent } from './lib/api.js';
 import { solvePow } from './lib/pow.js';
 import { openModal } from './lib/modal.js';
 import { esc } from './lib/render.js';
+import { icon } from './lib/icons.js';
 import { houseNumberOf } from './lib/address.js';
 import { eventType } from './events/index.js';
 
@@ -135,7 +136,7 @@ async function choose(item) {
   const claimed = item.claimed; // from the address lookup; ids are never probed one by one
   show($('#claimedPanel'), claimed);
   const sel = $('#selectedAddress');
-  sel.textContent = claimed ? '' : `✅ ${item.address} is available to list.`;
+  sel.innerHTML = claimed ? '' : `${icon('i-check')} ${esc(item.address)} is available to list.`;
   show(sel, !claimed);
   if (claimed) selected.claimed = true;
 }
@@ -235,7 +236,7 @@ async function submit() {
     const res = await api(withEvent('/api/auth/request-link', C.event.id), { method: 'POST', body: { email, pow, website: $('#regWebsite')?.value || '', claim: { address, listing: details() } } });
     form.hidden = true;
     const ok = $('#registerSuccess');
-    ok.innerHTML = `<b>📬 Check your email.</b><br>We sent a confirmation link for <b>${esc(res.address || selected?.address || '')}</b> to <b>${esc(email)}</b>. Open it and press <b>Confirm</b> within ${res.minutes} minutes to publish your stop.${!selected.address_id && C.registration.review_new_addresses ? ' Because this address is new, an organizer approves it before it appears on the map.' : ''} If someone else confirms this address first, you’ll be offered a review instead.<div class="modal-actions"><button type="button" class="secondary" data-close>Done</button></div>`;
+    ok.innerHTML = `<b>${icon('i-mail')} Check your email.</b><br>We sent a confirmation link for <b>${esc(res.address || selected?.address || '')}</b> to <b>${esc(email)}</b>. Open it and press <b>Confirm</b> within ${res.minutes} minutes to publish your stop.${!selected.address_id && C.registration.review_new_addresses ? ' Because this address is new, an organizer approves it before it appears on the map.' : ''} If someone else confirms this address first, you’ll be offered a review instead.<div class="modal-actions"><button type="button" class="secondary" data-close>Done</button></div>`;
     show(ok, true);
     ok.focus();
   } catch (e) {
@@ -341,7 +342,7 @@ function initDispute() {
       const res = await api(withEvent('/api/disputes', C.event.id), { method: 'POST', body: { address_id: disputeAddressId, house_number: disputeHouse, reporter_email: email, reason, pow, website: $('#dWebsite')?.value || '' } });
       form.hidden = true;
       const ok = $('#disputeSuccess');
-      ok.innerHTML = `<b>🎟️ Request ${esc(res.ticket)} sent.</b><br>${esc(res.message)}<div class="modal-actions"><button type="button" class="secondary" data-close>Close</button></div>`;
+      ok.innerHTML = `<b>${icon('i-ticket')} Request ${esc(res.ticket)} sent.</b><br>${esc(res.message)}<div class="modal-actions"><button type="button" class="secondary" data-close>Close</button></div>`;
       show(ok, true);
       ok.focus();
     } catch (ex) {

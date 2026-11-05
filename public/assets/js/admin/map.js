@@ -7,6 +7,7 @@
  *     dragged to where they read best on the public map (saved as the zone's label_at setting).
  */
 import { $, call, esc, flash } from './common.js';
+import { icon } from '../lib/icons.js';
 import { labelPoint } from '../lib/zone-labels.js';
 
 /** The boundary's line: the console's own colour (admin.css), never an event's or Halloween's orange (D-20261031-52). */
@@ -187,7 +188,7 @@ async function save(confirmOutside) {
   try {
     const res = await call('/api/admin/geometries', { method: 'PUT', body: { geojson: currentCollection(), confirm_outside_claims: confirmOutside } });
     dirty = false;
-    $('#saveNotes').innerHTML = res.result.warnings.map((w) => `<div class="notice">⚠️ ${esc(w)}</div>`).join('');
+    $('#saveNotes').innerHTML = res.result.warnings.map((w) => `<div class="notice">${icon('i-warning')} ${esc(w)}</div>`).join('');
     flash(`Saved as version v${res.result.version}. Review it, then approve to open house listings.`);
     reload(false);
   } catch (e) {
