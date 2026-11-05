@@ -8,11 +8,24 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [0.19.0-beta.1] - 2026-11-05
 
-Everything the site draws is now its own art instead of emoji, on every page and in every event, and Christmas lights pages hang a string of classic C9 bulbs along the top.
+The site now draws everything itself, the same on every phone and computer, and Christmas lights pages hang a string of classic C9 bulbs along the top. Each event can have its own logo, and logos are now part of your backups.
 
 ### New for visitors
-- **Drawn icons everywhere.** Pins, filters, tags, the legend, navigation, the hero picture and the browser tab use the site's own drawings, the same on every phone and computer. Words people wrote themselves stay as they wrote them.
-- **A C9 garland on Christmas lights pages.** Classic red, yellow, blue, green and orange bulbs along the top of the page, in light and dark. It is decoration only and never moves.
+- **Drawn icons everywhere.** Pins, filters, tags, the legend, navigation, the hero picture and the browser tab use the site's own drawings instead of emoji.
+- **A C9 garland on Christmas lights pages.** Red, yellow, blue, green and orange bulbs along the top of the page, in light and dark. It is decoration only and never moves.
+- **Each event looks like itself.** An event's pages show its own logo, or the drawing for its kind of event.
+- **The tabs fit on a phone.** "Past events" moves to its own line when it does not fit beside the tabs.
+
+### New for organizers
+- **A logo for each event.** Under Organizer > Events, the Branding section has a logo with upload and remove. Without one, the event shows the drawing for its kind.
+- **The community logo** now shows in the organizer console, on pages with no event and in sign-in emails. A logo you already had also stays on your Halloween events, so they look the same as before.
+- **Logos are in your backups.** Restoring a backup brings the logos back.
+- **Emails match.** Emails show the logo or drawing of what they are about, and the button in a listing email takes the event's colour. An SVG logo cannot be shown by mail apps, so those emails show the drawing instead.
+- **The page's opening line uses your event's name**, such as "Your Rummage Sale", unless you wrote your own.
+
+### Worth checking
+- **Words you wrote stay as you wrote them.** If a headline, intro, note or reminder of yours contains an emoji, it still shows. To change it, edit that event under Organizer > Events, or your reminders under Community & branding.
+- **Other events no longer show the community logo.** If you want a logo on your Christmas lights or sale, add it to that event.
 
 ## [0.18.0-beta.1] - 2026-11-04
 

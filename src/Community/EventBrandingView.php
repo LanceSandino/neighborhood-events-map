@@ -12,7 +12,7 @@ use App\Event\EventType;
  * @module Community/EventBrandingView
  * @description The community settings' branding and About text as one event shows them (ADR 0012): the community keeps
  *     its own name, subtitle, city line, logo, links and an optional general About text for the neighborhood; the
- *     emoji, headline, intro, colours and the event's About text come from the event (Event/EventBranding), each
+ *     headline, intro, colours, the stored emoji for the 0.9 mirror and the event's About text come from the event (Event/EventBranding), each
  *     falling back to the event type's default. The About text a page shows is the event's own, else the community's
  *     general one (else the page uses the type's built-in text). The branding keys keep their stored positions, so
  *     every answer keeps its key order. The stored branding keys and `community.about` are what the previous release

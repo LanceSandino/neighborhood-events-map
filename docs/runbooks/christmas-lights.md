@@ -34,7 +34,7 @@ empty form, or from their own details of last season. This page is the organizer
    the front page then moves to the lights if they are announced or open, and its thank-you message goes under Past
    events. Residents see "List for Christmas Lights" in My house. The season closes by itself after its last night (or
    **Close** it earlier): next season's event is created hidden, with the same nights a year later.
-4. Optional: in the season's **Branding of this event** (Organizer → Events → Edit), set its own emoji, headline, intro,
+4. Optional: in the season's **Branding of this event** (Organizer → Events → Edit), set its own logo, headline, intro,
    colours or About text. Empty fields keep the lights' look (midnight blue and gold, "Holiday nights. Bright
    lights."); another event's branding never shows on the lights ([ADR 0012](../adr/0012-community-and-event-branding.md)).
 5. For a drive-by tour, enable the routing provider under Community & branding → Map & routes (it needs an

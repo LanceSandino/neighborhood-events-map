@@ -369,7 +369,7 @@ html .leaflet-container img.leaflet-tile { mix-blend-mode: normal; width: 256.5p
 .outside-mask { fill: var(--bg); fill-opacity: .62; }
 .route-btn, .primary { background: #f07b3c; background: var(--orange); border-radius: 10px; color: var(--brand-ink); font-weight: 900; padding: 13px 20px; box-shadow: 0 5px 13px #f07b3c33; min-height: 44px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .primary[disabled], .secondary[disabled] { opacity: .55; cursor: not-allowed; }
-.bottom-actions { display: flex; align-items: center; gap: 10px; }
+.bottom-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .bottom-actions a, .bottom-actions button { white-space: nowrap; }
 .secondary { border: 1px solid var(--border); color: var(--text-2); background: var(--surface); border-radius: 10px; font-weight: 800; padding: 12px 16px; min-height: 44px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .danger { border: 1px solid var(--danger-border); color: var(--danger-fg); background: var(--surface); border-radius: 10px; font-weight: 800; padding: 12px 16px; min-height: 44px; }

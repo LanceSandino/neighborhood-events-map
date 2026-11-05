@@ -40,6 +40,20 @@ CI verifies every migration on a blank database up → down to zero → up again
 What each release needs from whoever runs the site. `CHANGELOG.md` (and the app's "What's new") is written for
 residents and organizers and leaves this out; the engineering records are in `CHANGES.md`.
 
+### 0.19.0-beta.1 (drawn art, a logo per event, logos in the database; D-20261105-01 to -07)
+
+- Pull `0.19.0-beta.1` and recreate the stack; back up first. **One migration**, `Version20261105000001`: it adds the `logos`
+  table and copies the logo the settings name from the `branding` volume into the community and every Halloween event, so an
+  upgraded Halloween looks the same. An install on 0.9 runs six event migrations, in order.
+- **Keep the `branding` volume.** The file and the stored `branding.logo` stay for the 0.9 image; `maintenance` now mounts it too.
+- **Other events change on purpose**: Christmas lights and sales show their drawn mark instead of the community logo until
+  they get a logo of their own. Text organizers wrote that holds an emoji still shows it.
+- **Image rollback to 0.9** (database kept): `0.9.0-beta.1` shows the Halloween's logo, else the community's, from the volume. A logo
+  changed on 0.9 is replaced by the database's when this release runs again. Rolling back to 0.10–0.18 is the restore path, as
+  before.
+- **Restore** of a 0.19 backup brings its logos back, with no volume needed; a backup from before 0.19 migrates again on start.
+  `doctrine:migrations:migrate` down drops the table and leaves the volume file.
+
 ### 0.18.0-beta.1 (automatic close, past events, each event's access; D-20261104-01 to -06)
 
 - Pull `0.18.0-beta.1` and recreate the stack; back up first. **No migration.** An install on 0.9 runs the same five event

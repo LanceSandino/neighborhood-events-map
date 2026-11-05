@@ -52,7 +52,7 @@ table.data th, table.data td { text-align: left; padding: 8px 6px; border-bottom
 table.data th { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
 table.data td.nowrap, table.data td:first-child { white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
-.pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .events-table .row-actions { min-width: 280px; } /* the table scrolls on a phone: its buttons stay on a few lines, not one each */
 .row-actions a { font-size: 11px; padding: 6px 9px; min-height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-weight: 800; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; }

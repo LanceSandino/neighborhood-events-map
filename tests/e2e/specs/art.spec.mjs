@@ -94,6 +94,21 @@ test('at phone width the tabs are never clipped because of "Past events"', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
 });
 
+test('an organizer\'s My house and console pages do not scroll sideways on a phone', async ({ page, request }) => {
+  await signIn(page, request, ORGANIZER, '/me');
+  await expect(page.locator('#adminLink')).toBeVisible();
+  for (const width of [375, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const path of ['/me', '/admin/addresses', '/admin', '/admin/events', '/admin/community']) {
+      await page.goto(LIGHTS + path);
+      await page.waitForLoadState('networkidle');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${path} at ${width}`).toBe(0);
+    }
+    await page.goto(LIGHTS + '/me');
+    await expect(page.locator('#btnLogout')).toBeInViewport({ ratio: 1 });
+  }
+});
+
 test('an organizer gives an event a logo under Events, its page shows it, and removing it brings the drawn mark back', async ({ page, request }) => {
   const guard = watchConsole(page);
   await signIn(page, request, ORGANIZER, '/admin/events');

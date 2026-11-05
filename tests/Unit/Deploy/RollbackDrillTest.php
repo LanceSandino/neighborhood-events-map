@@ -61,6 +61,17 @@ final class RollbackDrillTest extends TestCase
         self::assertLessThan(strpos($drill, 'custom headline after the image rollback'), strpos($drill, 'step "5. path (a)'));
     }
 
+    /** Logos in the database (D-20261105-03): a volume logo moves up, the file stays, 0.9 shows it after both rollback paths. */
+    public function testTheDrillChecksTheLogoAcrossTheRollback(): void
+    {
+        $drill = self::read('bin/drill-event-upgrade.sh');
+        foreach (['Version20261105000001', 'the logo did not reach the database', 'the upgrade removed the volume file', 'the upgrade changed the key the 0.9 image reads',
+            'a hidden event\'s logo answers visitors', 'does not show the logo after the image rollback', 'lost the logo'] as $needle) {
+            self::assertStringContainsString($needle, $drill);
+        }
+        self::assertLessThan(strpos($drill, 'step "3. upgrade'), strpos($drill, 'cat > /app/var/branding/logo.svg'), 'the logo is there before the upgrade');
+    }
+
     /** Hidden events (D-20261101-01): next year's is hidden after closing, stays hidden across the rollback, then is announced. */
     public function testTheDrillChecksNextYearsEventStaysHiddenUntilAnnounced(): void
     {
