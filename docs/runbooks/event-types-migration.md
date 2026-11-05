@@ -27,7 +27,8 @@ has passed in the community's time zone. So an install on 0.9 whose Halloween is
 mirroring the closed Halloween, so the 0.9 image shows the same homes and headline. Writes on 0.9 reach the closed
 Halloween as before, and going forward again closes nothing twice. Path (b) is unchanged: restoring the pre-upgrade backup
 on 0.9 brings back the open Halloween's data, and upgrading again closes it again. Hold the close with `EVENTS_AUTO_CLOSE=0`
-if you want to compare first. The drill runs all of this (steps 8 to 10), and it does not depend on the day it runs: the
+if you want to compare first. The drill's steps 8 to 10 script all of this, but they had not been run when this was written:
+read [the test report](../quality/test-report.md) before relying on it. They are written not to depend on the day they run: the
 demo's Halloween (October 30, 2026) is past on any date from now on, and no other step compares with today.
 
 **Limit of path (a).** An event's own access (`settings.access`, [D-20261104-05](../../DECISIONS.md)) is new: 0.9 reads only

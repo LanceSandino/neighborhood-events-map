@@ -203,7 +203,8 @@ shows too; the rummage sale is open to the public, the lights are not ([D-202611
   `::testTheAutomaticCloseAndNewDatesAtOnceStayConsistent`, `::testTheAutomaticCloseAndMakeDefaultAtOnceKeepTheOrganizersChoice`.
 - App start and the maintenance loop, never fatal, on in production and off on development stacks:
   `U/Deploy/ContainerConfigTest.php::testEventsCloseByThemselvesAtStartAndInTheLoopAndOnlyFixedDateStacksTurnItOff`; the upgrade
-  production takes, with a rollback to 0.9: the drill (steps 8 to 10), `U/Deploy/RollbackDrillTest.php::testTheDrillChecksTheAutomaticCloseAcrossTheRollback`.
+  production takes, with a rollback to 0.9: the drill's steps 8 to 10 (**not run yet at this release**, `test-report.md`);
+  `U/Deploy/RollbackDrillTest.php::testTheDrillChecksTheAutomaticCloseAcrossTheRollback` only checks the script's text.
 - Past events, not tabs: `I/PastEventsTest.php` (the switcher, the list newest first, the entry with one current event and none
   without a closed event, archived and hidden events nowhere, the way back, My house's read-only tabs); `E/events.spec.mjs`
   (mouse, keyboard, 375–1440 px, axe in light and dark); `E/season.spec.mjs` (announcing moves "/", Past events leads to the
@@ -216,14 +217,17 @@ shows too; the rummage sale is open to the public, the lights are not ([D-202611
   console's labels, next year keeps it, community.yaml, the community's stored value untouched, the community's notes);
   `E/events.spec.mjs`; Halloween parity: `I/GoldenApiParityTest.php` unchanged. A default event's hours edit reaches its season
   row: `I/EventAccessTest.php::testADefaultEventsHoursEditShowsInItsSeasonRow`.
-- Date independence: fixed-date demo stacks run with `EVENTS_AUTO_CLOSE=0`, tests move a mock clock, and one full PHPUnit and
-  Playwright run on a shifted server clock gave the same results (`test-report.md`).
+- Date independence, **in part**: fixed-date demo stacks run with `EVENTS_AUTO_CLOSE=0`, the PHPUnit tests move a mock clock, and
+  PHPUnit on a server clock 430 days ahead gave the same result. Playwright on that clock did not (7 failed, 8 did not run), and
+  the suite is expected to start failing on later real dates: see `test-report.md`. This item is open.
 
 ## Known limitations at 0.18.0-beta.1
 
 - An event closes up to one maintenance interval (an hour) after its last local midnight; until then it stays on the map.
 - The community's access notes do not show on an event with a different access; there is no per-event note (its rules carry it).
 - After an image rollback 0.9 shows the community's access, not an event's own.
+- `lights.spec` and `sale.spec` are expected to fail once their fixtures' day-scoped dates have really passed (December 12, 2026;
+  April 10 and 11, 2027), and the drill and the production-image smoke test had not been run at this release when this was written.
 
 ## Known limitations at 0.17.0-beta.1
 

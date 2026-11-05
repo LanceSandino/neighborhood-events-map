@@ -49,9 +49,10 @@ residents and organizers and leaves this out; the engineering records are in `CH
   to hold it (say, to look around first), set `EVENTS_AUTO_CLOSE=0` in `.env`, and remove it when you are done. Watch for
   `Closed “<event>”` in `docker compose logs app`; the maintenance container repeats the check hourly
   (`PURGE_INTERVAL_SECONDS`). A failure logs `WARN: closing ended events failed` and never stops the app.
-- Image rollback to 0.9.0-beta.1 and the full restore work as before: the bridge keeps mirroring the closed Halloween, so
-  0.9 shows the same homes and headline (the drill checks it, steps 8 to 10). The 0.15 to 0.17 images also run on this
-  schema, since nothing changed; they show closed events as tabs again. After an image rollback 0.9 shows the community's
+- Image rollback to 0.9.0-beta.1 and the full restore are meant to work as before: the bridge keeps mirroring the closed
+  Halloween, so 0.9 should show the same homes and headline. The drill's steps 8 to 10 check it; they had not been run when
+  this was written, so read [the test report](../quality/test-report.md) before relying on it. The 0.15 to 0.17 images should
+  also run on this schema, since nothing changed (not tested); they show closed events as tabs again. After an image rollback 0.9 shows the community's
   own access, not an event's ([event-types-migration.md](event-types-migration.md#018-events-close-by-themselves)).
 - New public route `/past-events`: no proxy rule needed. New optional environment variable `EVENTS_AUTO_CLOSE`.
 

@@ -1,6 +1,53 @@
 # Test and verification report
 
-## Latest run — 2026-11-01, release 0.17.0-beta.1
+## Latest run — 2026-11-05, release 0.18.0-beta.1
+
+Events close by themselves, past events, the default rule and each event's access (D-20261104-01 to -06; CU-20261104-01 to
+-07), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10. **Not every gate ran**: the release was handed over for the owner's
+test before the production-image gates, so this report says what ran and what did not.
+
+| Gate | Result |
+|---|---|
+| Baseline at 0.17.0-beta.1 (branch start) | PHPUnit **OK — 652 tests, 17260 assertions** |
+| PHPUnit 13.4.5 | **OK — 698 tests, 17630 assertions**, `--no-coverage` (new: EventAutoCloseTest 13, DefaultEventRuleTest 12, PastEventsTest 7, EventAccessTest 9, EventLifecycleRaceTest +3, ContainerConfigTest +1, RollbackDrillTest +1). EventsConsoleTest, HiddenNextEventTest, MultiEventTest and PerEventBrandingTest follow the new contract, with each guarantee asserted on the event's own page. GoldenApiParityTest unchanged |
+| Coverage (pcov) | **not measured** at this release |
+| PHPUnit on a server clock 430 days ahead (libfaketime, PHP only) | **OK — 698 tests, 17630 assertions**, the same result |
+| PHPStan level 6 · `lint:twig` · `lint:yaml` · `lint:container` | No errors · 81 files OK · 21 files OK · OK |
+| `composer audit --locked` | **FAILS: 14 advisories in 9 packages** (Symfony components, reported 2026-11-04; the one read closely is fixed in symfony/config 8.1.11, the install has 8.1.10). `composer.json` and `composer.lock` are unchanged on this branch, so the release did not bring them; they still need the same-day update AGENTS.md asks for, and were not updated here |
+| Migrations up / down / up | **not run**: this release has no migration |
+| node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **68/68** · **49/49** |
+| Playwright E2E on the four dev stacks, fresh, tiles blocked, real date | **232 passed, 2 skipped** (16.0 min), commit 7a03bba. Two earlier runs had 231 passed and 1 failed, both in the new access steps of events.spec: the test moved on before the console had reloaded (fixed in the test). A first attempt ran on a demo stack left closed by hand and does not count |
+| Playwright on a server clock 430 days ahead | **217 passed, 7 failed, 2 skipped, 8 did not run** (13.8 min): see below |
+| Session smoke test | **not run** |
+| `bin/smoke-prod-image.sh` | **not run**; the changed script only passed `bash -n` |
+| `bin/drill-event-upgrade.sh` | **not run**; the changed script only passed `bash -n`. So the upgrade from 0.9 with a past-dated Halloween, the image rollback to 0.9 and the full restore are **unverified at this release**, and so is the automatic close at start in the production image and in the maintenance container |
+| Trivy | not run locally (CI scans the images) |
+
+By hand: `app:events:close-ended` on the development demo stack said it was off with the flag, closed the Halloween with
+`--force` ("Closed “Halloween” (its last day was 2026-10-30); next year's event #6 is hidden."), and a second run said "No event
+has ended: nothing changed." Viewport screenshots at 390 and 1440 px, light and dark, of the map, a thank-you page and Past
+events on the fictional demos were looked at, with no horizontal overflow, and so was the console (1440 px light, 390 px light
+and dark; 1440 px dark was not captured, and its later row order and action-width changes were not shot again).
+
+### The run on a later clock
+
+PHP ran 430 days ahead (2028-01-09) through libfaketime; PostgreSQL, nginx, Mailpit, Node and the browser kept the real time,
+so this is not a faithful later real date. `EVENTS_AUTO_CLOSE=0` held: the demo's Halloween stayed open. The 8 tests that did not
+run are the season project (events.spec, season.spec), which depends on the others passing, so **Past events, the default rule
+and the console were not exercised on a later clock**. Item 7 of the release brief, a later real date not changing the
+results, is **not met for Playwright**. The causes below come from the failures and from reading the code; no fix was run
+against them.
+
+| Test | Looks like | What is established |
+|---|---|---|
+| lights.spec:51, lights.spec:106, sale.spec:54, sale.spec:113 | test dependence on the real date, not a product bug; expected to happen on real dates | One more home matches than expected. The fixtures' day-scoped statuses have fixed dates (lights 2026-12-12; sale 2027-04-10 and -11) and the API drops a status whose date has passed (D-20261031-17, as designed). Inferred, not confirmed by a run. The tests should start failing after those real dates |
+| lights.spec:225, sale.spec:235 | artifact of the shifted clock | The test takes "today" from the browser side's real clock and compares it with the shifted server's `status_date`. On a real later date the two should agree. Inferred from the code |
+| claim.spec:123 (Sign out everywhere) | **unexplained**; artifact or product not established | The other device reached `/login?next=%2Fme` instead of `/login?expired=1`, so it was signed out, but without the "Session expired" page. Seen once on this clock; it passes on the real date. Reading the session code did not explain it |
+
+A development-only clock pinning the server's date was started for the first group and reverted unverified: no full run was
+made with it, and the two tests in the second group would need the server's date too.
+
+## Run — 2026-11-01, release 0.17.0-beta.1
 
 Hidden events (D-20261101-01 to -03; CU-20261101-01 to -03), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10. The
 bar: the owner's report (closing Halloween showed 2027 to visitors at once) fixed — next year's event is hidden from
