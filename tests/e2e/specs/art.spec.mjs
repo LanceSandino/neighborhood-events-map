@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test';
 import { DEMO, LIGHTS, SALE, LIGHTS_MAILPIT, politeTiles, watchConsole } from './helpers.mjs';
 
-const ORGANIZER = process.env.E2E_ORGANIZER || 'e2e-organizer@example.test';
+const ORGANIZER = process.env.E2E_ART_ORGANIZER || 'e2e-art-organizer@example.test'; // its own: the sign-in limit counts per email
 const WIDTHS = [375, 430, 768, 1440];
 const GLYPHS = /[×←-⇿−⌀-⏿①-⓿■-➿️\u{1F000}-\u{1FAFF}]/u;
 const LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#123456"/></svg>';
