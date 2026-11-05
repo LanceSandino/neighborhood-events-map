@@ -71,7 +71,9 @@ COPY --from=prod /app/public /app/public
 # initializes the volume first, PHP can create its sockets and nginx can reach them).
 USER root
 # Alpine security fixes newer than the pinned base image (see the php-base stage).
+# The floor names the fix (CVE-2026-113351, CVE-2026-117610, CVE-2026-118370), so a build cache cannot answer with an older layer.
 RUN apk upgrade --no-cache \
+ && apk add --no-cache 'libexpat>=2.10.0-r0' \
  && install -d -o 82 -g 101 -m 0750 /run/php
 USER 101
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1

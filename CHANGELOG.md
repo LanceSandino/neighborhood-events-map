@@ -6,6 +6,14 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.9.1-beta.1] - 2026-11-05
+
+Security release of the 0.9 line. No new features and no database changes.
+
+### Security
+- Symfony 8.1.11, with the fixes published on 2026-11-04.
+- libexpat 2.10.0 in the nginx image (CVE-2026-113351, CVE-2026-117610, CVE-2026-118370).
+
 ## [0.9.0-beta.1] - 2026-10-30
 
 Update by pulling `0.9.0-beta.1` and recreating the stack. No data changes; the database and its migrations are unchanged.

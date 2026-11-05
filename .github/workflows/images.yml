@@ -5,6 +5,8 @@
 #                     tag pushed together) the same images also get :X.Y.Z and :latest.
 #   vX.Y.Z tag     -> nothing is rebuilt: the tag job copies :sha-<short> of the tagged commit to :X.Y.Z and
 #                     :latest. If that build is still running (pushed together), the main run applies them.
+# On maintenance/0.9 (security releases of the 0.9 line, D-20261105-50): run this workflow by hand on the branch to
+# build :sha-<short>, then push the tag. Version tags here never touch :latest, which belongs to main's newest release.
 # Each image carries OCI labels, an SBOM and buildx provenance; a signed GitHub attestation is added once the
 # repository is public (GitHub refuses attestations for user-owned private repositories).
 name: Images
@@ -162,8 +164,8 @@ jobs:
           set -euo pipefail
           git fetch --quiet --depth=1 origin '+refs/tags/v*:refs/tags/v*' || true
           for t in $(git tag --points-at HEAD 'v*'); do
-            docker buildx imagetools create -t "$REF:${t#v}" -t "$REF:latest" "$REF:sha-${GITHUB_SHA::7}"
-            echo "published $REF:${t#v} and :latest"
+            docker buildx imagetools create -t "$REF:${t#v}" "$REF:sha-${GITHUB_SHA::7}"
+            echo "published $REF:${t#v}"
           done
       - name: Digest for the attestation
         id: digest
@@ -196,8 +198,9 @@ jobs:
           ref="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.name }}"
           version="${GITHUB_REF_NAME#v}"
           if docker buildx imagetools inspect "$ref:sha-${GITHUB_SHA::7}" >/dev/null 2>&1; then
-            docker buildx imagetools create -t "$ref:$version" -t "$ref:latest" "$ref:sha-${GITHUB_SHA::7}"
-            echo "published $ref:$version and :latest"
+            docker buildx imagetools create -t "$ref:$version" "$ref:sha-${GITHUB_SHA::7}"
+            echo "published $ref:$version"
           else
-            echo "::notice::$ref:sha-${GITHUB_SHA::7} is not built yet; the main build of this commit applies :$version when it finishes. Tag only commits on main."
+            echo "::notice::$ref:sha-${GITHUB_SHA::7} is not built yet; run this workflow on maintenance/0.9 first, then promote again."
+            exit 1
           fi
