@@ -3,8 +3,9 @@
 ## Latest run — 2026-11-05, release 0.18.0-beta.1
 
 Events close by themselves, past events, the default rule and each event's access (D-20261104-01 to -06; CU-20261104-01 to
--07), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10. **Not every gate ran**: the release was handed over for the owner's
-test before the production-image gates, so this report says what ran and what did not.
+-07), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.10, then Symfony 8.1.11 for the security update (CU-20261105-01). The
+rows below say which commit or lock each gate ran on; the production image, drill and audit rows are on the updated lock,
+and CI repeats PHPUnit, PHPStan and Playwright on it.
 
 | Gate | Result |
 |---|---|
@@ -13,14 +14,14 @@ test before the production-image gates, so this report says what ran and what di
 | Coverage (pcov) | **not measured** at this release |
 | PHPUnit on a server clock 430 days ahead (libfaketime, PHP only) | **OK — 698 tests, 17630 assertions**, the same result |
 | PHPStan level 6 · `lint:twig` · `lint:yaml` · `lint:container` | No errors · 81 files OK · 21 files OK · OK |
-| `composer audit --locked` | **FAILS: 14 advisories in 9 packages** (Symfony components, reported 2026-11-04; the one read closely is fixed in symfony/config 8.1.11, the install has 8.1.10). `composer.json` and `composer.lock` are unchanged on this branch, so the release did not bring them; they still need the same-day update AGENTS.md asks for, and were not updated here |
+| `composer audit --locked` | **No advisories** on Symfony 8.1.11. On 8.1.10 it failed with 14 advisories in 9 packages (Symfony components, reported 2026-11-04) |
 | Migrations up / down / up | **not run**: this release has no migration |
 | node:test on Node 24 · Python 3.14 + shapely 2.2.0 | **68/68** · **49/49** |
 | Playwright E2E on the four dev stacks, fresh, tiles blocked, real date | **232 passed, 2 skipped** (16.0 min), commit 7a03bba. Two earlier runs had 231 passed and 1 failed, both in the new access steps of events.spec: the test moved on before the console had reloaded (fixed in the test). A first attempt ran on a demo stack left closed by hand and does not count |
 | Playwright on a server clock 430 days ahead | **217 passed, 7 failed, 2 skipped, 8 did not run** (13.8 min): see below |
 | Session smoke test | **not run** |
-| `bin/smoke-prod-image.sh` | **not run**; the changed script only passed `bash -n` |
-| `bin/drill-event-upgrade.sh` | **not run**; the changed script only passed `bash -n`. So the upgrade from 0.9 with a past-dated Halloween, the image rollback to 0.9 and the full restore are **unverified at this release**, and so is the automatic close at start in the production image and in the maintenance container |
+| `bin/smoke-prod-image.sh` | **Passed** on the images built with Symfony 8.1.11, including the forced automatic close in the production image |
+| `bin/drill-event-upgrade.sh` | **Passed** on the same images: 0.9.0-beta.1 → 0.18, image rollback to 0.9, full restore, then the upgrade production takes with automatic closing on (the past-dated Halloween closes at start, next year's is hidden), image rollback again and forward again, where nothing closes twice and the maintenance loop finds nothing to do |
 | Trivy | not run locally (CI scans the images) |
 
 By hand: `app:events:close-ended` on the development demo stack said it was off with the flag, closed the Halloween with

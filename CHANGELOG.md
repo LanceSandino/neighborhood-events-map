@@ -26,6 +26,9 @@ Events now end by themselves. The day after an event's last day it closes on its
 - An event with its own access does not show the community's access notes if they are for a different access. Put what visitors need in that event's rules.
 - My house still has a tab for ended events, so residents can read their listings there.
 
+### Security
+- Symfony 8.1.11, with the fixes published on 2026-11-04.
+
 ### Known limitations
 - An event closes within an hour after midnight, not at the exact minute; until then it stays on the map.
 

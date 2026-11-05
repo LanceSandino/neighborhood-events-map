@@ -1631,4 +1631,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/past-events"
   author: "Lance Sandino"
   timestamp: "2026-11-05T00:00:00Z"
+- id: CU-20261105-01
+  type: security
+  title: "Symfony 8.1.11: the 14 advisories reported on 2026-11-04 are fixed; smoke test and drill run on the updated images"
+  description: "composer update 'symfony/*' moves every Symfony component from 8.1.10 to 8.1.11; composer.json is unchanged and composer audit --locked is clean again. bin/smoke-prod-image.sh and bin/drill-event-upgrade.sh, not run when the release was handed over for the owner's test, ran on images built from this lock and passed; the test report says so."
+  impact: low
+  affected_modules: ["composer.lock", "CHANGELOG.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/Deploy/FrameworkPolicyTest.php: testSymfonyComponentsShareTheMinorFlexIsToldToUse", "composer audit --locked (CI: Dependency audit)", "bin/smoke-prod-image.sh", "bin/drill-event-upgrade.sh"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T14:45:00Z"
 ```
