@@ -42,6 +42,10 @@ class DrillHelperTest(unittest.TestCase):
         self.assertEqual(d.with_headline({}, "New."), {"branding": {"headline": "New."}})
         self.assertEqual(d.with_headline(None, "New."), {"branding": {"headline": "New."}})
 
+    def test_its_own_access_goes_with_it_only_when_given(self):
+        self.assertEqual(d.with_headline({"rules": ["Quiet"]}, "New.", "gated_guests"), {"rules": ["Quiet"], "branding": {"headline": "New."}, "access": "gated_guests"})
+        self.assertEqual(d.with_headline({"access": "public"}, "New."), {"access": "public", "branding": {"headline": "New."}}, "an event's own access is kept")
+
 
 if __name__ == "__main__":
     unittest.main()

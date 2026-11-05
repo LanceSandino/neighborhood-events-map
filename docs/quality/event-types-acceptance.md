@@ -183,6 +183,48 @@ hidden while residents get ready ([D-20261101-01](../../DECISIONS.md), -02, -03)
   `I/HiddenEventMigrationTest.php::testUpKeepsEveryEventAndDownMakesHiddenEventsDrafts`; the drill (steps 4b and 6:
   hidden across the image rollback to 0.9, announced afterwards), `U/Deploy/RollbackDrillTest.php::testTheDrillChecksNextYearsEventStaysHiddenUntilAnnounced`.
 
+## Past events and the automatic close (0.18)
+
+The owner's request (2026-11-04, testing a copy of the real site): Halloween is over, so turn it off by the date and show it
+under past events; show future events if enabled; do not show next Halloween; Christmas is the default and the rummage sale
+shows too; the rummage sale is open to the public, the lights are not ([D-20261104-01](../../DECISIONS.md) to -06).
+
+- Closes from the start of the local day after the last day, in the community's time zone (23:59 still open, 00:00 closed, in
+  four zones), on the injected clock: `I/EventAutoCloseTest.php::testAnOpenEventClosesFromTheStartOfTheLocalDayAfterItsLastDay`.
+  A year-crossing range (Nov 1–Jan 1) stays open across Dec 31 and Jan 1, and closes on Jan 2:
+  `::testAYearCrossingSeasonStaysOpenAcrossNewYearAndClosesTheDayAfterItsLastDay`.
+- Through the organizer's Close, audited as `cli`, next year's hidden: `::testItClosesLikeTheOrganizersCloseAndIsAudited`.
+  Idempotent: `::testItIsIdempotentAndLeavesOneNextYear`, `::testAnOrganizersCloseBeforeTheLoopLeavesNothingToDo`. Dates
+  checked again under the lock: `::testTheDateIsCheckedAgainUnderTheLock`. Only open events with dates:
+  `::testOnlyOpenEventsWithDatesCloseByThemselves`. A type this release does not offer is skipped:
+  `::testSeveralEndedEventsCloseOldestFirstAndAnEventOfAnUnofferedTypeIsSkipped`. The flag:
+  `::testTheCommandHonoursTheFlagAndForceOverridesIt`.
+- Races with the organizer: `I/EventLifecycleRaceTest.php::testAnOrganizersCloseAndTheAutomaticCloseAtOnceCloseOnce`,
+  `::testTheAutomaticCloseAndNewDatesAtOnceStayConsistent`, `::testTheAutomaticCloseAndMakeDefaultAtOnceKeepTheOrganizersChoice`.
+- App start and the maintenance loop, never fatal, on in production and off on development stacks:
+  `U/Deploy/ContainerConfigTest.php::testEventsCloseByThemselvesAtStartAndInTheLoopAndOnlyFixedDateStacksTurnItOff`; the upgrade
+  production takes, with a rollback to 0.9: the drill (steps 8 to 10), `U/Deploy/RollbackDrillTest.php::testTheDrillChecksTheAutomaticCloseAcrossTheRollback`.
+- Past events, not tabs: `I/PastEventsTest.php` (the switcher, the list newest first, the entry with one current event and none
+  without a closed event, archived and hidden events nowhere, the way back, My house's read-only tabs); `E/events.spec.mjs`
+  (mouse, keyboard, 375–1440 px, axe in light and dark); `E/season.spec.mjs` (announcing moves "/", Past events leads to the
+  thank-you page and on to next year).
+- The default event, each branch: `I/DefaultEventRuleTest.php` (today first, earliest open, earliest upcoming with dates to be
+  announced last, stays on the thank-you page, moves when an event appears, an organizer's choice holds, a closed event refused,
+  audited as the organizer or `cli`).
+- The Events console groups and its explanation: `E/events.spec.mjs` (an organizer opens and closes an event…).
+- Each event's access: `I/EventAccessTest.php` (validation, fallback, two events' own notices on `/`, `/about` and the API, the
+  console's labels, next year keeps it, community.yaml, the community's stored value untouched, the community's notes);
+  `E/events.spec.mjs`; Halloween parity: `I/GoldenApiParityTest.php` unchanged. A default event's hours edit reaches its season
+  row: `I/EventAccessTest.php::testADefaultEventsHoursEditShowsInItsSeasonRow`.
+- Date independence: fixed-date demo stacks run with `EVENTS_AUTO_CLOSE=0`, tests move a mock clock, and one full PHPUnit and
+  Playwright run on a shifted server clock gave the same results (`test-report.md`).
+
+## Known limitations at 0.18.0-beta.1
+
+- An event closes up to one maintenance interval (an hour) after its last local midnight; until then it stays on the map.
+- The community's access notes do not show on an event with a different access; there is no per-event note (its rules carry it).
+- After an image rollback 0.9 shows the community's access, not an event's own.
+
 ## Known limitations at 0.17.0-beta.1
 
 - A resident who has not claimed a home yet cannot list a new one for a hidden event: the map's "List your home" form

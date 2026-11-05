@@ -118,6 +118,11 @@ Each stage reuses the existing claim, listing, sign-in, moderation and route mac
    - The thank-you card names and links next year's event only once it is announced; "Get my house ready" leads to My house.
    - Status: shipped in 0.17.0-beta.1 ([D-20261101-01](DECISIONS.md) to [-03](DECISIONS.md), [event types](docs/architecture/event-types.md), [organizer guide](docs/runbooks/organizer-events.md#hidden-residents-get-ready-visitors-see-nothing-yet)).
 
+10. **Stage 9 — past events and the automatic close (done in 0.18.0-beta.1; the owner's request of 2026-11-04).**
+   - Events close by themselves after their last day; closed events move from the switcher to Past events; the default follows the current event happening soonest, never next year's hidden one.
+   - Each event may have its own access (a rummage sale open to the public, the lights not).
+   - Status: shipped in 0.18.0-beta.1 ([D-20261104-01](DECISIONS.md) to [-06](DECISIONS.md), [event types](docs/architecture/event-types.md), [organizer guide](docs/runbooks/organizer-events.md#when-an-event-is-over)).
+
 ## What remains
 
 These are known, deliberate gaps, each tracked here (there are no TODO notes in the code):
@@ -126,6 +131,7 @@ These are known, deliberate gaps, each tracked here (there are no TODO notes in 
 - **Retiring the legacy `listings` table.** It and its two triggers keep an image-only rollback to 0.9 working for one Halloween — the newest open or closed one (D-20261031-03, -06, -41). A later release drops them once no install needs that rollback, together with the community branding keys kept for 0.9 (D-20261031-49); the drill (`bin/drill-event-upgrade.sh`) proves the path until then.
 - **Reminders per event.** An organizer's own reminders (Community & branding) still show for every event; each kind of event's built-in list applies only while they are empty. Moving them to each event, like its rules and branding, is the next step for them.
 - **New homes for a hidden event.** A resident who has not claimed a home yet lists it from the map's public form, which lists for the event its page shows; for a hidden event they wait until it is announced. A "+ Add a home" form in My house would close this gap.
+- **Access notes per event.** The community's access notes (gates, entrances, parking) stay the community's; an event with a different access leaves them out, and its rules carry what visitors need there.
 - **Ordering the switcher's tabs.** Tabs are the default first, then by date; an organizer-chosen order is not built.
 - **Per-night hours in the lights forms.** A lights home has one start and end time for all its nights in the forms; the server and the API already take hours per night.
 - **44 px targets on Halloween.** Halloween's filter chips, time picker and card hearts stay 40 px high so its pages stay as they were; the other types have 44 px.

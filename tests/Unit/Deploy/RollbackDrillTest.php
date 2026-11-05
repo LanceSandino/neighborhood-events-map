@@ -12,8 +12,8 @@ use PHPUnit\Framework\TestCase;
  *   replaces the whole schema in one transaction (a pre-upgrade backup restores cleanly after newer tables with
  *   foreign keys into it were added, and a failed restore changes nothing); bin/drill-event-upgrade.sh runs the
  *   published 0.9.0-beta.1 images, the upgrade, both rollback paths and a second upgrade on a disposable project and
- *   always removes it, and checks the Halloween's custom branding on both sides of the image rollback (ADR 0012); the
- *   runbook names both paths and is linked from the release and upgrade runbooks. The drill's
+ *   always removes it, checks the Halloween's custom branding on both sides of the image rollback (ADR 0012) and the
+ *   automatic close of a past-dated Halloween on the upgrade production takes (0.18); the runbook names both paths and is linked from the release and upgrade runbooks. The drill's
  *   real output is in docs/quality/test-report.md.
  * @dependencies bin/restore.sh, bin/drill-event-upgrade.sh, docs/runbooks/*.md
  */
@@ -66,10 +66,26 @@ final class RollbackDrillTest extends TestCase
     {
         $drill = self::read('bin/drill-event-upgrade.sh');
         foreach (['Version20261101000001', '= "hidden 2027-10-31 true"', 'next year\'s hidden Halloween is listed for visitors', 'the hidden event answers the public API',
-            'the thank-you page names the hidden event', 'announce --event-id "$next_id"', '= "closed,open,upcoming"'] as $needle) {
+            'the thank-you page names the hidden event', 'announce --event-id "$next_id"', '= "open,closed,upcoming"'] as $needle) {
             self::assertStringContainsString($needle, $drill);
         }
         self::assertLessThan(strpos($drill, 'announce --event-id'), strpos($drill, 'step "6. forward again'), 'announced only after the rollback and the forward again');
+    }
+
+    /** The automatic close (D-20261104-01): the upgrade production takes closes a past-dated Halloween; 0.9 still shows it. */
+    public function testTheDrillChecksTheAutomaticCloseAcrossTheRollback(): void
+    {
+        $drill = self::read('bin/drill-event-upgrade.sh');
+        foreach (['EVENTS_AUTO_CLOSE=${4:-0}', 'images "$new_app" "$new_nginx" "$new_tag" 1', 'Closed “Halloween”', '= "cli cli"', 'Past events does not list the closed Halloween',
+            'does not show the same homes after the automatic close', 'does not show the Halloween\'s headline after the automatic close', 'the event closed twice',
+            'the maintenance loop did not run the automatic close', 'the default did not move from the closed Halloween to the open lights'] as $needle) {
+            self::assertStringContainsString($needle, $drill);
+        }
+        self::assertLessThan(strpos($drill, 'step "9. path (a) after the automatic close'), strpos($drill, 'step "8. the restored database upgrades again as production does'));
+        self::assertLessThan(strpos($drill, 'step "10. forward again: nothing closes twice'), strpos($drill, 'step "9. path (a) after the automatic close'));
+        foreach (['--access gated_guests', '--access gated_open', 'does not show the community\'s own access'] as $needle) {
+            self::assertStringContainsString($needle, $drill, 'an event\'s own access leaves what 0.9 reads alone');
+        }
     }
 
     public function testTheRunbookNamesBothPathsAndIsLinked(): void

@@ -30,9 +30,10 @@ empty form, or from their own details of last season. This page is the organizer
    **quiet hours** (optional) and whether to **offer a drive-by tour**.
 2. **Preview** the draft: it shows the lights theme, words and filters (and no homes).
 3. **Announce** it so residents can list early, then **Open** it when the season starts (opening confirms tentative
-   dates) and **Make default** so the front page shows it. Close Halloween first if it is over: closing shows its
-   thank-you message and creates next year's. Residents see "List for Christmas Lights" in My house.
-   When the season is over, **Close** it: next season's event is created with the same nights a year later.
+   dates) and **Make default** if the front page should show it now. Halloween closes by itself the day after it ends:
+   the front page then moves to the lights if they are announced or open, and its thank-you message goes under Past
+   events. Residents see "List for Christmas Lights" in My house. The season closes by itself after its last night (or
+   **Close** it earlier): next season's event is created hidden, with the same nights a year later.
 4. Optional: in the season's **Branding of this event** (Organizer → Events → Edit), set its own emoji, headline, intro,
    colours or About text. Empty fields keep the lights' look (midnight blue and gold, "Holiday nights. Bright
    lights."); another event's branding never shows on the lights ([ADR 0012](../adr/0012-community-and-event-branding.md)).

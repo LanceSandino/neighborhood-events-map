@@ -152,6 +152,8 @@ function row(e) {
 
 function group(g) {
   const rows = data.events.filter((e) => g.states.includes(e.state));
+  // On the site now: as visitors' tabs order them, the default first, then the soonest (to be announced last); other groups newest first.
+  if (g.states.includes('open')) rows.sort((a, b) => (b.is_default - a.is_default) || String(a.starts_on || '9999').localeCompare(String(b.starts_on || '9999')));
   const empty = g.states.includes('open') ? '<p class="notice">No event is on the site. Visitors see “No event on the map right now” (or the last thank-you message), and nobody can list a home until you announce or open an event.</p>' : '';
   if (!rows.length && !empty) return '';
   return `<div class="panel" data-event-group="${esc(g.states[0])}"><h2>${esc(g.title)}</h2><p class="form-caption">${esc(g.hint)}</p>${rows.length

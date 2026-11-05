@@ -1561,4 +1561,74 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/hidden-next-year"
   author: "Lance Sandino"
   timestamp: "2026-11-01T23:20:00Z"
+- id: CU-20261104-01
+  type: feat
+  title: "Events close by themselves after their last day, through the organizer's Close"
+  description: "app:events:close-ended (Command/EventsCloseEndedCommand, Event/EndedEvents) closes every open event whose last day is before today in the community's time zone, on the injected clock, oldest first, each in its own transaction through EventLifecycle::closeEnded, which checks state and date again under the occurrences lock, so an organizer's Close or new dates that came first win. Next year's event is created hidden. Audited as actor cli with automatic and last_day; every life-cycle change now writes its audit row inside its transaction. Runs in the maintenance loop and once at app start after the migrations and the bootstrap (docker/php/entrypoint.sh: timeout 60, never fatal under set -e). EVENTS_AUTO_CLOSE: on by default in compose.yaml and config/services.yaml, off in compose.dev.yaml and .env.test; --force overrides; bin/smoke-prod-image.sh sets it off and forces it at the end. No schema change. EventLifecycle's date-change checks moved to Event/EventDateChange to keep the module under ~400 lines."
+  impact: high
+  affected_modules: ["src/Event/EndedEvents.php", "src/Event/EventLifecycle.php", "src/Event/EventDateChange.php", "src/Event/EventOccurrenceRepository.php", "src/Command/EventsCloseEndedCommand.php", "src/Community/CommunityRepository.php", "docker/php/entrypoint.sh", "compose.yaml", "compose.dev.yaml", "config/services.yaml", ".env.example", ".env.test", "bin/smoke-prod-image.sh"]
+  related_tests: ["tests/Integration/EventAutoCloseTest.php (13 tests)", "tests/Integration/EventLifecycleRaceTest.php: testAnOrganizersCloseAndTheAutomaticCloseAtOnceCloseOnce, testTheAutomaticCloseAndNewDatesAtOnceStayConsistent", "tests/Unit/Deploy/ContainerConfigTest.php: testEventsCloseByThemselvesAtStartAndInTheLoopAndOnlyFixedDateStacksTurnItOff"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-04T23:00:00Z"
+- id: CU-20261104-02
+  type: feat
+  title: "Past events, not tabs: the map's switcher shows current events; closed ones are listed on /past-events"
+  description: "PublicEvents::tabs('/') keeps open and upcoming events (still none with fewer than two); PublicEvents::past lists closed events newest first with their year and dates; /past-events renders them with plain links to /?e=<id>; base.html.twig ends the switcher's row with a Past events link (outside the scrolling strip, shown even without tabs) and adds a footer link, both only while a closed event exists. A thank-you page leads back to the current default (PublicEvents::wayBack). /api/events is unchanged. My house keeps closed events as read-only tabs."
+  impact: medium
+  affected_modules: ["src/Event/PublicEvents.php", "src/Event/EventOccurrence.php", "src/Twig/EventSwitcherExtension.php", "src/Controller/PageController.php", "templates/base.html.twig", "templates/home/past_events.html.twig", "templates/home/event_status.html.twig", "public/assets/css/app.css"]
+  related_tests: ["tests/Integration/PastEventsTest.php (7 tests)", "tests/e2e/specs/events.spec.mjs: the switcher: the default event at \"/\"", "tests/e2e/specs/season.spec.mjs"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-04T23:10:00Z"
+- id: CU-20261104-03
+  type: feat
+  title: "The default event follows the current event happening soonest; a closed event cannot be chosen"
+  description: "Event/DefaultEventRule, inside the life-cycle transaction: a default that closes, is archived or is hidden, or a closed default while a public current event exists, moves to an open event whose dates include today, else the earliest starting open event, else the earliest upcoming one (to be announced last), of offered types; with none a closed default stays. An upcoming or open default is never touched. Audited as event.default_moved. makeDefault refuses a closed event (409 not_current). The close preview adds default_after. Events the command runs also settle a closed default an earlier release left."
+  impact: medium
+  affected_modules: ["src/Event/DefaultEventRule.php", "src/Event/EventLifecycle.php", "src/Event/EndedEvents.php", "src/Controller/Api/EventsAdminApiController.php"]
+  related_tests: ["tests/Integration/DefaultEventRuleTest.php (12 tests)", "tests/Integration/EventLifecycleRaceTest.php: testTheAutomaticCloseAndMakeDefaultAtOnceKeepTheOrganizersChoice", "tests/Integration/HiddenNextEventTest.php: testTheOrganizerAnnouncesHidesAndOpensAHiddenEvent"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-04T23:20:00Z"
+- id: CU-20261104-04
+  type: feat
+  title: "Organizer → Events groups events and explains that they close by themselves"
+  description: "public/assets/js/admin/events.js: How events work, then On the site now, Hidden and getting ready, Drafts, Past events and Archived, each with its own table and a plain hint; On the site now orders like the tabs. No Make default on a closed row. The Close confirmation says events also close by themselves and where \"/\" goes; the Open confirmation warns about an event already past its last day. The Overview lists closed events after current ones."
+  impact: low
+  affected_modules: ["public/assets/js/admin/events.js", "public/assets/js/admin/overview.js", "public/assets/css/admin.css", "src/Controller/Api/EventsAdminApiController.php"]
+  related_tests: ["tests/e2e/specs/events.spec.mjs: an organizer opens and closes an event", "tests/e2e/specs/season.spec.mjs"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-04T23:30:00Z"
+- id: CU-20261104-05
+  type: feat
+  title: "Each event may have its own access"
+  description: "Optional settings.access with the community's values, strictly checked (Event/EventAccess, OccurrenceInput; empty or null follows the community; settings sent without it keep it), edited under Organizer → Events in the type's words with Same as the community as the empty choice, or through event.settings in community.yaml. CommunityConfig::access is the effective value and CommunityPresenter applies it at one place: community.access, event.access only when the event has its own (Halloween's keys and golden answers unchanged), community.gate_notice empty where the access differs from the community's. The stored community.access stays the community's (the console edits it, the 0.9 image reads it). Next year's event keeps it."
+  impact: medium
+  affected_modules: ["src/Event/EventAccess.php", "src/Event/OccurrenceInput.php", "src/Community/CommunityConfig.php", "src/Community/CommunityPresenter.php", "src/Controller/Api/EventsAdminApiController.php", "public/assets/js/admin/events.js", "examples/reference/garage-sale.community.yaml"]
+  related_tests: ["tests/Integration/EventAccessTest.php (9 tests)", "tests/Integration/GoldenApiParityTest.php", "bin/drill-event-upgrade.sh (step 4a and step 5)"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-04T23:40:00Z"
+- id: CU-20261104-06
+  type: test
+  title: "The rollback drill covers the automatic close on the upgrade production takes; e2e follows the new contract"
+  description: "bin/drill-event-upgrade.sh: steps 3 to 6 run with EVENTS_AUTO_CLOSE=0 so an organizer works with the open Halloween; the default moves to the lights when it closes (public order open, closed); each event's own access leaves the community's stored value and what 0.9 shows alone. Steps 8 to 10 upgrade the restored database as production does: the past-dated Halloween closes at start, audited as cli, next year's hidden, listed under Past events; an image rollback to 0.9 shows the same homes and headline; forward again closes nothing twice, and the maintenance loop finds nothing to do. events.spec and season.spec follow the new switcher, Past events, default and console; a season run's organizer test takes up to 240 s on one sign-in."
+  impact: none
+  affected_modules: ["bin/drill-event-upgrade.sh", "scripts/drill_listing.py", "scripts/tests/test_drill_listing.py", "tests/e2e/specs/events.spec.mjs", "tests/e2e/specs/season.spec.mjs", "tests/Integration/EventsConsoleTest.php", "tests/Integration/HiddenNextEventTest.php", "tests/Integration/MultiEventTest.php", "tests/Integration/PerEventBrandingTest.php"]
+  related_tests: ["tests/Unit/Deploy/RollbackDrillTest.php: testTheDrillChecksTheAutomaticCloseAcrossTheRollback", "scripts/tests/test_drill_listing.py: test_its_own_access_goes_with_it_only_when_given"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-04T23:50:00Z"
+- id: CU-20261104-07
+  type: chore
+  title: "0.18.0-beta.1: version, release notes, decisions, roadmap, docs, acceptance audit and test report"
+  description: "VERSION, the CHANGELOG heading and the README status name 0.18.0-beta.1; plain release notes. DECISIONS D-20261104-01 to -06, ADR 0011 amended, ROADMAP stage 9, docs/architecture/event-types.md, runbooks (organizer events, event-types migration, upgrade and rollback, deployment, Christmas lights, garage sale), docs/quality/event-types-acceptance.md and test-report.md."
+  impact: none
+  affected_modules: ["VERSION", "CHANGELOG.md", "README.md", "DECISIONS.md", "ROADMAP.md", "docs/adr/0011-several-published-events.md", "docs/architecture/event-types.md", "docs/runbooks/", "docs/quality/"]
+  related_tests: ["tests/Unit/About/ReleaseConsistencyTest.php", "tests/Unit/About/ChangelogReaderTest.php: testRealChangelogStartsWithTheCurrentVersion", "tests/Integration/WhatsNewTest.php"]
+  commit_ref: "feature/past-events"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T00:00:00Z"
 ```

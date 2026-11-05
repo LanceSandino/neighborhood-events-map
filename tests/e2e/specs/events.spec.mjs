@@ -1,10 +1,11 @@
 // Several events at once on the fictional lights demo stack (examples/demo-lights, ADR 0011): Christmas lights open and
 // the default, a Halloween that has ended with its thank-you message, next year's Halloween (upcoming, tentative) and a
 // rummage sale whose dates are to be announced. Runs in the "season" project, after the other lights tests: visitors
-// switch events with the switcher (mouse and keyboard), each tab has its own theme, branding (the demo's Halloween has
-// its own, ADR 0012) and saved stops; a resident lists
-// next year's Halloween with "Use last year's details"; an organizer closes an event (next year's is created) and
-// changes the default. It gives everything back (archiving what it added); bin/e2e.sh's demo seed brings next year's
+// switch current events with the switcher (mouse and keyboard) and find the ended Halloween under Past events
+// (D-20261104-02), each event has its own theme, branding (the demo's Halloween has its own, ADR 0012), access
+// (D-20261104-05) and saved stops; a resident lists
+// next year's Halloween with "Use last year's details"; an organizer closes an event (next year's is created), sees the
+// console's groups and changes the default (never to a closed event). It gives everything back (archiving what it added); bin/e2e.sh's demo seed brings next year's
 // Halloween back for the next run. Browser clocks are pinned to a night of the lights season.
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -43,7 +44,7 @@ async function signIn(page, request, email, next) {
   await page.getByRole('button', { name: 'Confirm sign-in' }).click();
 }
 
-test('the switcher: the default event at "/", every public event by mouse and keyboard, its own theme, the closed message and the upcoming cards', async ({ page, request }) => {
+test('the switcher: the default event at "/", current events by mouse and keyboard, each with its own theme, the upcoming cards, and the ended event under Past events', async ({ page, request }) => {
   const guard = watchConsole(page);
   const e = await events(request);
   expect([e.lights.is_default, e.closed.closing_message, e.next.starts_on, e.next.dates_tentative, e.sale.starts_on]).toEqual(
@@ -53,33 +54,58 @@ test('the switcher: the default event at "/", every public event by mouse and ke
   await page.goto(LIGHTS + '/');
   await expect(page.locator('html')).toHaveAttribute('data-event-type', 'holiday_lights');
   const tabs = page.getByRole('navigation', { name: 'Events' }).getByRole('link');
-  await expect(tabs).toHaveText(['✨Christmas Lights', '🎃Halloween 2026Ended', '🎃Halloween 2027Soon', '🏷️Community Rummage SaleSoon']);
+  await expect(tabs, 'only current events are tabs').toHaveText(['✨Christmas Lights', '🎃HalloweenSoon', '🏷️Community Rummage SaleSoon']);
   await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
   for (const t of await tabs.all()) expect((await t.boundingBox()).height, 'a 44 px target').toBeGreaterThanOrEqual(44);
+  const past = page.locator('a.past-link');
+  await expect(past).toHaveText('Past events');
+  expect((await past.boundingBox()).height, 'a 44 px target').toBeGreaterThanOrEqual(44);
+  await expect(page.locator('.site-footer a[href="/past-events"]')).toBeVisible();
   await expect(page.locator('#homeCards .home-card')).toHaveCount(9);
   await page.screenshot({ path: `${SHOTS}/events-switcher-1440.png` });
 
-  // Keyboard: from the skip link to the switcher, then Enter opens the ended Halloween.
+  // Keyboard: from the skip link to the switcher, Enter opens the next tab; then on to Past events and the ended Halloween.
   await page.keyboard.press('Tab');
   for (let i = 0; i < 20 && !(await page.evaluate(() => document.activeElement?.closest('.event-switch') !== null)); i++) await page.keyboard.press('Tab');
   await expect(tabs.first()).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(tabs.nth(1)).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(`${LIGHTS}/?e=${e.closed.id}`);
+  await expect(page).toHaveURL(`${LIGHTS}/?e=${e.next.id}`);
   await expect(page.locator('html')).toHaveAttribute('data-event-type', 'halloween');
   await expect(tabs.nth(1)).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#eventStatusTitle')).toHaveText('Oct 31, 2027, tentative');
+  await expect(page.locator('.event-status .primary')).toHaveText('+ List your home');
+  await tabs.nth(1).focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await expect(past, 'the entry follows the tabs').toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(`${LIGHTS}/past-events`);
+  await expect(page.getByRole('heading', { name: 'Past events', level: 1 })).toBeVisible();
+  await expect(past).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.event-switch [aria-current]'), 'no tab is this page').toHaveCount(0);
+  const listed = page.locator('.past-list a');
+  await expect(listed).toHaveCount(1);
+  await expect(listed).toContainText('Halloween 2026');
+  await expect(listed).toContainText('Oct 31, 2026');
+  await expect(listed).toHaveAttribute('href', `/?e=${e.closed.id}`);
+  await listed.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(`${LIGHTS}/?e=${e.closed.id}`);
+  await expect(page.locator('html')).toHaveAttribute('data-event-type', 'halloween');
+  await expect(past).toHaveAttribute('aria-current', 'true');
   await expect(page.locator('.event-status-message')).toHaveText(e.closed.closing_message);
   await expect(page.locator('#homeCards')).toHaveCount(0);
   await expect(page.locator('#map')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Get my house ready' })).toHaveAttribute('href', `/me?e=${e.next.id}`);
   await page.screenshot({ path: `${SHOTS}/events-closed-1440.png` });
 
+  // The way back from a thank-you page, then the sale's tab.
+  await page.getByRole('link', { name: 'Back to Christmas Lights' }).click();
+  await expect(page).toHaveURL(`${LIGHTS}/`);
+  await expect(page.locator('html')).toHaveAttribute('data-event-type', 'holiday_lights');
   await tabs.nth(2).click();
-  await expect(page).toHaveURL(`${LIGHTS}/?e=${e.next.id}`);
-  await expect(page.locator('#eventStatusTitle')).toHaveText('Oct 31, 2027, tentative');
-  await expect(page.locator('.event-status .primary')).toHaveText('+ List your home');
-  await tabs.nth(3).click();
   await expect(page.locator('html')).toHaveAttribute('data-event-type', 'garage_sale');
   await expect(page.locator('#eventStatusTitle')).toHaveText('Dates to be announced');
   await expect(page.locator('.event-status')).toContainText('House listings open once the organizer sets them.');
@@ -174,7 +200,7 @@ test('each event keeps its own saved stops; a shared link keeps its event', asyn
   await page.locator('#homeCards .home-card').first().locator('[data-save]').click();
   const saved = page.getByRole('button', { name: 'Saved only' });
   await expect(saved.locator('.fcount')).toHaveText('1');
-  await page.getByRole('navigation', { name: 'Events' }).getByRole('link', { name: /Halloween 2026/ }).click();
+  await page.getByRole('navigation', { name: 'Events' }).getByRole('link', { name: /Halloween/ }).click();
   await expect(page.locator('.event-status')).toBeVisible();
   await page.getByRole('navigation', { name: 'Events' }).getByRole('link', { name: /Christmas Lights/ }).click();
   await expect(saved.locator('.fcount')).toHaveText('1');
@@ -191,18 +217,19 @@ test('each event keeps its own saved stops; a shared link keeps its event', asyn
   guard.assertClean();
 });
 
-test('the switcher and the event pages: no overflow from 375 to 1440 px, axe in light and dark', async ({ page, request }) => {
+test('the switcher, Past events and the event pages: no overflow from 375 to 1440 px, axe in light and dark', async ({ page, request }) => {
   const e = await events(request);
   await page.clock.install({ time: NIGHT });
   for (const scheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme: scheme });
-    for (const [path, name] of [['/', 'lights'], [`/?e=${e.closed.id}`, 'closed'], [`/?e=${e.next.id}`, 'upcoming'], [`/?e=${e.sale.id}`, 'to be announced']]) {
+    for (const [path, name] of [['/', 'lights'], [`/?e=${e.closed.id}`, 'closed'], [`/?e=${e.next.id}`, 'upcoming'], [`/?e=${e.sale.id}`, 'to be announced'], ['/past-events', 'past events']]) {
       for (const width of [375, 390, 768, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(LIGHTS + path);
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${name} at ${width}px (${scheme})`).toBe(0);
         const strip = await page.locator('.event-switch').boundingBox();
         expect(strip.x + strip.width, `${name} at ${width}px: the switcher stays inside the screen`).toBeLessThanOrEqual(width);
+        await expect(page.locator('a.past-link'), `${name} at ${width}px: the entry stays on the screen`).toBeInViewport();
       }
       const results = await new AxeBuilder({ page }).withTags(TAGS).exclude('.leaflet-pane').exclude('.leaflet-control-container').analyze();
       expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`), `${name} (${scheme})`).toEqual([]);
@@ -210,8 +237,9 @@ test('the switcher and the event pages: no overflow from 375 to 1440 px, axe in 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(LIGHTS + '/');
     await page.screenshot({ path: `${SHOTS}/events-switcher${scheme === 'dark' ? '-dark' : ''}-390.png` });
-    await page.goto(LIGHTS + `/?e=${e.closed.id}`);
+    await page.goto(LIGHTS + `/?e=${e.next.id}`);
     await expect(page.locator('.event-switch [aria-current="page"]')).toBeInViewport();
+    await page.goto(LIGHTS + `/?e=${e.closed.id}`);
     if (scheme === 'light') await page.screenshot({ path: `${SHOTS}/events-closed-390.png` });
     await page.setViewportSize({ width: 1440, height: 900 });
     if (scheme === 'dark') {
@@ -261,7 +289,8 @@ test('a resident switches events in My house and lists next year\'s Halloween wi
   guard.assertClean();
 });
 
-test('an organizer opens and closes an event (next year\'s is created) and changes the default', async ({ page, request }) => {
+test('an organizer opens and closes an event (next year\'s is created), changes the default and gives each event its own access', async ({ page, browser, request }) => {
+  test.setTimeout(240_000); // one sign-in for all of it: the organizer's address has three links per quarter hour
   const guard = watchConsole(page);
   const e = await events(request);
   await signIn(page, request, ORGANIZER, '/admin/events');
@@ -280,6 +309,12 @@ test('an organizer opens and closes an event (next year\'s is created) and chang
   await row(e.sale.id).getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('#flash')).toContainText('is open');
 
+  // The console's groups say where each event stands, and that events close by themselves.
+  await expect(page.locator('#eventsGuide')).toContainText('Events close by themselves after their last day.');
+  await expect(page.locator('#admin-events h2')).toHaveText(['How events work', 'Prepare an event', 'On the site now', 'Past events']);
+  await expect(page.locator('[data-event-group="open"]').locator(`tr[data-event="${e.lights.id}"]`)).toBeVisible();
+  await expect(page.locator('[data-event-group="closed"]').locator(`tr[data-event="${e.closed.id}"]`)).toBeVisible();
+
   // Closing: the confirmation shows the thank-you text and next year's dates.
   let shown = '';
   page.once('dialog', (d) => { shown = d.message(); d.accept(); });
@@ -287,22 +322,35 @@ test('an organizer opens and closes an event (next year\'s is created) and chang
   await expect(page.locator('#flash')).toContainText('is closed. Next year\'s event is ready.');
   expect(shown).toContain('Community Rummage Sale 2027 was a success — thank you! The next sale: dates to be announced.');
   expect(shown).toContain('created now, hidden: “Community Rummage Sale”, dates to be announced');
+  expect(shown).toContain('Events also close by themselves after their last day.');
+  expect(shown, 'it is not the default: "/" stays').not.toContain('“/” then shows');
   const after = await events(request);
   expect(after.sale, 'the next sale is hidden from visitors (0.17)').toBeUndefined();
   const nextSale = (await (await page.request.get(LIGHTS + '/api/admin/events')).json()).events.find((x) => x.type === 'garage_sale' && x.state === 'hidden');
   expect(nextSale.id, 'the next sale, created by closing').not.toBe(e.sale.id);
   await expect(row(nextSale.id)).toContainText('Hidden · residents can get ready');
+  await expect(page.locator('#admin-events h2')).toHaveText(['How events work', 'Prepare an event', 'On the site now', 'Hidden, getting ready', 'Past events']);
+  await expect(page.locator('[data-event-group="hidden"]').locator(`tr[data-event="${nextSale.id}"]`)).toBeVisible();
+  await expect(page.locator('[data-event-group="closed"]').locator(`tr[data-event="${e.sale.id}"]`)).toBeVisible();
   const closedSale = after.list.find((x) => x.id === e.sale.id);
   expect([closedSale.state, nextSale.starts_on]).toEqual(['closed', null]);
 
-  // The closed sale becomes the default: "/" shows its thank-you message; then the lights again.
-  await row(e.sale.id).getByRole('button', { name: 'Make default' }).click();
-  await expect(page.locator('#flash')).toContainText('“Community Rummage Sale” is the default event now');
+  // A closed event cannot be chosen as the default (D-20261104-04): no button, and the server refuses.
+  await expect(row(e.sale.id).getByRole('button', { name: 'Make default' })).toHaveCount(0);
+  const refused = await page.evaluate(async (id) => {
+    const r = await fetch(`/api/admin/events/${id}/default`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }, body: '{}' });
+    return [r.status, (await r.json()).error.code];
+  }, e.sale.id);
+  expect(refused).toEqual([409, 'not_current']);
+
+  // An upcoming event becomes the default: "/" shows it; then the lights again.
+  await row(e.next.id).getByRole('button', { name: 'Make default' }).click();
+  await expect(page.locator('#flash')).toContainText('“Halloween” is the default event now');
   const visitor = await (await page.context().browser().newContext()).newPage();
   await politeTiles(visitor);
   await visitor.goto(LIGHTS + '/');
-  await expect(visitor.locator('html')).toHaveAttribute('data-event-type', 'garage_sale');
-  await expect(visitor.locator('.event-status-message')).toContainText('was a success — thank you!');
+  await expect(visitor.locator('html')).toHaveAttribute('data-event-type', 'halloween');
+  await expect(visitor.locator('#eventStatusTitle')).toHaveText('Oct 31, 2027, tentative');
   await row(e.lights.id).getByRole('button', { name: 'Make default' }).click();
   await expect(page.locator('#flash')).toContainText('“Christmas Lights” is the default event now');
   await visitor.goto(LIGHTS + '/');
@@ -321,6 +369,37 @@ test('an organizer opens and closes an event (next year\'s is created) and chang
   page.once('dialog', (d) => d.accept());
   await row(nextSale.id).getByRole('button', { name: 'Announce' }).click();
   await expect(row(nextSale.id)).toContainText('Upcoming');
+
+  // Each event's own access (the owner's case: the rummage sale is open to the public, the lights are not), in the type's
+  // words with "Same as the community" as the empty choice; given back afterwards.
+  const setAccess = async (id, value) => {
+    await row(id).getByRole('button', { name: 'Edit' }).click();
+    await page.locator('#evAccess').selectOption(value);
+    await page.getByRole('button', { name: 'Save event' }).click();
+    await expect(page.locator('#flash')).toContainText('Event saved');
+  };
+  await row(nextSale.id).getByRole('button', { name: 'Edit' }).click();
+  await expect(page.locator('#evAccess option')).toHaveText(['Same as the community', 'Open to the public', 'Gated — gates open to shoppers during sale hours', 'Gated — residents and guests', 'Residents only', 'Not stated']);
+  await expect(page.locator('#evAccess')).toHaveValue('');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await setAccess(nextSale.id, 'public');
+  await setAccess(e.lights.id, 'gated_guests');
+  await expect(row(e.lights.id)).toContainText('Gated — residents and guests');
+  const guest = await (await browser.newContext()).newPage();
+  await politeTiles(guest);
+  for (const [query, title, access] of [['', 'Gated — residents and guests', 'gated_guests'], [`?e=${nextSale.id}`, 'Open to the public', 'public']]) {
+    await guest.goto(`${LIGHTS}/${query}`);
+    await guest.locator('.sidebar a[data-action="info"]').click();
+    await expect(guest.locator('#infoModal .guide-facts')).toContainText(title);
+    await guest.goto(`${LIGHTS}/about${query}`);
+    await expect(guest.locator('.about-facts')).toContainText(title);
+    expect((await (await request.get(`${LIGHTS}/api/event${query}`)).json()).community.access).toBe(access);
+  }
+  await guest.context().close();
+  await setAccess(nextSale.id, '');
+  await setAccess(e.lights.id, '');
+  expect((await (await request.get(`${LIGHTS}/api/event`)).json()).community.access, 'the demo community\'s own').toBe('public');
+
   const end = await events(request);
   expect(end.list.map((x) => [x.type, x.state, x.is_default])).toEqual([['holiday_lights', 'open', true], ['halloween', 'closed', false], ['garage_sale', 'upcoming', false]]);
   guard.assertClean();
