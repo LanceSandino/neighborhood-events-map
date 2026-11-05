@@ -1,6 +1,18 @@
 # Test and verification report
 
-## Latest run — 2026-10-30, release 0.9.0-beta.1
+## Latest run — 2026-11-05, release 0.9.1-beta.1
+
+Security release of the 0.9 line (CU-20261105-50): Symfony 8.1.11 and libexpat 2.10.0, on PHP 8.5.12 + PostgreSQL 18.6. No migration.
+
+| Gate | Result |
+|---|---|
+| CI on the pull request (PHPUnit, PHPStan, Playwright, Trivy, audits) | **All 4 checks passed** on commit b98fe77 |
+| `composer audit --locked` | **No advisories**; 14 advisories in 9 packages on Symfony 8.1.10 |
+| Trivy, fixed HIGH/CRITICAL, local builds of both images | **None**; `libexpat-2.10.0-r0` in the nginx image |
+| `bin/smoke-prod-image.sh` | **Passed**, `/healthz` reports 0.9.1-beta.1 |
+| Coverage | not measured locally for this release |
+
+## Earlier run — 2026-10-30, release 0.9.0-beta.1
 
 Symfony 8.1 (CU-20261030-03), on PHP 8.5.12 + PostgreSQL 18.6:
 

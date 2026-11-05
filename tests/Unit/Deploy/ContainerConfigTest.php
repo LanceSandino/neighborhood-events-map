@@ -311,6 +311,20 @@ final class ContainerConfigTest extends TestCase
         self::assertCount(3, $m[0], 'nothing else reaches the upload pool');
     }
 
+    /** libexpat 2.10.0 (CVE-2026-113351, CVE-2026-117610, CVE-2026-118370): named in the layer, so no build cache can bring the old package back. */
+    public function testNginxImageNamesTheFixedLibexpat(): void
+    {
+        self::assertSame(1, preg_match('~^FROM \S+ AS nginx\n(.*?)(?=^FROM |\z)~ms', self::read('Dockerfile'), $m));
+        self::assertStringContainsString("apk add --no-cache 'libexpat>=2.10.0-r0'", $m[1]);
+    }
+
+    /** A release of the 0.9 line must not move :latest back from main's newest release (D-20261105-50). */
+    public function testMaintenanceReleasesNeverMoveLatest(): void
+    {
+        self::assertDoesNotMatchRegularExpression('~-t "\$\w+:latest"~', self::read('.github/workflows/images.yml'));
+        self::assertStringContainsString('origin/maintenance/0.9', self::read('.github/workflows/release.yml'));
+    }
+
     /**
      * The pinned base images can trail Alpine's security fixes by days (brotli 1.2.1, CVE-2026-111497, shipped before
      * the PHP and nginx images were rebuilt), so both runtime images run `apk upgrade` at build time, and CI scans

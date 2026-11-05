@@ -911,4 +911,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/symfony-8.1"
   author: "Lance Sandino"
   timestamp: "2026-10-30T21:00:00Z"
+- id: CU-20261105-50
+  type: security
+  title: "0.9.1-beta.1: Symfony 8.1.11 and libexpat 2.10.0 on a maintenance branch of the line production runs"
+  description: "composer update 'symfony/*' clears the 14 advisories reported on 2026-11-04. The nginx stage names libexpat 2.10.0 (three HIGH CVEs found by the daily security check), so a build cache cannot reuse the older layer. On maintenance/0.9 the Images workflow publishes only the version tag and never :latest, and the Release workflow checks that branch instead of main (D-20261105-50). No migration."
+  impact: low
+  affected_modules: ["composer.lock", "Dockerfile", ".github/workflows/images.yml", ".github/workflows/release.yml", "VERSION", "README.md", "CHANGELOG.md", "DECISIONS.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testNginxImageNamesTheFixedLibexpat, testMaintenanceReleasesNeverMoveLatest", "composer audit --locked (CI: Dependency audit)", "Trivy image scan (CI)", "bin/smoke-prod-image.sh"]
+  commit_ref: "fix/security-0.9.1"
+  author: "Lance Sandino"
+  timestamp: "2026-11-05T15:30:00Z"
 ```
