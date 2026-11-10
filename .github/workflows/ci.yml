@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+        image: postgres:18-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
         env: { POSTGRES_USER: halloween, POSTGRES_PASSWORD: halloween, POSTGRES_DB: halloween }
         ports: ['5432:5432']
         options: --health-cmd "pg_isready -U halloween" --health-interval 5s --health-timeout 5s --health-retries 20
@@ -88,6 +88,11 @@ jobs:
           docker save nhm-app:ci -o "$RUNNER_TEMP/app.tar"
           docker save nhm-nginx:ci -o "$RUNNER_TEMP/nginx.tar"
           status=0
+          # The PostgreSQL image is used as pinned in compose.yaml (no build of ours upgrades it). gosu, the
+          # entrypoint's one-shot step down from root, is skipped (D-20261110-01).
+          pg=$(grep -m1 -oE 'postgres:[0-9]+-alpine@sha256:[0-9a-f]{64}' compose.yaml)
+          docker run --rm aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+            image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress --skip-files usr/local/bin/gosu "$pg" || status=1
           for tar in app nginx; do
             docker run --rm -v "$RUNNER_TEMP":/scan:ro \
               aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \

@@ -1,6 +1,23 @@
 # Test and verification report
 
-## Latest run — 2026-11-05, release 0.19.0-beta.1
+## Latest run — 2026-11-10, release 0.19.1-beta.1
+
+Security release (CU-20261110-01, D-20261110-01): zlib 1.4 in both images, new PHP 8.5.12 and PostgreSQL 18.6 base digests (Alpine 3.24.4),
+and the pinned PostgreSQL image scanned in CI and daily. Symfony 8.1.11 and the lock are unchanged. No migration. Run locally on the release branch:
+
+| Gate | Result |
+|---|---|
+| PHPUnit 13.4.5 (`sh bin/test.sh --coverage-text`, against the new PostgreSQL digest) | **OK — 719 tests, 18105 assertions** (new: testRuntimeImagesNameTheFixedZlib, testThePinnedPostgresImageIsScannedInCiAndDaily; both failed before the fix) |
+| Coverage (pcov) | Lines **95.81 %** (4484/4680), Methods 85.47 % (671/785), branches n/a |
+| PHPStan level 6 | No errors |
+| `composer audit --locked` | **No advisories** (lock unchanged) |
+| Node tests (`tests/js`) | **68 of 68** |
+| Trivy on local builds, every severity, fixed only | App image (Alpine 3.24.4) **0**, composer vendor **0**; nginx image **0**; `zlib-1.4-r0` in both |
+| Trivy, the new CI/daily PostgreSQL check | New digest **passes**; the old digest **fails** it (1 CRITICAL brotli CVE-2026-111497, 1 HIGH libcurl CVE-2026-92392) |
+| `bin/smoke-prod-image.sh` | **Passed**, `/healthz` reports 0.19.1-beta.1 |
+| Python tests, Playwright, `scripts/smoke_session.py` | **not run locally** (no application, script or page change); CI runs them on main |
+
+## Run — 2026-11-05, release 0.19.0-beta.1
 
 Drawn art, the C9 garland, a logo per event and logos in the database (D-20261105-01 to -07, ADR 0013; CU-20261105-02 to -05), on
 PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.11. Application code is the same from commit `c015187` on; later commits change tests, documents

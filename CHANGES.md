@@ -1691,4 +1691,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "maintenance/0.9"
   author: "Lance Sandino"
   timestamp: "2026-11-05T15:30:00Z"
+- id: CU-20261110-01
+  type: security
+  title: "0.19.1-beta.1: zlib 1.4 in both images, new PostgreSQL and PHP base digests, and the PostgreSQL image scanned in CI and daily"
+  description: "Both runtime stages name zlib 1.4-r0 (CVE-2026-4738, medium, found by an all-severity Trivy run of the 0.19.0 images) after `apk upgrade`, so a build cache cannot reuse the older layer. php:8.5-fpm-alpine moves to its Alpine 3.24.4 digest. postgres:18-alpine moves from 10a5c69a… (brotli 1.2.0, CVE-2026-111497 critical; libcurl 8.22.0, CVE-2026-92392 high) to 123b1799…, still PostgreSQL 18.6, in compose.yaml (postgres and backup) and CI's service. Neither CI nor the daily check scanned that image, so the pinned digest kept both after Docker had published fixed images: both now scan the image compose.yaml pins and fail on a fixed HIGH/CRITICAL package, skipping only gosu (D-20261110-01); run against the old digest the new check exits 1. Symfony stays on 8.1.11, which is patched for all 21 Symfony advisories of 2026-11-04. Left: the new PostgreSQL digest still has zlib 1.3.2 (CVE-2026-4738, medium; the database listens only inside the stack) until Docker rebuilds it, and gosu is not scanned. CHANGELOG.md keeps to plain words (WhatsNewTest). No migration."
+  impact: low
+  affected_modules: ["Dockerfile", "compose.yaml", ".github/workflows/ci.yml", ".github/workflows/security.yml", "VERSION", "README.md", "CHANGELOG.md", "DECISIONS.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testRuntimeImagesNameTheFixedZlib, testThePinnedPostgresImageIsScannedInCiAndDaily, testThePostgresImageVolumeAndServerVersionAgree", "Trivy image scan (CI)", "bin/smoke-prod-image.sh"]
+  commit_ref: "fix/security-0.19.1"
+  author: "Lance Sandino"
+  timestamp: "2026-11-10T18:30:00Z"
 ```

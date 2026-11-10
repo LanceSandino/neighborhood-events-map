@@ -6,6 +6,14 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.19.1-beta.1] - 2026-11-10
+
+A security update. Nothing changes on the site: your events, homes and accounts stay exactly as they are.
+
+### Security
+- Fixes for security problems in the compression and download libraries that the site and its database use (CVE-2026-4738, CVE-2026-111497, CVE-2026-92392).
+- The daily security check now covers the database too, so a fix it is missing is caught the same day.
+
 ## [0.19.0-beta.1] - 2026-11-05
 
 The site now draws everything itself, the same on every phone and computer, and Christmas lights pages hang a string of classic C9 bulbs along the top. Each event can have its own logo, and logos are now part of your backups.

@@ -4,11 +4,13 @@
 # Every base image is pinned by its multi-arch digest, so a rebuild cannot pick up a moved or replaced tag;
 # Dependabot (docker ecosystem) proposes the new digest when a tag moves.
 
-FROM php:8.5-fpm-alpine@sha256:4c2818074ec49f6abe46620f3965e0cb75bc3a5f2b417edd1aacaba6f091c40e AS php-base
+FROM php:8.5-fpm-alpine@sha256:951fb5b1780219b81d5daffa4cebef8e0077c537f3893d9790a5dfcd66ca334d AS php-base
 # OPcache is part of PHP itself since 8.5 (no extension to install). `apk upgrade` takes Alpine's security fixes
 # that the pinned base image does not carry yet (e.g. brotli 1.2.1 for CVE-2026-111497); CI's image scan fails on
-# any fixed HIGH/CRITICAL package left behind.
+# any fixed HIGH/CRITICAL package left behind. A floor names a fix the base image lacks (zlib 1.4, CVE-2026-4738),
+# so a build cache cannot answer with an older layer.
 RUN apk upgrade --no-cache \
+ && apk add --no-cache 'zlib>=1.4-r0' \
  && apk add --no-cache icu-libs libpq libzip fcgi tzdata \
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev postgresql-dev libzip-dev linux-headers \
  && docker-php-ext-install -j"$(nproc)" intl pdo_pgsql pcntl zip \
@@ -70,8 +72,9 @@ COPY --from=prod /app/public /app/public
 # Mount point of the PHP-FPM socket volume, same owner and mode as in the app image (whichever image
 # initializes the volume first, PHP can create its sockets and nginx can reach them).
 USER root
-# Alpine security fixes newer than the pinned base image (see the php-base stage).
+# Alpine security fixes newer than the pinned base image, with the same floor (see the php-base stage).
 RUN apk upgrade --no-cache \
+ && apk add --no-cache 'zlib>=1.4-r0' \
  && install -d -o 82 -g 101 -m 0750 /run/php
 USER 101
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1

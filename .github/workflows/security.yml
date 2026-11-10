@@ -2,6 +2,7 @@
 # owner) even when nothing was pushed. Security releases are applied the same day (D-20261021-36).
 #   - PHP in the published app image is the newest release of its line (php.net), e.g. a PHP security release.
 #   - The published app and nginx images have no fixed HIGH/CRITICAL vulnerability in their OS packages (Trivy).
+#   - Nor does the PostgreSQL image compose.yaml pins on main.
 #   - composer.lock and the end-to-end test tools' package-lock.json have no known advisory.
 # Every tool runs from an image pinned by digest (D-20261021-29) with no token or secret.
 name: Security checks
@@ -56,6 +57,19 @@ jobs:
               --exit-code 1 --no-progress "$image" || status=1
           done
           exit "$status"
+
+  postgres-image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - name: No fixed HIGH or CRITICAL vulnerability in the pinned PostgreSQL image
+        # Used as compose.yaml pins it, so no build of ours upgrades it. gosu, the entrypoint's one-shot step down
+        # from root, is skipped (D-20261110-01).
+        run: |
+          pg=$(grep -m1 -oE 'postgres:[0-9]+-alpine@sha256:[0-9a-f]{64}' compose.yaml)
+          docker run --rm "$TRIVY_IMAGE" image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 1 --no-progress --skip-files usr/local/bin/gosu "$pg"
 
   locked-dependencies:
     runs-on: ubuntu-24.04

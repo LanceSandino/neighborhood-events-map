@@ -362,6 +362,37 @@ final class ContainerConfigTest extends TestCase
         }
     }
 
+    /** zlib 1.4 (CVE-2026-4738): named in both runtime stages, so no build cache can bring the old package back. */
+    public function testRuntimeImagesNameTheFixedZlib(): void
+    {
+        $docker = self::read('Dockerfile');
+        foreach (['php-base', 'nginx'] as $stage) {
+            self::assertSame(1, preg_match('~^FROM \S+ AS '.$stage.'\n(.*?)(?=^FROM |\z)~ms', $docker, $m), $stage);
+            self::assertStringContainsString("apk add --no-cache 'zlib>=1.4-r0'", $m[1], $stage);
+        }
+    }
+
+    /**
+     * The database image comes straight from Docker Hub, so no build runs `apk upgrade` on it: the pinned digest
+     * carried brotli and libcurl fixes it lacked (CVE-2026-111497, CVE-2026-92392) until 0.19.1-beta.1 because
+     * neither scan looked at it. CI and the daily check scan the exact image compose.yaml pins; only gosu, the
+     * entrypoint's one-shot step down from root, is skipped (D-20261110-01).
+     */
+    public function testThePinnedPostgresImageIsScannedInCiAndDaily(): void
+    {
+        $find = "grep -m1 -oE 'postgres:[0-9]+-alpine@sha256:[0-9a-f]{64}' compose.yaml";
+        foreach (['.github/workflows/ci.yml', '.github/workflows/security.yml'] as $file) {
+            $workflow = (string) preg_replace('~\s*\\\\\n\s*~', ' ', self::read($file));
+            self::assertStringContainsString('pg=$('.$find.')', $workflow, "$file reads the pinned image");
+            self::assertMatchesRegularExpression(
+                '~--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress --skip-files usr/local/bin/gosu "\$pg"~',
+                $workflow,
+                "$file fails on a fixed HIGH/CRITICAL package in it",
+            );
+        }
+        self::assertMatchesRegularExpression('~postgres-image:\n\s+runs-on:[^\n]+\n\s+steps:\n\s+- uses: actions/checkout@~', self::read('.github/workflows/security.yml'));
+    }
+
     /** @return array<string, string> pool name => its section of docker/php/fpm-pool.conf */
     private static function pools(): array
     {
@@ -424,7 +455,7 @@ final class ContainerConfigTest extends TestCase
         self::assertContains('postgres-data:/var/lib/postgresql', $compose['services']['postgres']['volumes']);
         self::assertStringContainsString('serverVersion='.$m[1].'&', $compose['x-app-env']['DATABASE_URL'] ?? $compose['services']['app']['environment']['DATABASE_URL']);
         self::assertStringContainsString('serverVersion='.$m[1].'&', self::read('.env.dist'));
-        self::assertStringContainsString('postgres:'.$m[1].'-alpine@', self::read('.github/workflows/ci.yml'));
+        self::assertStringContainsString('image: '.$compose['services']['postgres']['image']."\n", self::read('.github/workflows/ci.yml'), 'CI tests the image production runs');
         self::assertTrue(is_executable(\dirname(__DIR__, 3).'/bin/upgrade-postgres.sh'));
     }
 
