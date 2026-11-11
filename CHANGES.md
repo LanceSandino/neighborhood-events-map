@@ -1711,4 +1711,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "chore/deps-2026-11-10"
   author: "Lance Sandino"
   timestamp: "2026-11-11T00:30:00Z"
+- id: CU-20261110-03
+  type: fix
+  title: "Organizer > Events: a refresh of the list keeps an open form, and a step's message shows after the refresh"
+  description: "Every life-cycle step (open, close, announce, hide, default, archive), Delete listings and Save flashed their message and then called load() without waiting, and load() re-rendered the whole page, form included. A form opened before the reload came back (\"+ Prepare an event\" right after the message) went back to the first type's defaults: CI's season.spec failed that way on 2026-11-10 (#evQuiet detached, the form back on Halloween). Now load() redraws with render(keepForm): an open form node is put back as it is, with its listeners, and bind() skips binding it again; each step awaits load() before flash(), so the message means the page is current. No server change."
+  impact: low
+  affected_modules: ["public/assets/js/admin/events.js", "tests/e2e/specs/events.spec.mjs", "CHANGELOG.md"]
+  related_tests: ["tests/e2e/specs/events.spec.mjs: an organizer opens and closes an event … (holds the reload: the message waits for it and a started sale form keeps its type and name; fails on the old code with 'halloween')"]
+  commit_ref: "fix/events-console-reload"
+  author: "Lance Sandino"
+  timestamp: "2026-11-11T01:30:00Z"
 ```

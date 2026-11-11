@@ -297,6 +297,36 @@ test('an organizer opens and closes an event (next year\'s is created), changes 
   const row = (id) => page.locator(`tr[data-event="${id}"]`);
   await expect(row(e.lights.id)).toContainText('Default');
 
+  // Refreshing the list after a step never wipes a form the organizer has started, and the step's message shows once
+  // the list is up to date (CI, 2026-11-10: "+ Prepare an event" clicked before the reload came back went back to the
+  // first type's defaults). The step's POST is answered here, so nothing changes on the server; the reload is held
+  // until the form is filled.
+  let release;
+  const held = new Promise((r) => { release = r; });
+  const fakeClose = (r) => r.fulfill({ json: { ok: true } });
+  const holdList = async (r) => { if (r.request().method() === 'GET') await held; await r.fallback(); };
+  const list = (url) => url.pathname === '/api/admin/events';
+  await page.route(`${LIGHTS}/api/admin/events/${e.lights.id}/close`, fakeClose);
+  await page.route(list, holdList);
+  const reloading = page.waitForRequest((q) => q.method() === 'GET' && list(new URL(q.url())));
+  page.once('dialog', (d) => d.accept());
+  await row(e.lights.id).getByRole('button', { name: 'Close' }).click();
+  await reloading;
+  await expect(page.locator('#flash')).not.toContainText('is closed');
+  await page.getByRole('button', { name: '+ Prepare an event' }).click();
+  await page.locator('#evType').selectOption('garage_sale');
+  await page.locator('#evName').fill('Spring Sale');
+  await page.locator('#eventsGuide').evaluate((el) => { el.dataset.stale = '1'; }); // gone once the list re-renders
+  release();
+  await expect(page.locator('#eventsGuide[data-stale]')).toHaveCount(0);
+  await expect(page.locator('#flash')).toContainText('is closed');
+  await expect(page.locator('#evType')).toHaveValue('garage_sale');
+  await expect(page.locator('#evName')).toHaveValue('Spring Sale');
+  await page.unroute(list, holdList);
+  await page.unroute(`${LIGHTS}/api/admin/events/${e.lights.id}/close`, fakeClose);
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('#evNew')).toBeVisible();
+
   // The sale gets its dates and opens: a sale to be announced cannot open before.
   await row(e.sale.id).getByRole('button', { name: 'Edit' }).click();
   await page.locator('#evTbd').uncheck();

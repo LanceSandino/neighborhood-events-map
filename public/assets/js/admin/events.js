@@ -168,14 +168,17 @@ function group(g) {
     : empty}</div>`;
 }
 
-function render() {
+/** Draws the page. With keepForm (a refresh of the list), an open form stays as it is, with what was typed in it. */
+function render(keepForm = false) {
+  const kept = keepForm && editing !== false ? $('#eventForm') : null;
   $('#admin-events').innerHTML = `
     <div class="panel" id="eventsGuide"><h2>How events work</h2>
       <p class="form-caption"><b>Events close by themselves after their last day.</b> From midnight in the community’s time zone (within the hour) the homes leave the map, visitors find the thank-you message under “Past events”, “/” moves to the current event happening soonest, and next year’s event of the same kind is created hidden. Use Close to end an event earlier.</p>
       <p class="form-caption">Several events can be on at once, one of each kind. Next year’s hidden event lets residents get ready in My house; visitors see it once you announce it. Claims stay with their residents; listings belong to one event, and nothing is copied from an earlier event unless a resident chooses “Use last year's details”.</p></div>
     <div class="panel"><h2>${editing ? 'Edit event' : 'Prepare an event'}</h2><div id="eventFormHost">${editing !== undefined && editing !== false ? form(editing) : '<button type="button" class="primary" id="evNew">+ Prepare an event</button>'}</div></div>
     ${GROUPS.map(group).join('')}`;
-  bind();
+  if (kept) $('#eventForm').replaceWith(kept); // its listeners are still bound
+  bind(!kept);
 }
 
 function readForm() {
@@ -204,21 +207,21 @@ function readForm() {
 
 const byId = (id) => data.events.find((e) => e.id === Number(id));
 
-/** One button kind per life-cycle step: confirm, POST, say what happened, reload. */
+/** One button kind per life-cycle step: confirm, POST, reload, then say what happened (on the page as it is now). */
 function step(attr, confirmText, url, done, body = () => ({ confirm: true })) {
   document.querySelectorAll(`[data-${attr}]`).forEach((b) => b.addEventListener('click', async () => {
     const e = byId(b.dataset[attr]);
     const text = confirmText(e);
     if (text && !window.confirm(text)) return;
     await call(`/api/admin/events/${e.id}/${url}`, { method: 'POST', body: body(e) });
+    await load();
     flash(done(e));
-    load();
   }));
 }
 
-function bind() {
+function bind(withForm = true) {
   $('#evNew')?.addEventListener('click', () => { editing = null; $('#eventFormHost').innerHTML = form(null); bindForm(); });
-  bindForm();
+  if (withForm) bindForm();
   document.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => {
     editing = byId(b.dataset.edit);
     render();
@@ -242,8 +245,8 @@ function bind() {
     const e = byId(b.dataset.purge);
     if (window.prompt(`Type DELETE to remove the ${e.opted_in} listings of “${e.name}” for good (claims stay). Export them first if you need a copy.`) !== 'DELETE') return;
     const r = await call(`/api/admin/events/${e.id}/purge-listings`, { method: 'POST', body: { confirm: 'DELETE' } });
+    await load();
     flash(`Deleted ${r.purged} listing(s) of “${e.name}”.`);
-    load();
   }));
 }
 
@@ -303,6 +306,7 @@ function bindForm() {
   f.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const body = readForm();
+    let saved = 'Event saved.';
     if (editing) {
       try {
         await call(`/api/admin/events/${editing.id}`, { method: 'PUT', body });
@@ -310,20 +314,21 @@ function bindForm() {
         if (e?.code !== 'listings_move' || !window.confirm(`${e.message}\n\nMove them to ${body.starts_on}?`)) return;
         await call(`/api/admin/events/${editing.id}`, { method: 'PUT', body: { ...body, move_listings: true } });
       }
-      flash('Event saved.');
     } else {
       await call('/api/admin/events', { method: 'POST', body });
-      flash(body.state === 'hidden' ? 'Hidden event saved: residents can get ready. Announce or open it when you are ready.' : 'Draft saved. Preview it, then announce or open it when you are ready.');
+      saved = body.state === 'hidden' ? 'Hidden event saved: residents can get ready. Announce or open it when you are ready.' : 'Draft saved. Preview it, then announce or open it when you are ready.';
     }
     editing = false;
-    load();
+    await load();
+    flash(saved);
   });
 }
 
+/** Fetches the events and redraws the list; a form the organizer has open is kept (render's keepForm). */
 async function load() {
   data = await call('/api/admin/events');
   if (editing) editing = data.events.find((e) => e.id === editing.id) || false;
-  render();
+  render(true);
 }
 editing = false;
 load();
