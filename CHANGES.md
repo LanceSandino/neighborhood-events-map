@@ -1701,4 +1701,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/security-0.19.1"
   author: "Lance Sandino"
   timestamp: "2026-11-10T18:30:00Z"
+- id: CU-20261110-02
+  type: refactor
+  title: "Dependabot updates: PHPUnit 13.4.6, PHPStan 2.3.5, Mailpit 1.33.0, docker/login-action 4.8.0"
+  description: "Applies Dependabot PRs #35-#38. The lock was regenerated with the project's own composer (`composer update phpunit/phpunit phpstan/phpstan`, only those two change), so it keeps the lock format; Mailpit (dev and staging compose) and login-action (Images workflow, SHA-pinned) move to the new pins. Development and CI tools only; the production images are unchanged."
+  impact: none
+  affected_modules: ["composer.json (bump-after-update raises the two minimums)", "composer.lock", "compose.dev.yaml", "compose.staging.yaml", ".github/workflows/images.yml"]
+  related_tests: ["PHPUnit 13.4.6: 719 tests, 18105 assertions", "PHPStan 2.3.5 level 6: no errors", "lights demo stack healthy on Mailpit 1.33.0"]
+  commit_ref: "chore/deps-2026-11-10"
+  author: "Lance Sandino"
+  timestamp: "2026-11-11T00:30:00Z"
 ```
