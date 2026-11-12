@@ -1751,4 +1751,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "test/pin-regions"
   author: "Lance Sandino"
   timestamp: "2026-11-12T16:45:00Z"
+- id: CU-20261112-04
+  type: test
+  title: "sale.spec and lights.spec pins also stay clear of the demo home in the south-east"
+  description: "CU-20261112-03 was incomplete: both demos have a home at 0.644, 0.627 of the outline's box, inside the old random square, and the narrower strip of CU-20261112-03 made a 4 m collision with it more likely (CI on main 3ed32d3, lights.spec:225: 'That pin is on top of another listed address'). The pin now stays in 0.62-0.66 x 0.70-0.82 of the box: at least ~39 m from that home and ~22 m from types.spec's pins, and checked inside both outlines (point in polygon on its corners and midpoints). No application change."
+  impact: none
+  affected_modules: ["tests/e2e/specs/sale.spec.mjs", "tests/e2e/specs/lights.spec.mjs"]
+  related_tests: ["tests/e2e/specs/sale.spec.mjs: a resident lists a sale …", "tests/e2e/specs/lights.spec.mjs: a resident lists a display …"]
+  commit_ref: "test/pin-regions-2"
+  author: "Lance Sandino"
+  timestamp: "2026-11-12T17:30:00Z"
 ```

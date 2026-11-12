@@ -234,9 +234,9 @@ test('a resident lists a display: nights, styles, viewing mode, music and statio
   await page.locator('#seStreet').selectOption({ label: 'HOLLY DR' });
   await page.waitForTimeout(400);
   const box = await page.locator('#pinMap .leaflet-overlay-pane path').first().boundingBox();
-  // Somewhere in the empty south-east of the outline, never on top of a demo home, and left of 0.67 of its width:
-  // types.spec drops its pin from 0.7 on, and a pin within 4 m of another address is refused (pin_collision).
-  await page.mouse.click(box.x + box.width * (0.62 + Math.random() * 0.04), box.y + box.height * (0.62 + Math.random() * 0.2));
+  // In the south-east of the outline, where no other pin can be within 4 m (pin_collision): left of types.spec's pins
+  // (from 0.7 of the width on) and below the demo home at 0.644, 0.627 of the outline's box.
+  await page.mouse.click(box.x + box.width * (0.62 + Math.random() * 0.04), box.y + box.height * (0.70 + Math.random() * 0.12));
   await page.getByRole('button', { name: 'Next: your stop' }).click();
   const form = page.locator('#registerForm');
   await expect(form.locator('fieldset[data-step="2"]')).toBeVisible();
