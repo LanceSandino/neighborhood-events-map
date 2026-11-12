@@ -1741,4 +1741,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "chore/mailpit-1.33.1"
   author: "Lance Sandino"
   timestamp: "2026-11-12T16:15:00Z"
+- id: CU-20261112-03
+  type: test
+  title: "sale.spec and lights.spec drop their pin where types.spec never does"
+  description: "Both tests dropped a random pin in 0.62-0.82 of the outline box and types.spec, on the same stacks, from 0.7-0.9, so a run could land the two within 4 m and get pin_collision instead of the behaviour under test (CI on main 2026-11-12, sale.spec:235: the form back on step 1, 'That pin is on top of another listed address'). Their pin now stays in 0.62-0.66 of the width (the demo outline is 729 m wide: at least ~20 m from types.spec's pins). No application change."
+  impact: none
+  affected_modules: ["tests/e2e/specs/sale.spec.mjs", "tests/e2e/specs/lights.spec.mjs"]
+  related_tests: ["tests/e2e/specs/sale.spec.mjs: a resident lists a sale …", "tests/e2e/specs/lights.spec.mjs (same pin step)"]
+  commit_ref: "test/pin-regions"
+  author: "Lance Sandino"
+  timestamp: "2026-11-12T16:45:00Z"
 ```
