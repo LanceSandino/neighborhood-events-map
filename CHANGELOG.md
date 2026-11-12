@@ -6,6 +6,10 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.19.2-beta.1] - 2026-11-12
+
+A small update for organizers. Nothing changes for visitors, and your events, homes and accounts stay as they are.
+
 ### Fixed for organizers
 - **What you type stays.** Under Organizer > Events, a form you have started is no longer cleared when the list refreshes after you open, close or change another event, and the confirmation now shows once the list is up to date.
 

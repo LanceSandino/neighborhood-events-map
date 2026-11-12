@@ -1721,4 +1721,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/events-console-reload"
   author: "Lance Sandino"
   timestamp: "2026-11-11T01:30:00Z"
+- id: CU-20261112-01
+  type: chore
+  title: "0.19.2-beta.1: the organizer console fix and the Dependabot updates, released; postgres:18-alpine moves to Docker's 2026-11-11 digest"
+  description: "Releases CU-20261110-02 and CU-20261110-03 (PR #39). postgres:18-alpine moves from 123b1799… to 9ba53c7d… (Docker's push of 2026-11-11 13:08 UTC, still PostgreSQL 18.6 on Alpine 3.24.4) in compose.yaml (postgres and backup) and CI's service. That push still carries krb5-libs 1.22.2-r1 and libxslt 1.1.43-r3 (19 HIGH CVEs fixed in Alpine's 1.22.3-r0 and 1.1.43-r4, e.g. CVE-2026-107364, CVE-2026-87636) and zlib 1.3.2: the PostgreSQL scans in CI and the daily check fail on it and are left failing on purpose until Docker rebuilds (D-20261112-01). The app and nginx images scan clean. No migration."
+  impact: low
+  affected_modules: ["compose.yaml", ".github/workflows/ci.yml", "VERSION", "README.md", "CHANGELOG.md", "DECISIONS.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testThePostgresImageVolumeAndServerVersionAgree (CI tests the image production runs)", "bin/smoke-prod-image.sh", "Trivy image scan (CI): app and nginx 0; PostgreSQL fails as recorded"]
+  commit_ref: "fix/events-console-reload"
+  author: "Lance Sandino"
+  timestamp: "2026-11-12T15:45:00Z"
 ```

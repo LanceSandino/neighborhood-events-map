@@ -1,6 +1,23 @@
 # Test and verification report
 
-## Latest run — 2026-11-10, release 0.19.1-beta.1
+## Latest run — 2026-11-12, release 0.19.2-beta.1
+
+The organizer console fix (CU-20261110-03), the Dependabot updates (CU-20261110-02: PHPUnit 13.4.6, PHPStan 2.3.5, Mailpit 1.33.0,
+docker/login-action 4.8.0) and Docker's 2026-11-11 postgres:18-alpine digest (CU-20261112-01), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.11. No migration.
+
+| Gate | Result |
+|---|---|
+| PHPUnit 13.4.6 (`sh bin/test.sh --coverage-text`, against the new PostgreSQL digest) | **OK — 719 tests, 18105 assertions** |
+| Coverage (pcov) | Lines **95.81 %** (4484/4680), Methods 85.47 % (671/785), branches n/a |
+| PHPStan 2.3.5 level 6 | No errors |
+| Node tests (`tests/js`) | **68 of 68** |
+| Playwright, full suite in CI on PR #39 (before the digest change) | **Passed** (e2e job) |
+| New console check (`events.spec`, organizer test, lights demo) | Fails on the old code (`#evType` back to `halloween`; the message before the reload); **3 of 3 passed** with the fix on a freshly seeded stack |
+| Trivy on local builds, every severity, fixed only | App image (Alpine 3.24.4) **0**; nginx image **0** (`libxslt-1.1.43-r4`, `zlib-1.4-r0`) |
+| Trivy, PostgreSQL check | **Fails, accepted** (D-20261112-01): Docker's newest digest has krb5-libs 1.22.2-r1 and libxslt 1.1.43-r3 (19 HIGH) |
+| `bin/smoke-prod-image.sh` | **Passed**, `/healthz` reports 0.19.2-beta.1 |
+
+## Run — 2026-11-10, release 0.19.1-beta.1
 
 Security release (CU-20261110-01, D-20261110-01): zlib 1.4 in both images, new PHP 8.5.12 and PostgreSQL 18.6 base digests (Alpine 3.24.4),
 and the pinned PostgreSQL image scanned in CI and daily. Symfony 8.1.11 and the lock are unchanged. No migration. Run locally on the release branch:
