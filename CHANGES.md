@@ -1731,4 +1731,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "fix/events-console-reload"
   author: "Lance Sandino"
   timestamp: "2026-11-12T15:45:00Z"
+- id: CU-20261112-02
+  type: chore
+  title: "Mailpit 1.33.1 in the dev and staging stacks"
+  description: "Applies Dependabot PR #36 after it moved to v1.33.1 (the PR was closed by mistake and its branch is gone). Development and staging mail catcher only; the production images and compose.yaml are unchanged."
+  impact: none
+  affected_modules: ["compose.dev.yaml", "compose.staging.yaml"]
+  related_tests: ["CI e2e on main (every dev stack sends its sign-in mail through Mailpit)"]
+  commit_ref: "chore/mailpit-1.33.1"
+  author: "Lance Sandino"
+  timestamp: "2026-11-12T16:15:00Z"
 ```
