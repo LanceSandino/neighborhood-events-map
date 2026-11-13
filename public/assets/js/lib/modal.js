@@ -1,58 +1,47 @@
 /**
  * @module assets/js/lib/modal
- * @description Accessible dialogs / mobile bottom sheets: focus moves in on open and returns on close,
- *     Escape and backdrop close, Tab is kept inside the dialog. No animation (sensory-friendly).
+ * @description Dialogs / mobile bottom sheets on native <dialog> opened with showModal(): the browser makes the
+ *     page inert, keeps focus inside, puts a dialog opened from another on top, closes on Escape (and the
+ *     back gesture) and returns focus to the opener. Here: initial focus on the first control that is not the
+ *     close button, [data-close] buttons, backdrop click (lib/light-dismiss.js) and toasts. No animation.
+ * @dependencies lib/light-dismiss.js
  */
-const stack = [];
+import { lightDismiss } from './light-dismiss.js';
+
+const open = []; // in the order they were opened, for closeTopModal()
 
 function focusables(el) {
   return [...el.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
-    .filter((n) => n.offsetParent !== null || n === document.activeElement);
+    .filter((n) => n.offsetParent !== null);
 }
 
 export function openModal(id) {
-  const wrap = document.getElementById(id);
-  if (!wrap) return null;
-  stack.push({ wrap, returnTo: document.activeElement });
-  wrap.style.zIndex = String(2000 + stack.length); // a dialog opened from another one is always on top
-  wrap.hidden = false;
-  wrap.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  const first = focusables(wrap).find((n) => !n.classList.contains('close-modal')) || focusables(wrap)[0];
+  const dialog = document.getElementById(id);
+  if (!dialog || typeof dialog.showModal !== 'function') return null;
+  if (!dialog.open) {
+    lightDismiss(dialog);
+    dialog.showModal();
+    open.push(dialog);
+    dialog.addEventListener('close', () => { const i = open.indexOf(dialog); if (i >= 0) open.splice(i, 1); }, { once: true });
+  }
+  const f = focusables(dialog);
+  const first = f.find((n) => !n.classList.contains('close-modal')) || f[0];
   if (first) first.focus();
-  return wrap;
+  return dialog;
 }
 
-export function closeModal(wrap) {
-  const i = stack.findIndex((s) => s.wrap === wrap);
-  if (i < 0) return;
-  const [{ returnTo }] = stack.splice(i, 1);
-  wrap.classList.remove('open');
-  wrap.hidden = true;
-  if (!stack.length) document.body.style.overflow = '';
-  if (returnTo && typeof returnTo.focus === 'function') returnTo.focus();
+export function closeModal(dialog) {
+  if (dialog?.open) dialog.close();
 }
 
 export function closeTopModal() {
-  if (stack.length) closeModal(stack[stack.length - 1].wrap);
+  closeModal(open[open.length - 1]);
 }
 
 export function initModals() {
   document.addEventListener('click', (e) => {
     const closer = e.target.closest('[data-close]');
-    if (closer) { closeModal(closer.closest('.modal-wrap')); return; }
-    if (e.target.classList && e.target.classList.contains('modal-wrap')) closeModal(e.target);
-  });
-  document.addEventListener('keydown', (e) => {
-    if (!stack.length) return;
-    const { wrap } = stack[stack.length - 1];
-    if (e.key === 'Escape') { e.preventDefault(); closeModal(wrap); return; }
-    if (e.key === 'Tab') {
-      const f = focusables(wrap);
-      if (!f.length) return;
-      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
-      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
-    }
+    if (closer) closeModal(closer.closest('dialog'));
   });
 }
 

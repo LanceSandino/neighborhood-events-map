@@ -101,7 +101,7 @@
   <a href="/{{ q }}#my-house" data-action="house" class="{{ (nav ?? '') == 'me' ? 'active' }}"><span aria-hidden="true">{{ icon('i-house') }}</span>My house</a>
 </nav>
 {% block modals %}{% endblock %}
-<dialog class="whats-new" id="whatsNew" aria-labelledby="whatsNewTitle">
+<dialog class="whats-new" id="whatsNew" aria-labelledby="whatsNewTitle" closedby="any">
   <button type="button" class="close-modal" data-whats-new-close aria-label="Close">{{ icon("i-close") }}</button>
   <div class="eyebrow">{{ icon("i-party") }} Version {{ app_version }}</div>
   <h2 id="whatsNewTitle">What’s new</h2>
@@ -110,7 +110,7 @@
   {% include 'partials/_source_links.html.twig' %}
 </dialog>
 <script type="module" src="{{ asset_path('js/whatsnew.js') }}"></script>
-<dialog class="whats-new appearance" id="appearanceDialog" aria-labelledby="appearanceTitle">
+<dialog class="whats-new appearance" id="appearanceDialog" aria-labelledby="appearanceTitle" closedby="any">
   <button type="button" class="close-modal" data-appearance-close aria-label="Close">{{ icon("i-close") }}</button>
   <div class="eyebrow">{{ icon("i-appearance") }} Make it comfortable</div>
   <h2 id="appearanceTitle">Appearance</h2>

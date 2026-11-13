@@ -377,9 +377,13 @@ html .leaflet-container img.leaflet-tile { mix-blend-mode: normal; width: 256.5p
 .footer-version { font-size: 12px; color: var(--muted); margin-top: 8px; }
 
 /* ---- Modals / bottom sheets --------------------------------------------------- */
-.modal-wrap { position: fixed; inset: 0; background: var(--overlay); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
-.modal-wrap.open { display: flex; }
-.modal { position: relative; overscroll-behavior: contain; background: var(--surface); border-radius: 22px; width: 100%; max-width: 520px; max-height: min(90vh, 850px); overflow: auto; padding: 28px; box-shadow: 0 25px 80px #15111d66; }
+/* Native <dialog> opened with showModal() (lib/modal.js): the top layer stacks them and makes the page inert. The
+   dialog is the card; ::backdrop is the dimmed page. No display here: a closed dialog keeps the browser's none. */
+.modal { border: 0; margin: auto; color: inherit; background: var(--surface); border-radius: 22px; width: calc(100% - 32px); max-width: 520px; max-height: min(90vh, 850px); overflow: auto; padding: 28px; box-shadow: 0 25px 80px #15111d66; }
+.modal::backdrop { background: var(--overlay); }
+/* Scrolling inside a dialog or over its backdrop never scrolls the page behind it (no lock on <body>). */
+dialog:modal { overscroll-behavior: contain; }
+dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .modal.wide { max-width: 640px; }
 .modal h2 { font-size: 24px; line-height: 1.15; margin: 6px 0; padding-right: 36px; }
 .modal .introtext { font-size: 12px; color: var(--muted); margin: 7px 0 19px; }
@@ -607,8 +611,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   .bottom-actions button, .bottom-actions a { flex: 1; white-space: nowrap; }
   .modal-actions { flex-direction: column-reverse; align-items: stretch; }
   .dash-head .bottom-actions { width: 100%; }
-  .modal-wrap { align-items: flex-end; padding: 0; }
-  .modal { padding: 22px 18px calc(22px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; max-height: 92vh; }
+  .modal { width: 100%; margin: auto auto 0; padding: 22px 18px calc(22px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; max-height: 92vh; }
   .form-grid { gap: 9px; }
   .page-card { padding: 22px 18px; margin: 12px auto; }
 }
@@ -637,8 +640,10 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   .mobile-bottom a, .mobile-bottom button { flex-direction: row; gap: 6px; font-size: 12px; }
   .mobile-bottom span { font-size: 17px; }
   .site-footer { padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
-  .modal-wrap { padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); }
-  .modal { max-height: calc(100dvh - 20px); }
+  .modal { width: calc(100% - max(16px, env(safe-area-inset-left)) - max(16px, env(safe-area-inset-right))); max-height: calc(100dvh - 20px); }
+}
+@media (max-width: 660px) and (max-height: 500px) and (orientation: landscape) {
+  .modal { margin: auto auto 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

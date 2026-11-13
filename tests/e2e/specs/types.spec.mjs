@@ -191,7 +191,7 @@ for (const t of TYPES) {
     // the pin at its centre), the type's details, the email; Escape is not needed because the form is sent.
     await tabTo(page, '.top-add');
     await page.keyboard.press('Enter');
-    await expect(page.locator('#registerModal')).toHaveClass(/open/);
+    await expect(page.locator('#registerModal:modal')).toBeVisible();
     await tabTo(page, '#btnSelfEntry');
     await page.keyboard.press('Enter');
     await tabTo(page, '#seHouse');

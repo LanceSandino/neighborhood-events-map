@@ -116,7 +116,7 @@ async function importCsv(dry) {
   $('#btnSearch').addEventListener('click', search);
   $('#btnPrev').addEventListener('click', () => { page -= 1; renderPage(); });
   $('#btnNext').addEventListener('click', () => { page += 1; renderPage(); });
-  $('#q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+  $('#q').addEventListener('keydown', (e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') search(); }); // not while an IME composes
   $('#rows').addEventListener('click', (e) => { const b = e.target.closest('button[data-act]'); if (b) act(Number(b.closest('tr').dataset.id), b.dataset.act); });
   $('#addForm').addEventListener('submit', async (e) => {
     e.preventDefault();

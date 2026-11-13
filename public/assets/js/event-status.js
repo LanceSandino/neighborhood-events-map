@@ -25,7 +25,7 @@ initRegistration({ community: boot.community, onPublishedHint: () => {} });
 document.addEventListener('click', (e) => {
   const a = e.target.closest('[data-action]');
   if (!a) return;
-  const host = a.closest('.modal-wrap.open');
+  const host = a.closest('dialog.modal[open]');
   if (host && a.dataset.action !== 'explore') closeModal(host);
   if (actions(a.dataset.action)) e.preventDefault();
 });

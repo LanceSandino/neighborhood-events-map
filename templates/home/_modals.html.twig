@@ -1,129 +1,122 @@
-{# Dialogs / mobile bottom sheets for the public page. All behaviour in assets/js/home.js + register.js. The event
+{# Dialogs / mobile bottom sheets for the public page: native <dialog>, opened with showModal() by assets/js/lib/modal.js
+   (closedby="any": a click on the backdrop closes them). Behaviour in assets/js/home.js + register.js. The event
    type supplies the words and the listing fields of step 2. #}
 {% set reg = c.registration %}
 {% set et = event_type(c.event.type) %}
-<div class="modal-wrap" id="registerModal" role="dialog" aria-modal="true" aria-labelledby="registerTitle" hidden>
-  <div class="modal">
-    <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
-    <div class="eyebrow">{{ icon('i-house') }} For {{ c.community.name }} residents</div>
-    <h2 id="registerTitle">{{ et.copy.register_title }}</h2>
-    <p class="introtext" id="registerIntro">No password needed. Pick your address, describe your stop, and confirm with a one-time link sent to your email. First verified neighbor for an address publishes it right away.</p>
-    {% if reg.open %}<ol class="steps" aria-hidden="true"><li data-step-dot="1"></li><li data-step-dot="2"></li><li data-step-dot="3"></li></ol>{% endif %}
+<dialog class="modal" id="registerModal" aria-labelledby="registerTitle" closedby="any">
+  <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
+  <div class="eyebrow">{{ icon('i-house') }} For {{ c.community.name }} residents</div>
+  <h2 id="registerTitle">{{ et.copy.register_title }}</h2>
+  <p class="introtext" id="registerIntro">No password needed. Pick your address, describe your stop, and confirm with a one-time link sent to your email. First verified neighbor for an address publishes it right away.</p>
+  {% if reg.open %}<ol class="steps" aria-hidden="true"><li data-step-dot="1"></li><li data-step-dot="2"></li><li data-step-dot="3"></li></ol>{% endif %}
 
-    {% if not reg.open %}
-      <div class="notice" role="status">{{ icon('i-hourglass') }} {{ reg.reason }}</div>
-      <div class="modal-actions"><button type="button" class="secondary" data-close>Close</button></div>
-    {% else %}
-    <form id="registerForm" novalidate>
-      <div class="hp-field" aria-hidden="true"><label for="regWebsite">Website</label><input id="regWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
-      <fieldset data-step="1">
-        <legend class="visually-hidden">Step 1 of 3: your address</legend>
-        {% if reg.address_mode != 'self_entry' %}
-        <div class="field full" id="lookupField">
-          <label for="addrQuery">Home address *</label>
-          <input id="addrQuery" autocomplete="off" placeholder="House number and street, e.g. {{ et.copy.page_address_example }}…" maxlength="80" aria-describedby="addrHelp" aria-autocomplete="list" aria-controls="addrSuggestions">
-          <span class="form-caption" id="addrHelp">Start with your house number. Only addresses in {{ c.community.name }} can be listed.</span>
-          <ul class="suggestions" id="addrSuggestions" role="listbox" aria-label="Matching addresses"></ul>
-          <span class="error" data-error="address"></span>
-        </div>
+  {% if not reg.open %}
+    <div class="notice" role="status">{{ icon('i-hourglass') }} {{ reg.reason }}</div>
+    <div class="modal-actions"><button type="button" class="secondary" data-close>Close</button></div>
+  {% else %}
+  <form id="registerForm" novalidate>
+    <div class="hp-field" aria-hidden="true"><label for="regWebsite">Website</label><input id="regWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+    <fieldset data-step="1">
+      <legend class="visually-hidden">Step 1 of 3: your address</legend>
+      {% if reg.address_mode != 'self_entry' %}
+      <div class="field full" id="lookupField">
+        <label for="addrQuery">Home address *</label>
+        <input id="addrQuery" autocomplete="off" placeholder="House number and street, e.g. {{ et.copy.page_address_example }}…" maxlength="80" aria-describedby="addrHelp" aria-autocomplete="list" aria-controls="addrSuggestions">
+        <span class="form-caption" id="addrHelp">Start with your house number. Only addresses in {{ c.community.name }} can be listed.</span>
+        <ul class="suggestions" id="addrSuggestions" role="listbox" aria-label="Matching addresses"></ul>
+        <span class="error" data-error="address"></span>
+      </div>
+      {% endif %}
+      {% if reg.address_mode != 'registry' %}
+      <div id="selfEntry" class="form-grid {{ reg.address_mode == 'both' ? 'hide' }}">
+        <div class="field"><label for="seHouse">House number *</label><input id="seHouse" inputmode="numeric" maxlength="7" autocomplete="off"></div>
+        <div class="field"><label for="seStreet">Street *</label><select id="seStreet"><option value="">Choose…</option>{% for s in reg.street_allowlist %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="seUnit">Unit (optional)</label><input id="seUnit" maxlength="8" autocomplete="off"></div>
+        {% if c.zones|length > 0 %}
+        <div class="field"><label for="seZone">{{ zone_summary(c.zones) ? zone_summary(c.zones).title|split(' ')|last|capitalize : 'Zone' }}</label><select id="seZone"><option value="">Detect from pin</option>{% for z in c.zones %}{% if z.claimable %}<option value="{{ z.key }}">{{ z.label }}</option>{% endif %}{% endfor %}</select></div>
         {% endif %}
-        {% if reg.address_mode != 'registry' %}
-        <div id="selfEntry" class="form-grid {{ reg.address_mode == 'both' ? 'hide' }}">
-          <div class="field"><label for="seHouse">House number *</label><input id="seHouse" inputmode="numeric" maxlength="7" autocomplete="off"></div>
-          <div class="field"><label for="seStreet">Street *</label><select id="seStreet"><option value="">Choose…</option>{% for s in reg.street_allowlist %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
-          <div class="field"><label for="seUnit">Unit (optional)</label><input id="seUnit" maxlength="8" autocomplete="off"></div>
-          {% if c.zones|length > 0 %}
-          <div class="field"><label for="seZone">{{ zone_summary(c.zones) ? zone_summary(c.zones).title|split(' ')|last|capitalize : 'Zone' }}</label><select id="seZone"><option value="">Detect from pin</option>{% for z in c.zones %}{% if z.claimable %}<option value="{{ z.key }}">{{ z.label }}</option>{% endif %}{% endfor %}</select></div>
-          {% endif %}
-          <div class="field full">
-            <span class="label" id="pinLabel">Tap your house on the map *</span>
-            <div class="pin-map" id="pinMap" role="application" aria-labelledby="pinLabel"></div>
-            <span class="form-caption">Place the pin on your roof. It must be inside the neighborhood boundary. Nothing is geocoded or guessed. With a keyboard, move the map with the arrow keys and press Enter to put the pin at its centre (+).{{ reg.review_new_addresses ? ' A new address appears on the map after an organizer approves it.' }}</span>
-            <span class="error" data-error="pin"></span>
-          </div>
+        <div class="field full">
+          <span class="label" id="pinLabel">Tap your house on the map *</span>
+          <div class="pin-map" id="pinMap" role="application" aria-labelledby="pinLabel"></div>
+          <span class="form-caption">Place the pin on your roof. It must be inside the neighborhood boundary. Nothing is geocoded or guessed. With a keyboard, move the map with the arrow keys and press Enter to put the pin at its centre (+).{{ reg.review_new_addresses ? ' A new address appears on the map after an organizer approves it.' }}</span>
+          <span class="error" data-error="pin"></span>
         </div>
-        {% if reg.address_mode == 'both' %}<button type="button" class="link-button" id="btnSelfEntry">Can’t find your address? Add it and place a pin{{ reg.review_new_addresses ? ' (an organizer approves it)' }}</button><button type="button" class="link-button hide" id="btnUseList">{{ icon("i-arrow-left") }} Search the address list instead</button>{% endif %}
-        {% endif %}
-        {% if reg.address_mode == 'registry' and c.community.contact_url %}<p class="form-caption">Home missing from the list? <a href="{{ c.community.contact_url }}" rel="noopener">Contact the organizer</a> to add it.</p>{% endif %}
-        <div id="claimedPanel" class="notice danger hide" role="alert">
-          <b>This home is already claimed.</b> If you think this is a mistake, request a review. The organizer will follow up by email; the current owner is never shown.
-          <div class="modal-actions"><button type="button" class="secondary" id="btnRequestReview">Request a review</button></div>
-        </div>
-        <div id="selectedAddress" class="success hide" role="status"></div>
-        <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="button" class="primary" data-next="2">Next: your stop {{ icon("i-arrow-right") }}</button></div>
-      </fieldset>
+      </div>
+      {% if reg.address_mode == 'both' %}<button type="button" class="link-button" id="btnSelfEntry">Can’t find your address? Add it and place a pin{{ reg.review_new_addresses ? ' (an organizer approves it)' }}</button><button type="button" class="link-button hide" id="btnUseList">{{ icon("i-arrow-left") }} Search the address list instead</button>{% endif %}
+      {% endif %}
+      {% if reg.address_mode == 'registry' and c.community.contact_url %}<p class="form-caption">Home missing from the list? <a href="{{ c.community.contact_url }}" rel="noopener">Contact the organizer</a> to add it.</p>{% endif %}
+      <div id="claimedPanel" class="notice danger hide" role="alert">
+        <b>This home is already claimed.</b> If you think this is a mistake, request a review. The organizer will follow up by email; the current owner is never shown.
+        <div class="modal-actions"><button type="button" class="secondary" id="btnRequestReview">Request a review</button></div>
+      </div>
+      <div id="selectedAddress" class="success hide" role="status"></div>
+      <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="button" class="primary" data-next="2">Next: your stop {{ icon("i-arrow-right") }}</button></div>
+    </fieldset>
 
-      <fieldset data-step="2" hidden>
-        <legend class="visually-hidden">Step 2 of 3: your stop</legend>
-        <div class="form-grid">
-          {% include event_fragment(c.event.type, 'form_hours') %}
-          {% include event_fragment(c.event.type, 'form_fields') %}
-          <div class="field full"><label for="regNote">Short public note (optional)</label><textarea id="regNote" maxlength="400" placeholder="{{ et.copy.note_placeholder }}"></textarea><span class="form-caption"><span id="noteCount">0</span>/400</span><span class="error" data-error="note"></span></div>
-        </div>
-        <div class="notice info">{{ icon('i-pin') }} Your street address, hours and these details will be <b>shown publicly</b> on the map. Your email is never shown.</div>
-        <span class="error" data-error="end"></span>
-        <div class="modal-actions"><button type="button" class="secondary" data-next="1">{{ icon("i-arrow-left") }} Back</button><button type="button" class="primary" data-next="3">Next: confirm by email {{ icon("i-arrow-right") }}</button></div>
-      </fieldset>
+    <fieldset data-step="2" hidden>
+      <legend class="visually-hidden">Step 2 of 3: your stop</legend>
+      <div class="form-grid">
+        {% include event_fragment(c.event.type, 'form_hours') %}
+        {% include event_fragment(c.event.type, 'form_fields') %}
+        <div class="field full"><label for="regNote">Short public note (optional)</label><textarea id="regNote" maxlength="400" placeholder="{{ et.copy.note_placeholder }}"></textarea><span class="form-caption"><span id="noteCount">0</span>/400</span><span class="error" data-error="note"></span></div>
+      </div>
+      <div class="notice info">{{ icon('i-pin') }} Your street address, hours and these details will be <b>shown publicly</b> on the map. Your email is never shown.</div>
+      <span class="error" data-error="end"></span>
+      <div class="modal-actions"><button type="button" class="secondary" data-next="1">{{ icon("i-arrow-left") }} Back</button><button type="button" class="primary" data-next="3">Next: confirm by email {{ icon("i-arrow-right") }}</button></div>
+    </fieldset>
 
-      <fieldset data-step="3" hidden>
-        <legend class="visually-hidden">Step 3 of 3: confirm by email</legend>
-        <div class="field full"><label for="regEmail">Your email *</label><input id="regEmail" type="email" inputmode="email" spellcheck="false" autocapitalize="off" autocomplete="email" placeholder="neighbor@example.com" maxlength="254"><span class="error" data-error="email"></span>
-          <p class="form-caption">We email you a one-time link (valid for a short time). Not shown to visitors. Use the same email later to edit your listing.</p></div>
-        <div id="powStatus" class="hide" role="status" aria-live="polite"><span class="form-caption">Running a quick anti-spam check on your device…</span><div class="progress"><span id="powBar"></span></div></div>
-        <div id="submitError" class="notice danger hide" role="alert"></div>
-        <div class="modal-actions"><button type="button" class="secondary" data-next="2">{{ icon("i-arrow-left") }} Back</button><button type="submit" class="primary" id="btnSendLink">Email me the confirmation link {{ icon("i-arrow-right") }}</button></div>
-      </fieldset>
-    </form>
-    <div id="registerSuccess" class="success hide" role="status" tabindex="-1"></div>
-    {% endif %}
+    <fieldset data-step="3" hidden>
+      <legend class="visually-hidden">Step 3 of 3: confirm by email</legend>
+      <div class="field full"><label for="regEmail">Your email *</label><input id="regEmail" type="email" inputmode="email" spellcheck="false" autocapitalize="off" autocomplete="email" placeholder="neighbor@example.com" maxlength="254"><span class="error" data-error="email"></span>
+        <p class="form-caption">We email you a one-time link (valid for a short time). Not shown to visitors. Use the same email later to edit your listing.</p></div>
+      <div id="powStatus" class="hide" role="status" aria-live="polite"><span class="form-caption">Running a quick anti-spam check on your device…</span><div class="progress"><span id="powBar"></span></div></div>
+      <div id="submitError" class="notice danger hide" role="alert"></div>
+      <div class="modal-actions"><button type="button" class="secondary" data-next="2">{{ icon("i-arrow-left") }} Back</button><button type="submit" class="primary" id="btnSendLink">Email me the confirmation link {{ icon("i-arrow-right") }}</button></div>
+    </fieldset>
+  </form>
+  <div id="registerSuccess" class="success hide" role="status" tabindex="-1"></div>
+  {% endif %}
+</dialog>
+
+<dialog class="modal" id="disputeModal" aria-labelledby="disputeTitle" closedby="any">
+  <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
+  <div class="eyebrow">{{ icon('i-search') }} Review request</div>
+  <h2 id="disputeTitle">Ask the organizer to review</h2>
+  <p class="introtext" id="disputeIntro"><b id="disputeAddress"></b> is already claimed. Tell the organizer why you think this is a mistake. They review requests by hand; nothing changes automatically and the current owner is never revealed.</p>
+  <form id="disputeForm" novalidate>
+    <div class="hp-field" aria-hidden="true"><label for="dWebsite">Website</label><input id="dWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+    <div class="field full"><label for="dEmail">Your email *</label><input id="dEmail" type="email" inputmode="email" spellcheck="false" autocapitalize="off" autocomplete="email" maxlength="254"><span class="error" data-error="reporter_email"></span></div>
+    <div class="field full"><label for="dReason">What happened? * (200–2000 characters)</label><textarea id="dReason" minlength="200" maxlength="2000"></textarea><span class="form-caption"><span id="dCount">0</span>/2000</span><span class="error" data-error="reason"></span></div>
+    <div id="dPow" class="hide" role="status"><span class="form-caption">Running a quick anti-spam check…</span><div class="progress"><span id="dPowBar"></span></div></div>
+    <div id="dError" class="notice danger hide" role="alert"></div>
+    <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="submit" class="primary">Send review request</button></div>
+  </form>
+  <div id="disputeSuccess" class="success hide" role="status" tabindex="-1"></div>
+</dialog>
+
+<dialog class="modal" id="infoModal" aria-labelledby="infoTitle" closedby="any">
+  <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
+  <div class="eyebrow">{{ icon('i-rules') }} Rules &amp; tips</div>
+  <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
+  {% set access = access_info(c.community.access ?? null, et.copy) %}
+  <div class="guide-facts">
+    {% if c.event.starts_on is defined and c.event.starts_on is null %}<div class="about-fact"><span aria-hidden="true">{{ icon(et.copy.event_icon) }}</span><div><b>Dates to be announced</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>
+    {%- elseif (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ icon(et.copy.event_icon) }}</span><div><b>{{ c.event.days ?? false ? day_list(c.event.days) : date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · {{ et.copy.own_schedule ?? 'each home sets its own nights and hours' }}</p></div></div>
+    {%- else %}<div class="about-fact"><span aria-hidden="true">{{ icon(et.copy.event_icon) }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>{% endif %}
+
+    <div class="about-fact"><span aria-hidden="true">{{ icon(access ? access.icon : 'i-gate') }}</span><div><b>{{ access ? access.title : 'Gates and private areas' }}</b><p>{{ c.community.gate_notice ?: (access ? access.text : 'This site does not grant access to gated areas.') }}</p></div></div>
+    {% if c.map.crossing_notes %}<div class="about-fact"><span aria-hidden="true">{{ icon('i-signpost') }}</span><div><b>Getting around</b>{% for note in c.map.crossing_notes %}<p>{{ note }}</p>{% endfor %}</div></div>{% endif %}
   </div>
-</div>
+  <h3 class="pref-heading">Reminders</h3>
+  <ul class="reminders compact">{% for r in c.community.reminders|slice(0, 3) %}<li>{{ reminder_icon(r, et.copy) }}{{ r }}</li>{% endfor %}</ul>
+  <div class="modal-actions"><a class="secondary" href="/about{{ event_query() }}">Full guide &amp; links</a><button type="button" class="primary" data-close>Got it!</button></div>
+  <p class="form-caption guide-foot">{{ et.copy.guide_foot }}</p>
+</dialog>
 
-<div class="modal-wrap" id="disputeModal" role="dialog" aria-modal="true" aria-labelledby="disputeTitle" hidden>
-  <div class="modal">
-    <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
-    <div class="eyebrow">{{ icon('i-search') }} Review request</div>
-    <h2 id="disputeTitle">Ask the organizer to review</h2>
-    <p class="introtext" id="disputeIntro"><b id="disputeAddress"></b> is already claimed. Tell the organizer why you think this is a mistake. They review requests by hand; nothing changes automatically and the current owner is never revealed.</p>
-    <form id="disputeForm" novalidate>
-      <div class="hp-field" aria-hidden="true"><label for="dWebsite">Website</label><input id="dWebsite" name="website" type="text" tabindex="-1" autocomplete="off"></div>
-      <div class="field full"><label for="dEmail">Your email *</label><input id="dEmail" type="email" inputmode="email" spellcheck="false" autocapitalize="off" autocomplete="email" maxlength="254"><span class="error" data-error="reporter_email"></span></div>
-      <div class="field full"><label for="dReason">What happened? * (200–2000 characters)</label><textarea id="dReason" minlength="200" maxlength="2000"></textarea><span class="form-caption"><span id="dCount">0</span>/2000</span><span class="error" data-error="reason"></span></div>
-      <div id="dPow" class="hide" role="status"><span class="form-caption">Running a quick anti-spam check…</span><div class="progress"><span id="dPowBar"></span></div></div>
-      <div id="dError" class="notice danger hide" role="alert"></div>
-      <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="submit" class="primary">Send review request</button></div>
-    </form>
-    <div id="disputeSuccess" class="success hide" role="status" tabindex="-1"></div>
-  </div>
-</div>
-
-<div class="modal-wrap" id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle" hidden>
-  <div class="modal">
-    <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
-    <div class="eyebrow">{{ icon('i-rules') }} Rules &amp; tips</div>
-    <h2 id="infoTitle">Welcome, {{ c.community.name }}!</h2>
-    {% set access = access_info(c.community.access ?? null, et.copy) %}
-    <div class="guide-facts">
-      {% if c.event.starts_on is defined and c.event.starts_on is null %}<div class="about-fact"><span aria-hidden="true">{{ icon(et.copy.event_icon) }}</span><div><b>Dates to be announced</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>
-      {%- elseif (c.event.ends_on ?? c.event.date) != c.event.date %}<div class="about-fact"><span aria-hidden="true">{{ icon(et.copy.event_icon) }}</span><div><b>{{ c.event.days ?? false ? day_list(c.event.days) : date_range(c.event.starts_on, c.event.ends_on) }}</b><p>Most homes {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · {{ et.copy.own_schedule ?? 'each home sets its own nights and hours' }}</p></div></div>
-      {%- else %}<div class="about-fact"><span aria-hidden="true">{{ icon(et.copy.event_icon) }}</span><div><b>{{ event_badge(c.event.date)|lower|capitalize }}</b><p>Suggested {{ c.event.starts_at|time12 }}–{{ c.event.ends_at|time12 }} · each home sets its own hours</p></div></div>{% endif %}
-
-      <div class="about-fact"><span aria-hidden="true">{{ icon(access ? access.icon : 'i-gate') }}</span><div><b>{{ access ? access.title : 'Gates and private areas' }}</b><p>{{ c.community.gate_notice ?: (access ? access.text : 'This site does not grant access to gated areas.') }}</p></div></div>
-      {% if c.map.crossing_notes %}<div class="about-fact"><span aria-hidden="true">{{ icon('i-signpost') }}</span><div><b>Getting around</b>{% for note in c.map.crossing_notes %}<p>{{ note }}</p>{% endfor %}</div></div>{% endif %}
-    </div>
-    <h3 class="pref-heading">Reminders</h3>
-    <ul class="reminders compact">{% for r in c.community.reminders|slice(0, 3) %}<li>{{ reminder_icon(r, et.copy) }}{{ r }}</li>{% endfor %}</ul>
-    <div class="modal-actions"><a class="secondary" href="/about{{ event_query() }}">Full guide &amp; links</a><button type="button" class="primary" data-close>Got it!</button></div>
-    <p class="form-caption guide-foot">{{ et.copy.guide_foot }}</p>
-  </div>
-</div>
-
-<div class="modal-wrap" id="houseModal" role="dialog" aria-modal="true" aria-labelledby="houseTitle" hidden>
-  <div class="modal">
-    <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
-    <div class="eyebrow">{{ icon('i-house') }} My house</div>
-    <h2 id="houseTitle">Your listing</h2>
-    <p class="introtext">{{ et.copy.house_intro }}</p>
-    <div class="modal-actions"><a class="secondary" href="/me">{{ icon('i-key') }} Manage my listing</a><button type="button" class="primary" data-action="register">+ List my house</button></div>
-  </div>
-</div>
+<dialog class="modal" id="houseModal" aria-labelledby="houseTitle" closedby="any">
+  <button type="button" class="close-modal" data-close aria-label="Close">{{ icon("i-close") }}</button>
+  <div class="eyebrow">{{ icon('i-house') }} My house</div>
+  <h2 id="houseTitle">Your listing</h2>
+  <p class="introtext">{{ et.copy.house_intro }}</p>
+  <div class="modal-actions"><a class="secondary" href="/me">{{ icon('i-key') }} Manage my listing</a><button type="button" class="primary" data-action="register">+ List my house</button></div>
+</dialog>

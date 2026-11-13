@@ -10,6 +10,7 @@ import { maskRings, panLimit, WORLD } from '../../public/assets/js/lib/map-focus
 import { zoneStyle, symbolOf, pinHtml, cardHtml, selectedHtml } from '../../public/assets/js/lib/render.js';
 import { houseNumberOf } from '../../public/assets/js/lib/address.js';
 import { labelPoint, resolveOverlaps } from '../../public/assets/js/lib/zone-labels.js';
+import { outsideRect, nativeClosedBy, lightDismiss } from '../../public/assets/js/lib/light-dismiss.js';
 
 const home = (o) => ({ id: 1, address: '1 Pumpkin Ln', zone: 'oak', lat: 40.03, lon: -74.99, start: '17:00', end: '21:00', candy: true, nonfood: false,
   adult_drinks: false, low_noise: true, jump_scares: false, flashing_lights: false, loud_audio: false, scare_level: 'gentle', stroller_friendly: false, note: '', status: 'active', ...o });
@@ -380,4 +381,17 @@ test('cards and the selected-home panel escape every value taken from the page d
     assert.match(html, /&quot; onmouseover=&quot;alert\(1\)&quot;&gt;&lt;img/);
   }
   assert.match(cardHtml(home({ id: 7 }), ctx, { saved: true, active: false, focus: {} }), /data-id="7"[\s\S]*data-save="7"/);
+});
+
+test('a backdrop click is a point outside the dialog box; its edges and padding are inside', () => {
+  const box = { left: 380, right: 900, top: 288, bottom: 512 };
+  assert.equal(outsideRect(box, 10, 10), true, 'the backdrop above and left of the dialog');
+  assert.equal(outsideRect(box, 640, 600), true, 'below the dialog');
+  assert.equal(outsideRect(box, 901, 400), true, 'just right of it');
+  assert.equal(outsideRect(box, 385, 505), false, 'its own padding (where the click target is also the dialog)');
+  assert.equal(outsideRect(box, 380, 288), false, 'its corner');
+  assert.equal(outsideRect(box, 900, 512), false, 'the opposite corner');
+  // Outside a browser there is no <dialog>: nothing is detected and nothing is bound.
+  assert.equal(nativeClosedBy, false);
+  assert.doesNotThrow(() => lightDismiss(null));
 });

@@ -2,8 +2,11 @@
  * @module assets/js/appearance
  * @description Header "Appearance" panel: theme (Auto/Light/Dark) and accessibility options (larger text,
  *     more contrast, reduced motion). Choices apply at once, are saved on this device only and are
- *     re-applied before paint by theme-init.js on every page.
+ *     re-applied before paint by theme-init.js on every page. A click on the backdrop closes the panel.
+ * @dependencies lib/light-dismiss.js
  */
+import { lightDismiss } from './lib/light-dismiss.js';
+
 const KEY = 'nhm:appearance';
 const COLORS = { light: '#f8f7f4', dark: '#15141d' };
 const root = document.documentElement;
@@ -39,16 +42,13 @@ function set(key, value) {
 
 apply(load());
 if (dialog && typeof dialog.showModal === 'function') {
+  lightDismiss(dialog);
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-appearance]')) { e.preventDefault(); dialog.showModal(); return; }
     if (e.target.closest('[data-appearance-close]')) { dialog.close(); return; }
     if (e.target.closest('[data-appearance-reset]')) { save({}); apply({}); return; }
     const t = e.target.closest('button[data-pref="theme"]');
     if (t) { set('theme', t.dataset.value === 'auto' ? null : t.dataset.value); return; }
-    if (e.target === dialog) {
-      const r = dialog.getBoundingClientRect();
-      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close();
-    }
   });
   dialog.addEventListener('change', (e) => {
     const i = e.target.closest('input[data-pref]');

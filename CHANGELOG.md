@@ -6,6 +6,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Changed for visitors
+- **Pop-up sheets work like the rest of your device.** Listing a home, the rules, My house and a review request now close with the back gesture on Android as well as with Escape or a tap outside, and screen readers treat them as proper dialogs. They look the same as before.
+
 ## [0.19.2-beta.1] - 2026-11-12
 
 A small update for organizers. Nothing changes for visitors, and your events, homes and accounts stay as they are.

@@ -295,6 +295,87 @@ test('"What\'s new" opens release notes with a source link; My house → List my
   await expect(page.locator('#registerModal')).toBeHidden();
 });
 
+test('sheets are native modal dialogs: inert page, Escape and backdrop close them, focus returns, a dialog opened from another is on top', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(DEMO + '/');
+  const opener = page.locator('[data-action="house"]:visible').first();
+  const house = page.locator('#houseModal');
+  const open = async () => { await opener.focus(); await page.keyboard.press('Enter'); await expect(page.locator('#houseModal:modal')).toBeVisible(); };
+  await open();
+  await expect(house.locator('a.secondary'), 'the first control that is not Close gets the focus').toBeFocused();
+  // The page behind is inert: the backdrop covers it, its controls cannot take the focus, and <body> is not locked.
+  expect(await page.evaluate(() => document.elementFromPoint(10, 10)?.id)).toBe('houseModal');
+  await page.locator('.top-add').evaluate((b) => b.focus());
+  await expect(page.locator('.top-add')).not.toBeFocused();
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  // A dialog opened from another one is drawn above it, and Escape closes only the top one.
+  await page.evaluate(() => { location.hash = '#info'; });
+  await expect(page.locator('#infoModal:modal')).toBeVisible();
+  const info = await page.locator('#infoModal').boundingBox();
+  expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('dialog')?.id, [info.x + info.width / 2, info.y + 12])).toBe('infoModal');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#infoModal')).toBeHidden();
+  await expect(page.locator('#houseModal:modal')).toBeVisible();
+  // Escape closes the sheet and the focus goes back to what opened it.
+  await page.keyboard.press('Escape');
+  await expect(house).toBeHidden();
+  await expect(opener).toBeFocused();
+  // A click in the dialog's own padding keeps it open; a click on the backdrop closes it (closedby="any", or
+  // lib/light-dismiss.js in browsers without it).
+  await page.evaluate(() => { history.replaceState(null, '', '/'); });
+  await open();
+  const box = await house.boundingBox();
+  await page.mouse.click(box.x + 6, box.y + box.height - 6);
+  await expect(house).toBeVisible();
+  await page.mouse.click(10, 10);
+  await expect(house).toBeHidden();
+  await expect(opener).toBeFocused();
+  // Close buttons ([data-close]) still close it.
+  await open();
+  await house.locator('.close-modal').click();
+  await expect(house).toBeHidden();
+});
+
+test('where <dialog closedby> is not supported, a backdrop click still closes a sheet (lib/light-dismiss.js)', async ({ page }) => {
+  // Simulate such a browser: no closedBy property, and no closedby attribute for the browser to act on by itself.
+  await page.addInitScript(() => {
+    delete HTMLDialogElement.prototype.closedBy;
+    new MutationObserver(() => document.querySelectorAll('dialog[closedby]').forEach((d) => d.removeAttribute('closedby')))
+      .observe(document, { childList: true, subtree: true });
+  });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(DEMO + '/#my-house');
+  const house = page.locator('#houseModal:modal');
+  await expect(house).toBeVisible();
+  expect(await house.evaluate((d) => [d.hasAttribute('closedby'), d.dataset.lightDismiss])).toEqual([false, '1']);
+  const box = await house.boundingBox();
+  await page.mouse.click(box.x + 6, box.y + box.height - 6);
+  await expect(house).toBeVisible();
+  // A drag that starts inside (selecting text) and ends on the backdrop does not close it.
+  await page.mouse.move(box.x + 40, box.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(10, 10);
+  await page.mouse.up();
+  await expect(house).toBeVisible();
+  await page.mouse.click(10, 10);
+  await expect(page.locator('#houseModal')).toBeHidden();
+});
+
+test('on a phone the sheet is a bottom sheet: full width, flush with the bottom, rounded top corners', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(DEMO + '/#list-my-house');
+  const sheet = page.locator('#registerModal:modal');
+  await expect(sheet).toBeVisible();
+  const box = await sheet.boundingBox();
+  expect(Math.round(box.x)).toBe(0);
+  expect(Math.round(box.width)).toBe(390);
+  expect(Math.round(box.y + box.height)).toBe(844);
+  expect(box.height).toBeLessThanOrEqual(844 * 0.92 + 1);
+  const radius = await sheet.evaluate((d) => { const s = getComputedStyle(d); return [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomLeftRadius, s.borderBottomRightRadius]; });
+  expect(radius).toEqual(['22px', '22px', '0px', '0px']);
+  expect(await sheet.evaluate((d) => getComputedStyle(d, '::backdrop').overscrollBehaviorY)).toBe('contain');
+});
+
 test('Appearance panel: Light over a dark system (kept after reload), Auto again, accessibility options', async ({ browser }) => {
   const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();

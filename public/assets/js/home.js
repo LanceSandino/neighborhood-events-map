@@ -213,7 +213,7 @@ function bind() {
     const a = e.target.closest('[data-action]');
     if (a) {
       // An action chosen inside a sheet (e.g. "+ List my house" in My house) replaces that sheet.
-      const host = a.closest('.modal-wrap.open');
+      const host = a.closest('dialog.modal[open]');
       if (host && a.dataset.action !== 'explore') closeModal(host);
       if (actions(a.dataset.action)) { e.preventDefault(); return; }
     }
