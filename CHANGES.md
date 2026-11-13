@@ -1781,4 +1781,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/native-dialog-modals"
   author: "Lance Sandino"
   timestamp: "2026-11-13T17:00:00Z"
+- id: CU-20261113-02
+  type: security
+  title: "0.19.4-beta.1: libpq 18.7 in the PHP image (PostgreSQL's 2026-11 security release)"
+  description: "The daily check after 0.19.3-beta.1 found libpq 18.6-r0 in the published app image (:latest and :edge): Alpine 3.24 ships 18.7-r0, but the Images build reused a cached `apk upgrade` layer from before it. The Dockerfile now asks for 'libpq>=18.7-r0' in php-base, as it does for zlib, so no cache can answer with 18.6. Trivy on local prod builds: app 0, nginx 0 (HIGH/CRITICAL, fixed only); bin/smoke-prod-image.sh passed. The server-side CVEs (CVE-2026-116304, -116306, -116307, -116309, -116313, -116314) were already fixed in production's database by 0.19.3-beta.1 (PostgreSQL 18.7). No migration."
+  impact: low
+  affected_modules: ["Dockerfile", "VERSION", "README.md", "CHANGELOG.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testThePhpImageNamesTheFixedLibpq", "bin/smoke-prod-image.sh", "Trivy image scan (CI and daily): app and nginx 0"]
+  commit_ref: "security/libpq-18.7"
+  author: "Lance Sandino"
+  timestamp: "2026-11-13T21:30:00Z"
 ```

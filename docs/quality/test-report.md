@@ -1,6 +1,17 @@
 # Test and verification report
 
-## Latest run — 2026-11-13, release 0.19.3-beta.1
+## Latest run — 2026-11-13, release 0.19.4-beta.1
+
+Security release (CU-20261113-02): libpq 18.7 in the PHP image. No migration.
+
+| Gate | Result |
+|---|---|
+| New check (`ContainerConfigTest::testThePhpImageNamesTheFixedLibpq`) | Fails on 0.19.3-beta.1's Dockerfile; **19 of 19** ContainerConfigTest with the fix |
+| Trivy on local prod builds, HIGH/CRITICAL, fixed only | App image (Alpine 3.24.4, libpq-18.7-r0) **0**; nginx image **0** |
+| `bin/smoke-prod-image.sh nhm-app nhm-nginx smoke` | **Passed** |
+| CI on the pull request | see its checks |
+
+## Run — 2026-11-13, release 0.19.3-beta.1
 
 The native dialog sheets (CU-20261112-05) and Docker's rebuilt postgres:18-alpine digest (CU-20261113-01), on PHP 8.5.12 + PostgreSQL 18.7, Symfony 8.1.11. No migration.
 

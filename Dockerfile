@@ -7,11 +7,11 @@
 FROM php:8.5-fpm-alpine@sha256:951fb5b1780219b81d5daffa4cebef8e0077c537f3893d9790a5dfcd66ca334d AS php-base
 # OPcache is part of PHP itself since 8.5 (no extension to install). `apk upgrade` takes Alpine's security fixes
 # that the pinned base image does not carry yet (e.g. brotli 1.2.1 for CVE-2026-111497); CI's image scan fails on
-# any fixed HIGH/CRITICAL package left behind. A floor names a fix the base image lacks (zlib 1.4, CVE-2026-4738),
-# so a build cache cannot answer with an older layer.
+# any fixed HIGH/CRITICAL package left behind. A floor names a fix the base image lacks (zlib 1.4, CVE-2026-4738;
+# libpq 18.7, CVE-2026-116304), so a build cache cannot answer with an older layer.
 RUN apk upgrade --no-cache \
  && apk add --no-cache 'zlib>=1.4-r0' \
- && apk add --no-cache icu-libs libpq libzip fcgi tzdata \
+ && apk add --no-cache icu-libs 'libpq>=18.7-r0' libzip fcgi tzdata \
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev postgresql-dev libzip-dev linux-headers \
  && docker-php-ext-install -j"$(nproc)" intl pdo_pgsql pcntl zip \
  && apk del .build-deps

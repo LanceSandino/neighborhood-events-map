@@ -6,6 +6,13 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.19.4-beta.1] - 2026-11-13
+
+A security update. Nothing changes on the site: your events, homes and accounts stay exactly as they are.
+
+### Security
+- The site's connection to its database uses PostgreSQL's latest security release (CVE-2026-116304 and others).
+
 ## [0.19.3-beta.1] - 2026-11-13
 
 Pop-up sheets now behave like the rest of your phone or computer, and the database gets security fixes. Your events, homes and accounts stay as they are.

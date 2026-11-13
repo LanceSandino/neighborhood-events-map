@@ -372,6 +372,14 @@ final class ContainerConfigTest extends TestCase
         }
     }
 
+    /** libpq 18.7 (CVE-2026-116304 and the rest of PostgreSQL's 2026-11 release): named in the PHP stage, so no build cache can bring 18.6 back. */
+    public function testThePhpImageNamesTheFixedLibpq(): void
+    {
+        $docker = self::read('Dockerfile');
+        self::assertSame(1, preg_match('~^FROM \S+ AS php-base\n(.*?)(?=^FROM |\z)~ms', $docker, $m));
+        self::assertMatchesRegularExpression("~apk add --no-cache [^\n]*'libpq>=18\\.7-r0'~", $m[1]);
+    }
+
     /**
      * The database image comes straight from Docker Hub, so no build runs `apk upgrade` on it: the pinned digest
      * carried brotli and libcurl fixes it lacked (CVE-2026-111497, CVE-2026-92392) until 0.19.1-beta.1 because
