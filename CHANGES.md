@@ -1771,4 +1771,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "feature/native-dialog-modals"
   author: "Lance Sandino"
   timestamp: "2026-11-12T19:30:00Z"
+- id: CU-20261113-01
+  type: chore
+  title: "0.19.3-beta.1: the native dialog sheets, released; postgres:18-alpine moves to Docker's rebuilt digest (PostgreSQL 18.7, krb5 1.22.3, libxslt 1.1.43-r4)"
+  description: "Releases CU-20261112-05 (PR #40). postgres:18-alpine moves from 9ba53c7d… to 10187334… (Docker's rebuild, PostgreSQL 18.7 on Alpine 3.24.4 with krb5-libs 1.22.3-r0 and libxslt 1.1.43-r4) in compose.yaml (postgres and backup) and CI's service. Trivy with --skip-files usr/local/bin/gosu: 0 fixed HIGH/CRITICAL, so the PostgreSQL scans in CI and the daily check pass again and D-20261112-01 is superseded. A minor PostgreSQL release: same data directory, no dump/restore, no migration."
+  impact: low
+  affected_modules: ["compose.yaml", ".github/workflows/ci.yml", "VERSION", "README.md", "CHANGELOG.md", "DECISIONS.md", "docs/quality/test-report.md"]
+  related_tests: ["tests/Unit/Deploy/ContainerConfigTest.php: testThePostgresImageVolumeAndServerVersionAgree (CI tests the image production runs)", "bin/smoke-prod-image.sh", "Trivy PostgreSQL image scan (CI and daily): 0"]
+  commit_ref: "feature/native-dialog-modals"
+  author: "Lance Sandino"
+  timestamp: "2026-11-13T17:00:00Z"
 ```

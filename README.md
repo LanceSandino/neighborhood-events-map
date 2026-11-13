@@ -10,7 +10,7 @@ A small, self-hosted map of the homes taking part in neighborhood events, for **
 | Status on the visitor's clock | handing out, paused, out of candy, done | lights on, later tonight, off tonight, done for the season | open now, opens at, paused or sold out today, closed |
 | Organizer checklist | [event day](docs/runbooks/event-day.md) | [Christmas lights](docs/runbooks/christmas-lights.md) | [garage sale](docs/runbooks/garage-sale.md) |
 
-**Status:** `0.19.2-beta.1` (pre-release; PHP 8.5, Symfony 8.1, PostgreSQL 18) — feature-complete beta with light and dark appearance; see [docs/quality/test-report.md](docs/quality/test-report.md) for what ran on this release. **Not production-approved yet**: see [Before going live](#before-going-live).
+**Status:** `0.19.3-beta.1` (pre-release; PHP 8.5, Symfony 8.1, PostgreSQL 18) — feature-complete beta with light and dark appearance; see [docs/quality/test-report.md](docs/quality/test-report.md) for what ran on this release. **Not production-approved yet**: see [Before going live](#before-going-live).
 
 | | Desktop | Phone | Phone, dark |
 |---|---|---|---|
