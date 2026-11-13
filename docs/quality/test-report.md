@@ -1,6 +1,19 @@
 # Test and verification report
 
-## Latest run — 2026-11-12, release 0.19.2-beta.1
+## Latest run — 2026-11-13, release 0.19.3-beta.1
+
+The native dialog sheets (CU-20261112-05) and Docker's rebuilt postgres:18-alpine digest (CU-20261113-01), on PHP 8.5.12 + PostgreSQL 18.7, Symfony 8.1.11. No migration.
+
+| Gate | Result |
+|---|---|
+| PHPUnit (`sh bin/test.sh`, local dev stack on the new PostgreSQL digest) | **OK — 719 tests, 18105 assertions** |
+| Node tests (`tests/js`) | **69 of 69** |
+| Playwright, full suite on the branch (local dev stacks) | **243 passed**, 2 skipped (existing) |
+| Playwright and PHPUnit in CI on PR #40 | see the PR's checks |
+| Viewport screenshots of the register and My house sheets, 1280x800 and 390x844, light and dark | Match main within anti-aliasing |
+| Trivy, PostgreSQL check (`--skip-files usr/local/bin/gosu`) | **0** fixed HIGH/CRITICAL (krb5-libs 1.22.3-r0, libxslt 1.1.43-r4) |
+
+## Run — 2026-11-12, release 0.19.2-beta.1
 
 The organizer console fix (CU-20261110-03), the Dependabot updates (CU-20261110-02: PHPUnit 13.4.6, PHPStan 2.3.5, Mailpit 1.33.0,
 docker/login-action 4.8.0) and Docker's 2026-11-11 postgres:18-alpine digest (CU-20261112-01), on PHP 8.5.12 + PostgreSQL 18.6, Symfony 8.1.11. No migration.

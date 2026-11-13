@@ -11,7 +11,7 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 Pop-up sheets now behave like the rest of your phone or computer, and the database gets security fixes. Your events, homes and accounts stay as they are.
 
 ### Changed for visitors
-- **Pop-up sheets work like the rest of your device.** Listing a home, the rules, My house and a review request now close with the back gesture on Android as well as with Escape or a tap outside, and screen readers treat them as proper dialogs. They look the same as before.
+- **Pop-up sheets work like the rest of your device.** Listing a home, the rules, My house and a review request now close with the back gesture on Android as well as with Escape or a tap outside, and screen readers announce them as dialogs. They look the same as before.
 
 ### Security
 - Fixes for security problems in the sign-in and document libraries inside the database (CVE-2026-107364, CVE-2026-87636 and others).
