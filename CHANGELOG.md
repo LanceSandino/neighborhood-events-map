@@ -6,6 +6,15 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+## [0.19.5-beta.1] - 2026-11-25
+
+A security update. Nothing changes on the site: your events, homes and accounts stay exactly as they are.
+
+### Security
+- The site runs PHP's latest security release (8.5.13), which fixes several serious flaws, among them two in how sign-in sessions are stored (CVE-2026-115560, CVE-2026-126714).
+- Pages are built with Twig 3.31.1, which fixes nine published flaws, including one that could leave text unescaped (CVE-2026-133771).
+- The site's XML library has its latest fix (CVE-2026-86144), and the framework moves to Symfony 8.1.12.
+
 ## [0.19.4-beta.1] - 2026-11-13
 
 A security update. Nothing changes on the site: your events, homes and accounts stay exactly as they are.

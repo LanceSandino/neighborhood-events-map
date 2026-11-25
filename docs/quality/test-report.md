@@ -1,6 +1,20 @@
 # Test and verification report
 
-## Latest run — 2026-11-13, release 0.19.4-beta.1
+## Latest run — 2026-11-25, release 0.19.5-beta.1
+
+Security release (CU-20261125-01): PHP 8.5.13, Twig 3.31.1, libxml2 2.13.9-r3 in both runtime images, Symfony 8.1.12. No migration.
+
+| Gate | Result |
+|---|---|
+| New checks (`testPhpHasTheNovember2026SecurityFixes`, `testRuntimeImagesNameTheFixedLibxml2`, `LockedSecurityFloorsTest`) | Fail on 0.19.4-beta.1 (PHP 8.5.12, no libxml2 floor, Twig 3.30.0); pass with the fix |
+| PHPUnit with coverage (dev image, PostgreSQL 18.7) | **OK — 723 tests, 18115 assertions**; lines 95.81 % |
+| PHPStan level 6 / `composer audit --locked` / migrations up-down-up | Clean / no advisories / passed |
+| Trivy on local prod builds, HIGH/CRITICAL, fixed only | App image (PHP 8.5.13, libxml2-2.13.9-r3) **0**; nginx image **0** |
+| `bin/smoke-prod-image.sh nhm-app nhm-nginx sec` | **Passed** |
+| Trivy, PostgreSQL check | **1**: libxml2 2.13.9-r2 (CVE-2026-86144) in Docker's postgres:18-alpine, also in its newest digest |
+| CI on the pull request | see its checks |
+
+## Run — 2026-11-13, release 0.19.4-beta.1
 
 Security release (CU-20261113-02): libpq 18.7 in the PHP image. No migration.
 

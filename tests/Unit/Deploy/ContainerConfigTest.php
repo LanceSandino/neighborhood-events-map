@@ -220,6 +220,20 @@ final class ContainerConfigTest extends TestCase
         }
     }
 
+    /**
+     * PHP's 19 November 2026 security releases (8.3.37, 8.4.28, 8.5.13): among them the fix for the session
+     * serializer mismatch that can lead to remote code execution (CVE-2026-115560, until now only mitigated by session
+     * upload progress staying off), partially overwritten session files (CVE-2026-126714) and the use-after-free in
+     * magic method backtraces (GHSA-8mjj-2r7p-4hg2).
+     */
+    public function testPhpHasTheNovember2026SecurityFixes(): void
+    {
+        $fixed = ['8.3' => '8.3.37', '8.4' => '8.4.28', '8.5' => '8.5.13'];
+        $line = \PHP_MAJOR_VERSION.'.'.\PHP_MINOR_VERSION;
+        self::assertArrayHasKey($line, $fixed, 'a supported PHP line');
+        self::assertTrue(version_compare(\PHP_VERSION, $fixed[$line], '>='), \PHP_VERSION.' lacks the November 2026 security fixes');
+    }
+
     /** Production images compile assertions out and keep argument values out of exception traces (php.ini-production). */
     public function testProductionPhpCompilesAssertionsOutAndHidesTraceArguments(): void
     {
@@ -369,6 +383,16 @@ final class ContainerConfigTest extends TestCase
         foreach (['php-base', 'nginx'] as $stage) {
             self::assertSame(1, preg_match('~^FROM \S+ AS '.$stage.'\n(.*?)(?=^FROM |\z)~ms', $docker, $m), $stage);
             self::assertStringContainsString("apk add --no-cache 'zlib>=1.4-r0'", $m[1], $stage);
+        }
+    }
+
+    /** libxml2 2.13.9-r3 (CVE-2026-86144): named in both runtime stages, so no build cache can bring 2.13.9-r2 back. */
+    public function testRuntimeImagesNameTheFixedLibxml2(): void
+    {
+        $docker = self::read('Dockerfile');
+        foreach (['php-base', 'nginx'] as $stage) {
+            self::assertSame(1, preg_match('~^FROM \S+ AS '.$stage.'\n(.*?)(?=^FROM |\z)~ms', $docker, $m), $stage);
+            self::assertMatchesRegularExpression("~apk add --no-cache [^\n]*'libxml2>=2\\.13\\.9-r3'~", $m[1], $stage);
         }
     }
 

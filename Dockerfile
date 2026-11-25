@@ -4,13 +4,13 @@
 # Every base image is pinned by its multi-arch digest, so a rebuild cannot pick up a moved or replaced tag;
 # Dependabot (docker ecosystem) proposes the new digest when a tag moves.
 
-FROM php:8.5-fpm-alpine@sha256:951fb5b1780219b81d5daffa4cebef8e0077c537f3893d9790a5dfcd66ca334d AS php-base
+FROM php:8.5-fpm-alpine@sha256:51414d5291758fe27f58a64c7e8a078465d32cc7dcef7bda803f5b36019802e0 AS php-base
 # OPcache is part of PHP itself since 8.5 (no extension to install). `apk upgrade` takes Alpine's security fixes
 # that the pinned base image does not carry yet (e.g. brotli 1.2.1 for CVE-2026-111497); CI's image scan fails on
 # any fixed HIGH/CRITICAL package left behind. A floor names a fix the base image lacks (zlib 1.4, CVE-2026-4738;
-# libpq 18.7, CVE-2026-116304), so a build cache cannot answer with an older layer.
+# libpq 18.7, CVE-2026-116304; libxml2 2.13.9-r3, CVE-2026-86144), so a build cache cannot answer with an older layer.
 RUN apk upgrade --no-cache \
- && apk add --no-cache 'zlib>=1.4-r0' \
+ && apk add --no-cache 'zlib>=1.4-r0' 'libxml2>=2.13.9-r3' \
  && apk add --no-cache icu-libs 'libpq>=18.7-r0' libzip fcgi tzdata \
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev postgresql-dev libzip-dev linux-headers \
  && docker-php-ext-install -j"$(nproc)" intl pdo_pgsql pcntl zip \
@@ -74,7 +74,7 @@ COPY --from=prod /app/public /app/public
 USER root
 # Alpine security fixes newer than the pinned base image, with the same floor (see the php-base stage).
 RUN apk upgrade --no-cache \
- && apk add --no-cache 'zlib>=1.4-r0' \
+ && apk add --no-cache 'zlib>=1.4-r0' 'libxml2>=2.13.9-r3' \
  && install -d -o 82 -g 101 -m 0750 /run/php
 USER 101
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1
