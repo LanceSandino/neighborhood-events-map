@@ -6,6 +6,9 @@ Engineering change records (with regression-test anchors) live in `CHANGES.md`.
 
 ## [Unreleased]
 
+### Changed
+- Behind-the-scenes updates to the database library and the developer tools. Nothing changes on the site.
+
 ## [0.19.5-beta.1] - 2026-11-25
 
 A security update. Nothing changes on the site: your events, homes and accounts stay exactly as they are.

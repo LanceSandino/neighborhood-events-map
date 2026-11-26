@@ -1801,4 +1801,14 @@ so their `commit_ref` reads `consolidated`.
   commit_ref: "security/twig-php-8.5.13"
   author: "Lance Sandino"
   timestamp: "2026-11-25T23:30:00Z"
+- id: CU-20261125-02
+  type: chore
+  title: "Dependabot updates: doctrine/dbal 4.6.0, doctrine/doctrine-bundle 3.4.2, PHPStan 2.3.7, PHPUnit 13.4.8, Mailpit 1.34.0"
+  description: "Dependabot PRs #44 (Mailpit v1.34.0, dev and staging compose), #45 (PHPStan 2.3.7), #46 (doctrine-bundle 3.4.2), #47 (dbal 4.6.0) and #48 (PHPUnit 13.4.8, with php-code-coverage 14.5.2 and sebastian/version 7.1.0) applied together on main after 0.19.5-beta.1. Their own CI runs passed php, e2e and js-and-python and failed only the accepted PostgreSQL libxml2 finding (D-20261125-01), which also skips CI's production-image smoke step, so the smoke test was run locally on the combined change. composer.json floors follow bump-after-update. bin/drill-event-upgrade.sh keeps its old Mailpit pin (it replays an old release's stack). Local: PHPUnit 723 OK (lines 95.81 %), PHPStan clean, composer audit clean, migrations up/down/up, bin/smoke-prod-image.sh passed. No migration; no release yet."
+  impact: low
+  affected_modules: ["composer.json", "composer.lock", "compose.dev.yaml", "compose.staging.yaml", "CHANGELOG.md"]
+  related_tests: ["PHPUnit suite (723 tests)", "vendor/bin/phpstan analyse", "bin/smoke-prod-image.sh", "Playwright e2e in CI"]
+  commit_ref: "chore/dependabot-20261125"
+  author: "Lance Sandino"
+  timestamp: "2026-11-26T01:10:00Z"
 ```
